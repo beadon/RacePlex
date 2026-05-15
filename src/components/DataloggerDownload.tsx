@@ -1,19 +1,17 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Bluetooth, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
-  BleConnection,
   FileInfo,
   DownloadProgress,
   isBleSupported,
-  connectToDevice,
   requestFileList,
   downloadFile,
-  disconnect,
   formatBytes,
 } from "@/lib/bleDatalogger";
+import { useDeviceContext } from "@/contexts/DeviceContext";
 import { parseDatalogContent } from "@/lib/datalogParser";
 import { ParsedData } from "@/types/racing";
 
@@ -32,8 +30,9 @@ interface DataloggerDownloadProps {
 }
 
 export function DataloggerDownload({ onDataLoaded, autoSave, autoSaveFile }: DataloggerDownloadProps) {
+  const device = useDeviceContext();
+  const connection = device.connection;
   const [state, setState] = useState<DownloadState>("idle");
-  const [connection, setConnection] = useState<BleConnection | null>(null);
   const [files, setFiles] = useState<FileInfo[]>([]);
   const [progress, setProgress] = useState<DownloadProgress | null>(null);
   const [currentFile, setCurrentFile] = useState<string>("");
@@ -48,8 +47,13 @@ export function DataloggerDownload({ onDataLoaded, autoSave, autoSaveFile }: Dat
     setStatusMessage("Scanning for DovesLapTimer...");
 
     try {
-      const conn = await connectToDevice(setStatusMessage);
-      setConnection(conn);
+      // Reuse existing context connection if available; otherwise connect via context.
+      const conn = device.connection ?? (await device.connect(setStatusMessage));
+      if (!conn) {
+        // User cancelled the picker
+        setState("idle");
+        return;
+      }
 
       setState("fetching-files");
       setStatusMessage("Fetching file list...");
@@ -63,11 +67,26 @@ export function DataloggerDownload({ onDataLoaded, autoSave, autoSaveFile }: Dat
       setError(err instanceof Error ? err.message : "Failed to connect");
       setState("error");
     }
+  }, [device]);
+
+  const handleClose = useCallback(() => {
+    // Do NOT disconnect — connection lifecycle is owned by DeviceContext.
+    // Only the explicit Disconnect button in the drawer header tears down GATT.
+    setState("idle");
+    setFiles([]);
+    setProgress(null);
+    setCurrentFile("");
+    setError("");
+    setStatusMessage("");
   }, []);
 
   const handleFileSelect = useCallback(
     async (file: FileInfo) => {
-      if (!connection) return;
+      if (!connection) {
+        setError("Device disconnected. Please reconnect.");
+        setState("error");
+        return;
+      }
 
       setState("downloading");
       setCurrentFile(file.name);
@@ -99,13 +118,13 @@ export function DataloggerDownload({ onDataLoaded, autoSave, autoSaveFile }: Dat
 
         // Parse the downloaded file
         setStatusMessage("Parsing file...");
-        
+
         // Convert Uint8Array to string for text-based formats
         const decoder = new TextDecoder();
         const content = decoder.decode(fileData);
-        
+
         const parsedData = parseDatalogContent(content);
-        
+
         // Close modal and load data
         handleClose();
         onDataLoaded(parsedData, file.name);
@@ -116,21 +135,16 @@ export function DataloggerDownload({ onDataLoaded, autoSave, autoSaveFile }: Dat
         setState("error");
       }
     },
-    [connection, onDataLoaded]
+    [connection, onDataLoaded, autoSave, autoSaveFile, handleClose]
   );
 
-  const handleClose = useCallback(() => {
-    if (connection) {
-      disconnect(connection);
+  // React to unexpected disconnects from the context while a transfer is in flight.
+  useEffect(() => {
+    if (!connection && (state === "downloading" || state === "fetching-files" || state === "file-list")) {
+      setError("Device disconnected unexpectedly.");
+      setState("error");
     }
-    setState("idle");
-    setConnection(null);
-    setFiles([]);
-    setProgress(null);
-    setCurrentFile("");
-    setError("");
-    setStatusMessage("");
-  }, [connection]);
+  }, [connection, state]);
 
   const handleRetry = useCallback(() => {
     setError("");
