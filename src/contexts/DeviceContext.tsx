@@ -40,20 +40,21 @@ export function DeviceProvider({ children }: { children: ReactNode }) {
     setDeviceName(null);
   }, []);
 
-  const connectFn = useCallback(async (): Promise<boolean> => {
-    if (isConnecting) return false;
+  const connectFn = useCallback(async (onStatus?: (msg: string) => void): Promise<BleConnection | null> => {
+    if (isConnecting) return null;
+    if (connectionRef.current) return connectionRef.current;
     setIsConnecting(true);
     try {
-      const conn = await connectToDevice();
+      const conn = await connectToDevice(onStatus);
       // Listen for unexpected disconnects
       conn.device.addEventListener("gattserverdisconnected", handleDisconnect);
       setConnection(conn);
       setDeviceName(conn.device.name ?? "Unknown Device");
-      return true;
+      return conn;
     } catch (err) {
       // User cancelled the picker or connection failed
       console.warn("BLE connect failed/cancelled:", err);
-      return false;
+      return null;
     } finally {
       setIsConnecting(false);
     }
