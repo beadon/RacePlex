@@ -227,7 +227,7 @@ export function FileManagerDrawer({
                 <Bluetooth className="w-12 h-12 text-muted-foreground" />
                 <h3 className="font-semibold text-foreground">Connect to Logger</h3>
                 <p className="text-sm text-muted-foreground max-w-[260px]">Connect to your DovesDataLogger to manage device settings and tracks.</p>
-                <Button onClick={device.connect} disabled={device.isConnecting} className="gap-2">
+                <Button onClick={() => device.connect()} disabled={device.isConnecting} className="gap-2">
                   {device.isConnecting ? (<><Loader2 className="w-4 h-4 animate-spin" /> Connecting…</>) : (<><Bluetooth className="w-4 h-4" /> Connect</>)}
                 </Button>
               </div>
