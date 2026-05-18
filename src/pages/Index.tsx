@@ -225,7 +225,7 @@ export default function Index() {
       }
     );
     // Restore session metadata (kart/setup link) for the sample file
-    const sampleFileName = "okc-tillotson-plain.nmea";
+    const sampleFileName = "okc-tillotson-data.dovex";
     const meta = await getFileMetadata(sampleFileName);
     sessionMeta.restoreFromMetadata(meta);
   }, [sessionData, handleSelectionChange, lapMgmt, setSelectedLapNumber, setReferenceLapNumber, sessionMeta]);
