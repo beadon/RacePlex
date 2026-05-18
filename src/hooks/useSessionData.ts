@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { ParsedData, FieldMapping, GpsSample, TrackCourseSelection, Course } from "@/types/racing";
-import { parseDatalog } from "@/lib/nmeaParser";
+import { parseDatalogContent } from "@/lib/datalogParser";
 import { loadTracks } from "@/lib/trackStorage";
 import { calculateLaps } from "@/lib/lapCalculation";
 
