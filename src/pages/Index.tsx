@@ -542,6 +542,16 @@ export default function Index() {
               <LocalWeatherDialog />
             </div>
 
+            <div className="text-center space-y-2">
+              <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
+                Free Online VBO, MoTeC, AiM & NMEA Telemetry Viewer
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                Open any Racelogic VBO, MoTeC i2 (LD/CSV), AiM MyChron, Alfano, u-blox UBX, NMEA or Dove datalog right in your browser. 100% offline — your files never leave your device.
+              </p>
+            </div>
+
+
             <FileImport
               onDataLoaded={handleDataLoaded}
               onOpenFileManager={fileManager.open}
