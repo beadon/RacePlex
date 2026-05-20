@@ -154,7 +154,7 @@ export function parseCsvLine(line: string, delimiter: string = ','): string[] {
  */
 export function detectDelimiter(line: string, candidates: string[] = ['\t', ';', ',']): string {
   let best = ',';
-  let bestCount = -1;
+  let bestCount = 0;
   for (const c of candidates) {
     const count = (line.match(new RegExp(c === '\t' ? '\\t' : `\\${c}`, 'g')) || []).length;
     if (count > bestCount) {
