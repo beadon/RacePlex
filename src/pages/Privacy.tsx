@@ -69,6 +69,7 @@ const Privacy = () => {
 
     <p className="mt-10 text-xs text-muted-foreground/60">Last updated: February 2026</p>
   </div>
-);
+  );
+};
 
 export default Privacy;
