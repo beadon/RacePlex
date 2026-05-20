@@ -127,6 +127,7 @@ export function resolveRange(
   if (sourceId === "__pace__") {
     let min = Infinity, max = -Infinity;
     for (const v of paceData) {
+      if (v === null) continue;
       if (v < min) min = v;
       if (v > max) max = v;
     }
