@@ -530,7 +530,7 @@ export const VideoPlayer = memo(function VideoPlayer({
       {/* Video element + click target */}
       <div ref={videoAreaRef} className="flex-1 min-h-0 relative overflow-hidden" onClick={handleVideoClick}>
         <video
-          ref={actions.videoRef as React.RefObject<HTMLVideoElement>}
+          ref={actions.videoRef}
           src={state.videoUrl}
           onLoadedMetadata={onLoadedMetadata}
           className="w-full h-full object-contain"
