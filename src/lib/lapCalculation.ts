@@ -1,4 +1,5 @@
 import { GpsSample, Course, Lap, LapCrossing, SectorTimes, SectorLine, CourseDirection, courseHasSectors } from '@/types/racing';
+import { EARTH_RADIUS_M } from './parserUtils';
 
 interface Point {
   x: number;
@@ -7,9 +8,8 @@ interface Point {
 
 // Project lat/lon to local planar coordinates (equirectangular approximation)
 function projectToPlane(lat: number, lon: number, centerLat: number, centerLon: number): Point {
-  const R = 6371000; // Earth radius in meters
-  const x = (lon - centerLon) * Math.PI / 180 * R * Math.cos(centerLat * Math.PI / 180);
-  const y = (lat - centerLat) * Math.PI / 180 * R;
+  const x = (lon - centerLon) * Math.PI / 180 * EARTH_RADIUS_M * Math.cos(centerLat * Math.PI / 180);
+  const y = (lat - centerLat) * Math.PI / 180 * EARTH_RADIUS_M;
   return { x, y };
 }
 

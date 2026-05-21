@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { ExternalRefBar } from '@/components/ExternalRefBar';
 import { FileEntry } from '@/lib/fileStorage';
 import { useSettingsContext } from '@/contexts/SettingsContext';
-import { haversineDistance } from '@/lib/parserUtils';
+import { haversineDistance, METERS_TO_FEET } from '@/lib/parserUtils';
 
 interface LapTableProps {
   laps: Lap[];
@@ -260,7 +260,7 @@ export const LapTable = memo(function LapTable({ laps, course, samples, onLapSel
             <div>
               <span className="text-muted-foreground">Avg Lap Length: </span>
               <span className="font-mono text-foreground font-semibold">
-                {`${(avgLapLength * 3.28084).toLocaleString(undefined, { maximumFractionDigits: 0 })} ft / ${avgLapLength.toLocaleString(undefined, { maximumFractionDigits: 0 })} m`}
+                {`${(avgLapLength * METERS_TO_FEET).toLocaleString(undefined, { maximumFractionDigits: 0 })} ft / ${avgLapLength.toLocaleString(undefined, { maximumFractionDigits: 0 })} m`}
               </span>
             </div>
           )}

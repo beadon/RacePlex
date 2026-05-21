@@ -13,6 +13,7 @@ import type { GpsPoint } from '@/components/track-editor/VisualEditor';
 import { VisualEditor, EditorModeToggle } from '@/components/track-editor/VisualEditor';
 import { Plus, Edit2, Check, X, Trash2, Star } from 'lucide-react';
 import { calculatePolylineLength, formatTrackLength } from '@/lib/trackUtils';
+import { METERS_TO_FEET } from '@/lib/parserUtils';
 import L from 'leaflet';
 
 type EditorMode = 'manual' | 'visual';
@@ -488,7 +489,7 @@ export function CoursesTab() {
             {courses.map((course) => {
               const layout = trackLayouts.find(l => l.course_id === course.id);
               const calculatedFt = layout && layout.layout_data.length >= 2
-                ? Math.round(calculatePolylineLength(layout.layout_data) * 3.28084)
+                ? Math.round(calculatePolylineLength(layout.layout_data) * METERS_TO_FEET)
                 : null;
               // eslint-disable-next-line @typescript-eslint/no-explicit-any -- length_ft_override column not in generated types; remove on next regen
               const overrideVal = (course as any).length_ft_override as number | null;

@@ -1,5 +1,11 @@
 import { SectorLine } from '@/types/racing';
-import { haversineDistance as haversineDist } from '@/lib/parserUtils';
+import { haversineDistance, METERS_TO_FEET } from '@/lib/parserUtils';
+
+/**
+ * Default radius (meters) within which a GPS sample is considered to belong
+ * to a given track. ~5 miles — matches the documented course-detection range.
+ */
+export const DEFAULT_TRACK_SEARCH_RADIUS_M = 8047;
 
 /** Parse sector line coordinates from string form fields. Returns undefined if any value is NaN. */
 export function parseSectorLine(sector: { aLat: string; aLon: string; bLat: string; bLon: string }): SectorLine | undefined {
@@ -45,19 +51,6 @@ export function getTrackDisplayName(track: { name: string; shortName?: string })
   return track.shortName || abbreviateTrackName(track.name);
 }
 
-/**
- * Haversine distance in meters between two lat/lon points.
- */
-function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 6371000;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLon = ((lon2 - lon1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) *
-    Math.sin(dLon / 2) * Math.sin(dLon / 2);
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
 
 /**
  * Find the nearest track to a GPS point. Returns the track if within threshold (default 2km).
@@ -65,7 +58,7 @@ function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
 export function findNearestTrack(
   lat: number, lon: number,
   tracks: { name: string; courses: { startFinishA: { lat: number; lon: number } }[] }[],
-  thresholdMeters = 8047 // 5 miles
+  thresholdMeters = DEFAULT_TRACK_SEARCH_RADIUS_M,
 ): typeof tracks[number] | null {
   let best: typeof tracks[number] | null = null;
   let bestDist = Infinity;
@@ -87,7 +80,7 @@ export function findNearestTrack(
 export function calculatePolylineLength(points: Array<{ lat: number; lon: number }>): number {
   let total = 0;
   for (let i = 1; i < points.length; i++) {
-    total += haversineDist(points[i - 1].lat, points[i - 1].lon, points[i].lat, points[i].lon);
+    total += haversineDistance(points[i - 1].lat, points[i - 1].lon, points[i].lat, points[i].lon);
   }
   return total;
 }
@@ -96,7 +89,7 @@ export function calculatePolylineLength(points: Array<{ lat: number; lon: number
  * Format a distance in meters to a compact ft / m string.
  */
 export function formatTrackLength(meters: number): string {
-  const feet = meters * 3.28084;
+  const feet = meters * METERS_TO_FEET;
   return `${Math.round(feet).toLocaleString()} ft / ${Math.round(meters).toLocaleString()} m`;
 }
 
@@ -117,7 +110,7 @@ export function resamplePolyline(
   for (let i = 1; i < points.length; i++) {
     const prev = points[i - 1];
     const curr = points[i];
-    const segDist = haversineDist(prev.lat, prev.lon, curr.lat, curr.lon);
+    const segDist = haversineDistance(prev.lat, prev.lon, curr.lat, curr.lon);
     if (segDist === 0) continue;
 
     let walked = carry;

@@ -1,6 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import type { ITrackDatabase, DbTrack, DbCourse, DbSubmission, DbBannedIp, DbCourseLayout } from './types';
 import { calculatePolylineLength } from '@/lib/trackUtils';
+import { METERS_TO_FEET } from '@/lib/parserUtils';
 
 export class SupabaseTrackDatabase implements ITrackDatabase {
   // Tracks
@@ -195,7 +196,7 @@ export class SupabaseTrackDatabase implements ITrackDatabase {
         const lengthFt = c.length_ft_override != null
           ? c.length_ft_override
           : (layout && layout.layout_data.length >= 2
-            ? Math.round(calculatePolylineLength(layout.layout_data) * 3.28084)
+            ? Math.round(calculatePolylineLength(layout.layout_data) * METERS_TO_FEET)
             : 0);
 
         const obj: Record<string, unknown> = {
