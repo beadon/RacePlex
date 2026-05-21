@@ -100,7 +100,7 @@ export function useVideoSync({ samples, allSamples, currentIndex, onScrub, sessi
       let loaded = false;
       if (record.fileHandle) {
         try {
-          const permission = await (record.fileHandle as any).queryPermission({ mode: "read" });
+          const permission = await record.fileHandle.queryPermission({ mode: "read" });
           if (permission === "granted") {
             const file = await record.fileHandle.getFile();
             const url = URL.createObjectURL(file);
@@ -155,7 +155,7 @@ export function useVideoSync({ samples, allSamples, currentIndex, onScrub, sessi
   const loadVideo = useCallback(async () => {
     if ("showOpenFilePicker" in window) {
       try {
-        const [handle] = await (window as any).showOpenFilePicker({
+        const [handle] = await window.showOpenFilePicker({
           types: [{ description: "Video files", accept: { "video/*": [".mp4", ".webm", ".mov", ".mkv", ".avi"] } }],
         });
         const file = await handle.getFile();
@@ -166,7 +166,7 @@ export function useVideoSync({ samples, allSamples, currentIndex, onScrub, sessi
         setFileHandle(handle);
         persistSync(syncOffsetMsRef.current, handle, file.name);
         return;
-      } catch (e: any) {
+      } catch (e) {
         if (e.name === "AbortError") return;
       }
     }
@@ -206,7 +206,7 @@ export function useVideoSync({ samples, allSamples, currentIndex, onScrub, sessi
       let lastTime = 0;
       let frameCount = 0;
       const frameTimes: number[] = [];
-      const callback = (_now: number, metadata: any) => {
+      const callback = (_now: number, metadata: VideoFrameCallbackMetadata) => {
         if (lastTime > 0) {
           const delta = metadata.mediaTime - lastTime;
           if (delta > 0 && delta < 0.2) {
@@ -221,18 +221,18 @@ export function useVideoSync({ samples, allSamples, currentIndex, onScrub, sessi
           }
         }
         lastTime = metadata.mediaTime;
-        (video as any).requestVideoFrameCallback(callback);
+        video.requestVideoFrameCallback(callback);
       };
       const origPaused = video.paused;
       if (origPaused) {
         const onPlay = () => {
-          (video as any).requestVideoFrameCallback(callback);
+          video.requestVideoFrameCallback(callback);
           video.removeEventListener("play", onPlay);
         };
         video.addEventListener("play", onPlay);
         return () => video.removeEventListener("play", onPlay);
       } else {
-        (video as any).requestVideoFrameCallback(callback);
+        video.requestVideoFrameCallback(callback);
       }
     }
   }, [videoUrl]);
@@ -255,9 +255,9 @@ export function useVideoSync({ samples, allSamples, currentIndex, onScrub, sessi
         onScrubRef.current(idx);
         setVideoCurrentTime(v.currentTime);
         setIsOutOfRange(outOfRange);
-        if (active) (v as any).requestVideoFrameCallback(callback);
+        if (active) v.requestVideoFrameCallback(callback);
       };
-      (video as any).requestVideoFrameCallback(callback);
+      video.requestVideoFrameCallback(callback);
     } else {
       let lastRaf = 0;
       const loop = (ts: number) => {
