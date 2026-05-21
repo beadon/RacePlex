@@ -46,8 +46,8 @@ export function detectCapabilities(): CapabilityCheck[] {
     },
     {
       feature: "BLE Datalogger",
-      status: !!(navigator as any).bluetooth ? "Supported" : "Not Available",
-      level: !!(navigator as any).bluetooth ? "green" : "red",
+      status: (navigator as any).bluetooth ? "Supported" : "Not Available",
+      level: (navigator as any).bluetooth ? "green" : "red",
     },
     {
       feature: "File Picker",

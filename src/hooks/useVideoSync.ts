@@ -108,7 +108,7 @@ export function useVideoSync({ samples, allSamples, currentIndex, onScrub, sessi
             setFileHandle(record.fileHandle);
             loaded = true;
           }
-        } catch {}
+        } catch { /* File System Access query failed; fall through to IDB stored video */ }
       }
 
       // Fallback: load from IndexedDB stored video

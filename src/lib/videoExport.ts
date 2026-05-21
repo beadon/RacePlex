@@ -179,7 +179,7 @@ async function encodeAudioToMuxer(
       encoder.close();
       resolve(!hadError);
     }).catch(() => {
-      try { encoder.close(); } catch {}
+      try { encoder.close(); } catch { /* encoder already closed during error handling */ }
       resolve(false);
     });
   });
