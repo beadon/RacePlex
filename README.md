@@ -2,7 +2,10 @@
 
 **Open source motorsport data acquisition and analytics**
 
-[![CI](https://github.com/TheAngryRaven/DovesDataViewer/actions/workflows/ci.yml/badge.svg)](https://github.com/TheAngryRaven/DovesDataViewer/actions/workflows/ci.yml)
+[![Lint](https://github.com/TheAngryRaven/DovesDataViewer/actions/workflows/lint.yml/badge.svg)](https://github.com/TheAngryRaven/DovesDataViewer/actions/workflows/lint.yml)
+[![Typecheck](https://github.com/TheAngryRaven/DovesDataViewer/actions/workflows/typecheck.yml/badge.svg)](https://github.com/TheAngryRaven/DovesDataViewer/actions/workflows/typecheck.yml)
+[![Test](https://github.com/TheAngryRaven/DovesDataViewer/actions/workflows/test.yml/badge.svg)](https://github.com/TheAngryRaven/DovesDataViewer/actions/workflows/test.yml)
+[![Build](https://github.com/TheAngryRaven/DovesDataViewer/actions/workflows/build.yml/badge.svg)](https://github.com/TheAngryRaven/DovesDataViewer/actions/workflows/build.yml)
 
 🌐 **Live Demo:** [HackTheTrack.net](https://hackthetrack.net)  
 🔧 **Hardware Project:** [DovesDataLogger on GitHub](https://github.com/TheAngryRaven/DovesDataLogger)
