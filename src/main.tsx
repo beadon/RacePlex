@@ -4,6 +4,16 @@ import "./index.css";
 import { toast } from "@/components/ui/sonner";
 import { registerSW } from "virtual:pwa-register";
 
+/**
+ * "Never auto-dismiss" duration for sonner toasts. Sonner doesn't export a
+ * persist constant, and passing `Infinity` hands the value to `setTimeout`
+ * which different browsers handle differently (some clamp to ~24 days, some
+ * fire immediately). A long finite value is unambiguous; 24h is more than
+ * enough — the toast is dismissed by the user clicking Refresh or Later
+ * long before this expires.
+ */
+const PERSISTENT_TOAST_DURATION_MS = 24 * 60 * 60 * 1000;
+
 createRoot(document.getElementById("root")!).render(<App />);
 
 const isInIframe = (() => {
@@ -31,7 +41,7 @@ if (isInIframe || isPreviewHost) {
     onNeedRefresh() {
       toast("Update ready", {
         description: "Refresh to clear stale cached files and load the latest app version.",
-        duration: Infinity,
+        duration: PERSISTENT_TOAST_DURATION_MS,
         action: {
           label: "Refresh",
           onClick: async () => {
