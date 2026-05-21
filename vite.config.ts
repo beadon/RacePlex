@@ -43,75 +43,88 @@ export default defineConfig(({ mode }) => {
       react(),
       mode === "development" && componentTagger(),
       VitePWA({
-      registerType: "autoUpdate",
-      includeAssets: ["favicon.png", "favicon.ico", "robots.txt", "tracks.json", "samples/**/*"],
-      manifest: {
-        name: "HackTheTrack - Motorsport Data Viewer",
-        short_name: "HackTheTrack",
-        description: "Open source motorsport data acquisition and analytics",
-        theme_color: "#1a1a2e",
-        background_color: "#0f0f1a",
-        display: "standalone",
-        start_url: "/",
-        icons: [
-          {
-            src: "pwa-192x192.png",
-            sizes: "192x192",
-            type: "image/png",
-          },
-          {
-            src: "pwa-512x512.png",
-            sizes: "512x512",
-            type: "image/png",
-          },
-          {
-            src: "apple-touch-icon-180x180.png",
-            sizes: "180x180",
-            type: "image/png",
-            // vite-plugin-pwa's manifest icon `purpose` type doesn't include
-            // "apple touch icon" but iOS supports it; widen to string.
-            purpose: "apple touch icon" as string,
-          },
-        ],
-      },
-      workbox: {
-        cleanupOutdatedCaches: true,
-        clientsClaim: true,
-        skipWaiting: true,
-        globPatterns: ["**/*.{js,css,html,ico,png,svg,woff,woff2,json,nmea}"],
-        globIgnores: ["**/tracks.zip"],
-        navigateFallbackDenylist: [/^\/~oauth/],
-        runtimeCaching: [
-          {
-            urlPattern: /^https:\/\/.*\.basemaps\.cartocdn\.com\/.*/i,
-            handler: "CacheFirst",
-            options: {
-              cacheName: "map-tiles-carto",
-              expiration: {
-                maxEntries: 500,
-                maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
-              },
-              cacheableResponse: {
-                statuses: [0, 200],
+        filename: "service-worker.js",
+        registerType: "autoUpdate",
+        devOptions: {
+          enabled: false,
+        },
+        includeAssets: ["favicon.png", "favicon.ico", "robots.txt", "tracks.json", "samples/**/*"],
+        manifest: {
+          name: "HackTheTrack - Motorsport Data Viewer",
+          short_name: "HackTheTrack",
+          description: "Open source motorsport data acquisition and analytics",
+          theme_color: "#1a1a2e",
+          background_color: "#0f0f1a",
+          display: "standalone",
+          start_url: "/",
+          icons: [
+            {
+              src: "pwa-192x192.png",
+              sizes: "192x192",
+              type: "image/png",
+            },
+            {
+              src: "pwa-512x512.png",
+              sizes: "512x512",
+              type: "image/png",
+            },
+            {
+              src: "apple-touch-icon-180x180.png",
+              sizes: "180x180",
+              type: "image/png",
+              purpose: "apple touch icon" as string,
+            },
+          ],
+        },
+        workbox: {
+          cleanupOutdatedCaches: true,
+          clientsClaim: true,
+          skipWaiting: true,
+          globPatterns: ["**/*.{js,css,html,ico,png,svg,woff,woff2,json,nmea}"],
+          globIgnores: ["**/tracks.zip"],
+          navigateFallbackDenylist: [/^\/~oauth/],
+          runtimeCaching: [
+            {
+              urlPattern: ({ request }) => request.mode === "navigate",
+              handler: "NetworkFirst",
+              options: {
+                cacheName: "app-html",
+                networkTimeoutSeconds: 3,
+                cacheableResponse: {
+                  statuses: [0, 200],
+                },
               },
             },
-          },
-          {
-            urlPattern: /^https:\/\/server\.arcgisonline\.com\/.*/i,
-            handler: "CacheFirst",
-            options: {
-              cacheName: "map-tiles-esri",
-              expiration: {
-                maxEntries: 500,
-                maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
-              },
-              cacheableResponse: {
-                statuses: [0, 200],
+            {
+              urlPattern: /^https:\/\/.*\.basemaps\.cartocdn\.com\/.*/i,
+              handler: "CacheFirst",
+              options: {
+                cacheName: "map-tiles-carto",
+                expiration: {
+                  maxEntries: 500,
+                  maxAgeSeconds: 60 * 60 * 24 * 30,
+                },
+                cacheableResponse: {
+                  statuses: [0, 200],
+                },
               },
             },
-          },
-        ],
-      },
+            {
+              urlPattern: /^https:\/\/server\.arcgisonline\.com\/.*/i,
+              handler: "CacheFirst",
+              options: {
+                cacheName: "map-tiles-esri",
+                expiration: {
+                  maxEntries: 500,
+                  maxAgeSeconds: 60 * 60 * 24 * 30,
+                },
+                cacheableResponse: {
+                  statuses: [0, 200],
+                },
+              },
+            },
+          ],
+        },
       }),
     ].filter(Boolean),
     resolve: {
