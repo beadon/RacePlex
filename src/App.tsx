@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -10,14 +10,17 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
-// Lazy load admin pages only when VITE_ENABLE_ADMIN is set
 const enableAdmin = import.meta.env.VITE_ENABLE_ADMIN === 'true';
 const enableRegistration = import.meta.env.VITE_ENABLE_REGISTRATION === 'true';
 
-import Login from "./pages/Login";
-import Admin from "./pages/Admin";
-import Register from "./pages/Register";
-import Privacy from "./pages/Privacy";
+// Lazy-load secondary routes — these are not on the main entry path. Each
+// becomes its own chunk that downloads only when the user navigates there.
+// Privacy is rarely visited; Login/Admin/Register only appear when admin is
+// enabled (and even then, only the route the user clicks loads).
+const Login = lazy(() => import("./pages/Login"));
+const Admin = lazy(() => import("./pages/Admin"));
+const Register = lazy(() => import("./pages/Register"));
+const Privacy = lazy(() => import("./pages/Privacy"));
 
 const SETTINGS_KEY = "dove-dataviewer-settings";
 
@@ -43,15 +46,17 @@ const App = () => {
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/privacy" element={<Privacy />} />
-            {enableAdmin && <Route path="/login" element={<Login />} />}
-            {enableAdmin && <Route path="/admin" element={<Admin />} />}
-            {enableRegistration && <Route path="/register" element={<Register />} />}
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <Suspense fallback={null}>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/privacy" element={<Privacy />} />
+              {enableAdmin && <Route path="/login" element={<Login />} />}
+              {enableAdmin && <Route path="/admin" element={<Admin />} />}
+              {enableRegistration && <Route path="/register" element={<Register />} />}
+              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </Suspense>
         </BrowserRouter>
       </TooltipProvider>
     </AuthProvider>

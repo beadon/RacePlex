@@ -1,10 +1,13 @@
-import { useCallback, useRef, useState, useEffect } from "react";
+import { useCallback, useRef, useState, useEffect, lazy, Suspense } from "react";
 import { Trash2, Download, Upload, FolderOpen, Loader2, Video, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FileEntry, FileMetadata } from "@/lib/fileStorage";
 import { parseDatalogFile } from "@/lib/datalogParser";
 import { ParsedData } from "@/types/racing";
-import { DataloggerDownload } from "@/components/DataloggerDownload";
+// Lazy — keeps the BLE module in its own chunk, loaded only on device use.
+const DataloggerDownload = lazy(() =>
+  import("@/components/DataloggerDownload").then((m) => ({ default: m.DataloggerDownload })),
+);
 import { listSessionVideos, deleteSessionVideo, StoredVideoMeta } from "@/lib/videoFileStorage";
 
 function formatSize(bytes: number): string {
@@ -263,11 +266,13 @@ export function FilesTab({
           {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
           Upload Files
         </Button>
-        <DataloggerDownload
-          onDataLoaded={handleBleDataLoaded}
-          autoSave={autoSave}
-          autoSaveFile={onSaveFile}
-        />
+        <Suspense fallback={null}>
+          <DataloggerDownload
+            onDataLoaded={handleBleDataLoaded}
+            autoSave={autoSave}
+            autoSaveFile={onSaveFile}
+          />
+        </Suspense>
       </div>
     </div>
   );

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useContext } from 'react';
+import { useState, useEffect, useCallback, useContext, lazy, Suspense } from 'react';
 import { Plus, Trash2, Edit2, Check, X, Settings, Code, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
@@ -32,7 +32,12 @@ import {
 } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useTrackEditorForm } from '@/hooks/useTrackEditorForm';
-import { VisualEditor, EditorModeToggle } from '@/components/track-editor/VisualEditor';
+import { EditorModeToggle } from '@/components/track-editor/EditorModeToggle';
+// Lazy — VisualEditor pulls in Leaflet drawing logic; only loads when the
+// track editor dialog is opened in visual mode.
+const VisualEditor = lazy(() =>
+  import('@/components/track-editor/VisualEditor').then((m) => ({ default: m.VisualEditor })),
+);
 import { CourseForm } from '@/components/track-editor/CourseForm';
 import { AddCourseDialog } from '@/components/track-editor/AddCourseDialog';
 import { AddTrackDialog } from '@/components/track-editor/AddTrackDialog';
@@ -369,20 +374,22 @@ function CourseDrawingMini({ points, size = 36 }: { points: Array<{ lat: number;
               <CourseForm {...form.courseFormProps} onSubmit={handleUpdateCourse} onCancel={() => { form.setEditingCourse(null); form.resetForm(); form.setEditorMode('visual'); }} submitLabel="Update" showTrackName={false} />
             ) : (
               <div className="space-y-4">
-                <VisualEditor
-                  startFinishA={form.visualEditorStartFinishA}
-                  startFinishB={form.visualEditorStartFinishB}
-                  sector2={form.visualEditorSector2}
-                  sector3={form.visualEditorSector3}
-                  onStartFinishChange={form.handleVisualStartFinishChange}
-                  onSector2Change={form.handleVisualSector2Change}
-                  onSector3Change={form.handleVisualSector3Change}
-                   showDrawTool={true}
-                   laps={laps}
-                   samples={samples}
-                   layoutPoints={resolveCourseDrawing(selectedTrack, form.editingCourse?.courseName)}
-                   showKnownDrawingToggle={true}
-                />
+                <Suspense fallback={null}>
+                  <VisualEditor
+                    startFinishA={form.visualEditorStartFinishA}
+                    startFinishB={form.visualEditorStartFinishB}
+                    sector2={form.visualEditorSector2}
+                    sector3={form.visualEditorSector3}
+                    onStartFinishChange={form.handleVisualStartFinishChange}
+                    onSector2Change={form.handleVisualSector2Change}
+                    onSector3Change={form.handleVisualSector3Change}
+                    showDrawTool={true}
+                    laps={laps}
+                    samples={samples}
+                    layoutPoints={resolveCourseDrawing(selectedTrack, form.editingCourse?.courseName)}
+                    showKnownDrawingToggle={true}
+                  />
+                </Suspense>
                 <div className="flex gap-2">
                   <Button onClick={handleUpdateCourse} className="flex-1">
                     <Check className="w-4 h-4 mr-2" />

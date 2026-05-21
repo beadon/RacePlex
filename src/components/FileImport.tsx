@@ -1,9 +1,13 @@
-import { useCallback, useState } from "react";
+import { useCallback, useState, lazy, Suspense } from "react";
 import { Upload, FileText, FolderOpen, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { parseDatalogFile } from "@/lib/datalogParser";
 import { ParsedData } from "@/types/racing";
-import { DataloggerDownload } from "./DataloggerDownload";
+// Lazy so the BLE module (Web Bluetooth protocol) stays out of the initial
+// bundle — it only loads when the user opens the device download UI.
+const DataloggerDownload = lazy(() =>
+  import("./DataloggerDownload").then((m) => ({ default: m.DataloggerDownload })),
+);
 
 interface FileImportProps {
   onDataLoaded: (data: ParsedData, fileName?: string) => void;
@@ -103,7 +107,9 @@ export function FileImport({ onDataLoaded, onOpenFileManager, autoSave, autoSave
           </Button>
         )}
 
-        <DataloggerDownload onDataLoaded={onDataLoaded} autoSave={autoSave} autoSaveFile={autoSaveFile} />
+        <Suspense fallback={null}>
+          <DataloggerDownload onDataLoaded={onDataLoaded} autoSave={autoSave} autoSaveFile={autoSaveFile} />
+        </Suspense>
       </div>
 
       {fileName && !error && <p className="text-sm text-muted-foreground font-mono">Loaded: {fileName}</p>}
