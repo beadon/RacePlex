@@ -117,6 +117,8 @@ The app includes an optional admin system for managing a community track databas
 
 > **Build fallback:** `vite.config.ts` now hardcodes the project's public backend URL, publishable key, and project ID as a fallback for production builds. Local `.env` values still take precedence, but published builds no longer white-screen if managed env injection is temporarily missing.
 
+> **PWA cache recovery:** the legacy `/sw.js` path now ships a one-release cleanup worker that deletes old app caches and unregisters itself without touching IndexedDB telemetry/session data. The active offline worker is now published at `/service-worker.js`, and HTML navigations use `NetworkFirst` to reduce the chance of users getting stuck on an old shell after future deploys.
+
 ### Database Setup
 
 The admin system uses Lovable Cloud (Supabase) for the database. The schema is created automatically via migrations. Tables:
