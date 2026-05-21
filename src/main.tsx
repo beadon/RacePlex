@@ -24,7 +24,7 @@ const updateSW = registerSW({
       },
     });
   },
-  onRegisteredSW(_swUrl, registration) {
+  onRegisteredSW(_swUrl: string, registration: ServiceWorkerRegistration | undefined) {
     if (!registration) return;
 
     window.setInterval(() => {
