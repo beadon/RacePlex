@@ -14,7 +14,7 @@ interface LandingPageProps {
   onDataLoaded: (data: ParsedData, fileName?: string) => void;
   onOpenFileManager: () => void;
   autoSave: boolean;
-  autoSaveFile: (fileName: string, file: File) => Promise<void>;
+  autoSaveFile: (name: string, blob: Blob) => Promise<void>;
   onLoadSample: () => void;
   isLoadingSample: boolean;
   enableAdmin: boolean;

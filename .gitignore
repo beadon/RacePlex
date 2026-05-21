@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# TypeScript incremental build info (created by `tsc -b`)
+*.tsbuildinfo
+
 # Environment — see .env.example for the schema
 .env
 .env.local

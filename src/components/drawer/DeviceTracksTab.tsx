@@ -268,7 +268,7 @@ export function DeviceTracksTab({ connection }: DeviceTracksTabProps) {
         await uploadTrackFile(connection, entry.shortName + ".json", data);
       } catch (err) {
         console.error(`Resync failed for ${entry.shortName}:`, err);
-        toast.error(`Failed to sync ${entry.shortName}: ${err?.message || "Unknown"}`);
+        toast.error(`Failed to sync ${entry.shortName}: ${err instanceof Error ? err.message : "Unknown"}`);
       }
     }
 
