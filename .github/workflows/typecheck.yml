@@ -11,7 +11,11 @@ concurrency:
 
 jobs:
   typecheck:
-    name: tsc --noEmit
+    # `tsc -b` (build mode) is required to follow the root tsconfig.json's
+    # project references — plain `tsc --noEmit` from repo root is a no-op
+    # because the root config has `files: []` and only references the app/node
+    # configs. Both referenced configs have `noEmit: true` so nothing emits.
+    name: tsc -b
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -20,4 +24,4 @@ jobs:
           node-version: '20'
           cache: 'npm'
       - run: npm ci
-      - run: npx tsc --noEmit
+      - run: npm run typecheck

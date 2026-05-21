@@ -364,7 +364,7 @@ async function runWebCodecsExport(
 
     callbacks.onComplete(blob);
   } catch (e) {
-    callbacks.onError(e.message || "Export failed");
+    callbacks.onError(e instanceof Error ? e.message : "Export failed");
   }
 }
 
@@ -498,7 +498,7 @@ async function runFallbackExport(
       requestAnimationFrame(drawFrame);
     }
   } catch (e) {
-    callbacks.onError(e.message || "Export failed");
+    callbacks.onError(e instanceof Error ? e.message : "Export failed");
   }
 }
 

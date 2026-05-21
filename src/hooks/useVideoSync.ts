@@ -167,7 +167,8 @@ export function useVideoSync({ samples, allSamples, currentIndex, onScrub, sessi
         persistSync(syncOffsetMsRef.current, handle, file.name);
         return;
       } catch (e) {
-        if (e.name === "AbortError") return;
+        // User cancelled the file picker — DOMException("AbortError"). Swallow.
+        if (e instanceof Error && e.name === "AbortError") return;
       }
     }
     if (!fileInputRef.current) {

@@ -365,13 +365,20 @@ Key settings: `useKph`, `gForceSmoothing`, `gForceSmoothingStrength`, `brakingZo
 ## Commands
 
 ```bash
-npm run dev       # Dev server on :8080
-npm run build     # Production build → dist/
-npm run lint      # ESLint
-npm run preview   # Preview production build
-npm test          # Vitest in watch mode
-npm run test:run  # Vitest single pass (CI-style)
+npm run dev        # Dev server on :8080
+npm run build      # Production build → dist/
+npm run lint       # ESLint
+npm run typecheck  # tsc -b (must use build mode to follow project references)
+npm run preview    # Preview production build
+npm test           # Vitest in watch mode
+npm run test:run   # Vitest single pass (CI-style)
 ```
+
+> **Why `tsc -b`?** The root `tsconfig.json` has `files: []` and only uses
+> `references` to point at `tsconfig.app.json` + `tsconfig.node.json`. Plain
+> `tsc --noEmit` from repo root silently exits 0 without checking anything.
+> `tsc -b` (build mode) follows references; both referenced configs have
+> `noEmit: true` so nothing is emitted.
 
 CI is split into four parallel workflows under `.github/workflows/`
 (`lint.yml`, `typecheck.yml`, `test.yml`, `build.yml`). Each runs on every PR
