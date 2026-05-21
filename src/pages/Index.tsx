@@ -12,11 +12,7 @@ import { FileManagerDrawer } from "@/components/FileManagerDrawer";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { ParsedData, Track, TrackCourseSelection, CourseDetectionResult } from "@/types/racing";
-import { getFileMetadata } from "@/lib/fileStorage";
-import { loadTracks } from "@/lib/trackStorage";
-import { findNearestTrack } from "@/lib/trackUtils";
-import { autoDetectCourse } from "@/lib/courseDetection";
+import { ParsedData } from "@/types/racing";
 import { TrackPromptDialog } from "@/components/TrackPromptDialog";
 import { useSettings } from "@/hooks/useSettings";
 import { usePlayback } from "@/hooks/usePlayback";
@@ -30,6 +26,7 @@ import { useLapManagement } from "@/hooks/useLapManagement";
 import { useReferenceLap, useExternalReference } from "@/hooks/useReferenceLap";
 import { useSessionMetadata } from "@/hooks/useSessionMetadata";
 import { useVideoSync } from "@/hooks/useVideoSync";
+import { useDataLoader } from "@/hooks/useDataLoader";
 import { SettingsProvider } from "@/contexts/SettingsContext";
 import { DeviceProvider } from "@/contexts/DeviceContext";
 import { SessionProvider, type SessionContextValue } from "@/contexts/SessionContext";
@@ -99,11 +96,6 @@ export default function Index() {
 
   const [topPanelView, setTopPanelView] = useState<TopPanelView>("raceline");
   const [showOverlays, setShowOverlays] = useState(true);
-  const [trackPromptOpen, setTrackPromptOpen] = useState(false);
-  const [detectedTrack, setDetectedTrack] = useState<Track | null>(null);
-  const [allTracks, setAllTracks] = useState<Track[]>([]);
-  const [gpsCenter, setGpsCenter] = useState<{ lat: number; lon: number } | null>(null);
-  const [detectionResult, setDetectionResult] = useState<CourseDetectionResult | null>(null);
 
   // Video sync for Labs tab
   const videoSync = useVideoSync({
@@ -115,142 +107,28 @@ export default function Index() {
   });
   const currentSample = visibleSamples[currentIndex] ?? null;
 
-  // Orchestrate data loading — connects sessionData, lapMgmt, and sessionMeta
-  const handleDataLoaded = useCallback(
-    async (parsedData: ParsedData, fileName?: string) => {
-      sessionData.loadParsedData(parsedData, fileName);
-      setCurrentIndex(0);
+  // Data loading orchestration — owns the track-prompt UI state and the
+  // sample-loader. Returns the three callbacks Index.tsx wires up to imports.
+  const dataLoader = useDataLoader({ sessionData, lapMgmt, sessionMeta });
+  const {
+    handleDataLoaded, handleLoadSample, handleTrackPromptSelect,
+    trackPromptOpen, setTrackPromptOpen, detectedTrack, detectionResult,
+    allTracks, gpsCenter,
+  } = dataLoader;
 
-      // Try to restore track selection from metadata
-      let courseToUse = selectedCourse;
-      let restoredFromMeta = false;
-      if (fileName) {
-        const meta = await getFileMetadata(fileName);
-        if (meta) {
-          const tracks = await loadTracks();
-          const track = tracks.find((t) => t.name === meta.trackName);
-          const course = track?.courses.find((c) => c.name === meta.courseName);
-          if (track && course) {
-            const restoredSelection: TrackCourseSelection = {
-              trackName: track.name,
-              courseName: course.name,
-              course,
-            };
-            lapMgmt.setSelection(restoredSelection);
-            courseToUse = course;
-            restoredFromMeta = true;
-          }
-          sessionMeta.restoreFromMetadata(meta);
-        } else {
-          sessionMeta.restoreFromMetadata(null);
-        }
-      } else {
-        sessionMeta.restoreFromMetadata(null);
-      }
-
-      // Calculate laps if course is selected
-      if (courseToUse) {
-        const computedLaps = lapMgmt.calculateAndSetLaps(courseToUse, parsedData.samples, fileName);
-        if (computedLaps.length > 0) {
-          const fastest = computedLaps.reduce((min, lap) => (lap.lapTimeMs < min.lapTimeMs ? lap : min), computedLaps[0]);
-          setSelectedLapNumber(fastest.lapNumber);
-        }
-      } else {
-        setSelectedLapNumber(null);
-      }
-
-      // Auto-detect track and prompt if not restored from metadata
-      if (!restoredFromMeta) {
-        const tracks = await loadTracks();
-        setAllTracks(tracks);
-        const validSample = parsedData.samples.find(
-          (s) => s.lat !== 0 && s.lon !== 0 && Math.abs(s.lat) <= 90 && Math.abs(s.lon) <= 180
-        );
-        if (validSample) {
-          setGpsCenter({ lat: validSample.lat, lon: validSample.lon });
-
-          // Run auto-detection
-          const detection = autoDetectCourse(parsedData.samples, tracks);
-          setDetectionResult(detection);
-
-          if (detection && !detection.isWaypointMode) {
-            // Auto-detected a real course — apply it directly
-            const sel: TrackCourseSelection = {
-              trackName: detection.track.name,
-              courseName: detection.course.name,
-              course: detection.course,
-            };
-            lapMgmt.setSelection(sel);
-            lapMgmt.setLaps(detection.laps);
-            if (detection.laps.length > 0) {
-              const fastest = detection.laps.reduce((min, lap) => (lap.lapTimeMs < min.lapTimeMs ? lap : min), detection.laps[0]);
-              setSelectedLapNumber(fastest.lapNumber);
-            }
-
-            // Course was auto-detected — no need to prompt the user
-          } else if (detection && detection.isWaypointMode) {
-            // Waypoint mode — apply laps and show prompt
-            lapMgmt.setLaps(detection.laps);
-            if (detection.laps.length > 0) {
-              const fastest = detection.laps.reduce((min, lap) => (lap.lapTimeMs < min.lapTimeMs ? lap : min), detection.laps[0]);
-              setSelectedLapNumber(fastest.lapNumber);
-            }
-            setDetectedTrack(null);
-            setTrackPromptOpen(true);
-          } else {
-            // No detection at all
-            const nearest = findNearestTrack(validSample.lat, validSample.lon, tracks);
-            setDetectedTrack(nearest as Track | null);
-            setTrackPromptOpen(true);
-          }
-        }
-      }
-    },
-    [selectedCourse, sessionData, lapMgmt, sessionMeta, setCurrentIndex, setSelectedLapNumber]
-  );
-
-  // Wire up sample loading
-  const handleLoadSample = useCallback(async () => {
-    await sessionData.handleLoadSample(
-      handleSelectionChange,
-      (computedLaps, autoSelectLap, autoSelectRef) => {
-        lapMgmt.setLaps(computedLaps);
-        if (autoSelectLap !== undefined) setSelectedLapNumber(autoSelectLap);
-        if (autoSelectRef !== undefined) setReferenceLapNumber(autoSelectRef);
-      }
-    );
-    // Restore session metadata (kart/setup link) for the sample file
-    const sampleFileName = "okc-tillotson-data.dovex";
-    const meta = await getFileMetadata(sampleFileName);
-    sessionMeta.restoreFromMetadata(meta);
-  }, [sessionData, handleSelectionChange, lapMgmt, setSelectedLapNumber, setReferenceLapNumber, sessionMeta]);
-
-  // Wire up reference setting to also clear external ref
+  // Reference-lap handlers: clear the other side when one is set.
   const handleSetReferenceWithClear = useCallback((lapNumber: number) => {
     handleSetReference(lapNumber);
     externalRef.setExternalRefSamples(null);
     externalRef.setExternalRefLabel(null);
   }, [handleSetReference, externalRef]);
 
-  // Wire up external lap selection to clear internal ref
   const handleSelectExternalLapWithClear = useCallback((fileName: string, lapNumber: number) => {
     handleSelectExternalLap(fileName, lapNumber);
     setReferenceLapNumber(null);
   }, [handleSelectExternalLap, setReferenceLapNumber]);
 
   const hasReference = referenceLapNumber !== null || externalRefSamples !== null;
-
-  // Handle course selection from the track prompt dialog
-  const handleTrackPromptSelect = useCallback((sel: TrackCourseSelection) => {
-    handleSelectionChange(sel);
-    if (data) {
-      const computedLaps = lapMgmt.calculateAndSetLaps(sel.course, data.samples);
-      if (computedLaps.length > 0) {
-        const fastest = computedLaps.reduce((min, lap) => (lap.lapTimeMs < min.lapTimeMs ? lap : min), computedLaps[0]);
-        setSelectedLapNumber(fastest.lapNumber);
-      }
-    }
-  }, [handleSelectionChange, data, lapMgmt, setSelectedLapNumber]);
 
   const brakingZoneSettings = useMemo(() => ({
     entryThresholdG: settings.brakingEntryThreshold / 100,
