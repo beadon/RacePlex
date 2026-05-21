@@ -18,6 +18,14 @@ export const MAX_SPEED_MPS = 150;
 /** Standard gravity used when normalizing m/s² accelerometer readings to G. */
 export const STANDARD_GRAVITY_MPS2 = 9.80665;
 
+// ─── Geographic ────────────────────────────────────────────────────────────
+
+/** Mean Earth radius in meters (used by haversine + equirectangular projection). */
+export const EARTH_RADIUS_M = 6_371_000;
+
+/** Meters → feet (used for course-length display + database storage). */
+export const METERS_TO_FEET = 3.28084;
+
 /** Build the three-unit speed triple used on every GpsSample. */
 export function speedTriple(speedMps: number): { speedMps: number; speedMph: number; speedKph: number } {
   return {
@@ -56,7 +64,7 @@ export function normalizeHeading(heading: number): number {
 
 /** Haversine distance between two GPS coordinates, in meters. */
 export function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 6371000;
+  const R = EARTH_RADIUS_M;
   const dLat = (lat2 - lat1) * Math.PI / 180;
   const dLon = (lon2 - lon1) * Math.PI / 180;
   const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +

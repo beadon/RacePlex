@@ -22,11 +22,11 @@
 
 import { GpsSample, Track, Course, Lap, CourseDirection, CourseDetectionResult } from '@/types/racing';
 import { calculateLaps, detectSectorOrder } from './lapCalculation';
-import { findNearestTrack } from './trackUtils';
-import { haversineDistance } from './parserUtils';
+import { findNearestTrack, DEFAULT_TRACK_SEARCH_RADIUS_M } from './trackUtils';
+import { haversineDistance, METERS_TO_FEET } from './parserUtils';
 
-// 5 miles in meters
-const TRACK_SEARCH_RADIUS_M = 8047;
+// 5 miles in meters — re-exported alias for clarity at the call site.
+const TRACK_SEARCH_RADIUS_M = DEFAULT_TRACK_SEARCH_RADIUS_M;
 
 // Speed threshold for waypoint drop (MPH)
 const WAYPOINT_SPEED_THRESHOLD_MPH = 30;
@@ -53,7 +53,7 @@ function calculateAverageLapDistanceFt(samples: GpsSample[], laps: Lap[]): numbe
         samples[i + 1].lat, samples[i + 1].lon
       );
     }
-    totalDistFt += lapDist * 3.28084; // meters to feet
+    totalDistFt += lapDist * METERS_TO_FEET;
   }
 
   return totalDistFt / laps.length;

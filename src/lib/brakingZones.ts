@@ -1,4 +1,5 @@
 import { GpsSample } from '@/types/racing';
+import { MAX_SPEED_MPS, STANDARD_GRAVITY_MPS2, MPH_TO_MPS } from './parserUtils';
 import savitzkyGolay from 'ml-savitzky-golay';
 
 export interface BrakingZone {
@@ -23,9 +24,7 @@ export const DEFAULT_BRAKING_CONFIG: BrakingZoneConfig = {
   smoothingAlpha: 0.4,
 };
 
-const GRAVITY_MPS2 = 9.80665;
 const MIN_SPEED_MPS = 2.0;      // Below this, accel is too noisy (matches gforceCalculation)
-const MAX_SPEED_MPS = 150;       // Reject GPS glitch speeds (matches speed sanity check)
 const MIN_DT_S = 0.02;           // Supports GPS up to 50Hz
 const MAX_DT_S = 2.0;            // Maximum time delta (GPS gap)
 const MAX_ACCEL_G = 3.0;         // Clamp raw accel to ±3G (matches gforceCalculation)
@@ -74,15 +73,15 @@ export function detectBrakingZones(
     }
 
     // Calculate longitudinal acceleration from scalar speed change
-    const speedMpsCurr = curr.speedMph * 0.44704; // mph to m/s
-    const speedMpsPrev = prev.speedMph * 0.44704;
+    const speedMpsCurr = curr.speedMph * MPH_TO_MPS; // mph to m/s
+    const speedMpsPrev = prev.speedMph * MPH_TO_MPS;
 
     // Speed sanity: reject impossible speeds or too-slow samples
     if (speedMpsCurr > MAX_SPEED_MPS || speedMpsPrev > MAX_SPEED_MPS) continue;
     if (speedMpsCurr < MIN_SPEED_MPS && speedMpsPrev < MIN_SPEED_MPS) continue;
 
     const accelG = Math.max(-MAX_ACCEL_G, Math.min(MAX_ACCEL_G,
-      (speedMpsCurr - speedMpsPrev) / dtS / GRAVITY_MPS2
+      (speedMpsCurr - speedMpsPrev) / dtS / STANDARD_GRAVITY_MPS2
     ));
 
     // Apply exponential smoothing
@@ -151,8 +150,8 @@ export function computeBrakingGSeries(
       continue;
     }
 
-    const speedMpsCurr = curr.speedMph * 0.44704;
-    const speedMpsPrev = prev.speedMph * 0.44704;
+    const speedMpsCurr = curr.speedMph * MPH_TO_MPS;
+    const speedMpsPrev = prev.speedMph * MPH_TO_MPS;
 
     // Speed sanity: reject impossible speeds (GPS glitch)
     if (speedMpsCurr > MAX_SPEED_MPS || speedMpsPrev > MAX_SPEED_MPS) {
@@ -168,7 +167,7 @@ export function computeBrakingGSeries(
 
     // Raw longitudinal acceleration, clamped to physical limits
     const rawAccelG = Math.max(-MAX_ACCEL_G, Math.min(MAX_ACCEL_G,
-      (speedMpsCurr - speedMpsPrev) / dtS / GRAVITY_MPS2
+      (speedMpsCurr - speedMpsPrev) / dtS / STANDARD_GRAVITY_MPS2
     ));
 
     // EMA smoothing
@@ -198,7 +197,7 @@ export function computeBrakingGSeriesSG(
 
   // Extract speed in m/s
   const speedMps = samples.map(s => {
-    const v = s.speedMph * 0.44704;
+    const v = s.speedMph * MPH_TO_MPS;
     return (v > MAX_SPEED_MPS || v < 0) ? 0 : v;
   });
 
@@ -226,7 +225,7 @@ export function computeBrakingGSeriesSG(
   return sgResult.map((dvdt: number, i: number) => {
     const speedMs = speedMps[i];
     if (speedMs < MIN_SPEED_MPS) return 0;
-    const g = dvdt / GRAVITY_MPS2;
+    const g = dvdt / STANDARD_GRAVITY_MPS2;
     return Math.max(-MAX_ACCEL_G, Math.min(MAX_ACCEL_G, g));
   });
 }
@@ -257,8 +256,8 @@ function createZone(samples: GpsSample[], startIdx: number, endIdx: number): Bra
     path.push({ lat: samples[i].lat, lon: samples[i].lon });
   }
 
-  const startSpeedMps = startSample.speedMph * 0.44704;
-  const endSpeedMps = endSample.speedMph * 0.44704;
+  const startSpeedMps = startSample.speedMph * MPH_TO_MPS;
+  const endSpeedMps = endSample.speedMph * MPH_TO_MPS;
 
   return {
     start: {

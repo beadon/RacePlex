@@ -1,5 +1,5 @@
 import { GpsSample } from '@/types/racing';
-import { clamp, normalizeHeadingDelta } from './parserUtils';
+import { clamp, normalizeHeadingDelta, STANDARD_GRAVITY_MPS2 } from './parserUtils';
 
 /**
  * G-Force calculation utilities for GPS-derived accelerations
@@ -17,7 +17,7 @@ import { clamp, normalizeHeadingDelta } from './parserUtils';
 
 // Configuration constants
 const G_FORCE_CONFIG = {
-  GRAVITY: 9.80665,        // m/s²
+  GRAVITY: STANDARD_GRAVITY_MPS2, // m/s²
   MAX_G: 3.0,              // reasonable max for karts/racing
   MIN_DT: 0.05,            // minimum time delta in seconds
   MAX_DT: 2.0,             // maximum time delta - larger gaps indicate filtered samples
