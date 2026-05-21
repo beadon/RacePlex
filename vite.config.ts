@@ -1,19 +1,40 @@
-import { defineConfig } from "vite";
+import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
 import { VitePWA } from "vite-plugin-pwa";
 
+const PUBLIC_BACKEND_FALLBACKS = {
+  VITE_SUPABASE_PROJECT_ID: "svjlieovpyiffbqwhtgk",
+  VITE_SUPABASE_PUBLISHABLE_KEY:
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN2amxpZW92cHlpZmZicXdodGdrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEwMDQ1MzcsImV4cCI6MjA4NjU4MDUzN30.-LnwDsiT1vmWxfoLiHlK9hHqCzN9ToHeB6qkH5-A2I4",
+  VITE_SUPABASE_URL: "https://svjlieovpyiffbqwhtgk.supabase.co",
+} as const;
+
 // https://vitejs.dev/config/
-export default defineConfig(({ mode }) => ({
-  server: {
-    host: "::",
-    port: 8080,
-  },
-  plugins: [
-    react(),
-    mode === "development" && componentTagger(),
-    VitePWA({
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), "");
+
+  return {
+    server: {
+      host: "::",
+      port: 8080,
+    },
+    define: {
+      "import.meta.env.VITE_SUPABASE_PROJECT_ID": JSON.stringify(
+        env.VITE_SUPABASE_PROJECT_ID || PUBLIC_BACKEND_FALLBACKS.VITE_SUPABASE_PROJECT_ID,
+      ),
+      "import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY": JSON.stringify(
+        env.VITE_SUPABASE_PUBLISHABLE_KEY || PUBLIC_BACKEND_FALLBACKS.VITE_SUPABASE_PUBLISHABLE_KEY,
+      ),
+      "import.meta.env.VITE_SUPABASE_URL": JSON.stringify(
+        env.VITE_SUPABASE_URL || PUBLIC_BACKEND_FALLBACKS.VITE_SUPABASE_URL,
+      ),
+    },
+    plugins: [
+      react(),
+      mode === "development" && componentTagger(),
+      VitePWA({
       registerType: "autoUpdate",
       includeAssets: ["favicon.png", "favicon.ico", "robots.txt", "tracks.json", "samples/**/*"],
       manifest: {
@@ -80,11 +101,12 @@ export default defineConfig(({ mode }) => ({
           },
         ],
       },
-    }),
-  ].filter(Boolean),
-  resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
+      }),
+    ].filter(Boolean),
+    resolve: {
+      alias: {
+        "@": path.resolve(__dirname, "./src"),
+      },
     },
-  },
-}));
+  };
+});
