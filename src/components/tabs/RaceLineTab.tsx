@@ -3,98 +3,66 @@ import { ResizableSplit } from "@/components/ResizableSplit";
 import { RaceLineView } from "@/components/RaceLineView";
 import { TelemetryChart } from "@/components/TelemetryChart";
 import { RangeSlider } from "@/components/RangeSlider";
-import { GpsSample, Course, FieldMapping, ParserStats } from "@/types/racing";
+import { useSessionContext } from "@/contexts/SessionContext";
 
 interface RaceLineTabProps {
-  visibleSamples: GpsSample[];
-  filteredSamples: GpsSample[];
-  referenceSamples: GpsSample[];
-  currentIndex: number;
-  course: Course | null;
-  bounds: { minLat: number; maxLat: number; minLon: number; maxLon: number };
-  paceDiff: number | null;
-  paceDiffLabel: "best" | "ref";
-  deltaTopSpeed: number | null;
-  deltaMinSpeed: number | null;
-  referenceLapNumber: number | null;
-  lapToFastestDelta: number | null;
   showOverlays: boolean;
-  lapTimeMs: number | null;
-  refAvgTopSpeed: number | null;
-  refAvgMinSpeed: number | null;
-  sessionGpsPoint?: { lat: number; lon: number };
-  sessionStartDate?: Date;
-  cachedWeatherStation: import("@/lib/weatherService").WeatherStation | null;
-  onWeatherStationResolved: (station: import("@/lib/weatherService").WeatherStation) => void;
-  isAllLaps?: boolean;
-  parserStats?: ParserStats | null;
-  // Telemetry chart props
-  fieldMappings: FieldMapping[];
-  onScrub: (index: number) => void;
-  onFieldToggle: (fieldName: string) => void;
-  paceData: (number | null)[];
-  referenceSpeedData: (number | null)[];
-  hasReference: boolean;
-  // Range slider props
-  visibleRange: [number, number];
-  onRangeChange: (range: [number, number]) => void;
-  minRange: number;
-  formatRangeLabel: (idx: number) => string;
 }
 
-export const RaceLineTab = memo(function RaceLineTab(props: RaceLineTabProps) {
+export const RaceLineTab = memo(function RaceLineTab({ showOverlays }: RaceLineTabProps) {
+  const s = useSessionContext();
   return (
     <ResizableSplit
       defaultRatio={0.7}
       topPanel={
         <RaceLineView
-          samples={props.visibleSamples}
-          allSamples={props.filteredSamples}
-          referenceSamples={props.referenceSamples}
-          currentIndex={props.currentIndex}
-          course={props.course}
-          bounds={props.bounds}
-          paceDiff={props.paceDiff}
-          paceDiffLabel={props.paceDiffLabel}
-          deltaTopSpeed={props.deltaTopSpeed}
-          deltaMinSpeed={props.deltaMinSpeed}
-          referenceLapNumber={props.referenceLapNumber}
-          lapToFastestDelta={props.lapToFastestDelta}
-          showOverlays={props.showOverlays}
-          lapTimeMs={props.lapTimeMs}
-          refAvgTopSpeed={props.refAvgTopSpeed}
-          refAvgMinSpeed={props.refAvgMinSpeed}
-          sessionGpsPoint={props.sessionGpsPoint}
-          sessionStartDate={props.sessionStartDate}
-          cachedWeatherStation={props.cachedWeatherStation}
-          onWeatherStationResolved={props.onWeatherStationResolved}
-          isAllLaps={props.isAllLaps}
-          parserStats={props.parserStats}
+          samples={s.visibleSamples}
+          allSamples={s.filteredSamples}
+          referenceSamples={s.referenceSamples}
+          currentIndex={s.currentIndex}
+          course={s.course}
+          bounds={s.bounds!}
+          paceDiff={s.paceDiff}
+          paceDiffLabel={s.paceDiffLabel}
+          deltaTopSpeed={s.deltaTopSpeed}
+          deltaMinSpeed={s.deltaMinSpeed}
+          referenceLapNumber={s.referenceLapNumber}
+          lapToFastestDelta={s.lapToFastestDelta}
+          showOverlays={showOverlays}
+          lapTimeMs={s.selectedLapTimeMs}
+          refAvgTopSpeed={s.refAvgTopSpeed}
+          refAvgMinSpeed={s.refAvgMinSpeed}
+          sessionGpsPoint={s.sessionGpsPoint}
+          sessionStartDate={s.sessionStartDate}
+          cachedWeatherStation={s.cachedWeatherStation}
+          onWeatherStationResolved={s.onWeatherStationResolved}
+          isAllLaps={s.isAllLaps}
+          parserStats={s.parserStats}
         />
       }
       bottomPanel={
         <div className="h-full flex flex-col">
           <div className="flex-1 min-h-0">
             <TelemetryChart
-              samples={props.visibleSamples}
-              fieldMappings={props.fieldMappings}
-              currentIndex={props.currentIndex}
-              onScrub={props.onScrub}
-              onFieldToggle={props.onFieldToggle}
-              paceData={props.paceData}
-              referenceSpeedData={props.referenceSpeedData}
-              hasReference={props.hasReference}
+              samples={s.visibleSamples}
+              fieldMappings={s.fieldMappings}
+              currentIndex={s.currentIndex}
+              onScrub={s.onScrub}
+              onFieldToggle={s.onFieldToggle}
+              paceData={s.paceData}
+              referenceSpeedData={s.referenceSpeedData}
+              hasReference={s.hasReference}
             />
           </div>
-          {props.filteredSamples.length > 0 && (
+          {s.filteredSamples.length > 0 && (
             <div className="shrink-0 px-4 py-2 border-t border-border bg-muted/30">
               <RangeSlider
                 min={0}
-                max={props.filteredSamples.length - 1}
-                value={props.visibleRange}
-                onChange={props.onRangeChange}
-                minRange={props.minRange}
-                formatLabel={props.formatRangeLabel}
+                max={s.filteredSamples.length - 1}
+                value={s.visibleRange}
+                onChange={s.onRangeChange}
+                minRange={s.minRange}
+                formatLabel={s.formatRangeLabel}
               />
             </div>
           )}

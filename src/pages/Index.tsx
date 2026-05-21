@@ -37,6 +37,7 @@ import { useSessionMetadata } from "@/hooks/useSessionMetadata";
 import { useVideoSync } from "@/hooks/useVideoSync";
 import { SettingsProvider } from "@/contexts/SettingsContext";
 import { DeviceProvider } from "@/contexts/DeviceContext";
+import { SessionProvider, type SessionContextValue } from "@/contexts/SessionContext";
 
 
 type TopPanelView = "raceline" | "laptable" | "graphview" | "labs";
@@ -294,6 +295,81 @@ export default function Index() {
     () => referenceSpeedData.slice(visibleRange[0], visibleRange[1] + 1),
     [referenceSpeedData, visibleRange]
   );
+
+  // ── SessionContext: everything the three main view tabs need ────────────
+  // Tabs read this via `useSessionContext()` instead of receiving 25+ props.
+  const sessionContextValue = useMemo<SessionContextValue>(() => ({
+    data,
+    visibleSamples,
+    filteredSamples,
+    allSamples: data?.samples ?? [],
+    referenceSamples,
+    currentSample,
+    fieldMappings,
+    currentIndex,
+    visibleRange,
+    minRange,
+    course: selectedCourse,
+    bounds: filteredBounds ?? null,
+    laps,
+    selectedLapNumber,
+    selectedLapTimeMs,
+    referenceLapNumber,
+    isAllLaps,
+    hasReference,
+    paceDiff,
+    paceDiffLabel,
+    paceData: slicedPaceData,
+    referenceSpeedData: slicedReferenceSpeedData,
+    deltaTopSpeed,
+    deltaMinSpeed,
+    lapToFastestDelta,
+    refAvgTopSpeed,
+    refAvgMinSpeed,
+    externalRefLabel,
+    savedFiles,
+    sessionGpsPoint,
+    sessionStartDate: data?.startDate,
+    sessionFileName: currentFileName,
+    sessionKartId,
+    sessionSetupId,
+    cachedWeatherStation,
+    parserStats: data?.parserStats,
+    vehicles: vehicleManager.vehicles,
+    setups: setupManager.setups,
+    templates: templateManager.templates,
+    videoState: videoSync.state,
+    videoActions: videoSync.actions,
+    onVideoLoadedMetadata: videoSync.handleLoadedMetadata,
+    onScrub: handleScrub,
+    onLapSelect: handleLapSelect,
+    onSetReference: handleSetReferenceWithClear,
+    onSelectExternalLap: handleSelectExternalLapWithClear,
+    onClearExternalRef: handleClearExternalRef,
+    onLoadFileForRef: handleLoadFileForRef,
+    onRefreshSavedFiles: refreshSavedFiles,
+    onRangeChange: handleRangeChange,
+    onFieldToggle: sessionData.handleFieldToggle,
+    onWeatherStationResolved: sessionMeta.handleWeatherStationResolved,
+    onSaveSessionSetup: sessionMeta.handleSaveSessionSetup,
+    formatRangeLabel,
+  }), [
+    data, visibleSamples, filteredSamples, referenceSamples, currentSample, fieldMappings,
+    currentIndex, visibleRange, minRange,
+    selectedCourse, filteredBounds,
+    laps, selectedLapNumber, selectedLapTimeMs, referenceLapNumber, isAllLaps,
+    hasReference, paceDiff, paceDiffLabel, slicedPaceData, slicedReferenceSpeedData,
+    deltaTopSpeed, deltaMinSpeed, lapToFastestDelta, refAvgTopSpeed, refAvgMinSpeed,
+    externalRefLabel, savedFiles,
+    sessionGpsPoint, currentFileName, sessionKartId, sessionSetupId, cachedWeatherStation,
+    vehicleManager.vehicles, setupManager.setups, templateManager.templates,
+    videoSync.state, videoSync.actions, videoSync.handleLoadedMetadata,
+    handleScrub, handleLapSelect, handleSetReferenceWithClear,
+    handleSelectExternalLapWithClear, handleClearExternalRef, handleLoadFileForRef,
+    refreshSavedFiles, handleRangeChange,
+    sessionData.handleFieldToggle, sessionMeta.handleWeatherStationResolved,
+    sessionMeta.handleSaveSessionSetup, formatRangeLabel,
+  ]);
 
   // Shared FileManagerDrawer props
   const fileManagerProps = useMemo(() => ({
@@ -670,6 +746,7 @@ export default function Index() {
     return (
     <DeviceProvider>
     <SettingsProvider value={settingsContextValue}>
+    <SessionProvider value={sessionContextValue}>
     <div className="h-screen bg-background flex flex-col overflow-hidden">
       <header className="border-b border-border px-4 py-2 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-3">
@@ -721,102 +798,9 @@ export default function Index() {
 
 
         <div className="flex-1 min-h-0 overflow-hidden">
-          {topPanelView === "raceline" && (
-            <RaceLineTab
-              visibleSamples={visibleSamples}
-              filteredSamples={filteredSamples}
-              referenceSamples={referenceSamples}
-              currentIndex={currentIndex}
-              course={selectedCourse}
-              bounds={filteredBounds!}
-              paceDiff={paceDiff}
-              paceDiffLabel={paceDiffLabel}
-              deltaTopSpeed={deltaTopSpeed}
-              deltaMinSpeed={deltaMinSpeed}
-              referenceLapNumber={referenceLapNumber}
-              lapToFastestDelta={lapToFastestDelta}
-              showOverlays={showOverlays}
-              lapTimeMs={selectedLapTimeMs}
-              refAvgTopSpeed={refAvgTopSpeed}
-              refAvgMinSpeed={refAvgMinSpeed}
-              sessionGpsPoint={sessionGpsPoint}
-              sessionStartDate={data?.startDate}
-              cachedWeatherStation={cachedWeatherStation}
-              onWeatherStationResolved={sessionMeta.handleWeatherStationResolved}
-              fieldMappings={fieldMappings}
-              onScrub={handleScrub}
-              onFieldToggle={sessionData.handleFieldToggle}
-              paceData={slicedPaceData}
-              referenceSpeedData={slicedReferenceSpeedData}
-              hasReference={hasReference}
-              visibleRange={visibleRange}
-              onRangeChange={handleRangeChange}
-              minRange={minRange}
-              formatRangeLabel={formatRangeLabel}
-              isAllLaps={isAllLaps}
-              parserStats={data?.parserStats}
-            />
-          )}
-          {topPanelView === "laptable" && (
-            <LapTimesTab
-              laps={laps}
-              course={selectedCourse}
-              samples={data?.samples}
-              onLapSelect={handleLapSelect}
-              selectedLapNumber={selectedLapNumber}
-              referenceLapNumber={referenceLapNumber}
-              onSetReference={handleSetReferenceWithClear}
-              externalRefLabel={externalRefLabel}
-              savedFiles={savedFiles}
-              onLoadFileForRef={handleLoadFileForRef}
-              onSelectExternalLap={handleSelectExternalLapWithClear}
-              onClearExternalRef={handleClearExternalRef}
-              onRefreshSavedFiles={refreshSavedFiles}
-            />
-          )}
-          {topPanelView === "graphview" && (
-            <GraphViewTab
-              visibleSamples={visibleSamples}
-              filteredSamples={filteredSamples}
-              referenceSamples={referenceSamples}
-              currentIndex={currentIndex}
-              onScrub={handleScrub}
-              fieldMappings={fieldMappings}
-              course={selectedCourse}
-              lapTimeMs={selectedLapTimeMs}
-              paceDiff={paceDiff}
-              paceDiffLabel={paceDiffLabel}
-              deltaTopSpeed={deltaTopSpeed}
-              deltaMinSpeed={deltaMinSpeed}
-              referenceLapNumber={referenceLapNumber}
-              lapToFastestDelta={lapToFastestDelta}
-              bounds={filteredBounds!}
-              sessionGpsPoint={sessionGpsPoint}
-              sessionStartDate={data?.startDate}
-              cachedWeatherStation={cachedWeatherStation}
-              onWeatherStationResolved={sessionMeta.handleWeatherStationResolved}
-              vehicles={vehicleManager.vehicles}
-              setups={setupManager.setups}
-              templates={templateManager.templates}
-              sessionKartId={sessionKartId}
-              sessionSetupId={sessionSetupId}
-              onSaveSessionSetup={sessionMeta.handleSaveSessionSetup}
-              visibleRange={visibleRange}
-              onRangeChange={handleRangeChange}
-              minRange={minRange}
-              formatRangeLabel={formatRangeLabel}
-              videoState={videoSync.state}
-              videoActions={videoSync.actions}
-              onVideoLoadedMetadata={videoSync.handleLoadedMetadata}
-              currentSample={currentSample}
-              sessionFileName={currentFileName}
-              isAllLaps={isAllLaps}
-              allSamples={data?.samples ?? []}
-              laps={laps}
-              selectedLapNumber={selectedLapNumber}
-              paceData={slicedPaceData}
-            />
-          )}
+          {topPanelView === "raceline" && <RaceLineTab showOverlays={showOverlays} />}
+          {topPanelView === "laptable" && <LapTimesTab />}
+          {topPanelView === "graphview" && <GraphViewTab />}
           {topPanelView === "labs" && settings.enableLabs && (
             <LabsTab />
           )}
@@ -834,6 +818,7 @@ export default function Index() {
         detectionResult={detectionResult}
       />
     </div>
+    </SessionProvider>
     </SettingsProvider>
     </DeviceProvider>
   );

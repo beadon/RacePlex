@@ -1,41 +1,25 @@
 import { memo } from "react";
 import { LapTable } from "@/components/LapTable";
-import { Lap, Course, GpsSample } from "@/types/racing";
-import { FileEntry } from "@/lib/fileStorage";
+import { useSessionContext } from "@/contexts/SessionContext";
 
-interface LapTimesTabProps {
-  laps: Lap[];
-  course: Course | null;
-  samples?: GpsSample[];
-  onLapSelect: (lap: Lap) => void;
-  selectedLapNumber: number | null;
-  referenceLapNumber: number | null;
-  onSetReference: (lapNumber: number) => void;
-  externalRefLabel: string | null;
-  savedFiles: FileEntry[];
-  onLoadFileForRef: (fileName: string) => Promise<Array<{ lapNumber: number; lapTimeMs: number }> | null>;
-  onSelectExternalLap: (fileName: string, lapNumber: number) => void;
-  onClearExternalRef: () => void;
-  onRefreshSavedFiles: () => void;
-}
-
-export const LapTimesTab = memo(function LapTimesTab(props: LapTimesTabProps) {
+export const LapTimesTab = memo(function LapTimesTab() {
+  const s = useSessionContext();
   return (
     <div className="h-full overflow-hidden">
       <LapTable
-        laps={props.laps}
-        course={props.course}
-        samples={props.samples}
-        onLapSelect={props.onLapSelect}
-        selectedLapNumber={props.selectedLapNumber}
-        referenceLapNumber={props.referenceLapNumber}
-        onSetReference={props.onSetReference}
-        externalRefLabel={props.externalRefLabel}
-        savedFiles={props.savedFiles}
-        onLoadFileForRef={props.onLoadFileForRef}
-        onSelectExternalLap={props.onSelectExternalLap}
-        onClearExternalRef={props.onClearExternalRef}
-        onRefreshSavedFiles={props.onRefreshSavedFiles}
+        laps={s.laps}
+        course={s.course}
+        samples={s.allSamples}
+        onLapSelect={s.onLapSelect}
+        selectedLapNumber={s.selectedLapNumber}
+        referenceLapNumber={s.referenceLapNumber}
+        onSetReference={s.onSetReference}
+        externalRefLabel={s.externalRefLabel}
+        savedFiles={s.savedFiles}
+        onLoadFileForRef={s.onLoadFileForRef}
+        onSelectExternalLap={s.onSelectExternalLap}
+        onClearExternalRef={s.onClearExternalRef}
+        onRefreshSavedFiles={s.onRefreshSavedFiles}
       />
     </div>
   );
