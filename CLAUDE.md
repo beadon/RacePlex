@@ -126,7 +126,17 @@ src/
 │   ├── videoExport.ts         # VideoWebCodecs H.264+AAC, fallback MediaRecorder fix-webm-duration)
 │   ├── overlayCanvasRenderer.ts # Canvas-based overlay drawing for export
 │   ├── graphPrefsStorage.ts   # IndexedDB: per-session graph selections
-│   ├── bleDatalogger.ts       # Web Bluetooth: DovesLapTimer BLE protocol (files + settings + tracks)
+│   ├── bleDatalogger.ts       # Legacy barrel — re-exports from `ble/` for back-compat
+│   ├── ble/                   # Web Bluetooth: DovesLapTimer protocol, split per-concern
+│   │   ├── index.ts             # Public API barrel
+│   │   ├── types.ts             # BleConnection, FileInfo, DownloadProgress, BatteryInfo
+│   │   ├── internal.ts          # UUIDs, debug logging (not exported)
+│   │   ├── format.ts            # formatBytes / formatSpeed / formatTime
+│   │   ├── connection.ts        # isBleSupported, connectToDevice, disconnect
+│   │   ├── fileTransfer.ts      # LIST + GET file protocol (data log download)
+│   │   ├── battery.ts           # BATT protocol
+│   │   ├── settings.ts          # SLIST/SGET/SSET/SRESET settings protocol
+│   │   └── trackSync.ts         # TLIST/TGET/TPUT/TDEL track-file protocol
 │   ├── deviceTrackSync.ts     # Track sync logic: merge/compare app↔device tracks, coordinate diff
 │   ├── deviceSettingsSchema.ts # Device settings key definitions + validation
 │   ├── weatherService.ts      # OpenWeatherMap API (online-only)
@@ -279,7 +289,7 @@ The `course_layouts` table stores polyline drawings of track layouts (1:1 with c
 
 ---
 
-## BLE Integration (`src/lib/bleDatalogger.ts`)
+## BLE Integration (`src/lib/ble/`)
 
 Connects to **DovesLapTimer** ESP32 device via Web Bluetooth.
 
