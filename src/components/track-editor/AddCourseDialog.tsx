@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { Check, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,7 +10,10 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { VisualEditor, EditorModeToggle } from './VisualEditor';
+import { EditorModeToggle } from './EditorModeToggle';
+const VisualEditor = lazy(() =>
+  import('./VisualEditor').then((m) => ({ default: m.VisualEditor })),
+);
 import { CourseForm } from './CourseForm';
 import type { CourseFormProps } from '@/hooks/useTrackEditorForm';
 import type { GpsPoint } from './VisualEditor';
@@ -54,16 +58,18 @@ export function AddCourseDialog({
           <CourseForm {...courseFormProps} onSubmit={onSubmit} onCancel={onCancel} submitLabel="Create Course" />
         ) : (
           <div className="space-y-4">
-            <VisualEditor
-              startFinishA={startFinishA}
-              startFinishB={startFinishB}
-              sector2={sector2}
-              sector3={sector3}
-              initialCenter={initialCenter}
-              onStartFinishChange={onStartFinishChange}
-              onSector2Change={onSector2Change}
-              onSector3Change={onSector3Change}
-            />
+            <Suspense fallback={null}>
+              <VisualEditor
+                startFinishA={startFinishA}
+                startFinishB={startFinishB}
+                sector2={sector2}
+                sector3={sector3}
+                initialCenter={initialCenter}
+                onStartFinishChange={onStartFinishChange}
+                onSector2Change={onSector2Change}
+                onSector3Change={onSector3Change}
+              />
+            </Suspense>
             <div className="space-y-3">
               <div>
                 <Label htmlFor="addCourseName">Course Name</Label>

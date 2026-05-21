@@ -136,5 +136,35 @@ export default defineConfig(({ mode }) => {
         "@": path.resolve(__dirname, "./src"),
       },
     },
+    build: {
+      // Split heavy vendor libs into their own chunks so they cache
+      // independently across deploys. Each entry below becomes a separate
+      // file in /dist/assets; a deploy that only touches app code lets users
+      // re-use the existing vendor chunks instead of re-downloading them.
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            "vendor-react": ["react", "react-dom", "react-router-dom"],
+            "vendor-query": ["@tanstack/react-query"],
+            "vendor-leaflet": ["leaflet"],
+            "vendor-supabase": ["@supabase/supabase-js"],
+            // Radix is many small packages; group them into one chunk.
+            "vendor-radix": [
+              "@radix-ui/react-collapsible",
+              "@radix-ui/react-dialog",
+              "@radix-ui/react-label",
+              "@radix-ui/react-select",
+              "@radix-ui/react-separator",
+              "@radix-ui/react-slider",
+              "@radix-ui/react-slot",
+              "@radix-ui/react-switch",
+              "@radix-ui/react-tabs",
+              "@radix-ui/react-toast",
+              "@radix-ui/react-tooltip",
+            ],
+          },
+        },
+      },
+    },
   };
 });

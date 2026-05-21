@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { Check, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,7 +10,10 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { VisualEditor, EditorModeToggle } from './VisualEditor';
+import { EditorModeToggle } from './EditorModeToggle';
+const VisualEditor = lazy(() =>
+  import('./VisualEditor').then((m) => ({ default: m.VisualEditor })),
+);
 import { CourseForm } from './CourseForm';
 import type { CourseFormProps } from '@/hooks/useTrackEditorForm';
 import type { GpsPoint } from './VisualEditor';
@@ -65,17 +69,19 @@ export function AddTrackDialog({
                 <Input id="newCourseName" value={courseFormProps.courseName} onChange={(e) => courseFormProps.onCourseNameChange(e.target.value)} onKeyDownCapture={(e) => e.stopPropagation()} placeholder="e.g., Full Track" className="font-mono" />
               </div>
             </div>
-            <VisualEditor
-              startFinishA={startFinishA}
-              startFinishB={startFinishB}
-              sector2={sector2}
-              sector3={sector3}
-              isNewTrack={true}
-              initialCenter={initialCenter}
-              onStartFinishChange={onStartFinishChange}
-              onSector2Change={onSector2Change}
-              onSector3Change={onSector3Change}
-            />
+            <Suspense fallback={null}>
+              <VisualEditor
+                startFinishA={startFinishA}
+                startFinishB={startFinishB}
+                sector2={sector2}
+                sector3={sector3}
+                isNewTrack={true}
+                initialCenter={initialCenter}
+                onStartFinishChange={onStartFinishChange}
+                onSector2Change={onSector2Change}
+                onSector3Change={onSector3Change}
+              />
+            </Suspense>
             <div className="flex gap-2">
               <Button onClick={onSubmit} className="flex-1" disabled={!courseFormProps.trackName.trim() || !courseFormProps.courseName.trim() || !courseFormProps.latA || !courseFormProps.lonA || !courseFormProps.latB || !courseFormProps.lonB}>
                 <Check className="w-4 h-4 mr-2" />

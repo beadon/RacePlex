@@ -1,14 +1,27 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, lazy, Suspense } from "react";
 import { Gauge, Map, ListOrdered, BarChart3, FolderOpen, Play, Pause, Eye, EyeOff, FlaskConical } from "lucide-react";
 import { LandingPage } from "@/components/LandingPage";
 import { TrackEditor } from "@/components/TrackEditor"; // still used in compact header
 import { RaceLineTab } from "@/components/tabs/RaceLineTab";
 import { LapTimesTab } from "@/components/tabs/LapTimesTab";
-import { GraphViewTab } from "@/components/tabs/GraphViewTab";
-import { LabsTab } from "@/components/tabs/LabsTab";
+// Heavy tabs lazy-loaded so the initial bundle doesn't carry their deps.
+// GraphView pulls in the multi-series canvas chart + InfoBox + MiniMap; Labs is
+// behind a settings flag and almost never opened. Both load on first user click
+// of their respective tab.
+const GraphViewTab = lazy(() =>
+  import("@/components/tabs/GraphViewTab").then((m) => ({ default: m.GraphViewTab })),
+);
+const LabsTab = lazy(() =>
+  import("@/components/tabs/LabsTab").then((m) => ({ default: m.LabsTab })),
+);
 import { InstallPrompt } from "@/components/InstallPrompt";
 import { SettingsModal } from "@/components/SettingsModal";
-import { FileManagerDrawer } from "@/components/FileManagerDrawer";
+// FileManagerDrawer is a slide-out that only opens on user click. Lazy-loading
+// it keeps its transitive deps (drawer tabs, kart/setup/template managers,
+// device manager UI) out of the initial bundle.
+const FileManagerDrawer = lazy(() =>
+  import("@/components/FileManagerDrawer").then((m) => ({ default: m.FileManagerDrawer })),
+);
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -305,7 +318,9 @@ export default function Index() {
             isLoadingSample={isLoadingSample}
             enableAdmin={enableAdmin}
           />
-          <FileManagerDrawer {...fileManagerProps} />
+          <Suspense fallback={null}>
+            <FileManagerDrawer {...fileManagerProps} />
+          </Suspense>
         </>
       </DeviceProvider>
     );
@@ -370,14 +385,16 @@ export default function Index() {
         <div className="flex-1 min-h-0 overflow-hidden">
           {topPanelView === "raceline" && <RaceLineTab showOverlays={showOverlays} />}
           {topPanelView === "laptable" && <LapTimesTab />}
-          {topPanelView === "graphview" && <GraphViewTab />}
-          {topPanelView === "labs" && settings.enableLabs && (
-            <LabsTab />
-          )}
+          <Suspense fallback={null}>
+            {topPanelView === "graphview" && <GraphViewTab />}
+            {topPanelView === "labs" && settings.enableLabs && <LabsTab />}
+          </Suspense>
         </div>
       </main>
       <InstallPrompt />
-      <FileManagerDrawer {...fileManagerProps} />
+      <Suspense fallback={null}>
+        <FileManagerDrawer {...fileManagerProps} />
+      </Suspense>
       <TrackPromptDialog
         open={trackPromptOpen}
         onOpenChange={setTrackPromptOpen}

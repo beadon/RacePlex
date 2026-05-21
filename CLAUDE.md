@@ -400,6 +400,38 @@ and push to `main` and shows up as its own status check + README badge.
 
 ---
 
+## Bundle Splitting / Code-Splitting
+
+The initial bundle is kept small via `React.lazy` boundaries plus
+`manualChunks` vendor splitting in `vite.config.ts`. Keep this in mind when
+adding imports — pulling a lazy module into an eagerly-imported file
+re-merges it into the main chunk.
+
+**Lazy-loaded (off the initial path) — loaded on first use:**
+- Routes: `Login`, `Admin`, `Register`, `Privacy` (`App.tsx`, wrapped in `<Suspense>`)
+- Pro view: `GraphViewTab` and `LabsTab` (`Index.tsx`)
+- `FileManagerDrawer` (slide-out drawer, `Index.tsx`)
+- `DataloggerDownload` (BLE entry point; keeps `lib/ble/*` out of initial bundle — `FileImport.tsx`, `drawer/FilesTab.tsx`)
+- `VisualEditor` (Leaflet drawing tools; `TrackEditor.tsx`, `track-editor/AddCourseDialog.tsx`, `track-editor/AddTrackDialog.tsx`, `admin/CoursesTab.tsx`)
+
+**`EditorModeToggle` lives in its own file** (`track-editor/EditorModeToggle.tsx`)
+so consumers can import the tiny toggle statically while `VisualEditor` stays
+lazy. Import the toggle from `./EditorModeToggle`, never from `./VisualEditor`.
+
+**Vendor chunks** (`manualChunks` in `vite.config.ts`): `vendor-react`,
+`vendor-query`, `vendor-leaflet`, `vendor-supabase`, `vendor-radix`. These cache
+independently across deploys so app-only changes don't re-download vendor code.
+
+> Lazy components must be rendered inside a `<Suspense>` boundary. Use
+> `lazy(() => import('…').then((m) => ({ default: m.Named })))` for the
+> named-export components in this codebase.
+>
+> **Known follow-up:** `vendor-supabase` is still on the initial path because
+> `AuthProvider` (`App.tsx`) and `SubmitTrackDialog` import the client eagerly.
+> Deferring it would require gating the auth bootstrap on `VITE_ENABLE_ADMIN`.
+
+---
+
 ## Key Conventions
 
 - **No server when client works** — this is the #1 rule
