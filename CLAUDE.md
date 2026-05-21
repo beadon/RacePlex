@@ -373,8 +373,9 @@ npm test          # Vitest in watch mode
 npm run test:run  # Vitest single pass (CI-style)
 ```
 
-CI (`.github/workflows/ci.yml`) runs lint + typecheck + `test:run` + build on
-every PR and push to `main`.
+CI is split into four parallel workflows under `.github/workflows/`
+(`lint.yml`, `typecheck.yml`, `test.yml`, `build.yml`). Each runs on every PR
+and push to `main` and shows up as its own status check + README badge.
 
 ---
 
