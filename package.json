@@ -23,6 +23,8 @@
     "test": "vitest",
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
+    "coverage:badge": "node scripts/coverage-badge.mjs",
+    "coverage:summary": "node scripts/coverage-summary.mjs",
     "typecheck": "tsc -b"
   },
   "dependencies": {
