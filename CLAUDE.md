@@ -16,6 +16,35 @@
 3. **Update README.md** when adding parsers, changing env vars, or modifying build params.
 4. **Update credits** (in README) when adding new FOSS dependencies.
 5. **Never do on the server what you can do on the client.**
+6. **Add tests when possible**: New parsers, pure utilities, and protocol/format logic should ship with Vitest coverage. Bug fixes should add a regression test that fails before the fix. Don't leave testable logic untested.
+7. **Keep `CHANGELOG.md` updated**: Add user-facing changes under the `[Unreleased]` heading (Keep a Changelog format) as you make them — don't wait for release time. Cut a new version section + tag when releasing.
+8. **Keep it professional**: This is a public, released OSS project (v1.5.0+). Hold the bar — see the standards below.
+
+---
+
+## Code Quality & Professional Standards
+
+This repo is public, released, and CI-gated. Treat every change as if a stranger
+will read it tomorrow.
+
+- **Green before merge**: `npm run lint`, `npm run typecheck`, `npm run test:run`,
+  and `npm run build` must all pass. CI runs them as four separate workflows on
+  every PR — don't merge red.
+- **Tests are part of the change, not a follow-up.** See Golden Rule #6.
+- **Changelog is part of the change.** See Golden Rule #7.
+- **Docs stay in sync**: update `README.md`, this file, and the in-app
+  `CreditsDialog.tsx` alongside the code that makes them stale (parsers, env
+  vars, dependencies, architecture). The README Credits list and `CreditsDialog`
+  must agree.
+- **Small, focused PRs** with clear commit messages explaining the *why*. Prefer
+  a topic branch + PR over committing to `main` directly.
+- **No dead code, no boilerplate cruft**: delete unused code rather than
+  commenting it out; no leftover `console.log`, no Lovable scaffolding defaults.
+- **Comments explain *why*, not *what*** — only where the reason is non-obvious.
+- **Respect the bundle budget**: keep lazy boundaries and vendor `manualChunks`
+  intact (see Bundle Splitting below) so the initial payload stays small.
+- **Honor the conventions below** (Tailwind tokens, composable hooks, parser
+  contract, gated admin code). Consistency is a feature.
 
 ---
 
