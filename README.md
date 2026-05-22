@@ -7,6 +7,7 @@
 [![Typecheck](https://github.com/TheAngryRaven/DovesDataViewer/actions/workflows/typecheck.yml/badge.svg)](https://github.com/TheAngryRaven/DovesDataViewer/actions/workflows/typecheck.yml)
 [![Test](https://github.com/TheAngryRaven/DovesDataViewer/actions/workflows/test.yml/badge.svg)](https://github.com/TheAngryRaven/DovesDataViewer/actions/workflows/test.yml)
 [![Build](https://github.com/TheAngryRaven/DovesDataViewer/actions/workflows/build.yml/badge.svg)](https://github.com/TheAngryRaven/DovesDataViewer/actions/workflows/build.yml)
+[![Coverage](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/TheAngryRaven/DovesDataViewer/badges/coverage-badge.json)](https://github.com/TheAngryRaven/DovesDataViewer/actions/workflows/coverage.yml)
 
 🌐 **Live Demo:** [HackTheTrack.net](https://hackthetrack.net)  
 🔧 **Hardware Project:** [DovesDataLogger on GitHub](https://github.com/TheAngryRaven/DovesDataLogger)
