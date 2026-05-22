@@ -5,29 +5,27 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-> This changelog was introduced at the `1.0.0` release. Entries before `1.0.0`
-> are reconstructed from git history and grouped by theme rather than exhaustive
-> per-commit detail.
+> This changelog was introduced at the `1.5.0` release. An early `V1.0.0` tag
+> exists from March 2026, but predates the changelog; no per-version records
+> were kept between it and `1.5.0`. The `1.5.0` entry below is reconstructed
+> from git history and grouped by theme rather than exhaustive per-commit
+> detail.
 
 ## [Unreleased]
 
-### Added
-- Open-source project hygiene: `CONTRIBUTING.md`, `SECURITY.md`, this
-  `CHANGELOG.md`, GitHub issue/PR templates, and Dependabot configuration.
+## [1.5.0] - 2026-05-22
+
+The first changelogged release. Dove's DataViewer is a feature-complete,
+offline-first, installable PWA for viewing and analyzing motorsport telemetry —
+live at [hackthetrack.net](https://hackthetrack.net). This release also adds the
+open-source project scaffolding and a bundle-size pass.
+
+### Added — Open Source & Tooling
+- Open-source project hygiene: `CONTRIBUTING.md`, `SECURITY.md`,
+  `CODE_OF_CONDUCT.md`, this `CHANGELOG.md`, GitHub issue/PR templates, and
+  Dependabot configuration.
 - README **Credits** and **License** sections; populated `package.json`
   metadata (name, version, license, repository, author).
-
-### Changed
-- Code-split the bundle with `React.lazy` boundaries and `manualChunks` vendor
-  splitting, shrinking the initial gzip payload (~403 KB → ~294 KB) by deferring
-  admin, pro view, file-manager drawer, BLE download, and the Leaflet editor off
-  the first-load path.
-
-## [1.0.0] - 2026-05-22
-
-First tagged release. Dove's DataViewer is a feature-complete, offline-first,
-installable PWA for viewing and analyzing motorsport telemetry — live at
-[hackthetrack.net](https://hackthetrack.net).
 
 ### Added — File Formats
 - Auto-detecting import for UBX (u-blox), VBO (Racelogic/RaceBox), Dove &
@@ -80,6 +78,10 @@ installable PWA for viewing and analyzing motorsport telemetry — live at
 - Hardened PWA cache recovery (NetworkFirst HTML, legacy `/sw.js` kill-switch),
   added safer production env fallbacks, and added SEO metadata
   (sitemap, robots, per-route head tags, `llms.txt`).
+- Code-split the bundle with `React.lazy` boundaries and `manualChunks` vendor
+  splitting, shrinking the initial gzip payload (~403 KB → ~294 KB) by deferring
+  admin, pro view, file-manager drawer, BLE download, and the Leaflet editor off
+  the first-load path.
 
-[Unreleased]: https://github.com/TheAngryRaven/DovesDataViewer/compare/v1.0.0...HEAD
-[1.0.0]: https://github.com/TheAngryRaven/DovesDataViewer/releases/tag/v1.0.0
+[Unreleased]: https://github.com/TheAngryRaven/DovesDataViewer/compare/v1.5.0...HEAD
+[1.5.0]: https://github.com/TheAngryRaven/DovesDataViewer/compare/V1.0.0...v1.5.0
