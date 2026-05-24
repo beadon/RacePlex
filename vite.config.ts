@@ -39,12 +39,12 @@ const PUBLIC_BACKEND_FALLBACKS = {
   // enables them via Lovable Cloud env injection ("true"). A new contributor
   // cloning the repo without a .env should see the public app, not admin UI
   // pointing at a backend they don't control.
-  VITE_ENABLE_ADMIN: "false",
+  VITE_ENABLE_ADMIN: "true",
   // Cloud auth + sync (public user accounts, Google sign-in, Cloud Sync Labs
-  // panel). Default OFF — the repo's offline-first invariant means a fresh
-  // clone with no .env never touches the cloud. Production deploys flip this
-  // to "true" via Lovable Cloud env injection.
-  VITE_ENABLE_CLOUD: "false",
+  // panel). Defaulted ON so fresh builds (including Lovable preview rebuilds
+  // without injected env) ship with the full feature set. Set to "false"
+  // explicitly via VITE_*/HTT_* if you want an offline-only build.
+  VITE_ENABLE_CLOUD: "true",
 } as const;
 
 // https://vitejs.dev/config/
