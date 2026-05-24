@@ -65,6 +65,19 @@ export function LandingPage({
             <SupportedFilesDialog />
             <AboutDialog />
             <ContactDialog variant="header" />
+            {enableCloud && (
+              user ? (
+                <Button variant="ghost" size="sm" className="gap-2" onClick={logout} title={user.email ?? undefined}>
+                  <LogOut className="w-4 h-4" />
+                  <span className="hidden sm:inline">Sign out</span>
+                </Button>
+              ) : (
+                <Button variant="ghost" size="sm" className="gap-2" onClick={() => navigate('/login')}>
+                  <LogIn className="w-4 h-4" />
+                  <span className="hidden sm:inline">Sign in</span>
+                </Button>
+              )
+            )}
             <a
               href="https://github.com/sponsors/TheAngryRaven"
               target="_blank"
