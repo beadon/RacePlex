@@ -323,6 +323,7 @@ export default function Index() {
             onLoadSample={handleLoadSample}
             isLoadingSample={isLoadingSample}
             enableAdmin={enableAdmin}
+            enableCloud={enableCloud}
           />
           <Suspense fallback={null}>
             <FileManagerDrawer {...fileManagerProps} />
