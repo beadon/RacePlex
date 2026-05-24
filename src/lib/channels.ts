@@ -18,12 +18,16 @@
 // IMU). These legitimately coexist on one sample (e.g. Alfano reports native g
 // while we also derive g from GPS), so they must never collapse to one key.
 
+import type { ParsedData } from "@/types/racing";
+
 export type ChannelId =
   // GPS / quality
   | "altitude"
   | "satellites"
   | "hdop"
   | "h_acc"
+  | "v_acc"
+  | "speed_acc"
   // G-force / IMU
   | "lat_g"
   | "lon_g"
@@ -64,7 +68,9 @@ export const CHANNELS: readonly ChannelDef[] = [
   { id: "altitude", label: "Altitude", unit: "m", aliases: ["Altitude (m)", "Alt", "Altitude M"] },
   { id: "satellites", label: "Satellites", aliases: ["Sats", "NumSats"] },
   { id: "hdop", label: "HDOP", aliases: ["Hdop"] },
-  { id: "h_acc", label: "H Accuracy", unit: "m", aliases: ["H Acc M", "Horizontal Accuracy"] },
+  { id: "h_acc", label: "H Accuracy", unit: "m", aliases: ["H Accuracy (m)", "H Acc M", "Horizontal Accuracy"] },
+  { id: "v_acc", label: "V Accuracy", unit: "m", aliases: ["V Accuracy (m)", "V Acc M", "Vertical Accuracy"] },
+  { id: "speed_acc", label: "Speed Accuracy", unit: "m/s", aliases: ["Speed Acc (m/s)", "Speed Acc"] },
 
   { id: "lat_g", label: "Lat G", unit: "g", aliases: ["Lateral G", "LatG"] },
   { id: "lon_g", label: "Lon G", unit: "g", aliases: ["Longitudinal G", "LonG"] },
@@ -146,4 +152,59 @@ export function customChannelId(rawName: string): string {
  */
 export function channelKeyFor(rawName: string): string {
   return resolveChannelId(rawName) ?? customChannelId(rawName);
+}
+
+/**
+ * Idempotent migration of any field identity to its canonical storage key.
+ * Handles three inputs: an already-canonical id (kept), an already-migrated
+ * `custom:` slug (kept), or a legacy display name (resolved). Use this for
+ * persisted identities (stored graph-prefs, saved overlay sourceIds) so old data
+ * keeps resolving without a destructive migration.
+ */
+export function toChannelKey(name: string): string {
+  if (isKnownChannel(name) || name.startsWith("custom:")) return name;
+  return channelKeyFor(name);
+}
+
+/**
+ * Rewrite a freshly-parsed `ParsedData` so every channel identity is canonical:
+ * `fieldMappings` get a stable `name` (id/slug) plus a display `label` and unit,
+ * and every sample's `extraFields` keys are renamed to match. Run once per parse
+ * (at the format router) so all parsers can keep emitting human display names
+ * internally while the rest of the app sees uniform keys regardless of format.
+ *
+ * Mutates the passed samples' `extraFields` in place (they're owned by the
+ * just-parsed result) and returns `data` with rebuilt `fieldMappings`.
+ */
+export function normalizeChannels(data: ParsedData): ParsedData {
+  const rename = new Map<string, string>();
+  const usedKeys = new Set<string>();
+
+  const fieldMappings = data.fieldMappings.map((m) => {
+    const known = resolveChannelId(m.name);
+    let key = toChannelKey(m.name);
+    // Two source columns must never collapse onto one channel id — that would
+    // clobber a column's samples. Keep the later duplicate under a custom key.
+    if (usedKeys.has(key)) key = customChannelId(m.name);
+    usedKeys.add(key);
+    rename.set(m.name, key);
+    return {
+      ...m,
+      name: key,
+      label: m.label ?? (known ? channelLabel(known) : m.name),
+      unit: m.unit ?? (known ? channelUnit(known) : undefined),
+    };
+  });
+
+  for (const s of data.samples) {
+    const next: Record<string, number> = {};
+    for (const k in s.extraFields) {
+      const v = s.extraFields[k];
+      if (v === undefined) continue;
+      next[rename.get(k) ?? toChannelKey(k)] = v;
+    }
+    s.extraFields = next;
+  }
+
+  return { ...data, fieldMappings };
 }

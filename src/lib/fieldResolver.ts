@@ -6,7 +6,7 @@
 // (`getCanonicalFieldId`, `isFieldHiddenByCanonical`, `FIELD_CATEGORIES`) stay
 // stable.
 
-import { type ChannelId, getChannelDef, resolveChannelId } from "./channels";
+import { type ChannelId, getChannelDef, isKnownChannel, resolveChannelId } from "./channels";
 
 /** A canonical field id is a registry channel id. */
 export type CanonicalFieldId = ChannelId;
@@ -16,6 +16,9 @@ export type CanonicalFieldId = ChannelId;
  * known alias). Returns undefined if the field has no canonical mapping.
  */
 export function getCanonicalFieldId(fieldName: string): CanonicalFieldId | undefined {
+  // Accept an already-canonical id (post-normalization field name) or a raw
+  // display name / alias (legacy callers, settings UI).
+  if (isKnownChannel(fieldName)) return fieldName;
   return resolveChannelId(fieldName);
 }
 

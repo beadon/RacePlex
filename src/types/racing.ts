@@ -77,7 +77,10 @@ export interface Lap {
 
 export interface FieldMapping {
   index: number;
+  /** Stable channel identity (canonical ChannelId or a `custom:` slug). */
   name: string;
+  /** Human-readable display name; falls back to `name` when absent. */
+  label?: string;
   unit?: string;
   enabled: boolean;
 }
