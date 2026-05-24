@@ -24,6 +24,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and offline-first otherwise.
 
 ### Changed
+- Lap delta / pace is now **position-based** by default: your line is projected
+  onto a reference lap resampled to a uniform arc-length grid, so the gap is
+  robust to racing-line and GPS-rate differences and no longer drifts over a lap
+  (the old cumulative-distance method is selectable under Settings → Lap Delta).
+  This upgrades the pace readout everywhere — charts, race-line, overlays, and
+  video export.
 - The optional AI coach plugin now ships from the public npm registry as
   `@perchwerks/eye-in-the-sky` and loads by default — no build token or `.npmrc`
   required. (Previously a private GitHub Packages package gated behind

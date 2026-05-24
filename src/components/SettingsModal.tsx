@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Settings, Eye, EyeOff, Gauge, Activity, Circle, HardDrive, FlaskConical, Sun, Moon, RefreshCw } from "lucide-react";
+import { Settings, Eye, EyeOff, Gauge, Activity, Circle, HardDrive, FlaskConical, Sun, Moon, RefreshCw, Timer } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -183,6 +183,38 @@ export function SettingsModal({
                 />
                 <span className={`text-xs ${settings.gForceSource === 'hw' ? "text-foreground font-medium" : "text-muted-foreground"}`}>
                   HW
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Lap Delta Method */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Timer className="w-4 h-4 text-muted-foreground" />
+              <h3 className="font-medium">Lap Delta</h3>
+            </div>
+            <div className="flex items-center justify-between pl-6">
+              <div>
+                <Label htmlFor="settings-delta-method" className="text-sm text-muted-foreground">
+                  Gap-to-reference calculation
+                </Label>
+                <p className="text-xs text-muted-foreground/70 mt-0.5">
+                  Position projects your line onto the reference (robust to line &amp; GPS-rate
+                  differences); Distance is the legacy cumulative-distance method
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className={`text-xs ${settings.deltaMethod === 'distance' ? "text-foreground font-medium" : "text-muted-foreground"}`}>
+                  Distance
+                </span>
+                <Switch
+                  id="settings-delta-method"
+                  checked={settings.deltaMethod === 'position'}
+                  onCheckedChange={(checked) => onSettingsChange({ deltaMethod: checked ? 'position' : 'distance' })}
+                />
+                <span className={`text-xs ${settings.deltaMethod === 'position' ? "text-foreground font-medium" : "text-muted-foreground"}`}>
+                  Position
                 </span>
               </div>
             </div>

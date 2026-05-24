@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { EARTH_RADIUS_M } from "./parserUtils";
-import { resampleByDistance, computePositionDelta, smoothDelta } from "./lapDelta";
+import { resampleByDistance, computePositionDelta, smoothDelta, computeLapPace } from "./lapDelta";
+import { calculatePace } from "./referenceUtils";
 import type { GpsSample } from "@/types/racing";
 
 // Build a straight lap heading north: positions are spaced `spacingM` apart and
@@ -108,6 +109,23 @@ describe("computePositionDelta", () => {
     // Late-lap gaps exceed the 0.05 s guard and are nulled; early ones survive.
     expect(rawDelta.some((d) => d === null)).toBe(true);
     expect(rawDelta.some((d) => d !== null)).toBe(true);
+  });
+});
+
+describe("computeLapPace", () => {
+  it("delegates to the legacy distance method when selected", () => {
+    const current = lineLap(101, 1, 11);
+    const reference = lineLap(101, 1, 10);
+    const viaSelector = computeLapPace(current, reference, { method: "distance", sampleMeters: 2 });
+    expect(viaSelector).toEqual(calculatePace(current, reference));
+  });
+
+  it("uses the position method by resampling + projecting", () => {
+    const current = lineLap(101, 1, 10);
+    const reference = lineLap(101, 1, 10);
+    const pace = computeLapPace(current, reference, { method: "position", sampleMeters: 2 });
+    expect(pace).toHaveLength(current.length);
+    for (const d of pace) expect(Math.abs((d as number) ?? 0)).toBeLessThan(0.02);
   });
 });
 

@@ -89,7 +89,8 @@ export default function Index() {
   // Reference lap comparison
   const refLap = useReferenceLap(
     data, laps, selectedCourse, filteredSamples, selectedLapNumber,
-    referenceLapNumber, externalRefSamples, useKph
+    referenceLapNumber, externalRefSamples, useKph,
+    settings.deltaMethod, settings.deltaSampleMeters
   );
   const {
     referenceSamples, paceData, referenceSpeedData, lapToFastestDelta,
