@@ -1,13 +1,18 @@
+import externalPlugins from "virtual:external-plugins";
 import { pluginRegistry } from "./registry";
 import type { DataViewerPlugin } from "./types";
 
 let initialized = false;
 
 /**
- * Discover and wire every plugin. Each `src/plugins/<name>/index.ts` must
- * default-export a `DataViewerPlugin`. Folders absent at build time (e.g. the
- * private coaching submodule) simply don't appear in the glob, so the app
- * builds and runs without them.
+ * Discover and wire every plugin from two sources:
+ *  1. In-repo first-party plugins — `src/plugins/<name>/index.ts` (glob).
+ *  2. External plugins installed as npm packages (the coach), surfaced via the
+ *     `virtual:external-plugins` module — see `externalPluginsLoader` in
+ *     vite.config.ts. Packages absent at build time simply don't appear, so the
+ *     public/Lovable build runs without them.
+ *
+ * When two plugins share an `id`, higher `priority` wins (private coach > public).
  */
 export function initPlugins(): void {
   if (initialized) return;
@@ -16,6 +21,10 @@ export function initPlugins(): void {
   const modules = import.meta.glob<{ default: DataViewerPlugin }>("./*/index.ts", { eager: true });
   for (const path in modules) {
     const plugin = modules[path]?.default;
+    if (plugin?.id) pluginRegistry.register(plugin);
+  }
+
+  for (const plugin of externalPlugins) {
     if (plugin?.id) pluginRegistry.register(plugin);
   }
 

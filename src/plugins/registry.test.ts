@@ -20,12 +20,20 @@ describe("pluginRegistry", () => {
     expect(pluginRegistry.list().map((x) => x.id)).toContain("alpha");
   });
 
-  it("ignores duplicate ids", () => {
+  it("keeps the first plugin when a same-id duplicate has equal/lower priority", () => {
     const first = makePlugin("dup");
     const second = makePlugin("dup");
     pluginRegistry.register(first);
     pluginRegistry.register(second);
     expect(pluginRegistry.get("dup")).toBe(first);
+  });
+
+  it("lets a higher-priority plugin override a same-id one (private coach > public)", () => {
+    const pub = { ...makePlugin("coach"), priority: 0 };
+    const priv = { ...makePlugin("coach"), priority: 100 };
+    pluginRegistry.register(pub);
+    pluginRegistry.register(priv);
+    expect(pluginRegistry.get("coach")).toBe(priv);
   });
 
   it("collects contributions per extension point", () => {

@@ -113,8 +113,12 @@ The app includes an optional admin system for managing a community track databas
 | `VITE_ENABLE_REGISTRATION` | No | Set to `true` to enable the `/register` route |
 | `VITE_TURNSTILE_SITE_KEY` | No | Cloudflare Turnstile site key for track submission CAPTCHA |
 | `TURNSTILE_SECRET_KEY` | No | Cloudflare Turnstile secret key (edge function secret — `???`) |
+| `DOVE_PLUGIN_PACKAGES` | No | Build-time: comma-separated external plugin npm packages to load (e.g. `@theangryraven/dove-coach`). Empty/unset loads none |
+| `NODE_AUTH_TOKEN` | No | Build-time: GitHub PAT with `read:packages` to install private plugin packages from GitHub Packages — `???` |
 
 > **Note:** `TURNSTILE_SECRET_KEY` is a server-side secret stored in Lovable Cloud, not a `VITE_` client variable. If not set, Turnstile verification is skipped.
+
+> **Note:** `DOVE_PLUGIN_PACKAGES` and `NODE_AUTH_TOKEN` are build-time only (read by `vite.config.ts` / npm during install), not client `VITE_` variables. They drive the optional AI coach plugin packaging — see `src/plugins/README.md`.
 
 > **Build fallback:** `vite.config.ts` now hardcodes the project's public backend URL, publishable key, and project ID as a fallback for production builds. Local `.env` values still take precedence, but published builds no longer white-screen if managed env injection is temporarily missing.
 

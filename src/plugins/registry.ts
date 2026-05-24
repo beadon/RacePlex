@@ -5,10 +5,8 @@ class Registry implements PluginRegistry {
   private contributions = new Map<string, unknown[]>();
 
   register(plugin: DataViewerPlugin): void {
-    if (this.plugins.has(plugin.id)) {
-      console.warn(`[plugins] duplicate plugin id "${plugin.id}" ignored`);
-      return;
-    }
+    const existing = this.plugins.get(plugin.id);
+    if (existing && (plugin.priority ?? 0) <= (existing.priority ?? 0)) return;
     this.plugins.set(plugin.id, plugin);
   }
 

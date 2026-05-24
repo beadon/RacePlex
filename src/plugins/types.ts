@@ -17,6 +17,12 @@ export interface DataViewerPlugin {
   /** Human-readable name for diagnostics and UI. */
   name: string;
   version?: string;
+  /**
+   * Override precedence for plugins sharing an `id`. Higher wins. Defaults to 0.
+   * The private coach package sets a higher priority than the public one so it
+   * overrides it when both are installed.
+   */
+  priority?: number;
   /** Called once at startup to wire the plugin into the app. */
   setup?(ctx: PluginContext): void | Promise<void>;
 }
