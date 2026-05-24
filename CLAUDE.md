@@ -188,7 +188,7 @@ src/
 │   │   ├── index.ts             # Plugin def — contributes the Labs panel + a FileRow mount (both lazy, cloud-gated)
 │   │   ├── CloudSyncPanel.tsx    # Sign-in + push/pull UI (lazy-loaded)
 │   │   ├── FileSyncToggle.tsx    # Per-file sync toggle, mounted on each file row (off/pending/synced)
-│   │   ├── CloudFilesSection.tsx # FileManagerSection mount: cloud-only files with per-file pull
+│   │   ├── CloudFilesSection.tsx # FileManagerSection mount: lists all cloud files (on-device marked, others pullable)
 │   │   ├── fileSync.ts           # Per-file selection state in the plugin store + fileSyncStatus/cloudOnlyNames (pure, tested)
 │   │   ├── syncStores.ts         # Pure config: which IDB stores sync + how they're keyed (testable)
 │   │   ├── syncEngine.ts         # pushAll (garage + selected files) / pushFile / pullAll: IDB ↔ sync_records + bucket
@@ -403,10 +403,11 @@ Files are **opt-in per file** (`fileSync.ts`): a `FileRow` mount adds a toggle t
 each file-manager row (`off` → `pending` → `synced`), and the selection set lives
 in the plugin's own KV store (`getPluginStore("cloud-sync")`). `pushAll` uploads
 all garage docs but only the *selected* files; `pushFile` handles a single
-toggle. Cloud-only files (in the cloud, not on this device) are listed by a
-`FileManagerSection` mount (`CloudFilesSection`) with a per-file pull; pulling
-persists via `ctx.onSaveFile` (which refreshes the list). `modified` detection +
-a "sync all" affordance remain follow-ups.
+toggle. A `FileManagerSection` mount (`CloudFilesSection`) lists **all** cloud
+files — ones already on this device are marked present, others get a per-file
+pull; pulling persists via `ctx.onSaveFile` (which refreshes the list). A
+dedicated Cloud *tab* (a new garage-tab mount slot), `modified` detection, and a
+"sync all" affordance remain follow-ups.
 
 After a migration, Lovable regenerates `integrations/supabase/types.ts`. Until
 then `cloudClient.ts` accesses the new table/bucket through a narrowly-typed
