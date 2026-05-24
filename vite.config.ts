@@ -40,12 +40,32 @@ const PUBLIC_BACKEND_FALLBACKS = {
   // cloning the repo without a .env should see the public app, not admin UI
   // pointing at a backend they don't control.
   VITE_ENABLE_ADMIN: "false",
-  VITE_ENABLE_REGISTRATION: "false",
+  // Cloud auth + sync (public user accounts, Google sign-in, Cloud Sync Labs
+  // panel). Default OFF — the repo's offline-first invariant means a fresh
+  // clone with no .env never touches the cloud. Production deploys flip this
+  // to "true" via Lovable Cloud env injection.
+  VITE_ENABLE_CLOUD: "false",
 } as const;
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
+
+  // Lovable's secret store rejects the `VITE_` prefix (those are public,
+  // build-time values by Vite convention). To let contributors stash the
+  // backend wiring in Lovable workspace build secrets *without* committing a
+  // `.env`, we also accept a parallel `HTT_` prefix and copy it into the
+  // VITE_* names at build time. Precedence: VITE_* > HTT_* > public fallback.
+  //
+  // REMINDER: until Lovable injects these automatically, you may need to
+  // regenerate `.env` (or re-set the HTT_* build secrets) on each fresh
+  // build environment. See `.env.example` for the full list.
+  // NOTE: Vite's loadEnv() only reads .env files — it does NOT include
+  // process.env. Lovable injects build secrets as real env vars, so we must
+  // check process.env explicitly for the HTT_* (and VITE_*) fallbacks to work
+  // when there's no committed .env file.
+  const pick = (viteKey: string, httKey: string, fallback: string) =>
+    env[viteKey] || process.env[viteKey] || env[httKey] || process.env[httKey] || fallback;
 
   const DEFAULT_PLUGIN_PACKAGES = "@perchwerks/eye-in-the-sky";
   const pluginPackages = (env.DOVE_PLUGIN_PACKAGES || DEFAULT_PLUGIN_PACKAGES)
@@ -60,19 +80,19 @@ export default defineConfig(({ mode }) => {
     },
     define: {
       "import.meta.env.VITE_SUPABASE_PROJECT_ID": JSON.stringify(
-        env.VITE_SUPABASE_PROJECT_ID || PUBLIC_BACKEND_FALLBACKS.VITE_SUPABASE_PROJECT_ID,
+        pick("VITE_SUPABASE_PROJECT_ID", "HTT_SUPABASE_PROJECT_ID", PUBLIC_BACKEND_FALLBACKS.VITE_SUPABASE_PROJECT_ID),
       ),
       "import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY": JSON.stringify(
-        env.VITE_SUPABASE_PUBLISHABLE_KEY || PUBLIC_BACKEND_FALLBACKS.VITE_SUPABASE_PUBLISHABLE_KEY,
+        pick("VITE_SUPABASE_PUBLISHABLE_KEY", "HTT_SUPABASE_PUBLISHABLE_KEY", PUBLIC_BACKEND_FALLBACKS.VITE_SUPABASE_PUBLISHABLE_KEY),
       ),
       "import.meta.env.VITE_SUPABASE_URL": JSON.stringify(
-        env.VITE_SUPABASE_URL || PUBLIC_BACKEND_FALLBACKS.VITE_SUPABASE_URL,
+        pick("VITE_SUPABASE_URL", "HTT_SUPABASE_URL", PUBLIC_BACKEND_FALLBACKS.VITE_SUPABASE_URL),
       ),
       "import.meta.env.VITE_ENABLE_ADMIN": JSON.stringify(
-        env.VITE_ENABLE_ADMIN || PUBLIC_BACKEND_FALLBACKS.VITE_ENABLE_ADMIN,
+        pick("VITE_ENABLE_ADMIN", "HTT_ENABLE_ADMIN", PUBLIC_BACKEND_FALLBACKS.VITE_ENABLE_ADMIN),
       ),
-      "import.meta.env.VITE_ENABLE_REGISTRATION": JSON.stringify(
-        env.VITE_ENABLE_REGISTRATION || PUBLIC_BACKEND_FALLBACKS.VITE_ENABLE_REGISTRATION,
+      "import.meta.env.VITE_ENABLE_CLOUD": JSON.stringify(
+        pick("VITE_ENABLE_CLOUD", "HTT_ENABLE_CLOUD", PUBLIC_BACKEND_FALLBACKS.VITE_ENABLE_CLOUD),
       ),
     },
     plugins: [

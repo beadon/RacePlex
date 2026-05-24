@@ -22,6 +22,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the cloud and pull them onto another device. Manual push/pull; data is private
   per account. Requires a backend (Supabase) and a connection — fully optional
   and offline-first otherwise.
+- Public user accounts (gated by `VITE_ENABLE_CLOUD`, default off): email +
+  password sign up / sign in, Google sign-in via Lovable Cloud managed OAuth,
+  forgot-password and reset-password flows. New routes: `/register`,
+  `/forgot-password`, `/reset-password`, `/auth/callback`. A "Sign in" /
+  "Sign out" affordance appears in the landing-page header when the flag is on.
+  Regular accounts have no admin privileges (admin role remains driven by
+  `user_roles`).
 
 ### Changed
 - Lap delta / pace is now **position-based** by default: your line is projected
@@ -30,6 +37,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (the old cumulative-distance method is selectable under Settings → Lap Delta).
   This upgrades the pace readout everywhere — charts, race-line, overlays, and
   video export.
+- Build flag rename: `VITE_ENABLE_REGISTRATION` retired. Cloud auth routes
+  (`/register`, `/forgot-password`, `/reset-password`, `/auth/callback`) and the
+  Cloud Sync Labs panel are now all gated by the single `VITE_ENABLE_CLOUD`
+  flag. `VITE_ENABLE_ADMIN` continues to gate `/admin` independently; `/login`
+  mounts when either flag is on. With `VITE_ENABLE_CLOUD` off, no auth pages,
+  Google OAuth SDK, or Cloud Sync panel are included in the bundle.
+- Build-time env vars now also accept an `HTT_` mirror prefix
+  (`HTT_SUPABASE_URL`, `HTT_SUPABASE_PUBLISHABLE_KEY`, `HTT_SUPABASE_PROJECT_ID`,
+  `HTT_ENABLE_CLOUD`, `HTT_ENABLE_ADMIN`) so contributors can store backend
+  wiring in Lovable workspace build secrets instead of committing a `.env`.
+  Precedence: `VITE_*` > `HTT_*` > built-in public fallback. See `.env.example`.
+- Lovable preview URLs now aggressively unregister service workers and clear
+  Cache Storage so preview tabs stop serving stale builds after updates.
 - The optional AI coach plugin now ships from the public npm registry as
   `@perchwerks/eye-in-the-sky` and loads by default — no build token or `.npmrc`
   required. (Previously a private GitHub Packages package gated behind
