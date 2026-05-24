@@ -51,6 +51,18 @@ const PUBLIC_BACKEND_FALLBACKS = {
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
 
+  // Lovable's secret store rejects the `VITE_` prefix (those are public,
+  // build-time values by Vite convention). To let contributors stash the
+  // backend wiring in Lovable workspace build secrets *without* committing a
+  // `.env`, we also accept a parallel `HTT_` prefix and copy it into the
+  // VITE_* names at build time. Precedence: VITE_* > HTT_* > public fallback.
+  //
+  // REMINDER: until Lovable injects these automatically, you may need to
+  // regenerate `.env` (or re-set the HTT_* build secrets) on each fresh
+  // build environment. See `.env.example` for the full list.
+  const pick = (viteKey: string, httKey: string, fallback: string) =>
+    env[viteKey] || env[httKey] || fallback;
+
   const DEFAULT_PLUGIN_PACKAGES = "@perchwerks/eye-in-the-sky";
   const pluginPackages = (env.DOVE_PLUGIN_PACKAGES || DEFAULT_PLUGIN_PACKAGES)
     .split(",")
@@ -64,19 +76,19 @@ export default defineConfig(({ mode }) => {
     },
     define: {
       "import.meta.env.VITE_SUPABASE_PROJECT_ID": JSON.stringify(
-        env.VITE_SUPABASE_PROJECT_ID || PUBLIC_BACKEND_FALLBACKS.VITE_SUPABASE_PROJECT_ID,
+        pick("VITE_SUPABASE_PROJECT_ID", "HTT_SUPABASE_PROJECT_ID", PUBLIC_BACKEND_FALLBACKS.VITE_SUPABASE_PROJECT_ID),
       ),
       "import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY": JSON.stringify(
-        env.VITE_SUPABASE_PUBLISHABLE_KEY || PUBLIC_BACKEND_FALLBACKS.VITE_SUPABASE_PUBLISHABLE_KEY,
+        pick("VITE_SUPABASE_PUBLISHABLE_KEY", "HTT_SUPABASE_PUBLISHABLE_KEY", PUBLIC_BACKEND_FALLBACKS.VITE_SUPABASE_PUBLISHABLE_KEY),
       ),
       "import.meta.env.VITE_SUPABASE_URL": JSON.stringify(
-        env.VITE_SUPABASE_URL || PUBLIC_BACKEND_FALLBACKS.VITE_SUPABASE_URL,
+        pick("VITE_SUPABASE_URL", "HTT_SUPABASE_URL", PUBLIC_BACKEND_FALLBACKS.VITE_SUPABASE_URL),
       ),
       "import.meta.env.VITE_ENABLE_ADMIN": JSON.stringify(
-        env.VITE_ENABLE_ADMIN || PUBLIC_BACKEND_FALLBACKS.VITE_ENABLE_ADMIN,
+        pick("VITE_ENABLE_ADMIN", "HTT_ENABLE_ADMIN", PUBLIC_BACKEND_FALLBACKS.VITE_ENABLE_ADMIN),
       ),
       "import.meta.env.VITE_ENABLE_CLOUD": JSON.stringify(
-        env.VITE_ENABLE_CLOUD || PUBLIC_BACKEND_FALLBACKS.VITE_ENABLE_CLOUD,
+        pick("VITE_ENABLE_CLOUD", "HTT_ENABLE_CLOUD", PUBLIC_BACKEND_FALLBACKS.VITE_ENABLE_CLOUD),
       ),
     },
     plugins: [
