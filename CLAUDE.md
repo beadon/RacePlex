@@ -184,11 +184,13 @@ src/
 │   ├── mounts.ts              # Inline mounts: MOUNTS_POINT, MountSlot (FileRow/FileManagerSection), contexts, getMounts
 │   ├── PluginMount.tsx        # Renders inline mounts for a slot (error-boundaried, Suspense; renders null when none)
 │   ├── storage.ts             # getPluginStore(id): per-plugin KV in its own IndexedDB DB (dove-plugin-<id>)
-│   ├── cloud-sync/            # ★ First-party plugin: Supabase file + garage sync (Labs panel)
-│   │   ├── index.ts             # Plugin def — contributes a lazy CloudSyncPanel to the Labs slot
+│   ├── cloud-sync/            # ★ First-party plugin: Supabase file + garage sync (Labs panel + per-file toggle)
+│   │   ├── index.ts             # Plugin def — contributes the Labs panel + a FileRow mount (both lazy, cloud-gated)
 │   │   ├── CloudSyncPanel.tsx    # Sign-in + push/pull UI (lazy-loaded)
+│   │   ├── FileSyncToggle.tsx    # Per-file sync toggle, mounted on each file row (off/pending/synced)
+│   │   ├── fileSync.ts           # Per-file selection state in the plugin store + fileSyncStatus (pure, tested)
 │   │   ├── syncStores.ts         # Pure config: which IDB stores sync + how they're keyed (testable)
-│   │   ├── syncEngine.ts         # pushAll/pullAll: IDB ↔ sync_records (jsonb) + user-files bucket (blobs)
+│   │   ├── syncEngine.ts         # pushAll (garage + selected files) / pushFile / pullAll: IDB ↔ sync_records + bucket
 │   │   └── cloudClient.ts        # Typed access to sync_records + bucket (escape hatch until types regen)
 │   └── coaching/              # Gitignored private slot (AI coaching submodule)
 ├── types/
@@ -395,6 +397,12 @@ Synced stores (`syncStores.ts` — pure, unit-tested): `metadata`, `karts`,
 `setups`, `notes`, `graph-prefs`, `vehicle-types`, `setup-templates` (jsonb
 docs) + `files` (blobs). Video stores are intentionally excluded (size).
 `vehicle-types`/`setup-templates` ride along because setups are template-driven.
+
+Files are **opt-in per file** (`fileSync.ts`): a `FileRow` mount adds a toggle to
+each file-manager row (`off` → `pending` → `synced`), and the selection set lives
+in the plugin's own KV store (`getPluginStore("cloud-sync")`). `pushAll` uploads
+all garage docs but only the *selected* files; `pushFile` handles a single
+toggle. Cloud-only files (pull-per-file) + a section mount are a follow-up.
 
 After a migration, Lovable regenerates `integrations/supabase/types.ts`. Until
 then `cloudClient.ts` accesses the new table/bucket through a narrowly-typed

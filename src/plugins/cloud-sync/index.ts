@@ -2,11 +2,15 @@ import { lazy } from "react";
 import { Cloud } from "lucide-react";
 import type { DataViewerPlugin } from "@/plugins/types";
 import { PANELS_POINT, PanelSlot, type PluginPanel } from "@/plugins/panels";
+import { MOUNTS_POINT, MountSlot, type PluginMountDef, type FileRowContext } from "@/plugins/mounts";
 
 // The panel pulls in the Supabase sync engine + storage modules, so it's lazy:
 // the chunk loads only when the Labs tab is opened, keeping the initial bundle
 // lean (see Bundle Splitting in CLAUDE.md).
 const CloudSyncPanel = lazy(() => import("./CloudSyncPanel"));
+// Likewise the per-file toggle: lazy so the file-manager drawer doesn't pull the
+// sync engine onto its chunk until a row actually renders the control.
+const FileSyncToggle = lazy(() => import("./FileSyncToggle"));
 
 const enableCloud = import.meta.env.VITE_ENABLE_CLOUD === 'true';
 
@@ -28,6 +32,14 @@ const plugin: DataViewerPlugin = {
       component: CloudSyncPanel,
     };
     ctx.registry.contribute(PANELS_POINT, panel);
+
+    // Per-file sync toggle injected into each file-manager row.
+    ctx.registry.contribute(MOUNTS_POINT, {
+      id: "cloud-sync-file-toggle",
+      slot: MountSlot.FileRow,
+      order: 0,
+      component: FileSyncToggle,
+    } satisfies PluginMountDef<FileRowContext>);
   },
 };
 
