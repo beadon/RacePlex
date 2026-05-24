@@ -37,6 +37,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   flag. `VITE_ENABLE_ADMIN` continues to gate `/admin` independently; `/login`
   mounts when either flag is on. With `VITE_ENABLE_CLOUD` off, no auth pages,
   Google OAuth SDK, or Cloud Sync panel are included in the bundle.
+- Build-time env vars now also accept an `HTT_` mirror prefix
+  (`HTT_SUPABASE_URL`, `HTT_SUPABASE_PUBLISHABLE_KEY`, `HTT_SUPABASE_PROJECT_ID`,
+  `HTT_ENABLE_CLOUD`, `HTT_ENABLE_ADMIN`) so contributors can store backend
+  wiring in Lovable workspace build secrets instead of committing a `.env`.
+  Precedence: `VITE_*` > `HTT_*` > built-in public fallback. See `.env.example`.
 - Lovable preview URLs now aggressively unregister service workers and clear
   Cache Storage so preview tabs stop serving stale builds after updates.
 - The optional AI coach plugin now ships from the public npm registry as
