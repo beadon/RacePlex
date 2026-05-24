@@ -23,7 +23,7 @@
  */
 
 import { GpsSample } from "@/types/racing";
-import { projectToPlane } from "./referenceUtils";
+import { projectToPlane, calculatePace } from "./referenceUtils";
 
 interface Point {
   x: number;
@@ -235,4 +235,31 @@ export function computePositionDelta(
   }
 
   return { delta: smoothDelta(rawDelta, o.alpha, o.zeroLag), rawDelta, matchIndex, matchFrac };
+}
+
+export type DeltaMethod = "position" | "distance";
+
+export interface PaceOptions {
+  method: DeltaMethod;
+  /** Arc-length grid spacing for the position method (m). */
+  sampleMeters: number;
+  zeroLag?: boolean;
+  alpha?: number;
+}
+
+/**
+ * Compute pace (gap-to-reference per native current sample) using the configured
+ * method. "position" resamples the reference to an arc-length grid and projects
+ * each current fix onto it (issue #29); "distance" is the legacy cumulative-
+ * distance interpolation. Output shape is identical, so it's a drop-in for the
+ * existing `paceData` contract regardless of method.
+ */
+export function computeLapPace(
+  current: GpsSample[],
+  reference: GpsSample[],
+  opts: PaceOptions,
+): (number | null)[] {
+  if (opts.method === "distance") return calculatePace(current, reference);
+  const ref = resampleByDistance(reference, opts.sampleMeters);
+  return computePositionDelta(current, ref, { zeroLag: opts.zeroLag ?? true, alpha: opts.alpha }).delta;
 }

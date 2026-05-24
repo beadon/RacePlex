@@ -31,6 +31,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `user_roles`).
 
 ### Changed
+- Lap delta / pace is now **position-based** by default: your line is projected
+  onto a reference lap resampled to a uniform arc-length grid, so the gap is
+  robust to racing-line and GPS-rate differences and no longer drifts over a lap
+  (the old cumulative-distance method is selectable under Settings → Lap Delta).
+  This upgrades the pace readout everywhere — charts, race-line, overlays, and
+  video export.
 - Build flag rename: `VITE_ENABLE_REGISTRATION` retired. Cloud auth routes
   (`/register`, `/forgot-password`, `/reset-password`, `/auth/callback`) and the
   Cloud Sync Labs panel are now all gated by the single `VITE_ENABLE_CLOUD`
