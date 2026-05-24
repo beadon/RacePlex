@@ -37,6 +37,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   flag. `VITE_ENABLE_ADMIN` continues to gate `/admin` independently; `/login`
   mounts when either flag is on. With `VITE_ENABLE_CLOUD` off, no auth pages,
   Google OAuth SDK, or Cloud Sync panel are included in the bundle.
+- Lovable preview URLs now aggressively unregister service workers and clear
+  Cache Storage so preview tabs stop serving stale builds after updates.
 - The optional AI coach plugin now ships from the public npm registry as
   `@perchwerks/eye-in-the-sky` and loads by default — no build token or `.npmrc`
   required. (Previously a private GitHub Packages package gated behind
