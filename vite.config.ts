@@ -51,6 +51,18 @@ const PUBLIC_BACKEND_FALLBACKS = {
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
 
+  // Lovable's secret store rejects the `VITE_` prefix (those are public,
+  // build-time values by Vite convention). To let contributors stash the
+  // backend wiring in Lovable workspace build secrets *without* committing a
+  // `.env`, we also accept a parallel `HTT_` prefix and copy it into the
+  // VITE_* names at build time. Precedence: VITE_* > HTT_* > public fallback.
+  //
+  // REMINDER: until Lovable injects these automatically, you may need to
+  // regenerate `.env` (or re-set the HTT_* build secrets) on each fresh
+  // build environment. See `.env.example` for the full list.
+  const pick = (viteKey: string, httKey: string, fallback: string) =>
+    env[viteKey] || env[httKey] || fallback;
+
   const DEFAULT_PLUGIN_PACKAGES = "@perchwerks/eye-in-the-sky";
   const pluginPackages = (env.DOVE_PLUGIN_PACKAGES || DEFAULT_PLUGIN_PACKAGES)
     .split(",")
