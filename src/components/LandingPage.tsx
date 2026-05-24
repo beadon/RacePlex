@@ -1,4 +1,4 @@
-import { Gauge, Github, Heart, Shield, BookOpen, Play, Loader2 } from "lucide-react";
+import { Gauge, Github, Heart, Shield, BookOpen, Play, Loader2, LogIn, LogOut } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { FileImport } from "@/components/FileImport";
@@ -8,6 +8,7 @@ import { ContactDialog } from "@/components/ContactDialog";
 import { SupportedFilesDialog } from "@/components/SupportedFilesDialog";
 import { AboutDialog } from "@/components/AboutDialog";
 import { CreditsDialog } from "@/components/CreditsDialog";
+import { useAuth } from "@/contexts/AuthContext";
 import type { ParsedData } from "@/types/racing";
 
 interface LandingPageProps {
@@ -18,6 +19,7 @@ interface LandingPageProps {
   onLoadSample: () => void;
   isLoadingSample: boolean;
   enableAdmin: boolean;
+  enableCloud: boolean;
 }
 
 const GITHUB_LINKS: Array<{ href: string; label: string }> = [
@@ -43,8 +45,10 @@ export function LandingPage({
   onLoadSample,
   isLoadingSample,
   enableAdmin,
+  enableCloud,
 }: LandingPageProps) {
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
