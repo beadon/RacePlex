@@ -41,6 +41,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `user_roles`).
 
 ### Changed
+- Telemetry channels are now normalized to a canonical identity at import time,
+  so the Settings "default fields" show/hide and your saved graph and video-
+  overlay selections apply **consistently across every logger format** (e.g.
+  lateral G is one channel whether the file came from a Dove, AiM, Alfano, or
+  VBO log). Existing files keep their saved graph/overlay choices — legacy field
+  names are migrated transparently on load.
 - Lap delta / pace is now **position-based** by default: your line is projected
   onto a reference lap resampled to a uniform arc-length grid, so the gap is
   robust to racing-line and GPS-rate differences and no longer drifts over a lap

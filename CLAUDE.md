@@ -131,7 +131,8 @@ src/
 │   ├── aimParser.ts           # AiM MyChron CSV parser
 │   ├── motecParser.ts         # MoTeC LD binary + CSV parser
 │   ├── parserUtils.ts         # Shared parser helpers (haversine, speed calc, etc.)
-│   ├── fieldResolver.ts       # Canonical field name mapping across parsers
+│   ├── channels.ts            # ★ Canonical channel registry (single source of truth: ids/labels/units/aliases) + normalizeChannels()
+│   ├── fieldResolver.ts       # Settings-facing adapter over channels.ts (canonical id resolution + field categories)
 │   ├── courseDetection.ts     # ★ Auto course detection, direction detection, waypoint mode
 │   ├── lapCalculation.ts      # Start/finish line crossing detection → Lap[]
 │   ├── brakingZones.ts        # Braking zone detection from G-force data
@@ -215,6 +216,7 @@ File Import (drag-drop / BLE download / file manager)
   → fileStorage.ts (save raw blob to IndexedDB)
   → useSessionData.ts (read blob, call parseDatalogFile)
     → datalogParser.ts (auto-detect format, route to specific parser)
+      → normalizeChannels() (channels.ts): rewrites every fieldMapping name + extraFields key to a canonical ChannelId (or `custom:` slug), sets display label/unit. Runs once for all formats — parsers keep emitting human names internally.
       → returns ParsedData { samples: GpsSample[], fieldMappings, bounds, duration, startDate, dovexMetadata?, parserStats? }
   → courseDetection.ts (auto-detect track, course, direction; waypoint fallback)
     → returns CourseDetectionResult { track, course, direction, laps, isWaypointMode }
@@ -324,7 +326,7 @@ Detection order matters: binary formats first (MoTeC LD → UBX), then text form
 | `Track` | `name`, `shortName?` (max 8 chars), `courses[]` |
 | `CourseDetectionResult` | `track`, `course`, `direction?`, `laps[]`, `isWaypointMode`, `waypointNotice?` |
 | `CourseDirection` | `'forward' \| 'reverse'` |
-| `FieldMapping` | `index`, `name`, `unit?`, `enabled` — maps extraFields to UI toggles |
+| `FieldMapping` | `index`, `name` (canonical ChannelId or `custom:` slug — the extraFields key), `label?` (display), `unit?`, `enabled` |
 | `FileMetadata` | `fileName`, `trackName`, `courseName`, `weatherStation*?`, `sessionKartId?`, `sessionSetupId?`, `fastestLapMs?`, `fastestLapNumber?` |
 
 ---
@@ -512,7 +514,16 @@ Key settings: `useKph`, `gForceSmoothing`, `gForceSmoothingStrength`, `brakingZo
 switches on `deltaMethod`. The position method is the issue #29 port; `distance`
 falls back to the legacy `calculatePace` in `referenceUtils.ts`.
 
-`fieldResolver.ts` maps parser-specific field names (e.g., "Lat G", "Lateral G", "LatG") to canonical IDs (`lat_g`) so settings apply uniformly.
+Channels are normalized to canonical ids at parse time (`channels.ts` →
+`normalizeChannels()`), so `extraFields` keys and `FieldMapping.name` are uniform
+across formats (e.g. every parser's lateral-g lands on `lat_g`, with display
+`label` "Lat G"). G-force is modelled as distinct ids per source — `lat_g`/`lon_g`
+(primary/GPS-derived), `lat_g_native`/`lon_g_native` (logger-native), `accel_x/y/z`
+(raw IMU) — which coexist on a sample and must never collapse. `fieldResolver.ts`
+is the settings-facing adapter (resolves names→ids for the field-default
+show/hide). `toChannelKey()` is the idempotent shim that migrates legacy
+display-name keys persisted in graph-prefs / saved overlay configs on load, so
+existing user data keeps resolving without a destructive migration.
 
 ---
 
