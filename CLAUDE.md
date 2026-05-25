@@ -196,7 +196,8 @@ src/
 │   │   ├── storageTypes.ts      # Pure: storage types (documents 5MB / logs 20MB) + usage math (tested)
 │   │   ├── syncEngine.ts         # pushAll/pushFile/pullAll + incremental pushRecord/deleteRecord/pushDocs/pullDocs + getStorageUsage
 │   │   ├── autoSync.ts           # Background doc auto-sync: subscribes to garageEvents, debounced upsert/delete + reconcile on sign-in
-│   │   ├── StoragePanel.tsx      # Profile-tab panel: storage usage meters + account scratch pad (lazy)
+│   │   ├── StoragePanel.tsx      # Profile-tab panel: display-name editor + storage usage meters (lazy)
+│   │   ├── profile.ts            # getMyProfile / updateDisplayName (unique display names; taken-name handling)
 │   │   └── cloudClient.ts        # Typed access to sync_records + bucket + sync_storage_usage RPC (escape hatch until types regen)
 │   └── coaching/              # Gitignored private slot (AI coaching submodule)
 ├── types/
@@ -423,6 +424,8 @@ Backend (migrations `..._cloud_sync.sql`, `..._storage_quotas.sql`):
 | `quota_limits` | table | `(storage_type, max_bytes)` seeded `documents`=5 MB, `logs`=20 MB. Read by client + trigger. |
 | `enforce_sync_quota` | trigger | BEFORE INSERT/UPDATE on `sync_records`: rejects writes that push a storage type over its limit (`quota_exceeded`). |
 | `sync_storage_usage()` | RPC | Per-type `(used_bytes, limit_bytes)` for the caller. |
+| `profiles` | table | `(user_id PK→auth.users, display_name unique, …)`. RLS: authenticated read-all, update/insert own. Display name is unique but **not** a key — user-editable. |
+| `handle_new_user` | trigger | On `auth.users` insert: creates a profile, using the sign-up `display_name` or a generated silly name (`SpeedyRac3r-546`). `unique_display_name()` auto-suffixes a taken name at creation; user edits get an explicit "taken" error instead. |
 
 Synced stores (`syncStores.ts` — pure, unit-tested): `metadata`, `karts`,
 `setups`, `notes`, `graph-prefs`, `vehicle-types`, `setup-templates` (jsonb

@@ -53,3 +53,21 @@ export async function fetchStorageUsage(): Promise<StorageUsageRow[]> {
 export function isQuotaError(err: unknown): boolean {
   return err instanceof Error && /quota_exceeded/i.test(err.message);
 }
+
+/** A row in public.profiles — the user's unique, editable display name. */
+export interface ProfileRow {
+  user_id: string;
+  display_name: string;
+}
+
+/** Query builder for the profiles table. */
+export function profiles() {
+  return untyped.from("profiles");
+}
+
+/** True when a Postgres error is a unique-constraint violation (e.g. taken name). */
+export function isUniqueViolation(err: unknown): boolean {
+  if (!err || typeof err !== "object") return false;
+  const e = err as { code?: string; message?: string };
+  return e.code === "23505" || /duplicate key|unique constraint/i.test(e.message ?? "");
+}

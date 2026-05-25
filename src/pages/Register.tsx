@@ -15,6 +15,7 @@ export default function Register() {
     canonical: 'https://hackthetrack.net/register',
   });
   const [email, setEmail] = useState('');
+  const [displayName, setDisplayName] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -32,7 +33,7 @@ export default function Register() {
       return;
     }
     setIsLoading(true);
-    const { error } = await signUp(email, password);
+    const { error } = await signUp(email, password, displayName);
     setIsLoading(false);
     if (error) {
       toast({ title: 'Registration failed', description: error.message, variant: 'destructive' });
@@ -75,6 +76,10 @@ export default function Register() {
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="displayName">Display name <span className="text-muted-foreground font-normal">(optional)</span></Label>
+              <Input id="displayName" type="text" maxLength={40} placeholder="Leave blank for a random name" value={displayName} onChange={e => setDisplayName(e.target.value)} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>

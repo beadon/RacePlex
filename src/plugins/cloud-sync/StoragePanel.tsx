@@ -1,8 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
-import { User as UserIcon } from "lucide-react";
+import { Check, Pencil, User as UserIcon, X } from "lucide-react";
+import { toast } from "sonner";
 import type { PluginPanelProps } from "@/plugins/panels";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
 import { getStorageUsage } from "./syncEngine";
+import { getMyProfile, updateDisplayName } from "./profile";
 import { formatBytes, usageFraction, type StorageTypeUsage } from "./storageTypes";
 
 const TYPE_LABEL: Record<string, string> = { documents: "Documents", logs: "Logs" };
@@ -11,9 +15,8 @@ const TYPE_HINT: Record<string, string> = {
   logs: "Session log files you've chosen to sync.",
 };
 
-// Scratch-pad profile panel: who you're signed in as + your cloud storage usage
-// against the document/log storage limits. (Display name / avatar are placeholders
-// until profiles land.)
+// Scratch-pad profile panel: your (editable, unique) display name + cloud storage
+// usage against the document/log storage limits.
 export default function StoragePanel(_props: PluginPanelProps) {
   const { user, loading } = useAuth();
   const [usage, setUsage] = useState<StorageTypeUsage[] | null>(null);
@@ -46,20 +49,9 @@ export default function StoragePanel(_props: PluginPanelProps) {
     );
   }
 
-  const displayName =
-    (user.user_metadata?.display_name as string | undefined) || user.email || "Driver";
-
   return (
     <div className="space-y-5">
-      <div className="flex items-center gap-3">
-        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
-          <UserIcon className="h-6 w-6" />
-        </div>
-        <div className="min-w-0">
-          <p className="truncate text-sm font-medium text-foreground">{displayName}</p>
-          <p className="truncate text-xs text-muted-foreground">{user.email}</p>
-        </div>
-      </div>
+      <DisplayName userId={user.id} email={user.email ?? ""} />
 
       <div className="space-y-3">
         <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Storage</p>
@@ -68,6 +60,89 @@ export default function StoragePanel(_props: PluginPanelProps) {
         {usage?.map((u) => (
           <Meter key={u.storageType} usage={u} />
         ))}
+      </div>
+    </div>
+  );
+}
+
+function DisplayName({ userId, email }: { userId: string; email: string }) {
+  const [name, setName] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    void getMyProfile(userId)
+      .then((p) => {
+        if (!cancelled) setName(p?.display_name ?? null);
+      })
+      .catch(() => {
+        if (!cancelled) setName(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
+
+  const startEdit = () => {
+    setDraft(name ?? "");
+    setEditing(true);
+  };
+
+  const save = async () => {
+    setSaving(true);
+    const result = await updateDisplayName(userId, draft);
+    setSaving(false);
+    if (result.ok) {
+      setName(draft.trim());
+      setEditing(false);
+      toast.success("Display name updated.");
+    } else if (result.reason === "taken") {
+      toast.error("That name's taken — try another.");
+    } else if (result.reason === "empty") {
+      toast.error("Display name can't be empty.");
+    } else {
+      toast.error(result.message ?? "Couldn't update display name.");
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-3">
+      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
+        <UserIcon className="h-6 w-6" />
+      </div>
+      <div className="min-w-0 flex-1">
+        {editing ? (
+          <div className="flex items-center gap-1.5">
+            <Input
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              maxLength={40}
+              autoFocus
+              disabled={saving}
+              className="h-8"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") void save();
+                if (e.key === "Escape") setEditing(false);
+              }}
+            />
+            <Button size="icon" variant="ghost" className="h-8 w-8 shrink-0" disabled={saving} onClick={() => void save()}>
+              <Check className="h-4 w-4" />
+            </Button>
+            <Button size="icon" variant="ghost" className="h-8 w-8 shrink-0" disabled={saving} onClick={() => setEditing(false)}>
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-1.5">
+            <p className="truncate text-sm font-medium text-foreground">{name ?? "…"}</p>
+            <Button size="icon" variant="ghost" className="h-6 w-6 shrink-0 text-muted-foreground" onClick={startEdit}>
+              <Pencil className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        )}
+        <p className="truncate text-xs text-muted-foreground">{email}</p>
       </div>
     </div>
   );
