@@ -22,7 +22,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Propagation deletes**: deleting a vehicle or setup while signed in removes it
   from **every device and the cloud**, with a clear warning before you confirm.
 - New **Profile** tab (far right) showing your cloud storage usage against the
-  document and log limits (account display name/avatar are placeholders for now).
+  document and log limits.
+- **User display names**: choose a unique display name when you register, or get a
+  fun auto-generated one (e.g. `SpeedyRac3r-546`) if you leave it blank — editable
+  any time from the Profile tab, with a clear "that name's taken" message. Existing
+  accounts are given a generated name automatically.
 - Plugin UI panel framework: plugins can contribute self-contained panels to a
   named slot, starting with the Labs tab. The tab now appears automatically when
   a plugin contributes a panel, and each panel is isolated by an error boundary.
