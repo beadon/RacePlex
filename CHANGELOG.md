@@ -65,13 +65,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `user_roles`).
 
 ### Added
+- Deleting a **synced log locally** now offers an opt-in *"also delete the cloud
+  copy"* toggle in the delete confirm (off by default — the cloud copy is a
+  backup). When offline, the cloud delete queues and propagates on reconnect.
 - Your custom **tracks & courses now sync to the cloud** too (documents storage),
   the same way setups do — auto-sync, delete propagation, and the offline-aware
   timestamp merge. Only your user-created tracks/courses sync; built-in tracks
   stay local.
 
 ### Changed
-- Cloud document sync is now **offline-aware and conflict-safe**. Garage records
+- Cloud document sync is now **offline-aware and conflict-safe**.
+
+### Fixed
+- Cloud log uploads no longer **orphan a blob** when the server quota rejects the
+  index write — the just-uploaded blob is rolled back. Any pre-existing orphans
+  are reclaimed when the Cloud logs panel is opened. Garage records
   (vehicles, setups, templates, notes) carry an edit timestamp, and sync uses
   last-write-wins, so a newer change is never overwritten by an older copy.
   Changes made **offline** are saved as pending and, on reconnect, take
