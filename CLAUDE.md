@@ -77,7 +77,7 @@ src/
 ├── components/
 │   ├── ui/                # shadcn/ui primitives (button, dialog, tabs, etc.)
 │   ├── admin/             # Admin tabs: TracksTab, CoursesTab, SubmissionsTab, BannedIpsTab, ToolsTab, MessagesTab
-│   ├── tabs/              # Main view tabs: GraphViewTab, RaceLineTab, LapTimesTab, LabsTab, CoachTab
+│   ├── tabs/              # Main view tabs: GraphViewTab, RaceLineTab, LapTimesTab, LabsTab, CoachTab, ProfileTab
 │   ├── graphview/         # Pro mode: GraphPanel, GraphViewPanel, MiniMap, SingleSeriesChart, InfoBox
 │   ├── drawer/            # File manager drawer tabs: FilesTab, KartsTab, NotesTab, SetupsTab, DeviceSettingsTab, DeviceTracksTab
 │   ├── track-editor/      # Track editor sub-components
@@ -146,6 +146,7 @@ src/
 │   ├── referenceUtils.ts      # Reference lap comparison (legacy distance-based pace)
 │   ├── lapDelta.ts            # ★ Position-based lap delta: arc-length resample + segment-projected gap (issue #29 port)
 │   ├── dbUtils.ts             # ★ Shared IndexedDB: DB_NAME, DB_VERSION, openDB(), transaction helpers
+│   ├── garageEvents.ts        # ★ Host pub/sub: storage modules emit {store,key,put|delete}; cloud-sync auto-syncs off it
 │   ├── fileStorage.ts         # IndexedDB: raw file blobs
 │   ├── kartStorage.ts         # Old kart storage (kept for compat)
 │   ├── vehicleStorage.ts     # ★ Vehicle profiles CRUD (replaces kartStorage)
@@ -192,8 +193,11 @@ src/
 │   │   ├── CloudFilesSection.tsx # FileManagerSection mount: lists all cloud files (on-device marked, others pullable)
 │   │   ├── fileSync.ts           # Per-file selection state in the plugin store + fileSyncStatus/cloudOnlyNames (pure, tested)
 │   │   ├── syncStores.ts         # Pure config: which IDB stores sync + how they're keyed (testable)
-│   │   ├── syncEngine.ts         # pushAll (garage + selected files) / pushFile / pullAll: IDB ↔ sync_records + bucket
-│   │   └── cloudClient.ts        # Typed access to sync_records + bucket (escape hatch until types regen)
+│   │   ├── storageTypes.ts      # Pure: storage types (documents 5MB / logs 20MB) + usage math (tested)
+│   │   ├── syncEngine.ts         # pushAll/pushFile/pullAll + incremental pushRecord/deleteRecord/pushDocs/pullDocs + getStorageUsage
+│   │   ├── autoSync.ts           # Background doc auto-sync: subscribes to garageEvents, debounced upsert/delete + reconcile on sign-in
+│   │   ├── StoragePanel.tsx      # Profile-tab panel: storage usage meters + account scratch pad (lazy)
+│   │   └── cloudClient.ts        # Typed access to sync_records + bucket + sync_storage_usage RPC (escape hatch until types regen)
 │   └── coaching/              # Gitignored private slot (AI coaching submodule)
 ├── types/
 │   └── racing.ts              # ★ Core types: GpsSample, ParsedData, Lap, Course, Track, etc.
@@ -259,11 +263,13 @@ A plugin default-exports `{ id, name, version?, priority?, setup?(ctx) }`. In
 
 **UI panels:** the first concrete extension point. A plugin contributes
 `PluginPanel` descriptors to `PANELS_POINT`, targeting a *slot* (host surface).
-Two slots exist today: `PanelSlot.Labs` (rendered by `LabsTab.tsx`) and
+Three slots exist today: `PanelSlot.Labs` (rendered by `LabsTab.tsx`),
 `PanelSlot.Coach` (rendered by `CoachTab.tsx` — the dedicated AI Coach tab, home
-for the `@perchwerks/eye-in-the-sky` coaching plugin). Both render contributed
-panels via `PluginPanelHost` and are **self-gating**: `Index.tsx` computes
-`hasLabsPanels`/`showCoach` from `getPanelsForSlot`, so a tab appears only when a
+for the `@perchwerks/eye-in-the-sky` coaching plugin), and `PanelSlot.Profile`
+(rendered by `ProfileTab.tsx`, far-right — cloud-sync contributes the storage
+meters). All render contributed panels via `PluginPanelHost` and are
+**self-gating**: `Index.tsx` computes `hasLabsPanels`/`showCoach`/`showProfile`
+from `getPanelsForSlot`, so a tab appears only when a
 plugin contributes a panel to it (Labs additionally shows when the experimental
 `enableLabs` setting is on). New slots are just new strings — no framework change.
 `PluginPanelHost` wraps each panel in an error boundary **and** a `Suspense`
@@ -390,18 +396,33 @@ To add a new store: increment `DB_VERSION`, add store name to `STORE_NAMES`, add
 ## Cloud Sync (`src/plugins/cloud-sync/`)
 
 Optional per-user backup/sync of the IndexedDB data above to Supabase. Built as
-a first-party plugin (Labs panel), online-only (accepted offline-first
-exception). **Manual & directional**: "push" mirrors local → cloud, "pull"
-brings cloud → local; on a key collision the chosen direction wins. Sync is
-**additive** — neither side deletes the other's extra records (deletion
-propagation + timestamp merge are deliberate follow-ups).
+a first-party plugin (Labs + Profile panels), online-only (accepted offline-first
+exception). Manual push/pull remains (`CloudSyncPanel`), but the **document tier
+now auto-syncs**: storage modules emit `garageEvents` on write/delete, and
+`autoSync.ts` (started in `setup`, dynamically imported to stay off the initial
+bundle) debounces and incrementally **upserts (put) / deletes (delete)** the one
+changed record while signed in, and **reconciles** (pull docs → push docs) on
+sign-in. So edits back up automatically and **deletes propagate everywhere** —
+the Karts/Setups delete UI shows a loud "deletes from every device + the cloud"
+warning when signed in. (Log-blob deletion propagation + timestamp merge are
+still follow-ups.)
 
-Backend (migration `..._cloud_sync.sql`):
+**Storage types** (`storageTypes.ts`, enforced server-side) — distinct from
+future *subscription tiers*: **documents** = all structured stores (5 MB, free,
+auto-synced) and **logs** = file blobs (20 MB, opt-in). Limits live in the
+`quota_limits` table (one source of truth for the enforcing trigger + the client
+meter); `sync_storage_usage()` returns per-type usage for the Profile-tab meters.
+Client checks are advisory — the DB trigger is the real gate.
+
+Backend (migrations `..._cloud_sync.sql`, `..._storage_quotas.sql`):
 
 | Object | Type | Notes |
 |--------|------|-------|
 | `sync_records` | table | One jsonb document per record: `(user_id, store, record_key, data, updated_at)`, unique on `(user_id, store, record_key)`. RLS: `auth.uid() = user_id`. `store`/`record_key` mirror the IndexedDB store name + key path. |
 | `user-files` | Storage bucket | Private. Raw session blobs at `{user_id}/{encodeURIComponent(name)}`. RLS scopes objects to the owner's folder. |
+| `quota_limits` | table | `(storage_type, max_bytes)` seeded `documents`=5 MB, `logs`=20 MB. Read by client + trigger. |
+| `enforce_sync_quota` | trigger | BEFORE INSERT/UPDATE on `sync_records`: rejects writes that push a storage type over its limit (`quota_exceeded`). |
+| `sync_storage_usage()` | RPC | Per-type `(used_bytes, limit_bytes)` for the caller. |
 
 Synced stores (`syncStores.ts` — pure, unit-tested): `metadata`, `karts`,
 `setups`, `notes`, `graph-prefs`, `vehicle-types`, `setup-templates` (jsonb
