@@ -15,7 +15,7 @@ import { getFile, saveFile } from "@/lib/fileStorage";
 import { getAccessor } from "./storeAccessors";
 import { fetchStorageUsage, syncRecords, userFiles, type SyncRecordRow } from "./cloudClient";
 import { DOC_STORES, FILE_STORE, extractKey, type SyncSummary } from "./syncStores";
-import { listSelectedFiles, markPushed } from "./fileSync";
+import { listSelectedFiles, markPushed, orphanedObjectNames } from "./fileSync";
 import { DEFAULT_LIMITS, type StorageType, type StorageTypeUsage } from "./storageTypes";
 import { decideSync, pendingId, recordUpdatedAt } from "./merge";
 
@@ -40,7 +40,8 @@ async function writeOne(store: string, record: unknown): Promise<void> {
 async function uploadBlob(userId: string, name: string): Promise<boolean> {
   const blob = await getFile(name);
   if (!blob) return false;
-  const { error: upErr } = await userFiles().upload(blobPath(userId, name), blob, {
+  const path = blobPath(userId, name);
+  const { error: upErr } = await userFiles().upload(path, blob, {
     upsert: true,
     contentType: blob.type || "application/octet-stream",
   });
@@ -49,7 +50,12 @@ async function uploadBlob(userId: string, name: string): Promise<boolean> {
     [{ user_id: userId, store: FILE_STORE, record_key: name, data: { size: blob.size } }],
     { onConflict: "user_id,store,record_key" },
   );
-  if (error) throw new Error(`Failed to index ${name}: ${error.message}`);
+  if (error) {
+    // The blob is uploaded but its index row was rejected (e.g. the server
+    // quota trigger). Roll the blob back so it can't orphan in the bucket.
+    await userFiles().remove([path]).catch(() => {});
+    throw new Error(`Failed to index ${name}: ${error.message}`);
+  }
   return true;
 }
 
@@ -96,6 +102,25 @@ export async function deleteCloudFile(userId: string, name: string): Promise<voi
     .eq("store", FILE_STORE)
     .eq("record_key", name);
   if (error) throw new Error(`Failed to remove cloud file index: ${error.message}`);
+}
+
+/**
+ * Remove bucket blobs that have no `sync_records` index row (orphans — e.g. left
+ * by an interrupted upload before the rollback fix). Returns the count removed.
+ */
+export async function cleanupOrphanBlobs(userId: string): Promise<number> {
+  const { data: objects, error: listErr } = await userFiles().list(userId, { limit: 1000 });
+  if (listErr || !objects) return 0;
+  const { data: rows } = await syncRecords()
+    .select("record_key")
+    .eq("user_id", userId)
+    .eq("store", FILE_STORE);
+  const indexed = (rows ?? []).map((r) => (r as { record_key: string }).record_key);
+  const orphans = orphanedObjectNames(objects.map((o) => o.name), indexed);
+  if (!orphans.length) return 0;
+  const { error: rmErr } = await userFiles().remove(orphans.map((n) => `${userId}/${n}`));
+  if (rmErr) return 0;
+  return orphans.length;
 }
 
 /** Download a single file blob from the cloud (does not persist it locally). */

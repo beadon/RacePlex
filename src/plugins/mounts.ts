@@ -20,6 +20,9 @@ export const MountSlot = {
   FileRow: "file-row",
   /** Rendered once below the file list. Context: the whole list. */
   FileManagerSection: "file-manager-section",
+  /** Rendered inside the file delete-confirm banner. Context: the target file +
+   *  a hook to run an extra action when the user confirms the delete. */
+  FileDeleteConfirm: "file-delete-confirm",
 } as const;
 export type MountSlot = (typeof MountSlot)[keyof typeof MountSlot];
 
@@ -34,6 +37,18 @@ export interface FileManagerSectionContext {
   files: FileEntry[];
   /** Persist a (e.g. cloud-pulled) blob into local storage. */
   onSaveFile: (name: string, blob: Blob) => Promise<void>;
+}
+
+/** Context handed to a `MountSlot.FileDeleteConfirm` component. */
+export interface FileDeleteConfirmContext {
+  /** The file about to be deleted locally. */
+  fileName: string;
+  /**
+   * Register an extra action the host runs (after the local delete) when the
+   * user confirms — or `null` to clear it. Lets a plugin (e.g. cloud-sync)
+   * offer "also delete from the cloud" without the host knowing about cloud.
+   */
+  registerOnConfirm: (fn: (() => Promise<void>) | null) => void;
 }
 
 /**
