@@ -33,7 +33,7 @@ const TIERS: Tier[] = [
     features: [
       "Setup info synced across all your devices",
       "Sync your personal tracks",
-      "10 MB cloud log storage",
+      "20 MB cloud log storage",
     ],
   },
   {
@@ -52,7 +52,7 @@ const TIERS: Tier[] = [
     cadence: "/mo",
     comingSoon: true,
     inherits: "Everything in Plus, plus",
-    features: ["1 GB cloud log storage", "100 AI coaching credits / month"],
+    features: ["1 GB cloud log storage", "AI coaching (coming soon)"],
   },
 ];
 

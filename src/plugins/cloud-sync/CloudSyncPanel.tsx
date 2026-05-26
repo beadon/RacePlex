@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
-import { Cloud, CloudUpload, CloudDownload, LogOut, WifiOff, Loader2 } from "lucide-react";
+import { CloudUpload, CloudDownload, LogOut, WifiOff, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
@@ -33,9 +33,6 @@ export default function CloudSyncPanel() {
     };
     return (
       <div className="space-y-3 w-full">
-        <h3 className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
-          <Cloud className="w-4 h-4 text-primary" /> Cloud Sync
-        </h3>
         <p className="text-xs text-muted-foreground">
           Sign in to back up and sync your files, garage and notes across devices. Cloud Sync is optional — the app works fully offline without it.
         </p>
@@ -85,10 +82,7 @@ export default function CloudSyncPanel() {
   return (
     <div className="space-y-4 w-full">
       <div className="flex items-center justify-between gap-2">
-        <h3 className="flex items-center gap-1.5 text-sm font-semibold text-foreground min-w-0">
-          <Cloud className="w-4 h-4 text-primary shrink-0" />
-          <span className="truncate">{user.email}</span>
-        </h3>
+        <span className="text-sm text-foreground truncate">{user.email}</span>
         <Button variant="ghost" size="sm" onClick={logout} disabled={busy !== null}>
           <LogOut className="w-4 h-4 mr-1.5" /> Sign out
         </Button>

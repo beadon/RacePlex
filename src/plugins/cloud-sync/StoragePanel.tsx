@@ -50,7 +50,7 @@ export default function StoragePanel(_props: PluginPanelProps) {
       <div className="space-y-2">
         <p className="text-sm font-medium text-foreground">Not signed in</p>
         <p className="text-xs text-muted-foreground">
-          Sign in under Labs → Cloud Sync to back up your garage and see your storage usage.
+          Sign in under Account (above) to back up your garage and see your storage usage.
         </p>
       </div>
     );

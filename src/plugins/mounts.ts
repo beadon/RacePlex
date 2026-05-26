@@ -21,7 +21,7 @@ export const MountSlot = {
   /** Rendered once below the file list. Context: the whole list. */
   FileManagerSection: "file-manager-section",
   /** Rendered near the bottom of the file manager (above storage usage).
-   *  Context: the whole list. Home for the Cloud Sync sign-in / push-pull panel. */
+   *  Context: the whole list. Home for the "Download all cloud logs" action. */
   FileManagerFooter: "file-manager-footer",
 } as const;
 export type MountSlot = (typeof MountSlot)[keyof typeof MountSlot];
