@@ -636,7 +636,20 @@ npm run typecheck  # tsc -b (must use build mode to follow project references)
 npm run preview    # Preview production build
 npm test           # Vitest in watch mode
 npm run test:run   # Vitest single pass (CI-style)
+npm run test:coverage  # Vitest + v8 coverage (enforces thresholds in vitest.config.ts)
 ```
+
+> **Coverage scope (`vitest.config.ts`).** Coverage is deliberately scoped to
+> *logic worth unit-testing* — `lib/` parsers/utilities/protocol code, `hooks/`,
+> and `plugins/`. The React **view layer is excluded**: presentational
+> components (`src/components/**/*.tsx`), route/page shells (`src/pages/**`),
+> context providers (`src/contexts/**`), `App.tsx`, vendored `ui/`, and the
+> generated Supabase client. Note the exclude targets `components/**/*.tsx`
+> *only* — the `.ts` logic files under `components/video-overlays/` stay in
+> scope. Don't widen the include to pull view code back in (it tanks the number
+> with code nobody unit-tests) and don't exclude `hooks/`/`lib/` to inflate it
+> (that hides real test debt). Thresholds are floors a few points below current
+> actuals — ratchet them up as coverage grows.
 
 > **Why `tsc -b`?** The root `tsconfig.json` has `files: []` and only uses
 > `references` to point at `tsconfig.app.json` + `tsconfig.node.json`. Plain
@@ -644,9 +657,11 @@ npm run test:run   # Vitest single pass (CI-style)
 > `tsc -b` (build mode) follows references; both referenced configs have
 > `noEmit: true` so nothing is emitted.
 
-CI is split into four parallel workflows under `.github/workflows/`
-(`lint.yml`, `typecheck.yml`, `test.yml`, `build.yml`). Each runs on every PR
-and push to `main` and shows up as its own status check + README badge.
+CI is split into five parallel workflows under `.github/workflows/`
+(`lint.yml`, `typecheck.yml`, `test.yml`, `build.yml`, `coverage.yml`). Each
+runs on every PR and push to `main` and shows up as its own status check +
+README badge. `coverage.yml` also enforces the thresholds in `vitest.config.ts`,
+posts a per-PR summary comment, and publishes the % badge JSON.
 
 ---
 
