@@ -72,17 +72,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the same way setups do — auto-sync, delete propagation, and the offline-aware
   timestamp merge. Only your user-created tracks/courses sync; built-in tracks
   stay local.
+- **Plans & pricing** cards on the landing page (below the sample) and on the
+  registration page — Free offline, Free online (20 MB cloud logs), and paid
+  tiers (marked "Coming soon" until billing is wired up).
+- **"Download all cloud logs"** button at the bottom of the file manager:
+  one-click bulk pull of every cloud log not already on this device.
+- Registration now supports a **Cloudflare Turnstile captcha** when
+  `VITE_TURNSTILE_SITE_KEY` is set (gracefully skipped when it isn't), and
+  rejects **disposable / temporary email** addresses.
 
 ### Changed
-- Cloud document sync is now **offline-aware and conflict-safe**.
+- **Cloud Sync moved out of the Labs tab**: sign-in and manual push/pull now live
+  on the **Profile** tab as an "Account" panel. The Labs tab no longer appears
+  unless the experimental setting is on or a plugin contributes to it.
+- Landing-page and About copy now reflect **optional cloud storage** (instead of
+  "files never leave your device"), since cloud sync is available when signed in.
 - When local garage data exceeds the cloud **documents** limit, sync now does a
   **partial push** — it saves everything that fits and tells you how many items
   didn't — instead of rejecting the whole batch and syncing nothing.
-
-### Fixed
-- Cloud log uploads no longer **orphan a blob** when the server quota rejects the
-  index write — the just-uploaded blob is rolled back. Any pre-existing orphans
-  are reclaimed when the Cloud logs panel is opened. Garage records
+- Cloud document sync is now **offline-aware and conflict-safe**. Garage records
   (vehicles, setups, templates, notes) carry an edit timestamp, and sync uses
   last-write-wins, so a newer change is never overwritten by an older copy.
   Changes made **offline** are saved as pending and, on reconnect, take
@@ -117,6 +125,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `@perchwerks/eye-in-the-sky` and loads by default — no build token or `.npmrc`
   required. (Previously a private GitHub Packages package gated behind
   `NODE_AUTH_TOKEN`.)
+
+### Fixed
+- Cloud log uploads no longer **orphan a blob** when the server quota rejects the
+  index write — the just-uploaded blob is rolled back. Any pre-existing orphans
+  are reclaimed when the Cloud logs panel is opened.
 
 ## [1.5.0] - 2026-05-22
 

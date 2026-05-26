@@ -10,14 +10,16 @@ import {
 } from "@/plugins/mounts";
 
 // The panel pulls in the Supabase sync engine + storage modules, so it's lazy:
-// the chunk loads only when the Labs tab is opened, keeping the initial bundle
-// lean (see Bundle Splitting in CLAUDE.md).
+// the chunk loads only when the Profile tab is opened, keeping the initial
+// bundle lean (see Bundle Splitting in CLAUDE.md).
 const CloudSyncPanel = lazy(() => import("./CloudSyncPanel"));
-// Likewise the per-file toggle + cloud-only list: lazy so the file-manager
-// drawer doesn't pull the sync engine onto its chunk until they render.
+// Likewise the per-file toggle, cloud-only list, and bulk-download button: lazy
+// so the file-manager drawer doesn't pull the sync engine onto its chunk until
+// they render.
 const FileSyncToggle = lazy(() => import("./FileSyncToggle"));
 const FileDeleteToggle = lazy(() => import("./FileDeleteToggle"));
 const CloudFilesSection = lazy(() => import("./CloudFilesSection"));
+const DownloadAllCloudLogs = lazy(() => import("./DownloadAllCloudLogs"));
 // Profile tab panels: storage usage meters + account, and cloud-log management.
 const StoragePanel = lazy(() => import("./StoragePanel"));
 const CloudLogsPanel = lazy(() => import("./CloudLogsPanel"));
@@ -30,18 +32,18 @@ const plugin: DataViewerPlugin = {
   version: "0.1.0",
   setup(ctx) {
     // Offline-first guard: when the cloud flag is off, contribute nothing.
-    // The Labs panel never registers, the panel chunk never loads, and the
-    // Labs tab stays hidden unless another plugin contributes there.
+    // No panels/mounts register, their chunks never load, and the Labs tab
+    // stays hidden unless another plugin contributes there.
     if (!enableCloud) return;
-    const panel: PluginPanel = {
-      id: "cloud-sync",
-      title: "Cloud Sync",
-      slot: PanelSlot.Labs,
-      order: 10,
-      icon: Cloud,
-      component: CloudSyncPanel,
-    };
-    ctx.registry.contribute(PANELS_POINT, panel);
+
+    // "Download all cloud logs" bulk action at the bottom of the file list.
+    // (Sign-in itself lives on the Profile tab — see CloudSyncPanel below.)
+    ctx.registry.contribute(MOUNTS_POINT, {
+      id: "cloud-sync-download-all",
+      slot: MountSlot.FileManagerFooter,
+      order: 0,
+      component: DownloadAllCloudLogs,
+    } satisfies PluginMountDef<FileManagerSectionContext>);
 
     // Per-file sync toggle injected into each file-manager row.
     ctx.registry.contribute(MOUNTS_POINT, {
@@ -69,7 +71,18 @@ const plugin: DataViewerPlugin = {
       component: CloudFilesSection,
     } satisfies PluginMountDef<FileManagerSectionContext>);
 
-    // Profile tab: storage usage meters (document + log storage types) + account.
+    // Profile tab: account / sign-in + manual push/pull (the login moved here
+    // from the file manager). Ordered first so it's the top of the Profile tab.
+    ctx.registry.contribute(PANELS_POINT, {
+      id: "cloud-sync-account",
+      title: "Account",
+      slot: PanelSlot.Profile,
+      order: -10,
+      icon: User,
+      component: CloudSyncPanel,
+    } satisfies PluginPanel);
+
+    // Profile tab: storage usage meters (document + log storage types).
     ctx.registry.contribute(PANELS_POINT, {
       id: "cloud-sync-storage",
       title: "Profile",

@@ -269,11 +269,14 @@ A plugin default-exports `{ id, name, version?, priority?, setup?(ctx) }`. In
 
 **UI panels:** the first concrete extension point. A plugin contributes
 `PluginPanel` descriptors to `PANELS_POINT`, targeting a *slot* (host surface).
-Three slots exist today: `PanelSlot.Labs` (rendered by `LabsTab.tsx`),
-`PanelSlot.Coach` (rendered by `CoachTab.tsx` — the dedicated AI Coach tab, home
-for the `@perchwerks/eye-in-the-sky` coaching plugin), and `PanelSlot.Profile`
-(rendered by `ProfileTab.tsx`, far-right — cloud-sync contributes the storage
-meters). All render contributed panels via `PluginPanelHost` and are
+Three slots exist today: `PanelSlot.Labs` (rendered by `LabsTab.tsx`; no
+first-party panel targets it now — it shows only when the experimental
+`enableLabs` setting is on or another plugin contributes), `PanelSlot.Coach`
+(rendered by `CoachTab.tsx` — the dedicated AI Coach tab, home for the
+`@perchwerks/eye-in-the-sky` coaching plugin), and `PanelSlot.Profile`
+(rendered by `ProfileTab.tsx`, far-right — cloud-sync contributes the Account
+sign-in panel, storage meters, and cloud-log management). All render contributed
+panels via `PluginPanelHost` and are
 **self-gating**: `Index.tsx` computes `hasLabsPanels`/`showCoach`/`showProfile`
 from `getPanelsForSlot`, so a tab appears only when a
 plugin contributes a panel to it (Labs additionally shows when the experimental
@@ -289,17 +292,23 @@ are all chromeless (`isBareSlot`) also drops the host's outer padding.
 component into a fixed spot in core UI. A plugin contributes a `PluginMountDef`
 to `MOUNTS_POINT`, targeting a `MountSlot`; the host renders `<PluginMount slot
 ctx={…}>` at that spot, passing a typed context as a single `ctx` prop.
-`FilesTab` exposes three: `MountSlot.FileRow` (per file row, ctx = that file),
-`MountSlot.FileManagerSection` (once under the list, ctx = the whole list), and
+`FilesTab` exposes four: `MountSlot.FileRow` (per file row, ctx = that file),
+`MountSlot.FileManagerSection` (once under the list, ctx = the whole list),
+`MountSlot.FileManagerFooter` (near the bottom, above storage usage, ctx = the
+whole list — home for the "Download all cloud logs" bulk action), and
 `MountSlot.FileDeleteConfirm` (inside the delete-confirm banner, ctx = the target
 file + a `registerOnConfirm` hook so a plugin can run an extra action — e.g.
 cloud-sync's "also delete the cloud copy" — without the host knowing about
 cloud). New mount locations are just new slot strings.
 
 **Cloud Sync (first-party plugin, `src/plugins/cloud-sync/`):** the first
-in-repo plugin built on the panel framework. Contributes a lazy Labs panel that
-signs the user in (`useAuth`) and does manual push/pull of local IndexedDB data
-to Supabase. Structured stores go to the `sync_records` table as jsonb
+in-repo plugin built on the panel framework. Sign-in + manual push/pull live in
+`CloudSyncPanel` (lazy), contributed as the **Account** panel on the Profile tab
+(`PanelSlot.Profile`, ordered first). The file manager's footer
+(`MountSlot.FileManagerFooter`) gets a separate lazy `DownloadAllCloudLogs` mount
+— a one-click bulk pull of every cloud log not yet on this device (self-hides
+when signed out). (Cloud Sync used to be a Labs panel; no first-party panel
+targets Labs now.) Structured stores go to the `sync_records` table as jsonb
 documents; raw session blobs go to the private `user-files` Storage bucket. See
 the Cloud Sync section below for the data model.
 

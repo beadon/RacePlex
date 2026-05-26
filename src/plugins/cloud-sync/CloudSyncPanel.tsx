@@ -32,7 +32,7 @@ export default function CloudSyncPanel() {
       }
     };
     return (
-      <div className="space-y-3 max-w-sm">
+      <div className="space-y-3 w-full">
         <p className="text-xs text-muted-foreground">
           Sign in to back up and sync your files, garage and notes across devices. Cloud Sync is optional — the app works fully offline without it.
         </p>
@@ -86,7 +86,7 @@ export default function CloudSyncPanel() {
   };
 
   return (
-    <div className="space-y-4 max-w-sm">
+    <div className="space-y-4 w-full">
       <div className="flex items-center justify-between gap-2">
         <span className="text-sm text-foreground truncate">{user.email}</span>
         <Button variant="ghost" size="sm" onClick={logout} disabled={busy !== null}>
