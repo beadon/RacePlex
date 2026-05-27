@@ -1,4 +1,4 @@
-import { Gauge, Github, Heart, Shield, BookOpen, Play, Loader2, LogIn, LogOut } from "lucide-react";
+import { Gauge, Github, Heart, Shield, BookOpen, Play, Loader2, LogIn, LogOut, FileText } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { FileImport } from "@/components/FileImport";
@@ -157,6 +157,10 @@ export function LandingPage({
             <Link to="/privacy" className="inline-flex items-center gap-1 text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors">
               <Shield className="w-3 h-3" />
               Privacy Policy
+            </Link>
+            <Link to="/terms" className="inline-flex items-center gap-1 text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors">
+              <FileText className="w-3 h-3" />
+              Terms of Service
             </Link>
             <ContactDialog />
             <CreditsDialog />

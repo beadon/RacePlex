@@ -14,6 +14,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Terms of Service page** (`/terms`) and a rewritten **Privacy Policy** that
+  now accurately reflect the optional online features — accounts, cloud sync,
+  Stripe-billed plans, and AI coaching — instead of the old "nothing ever leaves
+  your device" copy. Both pages adapt to the build flags (offline-only builds
+  show the simpler policy) and are linked from the landing-page footer. Account
+  sign-up now states the **16+ age requirement** and links both documents
+  (under-16 users use the app offline only). AI coaching is documented as
+  informational only — not safety or professional advice.
 - **Paid subscription tiers**: Stripe-backed `Plus` ($1/mo, 500 MB logs) and
   `Pro` ($10/mo, 1 GB logs) plans on top of the free 20 MB tier. Plan limits are
   data-driven (`subscription_tiers` table) and the cloud-sync storage quota is

@@ -109,6 +109,13 @@ export default function Register() {
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? 'Please wait...' : 'Create Account'}
             </Button>
+            <p className="text-xs text-muted-foreground text-center">
+              You must be 16 or older to create an account. By continuing you
+              agree to our{' '}
+              <Link to="/terms" className="text-primary hover:underline">Terms of Service</Link>{' '}
+              and{' '}
+              <Link to="/privacy" className="text-primary hover:underline">Privacy Policy</Link>.
+            </p>
           </form>
 
           <p className="text-sm text-muted-foreground text-center">

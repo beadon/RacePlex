@@ -72,7 +72,7 @@ src/
 ├── pages/
 │   ├── Index.tsx          # Main SPA — file import, tab views, all state orchestration
 │   ├── Admin.tsx          # Admin panel (behind VITE_ENABLE_ADMIN)
-│   ├── Login.tsx / Register.tsx / Privacy.tsx
+│   ├── Login.tsx / Register.tsx / Privacy.tsx / Terms.tsx
 │   └── NotFound.tsx
 ├── components/
 │   ├── ui/                # shadcn/ui primitives (button, dialog, tabs, etc.)
