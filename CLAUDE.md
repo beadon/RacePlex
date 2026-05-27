@@ -79,7 +79,7 @@ src/
 │   ├── admin/             # Admin tabs: TracksTab, CoursesTab, SubmissionsTab, BannedIpsTab, ToolsTab, MessagesTab
 │   ├── tabs/              # Main view tabs: GraphViewTab, RaceLineTab, LapTimesTab, LabsTab, CoachTab, ProfileTab
 │   ├── graphview/         # Pro mode: GraphPanel, GraphViewPanel, MiniMap, SingleSeriesChart, InfoBox
-│   ├── drawer/            # File manager drawer tabs: FilesTab, KartsTab, NotesTab, SetupsTab, DeviceSettingsTab, DeviceTracksTab
+│   ├── drawer/            # File manager drawer tabs: FilesTab, KartsTab/VehiclesTab, NotesTab, SetupsTab, DeviceSettingsTab, DeviceTracksTab, EngineCombobox
 │   ├── track-editor/      # Track editor sub-components
 │   ├── RaceLineView.tsx   # Leaflet map with race line, speed heatmap, braking zones
 │   ├── TelemetryChart.tsx # Canvas-based speed/telemetry chart (simple mode)
@@ -114,6 +114,7 @@ src/
 │   ├── useFileManager.ts      # IndexedDB file CRUD
 │   ├── useKartManager.ts      # Backward compat re-export → useVehicleManager
 │   ├── useVehicleManager.ts   # Vehicle profiles CRUD
+│   ├── useEngineManager.ts    # Reusable engine-type list CRUD (search/create/import)
 │   ├── useTemplateManager.ts  # Vehicle types & setup templates CRUD
 │   ├── useNoteManager.ts      # Session notes CRUD
 │   ├── useSetupManager.ts     # Generic setup sheets CRUD (template-driven)
@@ -151,6 +152,8 @@ src/
 │   ├── fileStorage.ts         # IndexedDB: raw file blobs
 │   ├── kartStorage.ts         # Old kart storage (kept for compat)
 │   ├── vehicleStorage.ts     # ★ Vehicle profiles CRUD (replaces kartStorage)
+│   ├── engineStorage.ts      # IndexedDB: reusable engine-type list (emits garage events)
+│   ├── engineUtils.ts        # Pure engine search/dedup/create-offer helpers
 │   ├── templateStorage.ts    # ★ Vehicle types + setup templates, default kart schema
 │   ├── noteStorage.ts         # IndexedDB: session notes
 │   ├── setupStorage.ts        # IndexedDB: kart setups
@@ -395,7 +398,7 @@ GPS data is always parseable even if metadata is corrupted. Metadata is attached
 
 ## IndexedDB Storage (`src/lib/dbUtils.ts`)
 
-Single shared database: `"dove-file-manager"`, version 9.
+Single shared database: `"dove-file-manager"`, version 10.
 
 | Store | Key | Module |
 |-------|-----|--------|
@@ -409,6 +412,7 @@ Single shared database: `"dove-file-manager"`, version 9.
 | `vehicle-types` | `id` | `templateStorage.ts` |
 | `setup-templates` | `id` | `templateStorage.ts` |
 | `session-videos` | `sessionFileName` | `videoFileStorage.ts` |
+| `engines` | `id` | `engineStorage.ts` |
 
 To add a new store: increment `DB_VERSION`, add store name to `STORE_NAMES`, add creation logic in `openDB()`, create a corresponding storage module.
 
