@@ -121,12 +121,26 @@ The app includes an optional admin system for managing a community track databas
 > **Note:** `TURNSTILE_SECRET_KEY` is a server-side secret stored in Lovable Cloud, not a `VITE_` client variable. If not set, Turnstile verification is skipped.
 
 > **Stripe / paid tiers:** `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` are
-> edge-function secrets (not `VITE_` client vars). After creating the
-> Plus/Premium/Pro Products + recurring Prices in Stripe, store each Price id in the matching
-> `subscription_tiers.stripe_price_id` row, and point a Stripe webhook (events:
+> edge-function secrets (not `VITE_` client vars). Prices are resolved live by
+> **lookup_key** — there are no Price ids in code or env. Create the
+> Plus/Premium/Pro Products in Stripe with one recurring Price per billing
+> interval, each tagged with the matching lookup_key:
+> `plus_monthly`, `plus_annual`, `premium_monthly`, `premium_annual`,
+> `pro_monthly`, `pro_annual`. Then point a Stripe webhook (events:
 > `checkout.session.completed`, `customer.subscription.created/updated/deleted`)
-> at the `stripe-webhook` function URL. Use Stripe **test mode** first. Tier
-> entitlements are granted only by the webhook, never the client.
+> at the `stripe-webhook` function URL. When `STRIPE_SECRET_KEY` is absent the
+> pricing UI falls back to showing only the two free cards (Guest + Free). Use
+> Stripe **test mode** first. Tier entitlements are granted only by the webhook,
+> never the client.
+>
+> **Cancellation grace + log trimming:** a cancelled subscription ends at the
+> period boundary and drops to the free tier's limits immediately, but the
+> user's cloud logs are kept for a 60-day grace window (`grace_until`). After it
+> expires, the `trim_expired_logs()` function (scheduled daily via `pg_cron` in
+> the `subscription_grace_trim` migration) deletes their synced log files
+> newest-first down to the free `logs_bytes` allowance. If `pg_cron` isn't
+> enabled on the project, enable it (Dashboard → Database → Extensions) or invoke
+> `select public.trim_expired_logs();` from an external scheduler.
 
 > **Note:** `DOVE_PLUGIN_PACKAGES` is build-time only (read by `vite.config.ts`), not a client `VITE_` variable. It overrides which external plugin packages the build loads; by default the build pulls in the public AI coach (`@perchwerks/eye-in-the-sky`) from npm as an optional dependency — see `src/plugins/README.md`.
 
@@ -146,6 +160,10 @@ The admin system uses Lovable Cloud (Supabase) for the database. The schema is c
 - **user_roles** — Admin/user role assignments (uses `has_role()` security definer)
 - **sync_records** — Per-user cloud-sync documents (files/garage data), RLS-scoped to the owner
 - **user-files** (Storage bucket) — Private per-user session file blobs for cloud sync
+- **quota_limits** — Baseline per-storage-type byte limits (documents/logs)
+- **subscription_tiers** — Data-driven plan catalogue (free/plus/premium/pro): label, price, per-type byte limits
+- **user_subscriptions** — Per-user tier + Stripe customer/subscription state, status, renewal date, cancellation grace (service-role-written only)
+- **profiles** — Per-user unique, editable display name
 
 > Cloud sync is independent of the admin system — it only needs a signed-in user
 > account, not the admin role. It's an online-only, opt-in feature; the core app
@@ -177,6 +195,11 @@ src/lib/db/
 | `submit-track` | Public endpoint for track submissions (with IP ban check) |
 | `admin-build-zip` | Admin-only: generates per-track JSON files |
 | `check-login-rate` | Rate limiting for login attempts |
+| `submit-message` | Public contact-form endpoint (with IP ban + rate limit) |
+| `stripe-prices` | Public: reports whether Stripe is configured + live monthly/annual prices (resolved by lookup_key) for the pricing UI |
+| `create-checkout-session` | Auth: starts Stripe Checkout for a tier + interval |
+| `create-portal-session` | Auth: opens the Stripe Billing Portal (manage/cancel/renewal) |
+| `stripe-webhook` | Stripe-signed: the only writer of subscription tier/status + grace window |
 
 ### Track Short Names
 

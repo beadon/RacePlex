@@ -1,7 +1,8 @@
-// Creates a Stripe Checkout Session for a subscription tier and returns its URL.
-// The caller's Supabase JWT (Authorization: Bearer …) identifies the user; the
-// tier's Price id lives in the subscription_tiers table (set after you create
-// the Price in Stripe). The actual entitlement is granted by stripe-webhook on
+// Creates a Stripe Checkout Session for a subscription tier + billing interval
+// and returns its URL. The caller's Supabase JWT (Authorization: Bearer …)
+// identifies the user; the Price is resolved live by lookup_key ("{tier}_{interval}",
+// e.g. "plus_annual") so the Stripe dashboard is the source of truth — no Price
+// ids in code or DB. The actual entitlement is granted by stripe-webhook on
 // completion — never by the client.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import Stripe from "https://esm.sh/stripe@17.7.0?target=deno";
@@ -43,23 +44,36 @@ Deno.serve(async (req) => {
       return json({ error: 'Unauthorized' }, 401);
     }
 
-    const { tier, returnUrl } = await req.json().catch(() => ({}));
+    const { tier, interval, returnUrl } = await req.json().catch(() => ({}));
     if (!tier || typeof tier !== 'string' || tier === 'free') {
       return json({ error: 'Invalid tier' }, 400);
     }
+    const billingInterval = interval === 'annual' ? 'annual' : 'monthly';
 
     const admin = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     );
 
-    // Resolve the tier's Stripe Price.
+    // The tier must exist in our catalogue (and not be the free tier).
     const { data: tierRow } = await admin
       .from('subscription_tiers')
-      .select('stripe_price_id')
+      .select('tier')
       .eq('tier', tier)
       .maybeSingle();
-    if (!tierRow?.stripe_price_id) {
+    if (!tierRow) {
+      return json({ error: 'Unknown tier' }, 400);
+    }
+
+    // Resolve the live Price by lookup_key — the dashboard is the source of truth.
+    const lookupKey = `${tier}_${billingInterval}`;
+    const { data: prices } = await stripe.prices.list({
+      lookup_keys: [lookupKey],
+      active: true,
+      limit: 1,
+    });
+    const price = prices[0];
+    if (!price) {
       return json({ error: 'Tier is not purchasable' }, 400);
     }
 
@@ -87,9 +101,9 @@ Deno.serve(async (req) => {
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
       customer: customerId,
-      line_items: [{ price: tierRow.stripe_price_id, quantity: 1 }],
+      line_items: [{ price: price.id, quantity: 1 }],
       client_reference_id: user.id,
-      subscription_data: { metadata: { user_id: user.id, tier } },
+      subscription_data: { metadata: { user_id: user.id, tier, interval: billingInterval } },
       allow_promotion_codes: true,
       success_url: `${base}?checkout=success`,
       cancel_url: `${base}?checkout=cancel`,

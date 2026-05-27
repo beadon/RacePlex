@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.create-portal-session]
 verify_jwt = false
+
+[functions.stripe-prices]
+verify_jwt = false

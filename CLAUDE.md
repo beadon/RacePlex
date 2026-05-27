@@ -120,6 +120,7 @@ src/
 │   ├── useSettings.ts         # User preferences (units, smoothing, dark mode, etc.)
 │   ├── useSessionMetadata.ts  # Per-file metadata (selected track/course)
 │   ├── useSubscription.ts     # Reads subscription tier catalogue + the user's plan (online, account-gated)
+│   ├── useStripePrices.ts     # Reads the live Stripe price catalogue (configured? + monthly/annual prices); drives the no-Stripe failback
 │   └── useOnlineStatus.ts     # Navigator.onLine wrapper
 ├── lib/
 │   ├── datalogParser.ts       # ★ Format auto-detection router (entry point for all parsing)
@@ -177,8 +178,9 @@ src/
 │   │   ├── types.ts           # ITrackDatabase interface
 │   │   ├── supabaseAdapter.ts # Supabase implementation
 │   │   └── index.ts           # Factory: getDatabase()
-│   ├── billing.ts             # ★ Pure subscription logic + row shapes (effectiveTier, pricingCta) — unit-tested, no Supabase import
-│   ├── billingClient.ts       # Supabase I/O for tiers/subscriptions + Stripe checkout/portal (functions.invoke)
+│   ├── billing.ts             # ★ Pure subscription logic + row/price shapes (effectiveTier, pricingCta, lookupKey, paidTiersVisible, priceFor, formatPrice) — unit-tested, no Supabase import
+│   ├── billingClient.ts       # Supabase I/O for tiers/subscriptions + Stripe prices/checkout/portal (functions.invoke)
+│   ├── pendingCheckout.ts     # localStorage stash for a plan chosen at sign-up; redeemed on first sign-in (account-first paid flow) — pure parse is unit-tested
 │   └── utils.ts               # Tailwind cn() helper
 ├── plugins/                   # ★ Plugin framework (auto-discovered via import.meta.glob)
 │   ├── types.ts               # DataViewerPlugin / PluginContext / PluginRegistry contracts
@@ -501,48 +503,71 @@ After a migration, Lovable regenerates `integrations/supabase/types.ts`. Until
 then `cloudClient.ts` accesses the new table/bucket through a narrowly-typed
 escape hatch confined to that one module.
 
-### Subscriptions / Stripe (`..._stripe_subscriptions.sql` + 3 edge functions)
+### Subscriptions / Stripe (`..._stripe_subscriptions.sql`, `..._subscription_grace_trim.sql` + 4 edge functions)
 
 Paid tiers scale the cloud-sync **logs** quota (`free` 20 MB → `plus` $1 500 MB
 → `premium` $3 1 GB → `pro` $10 1 GB; docs stay 5 MB). `premium` matches `pro`'s
-storage but carries no AI credits. Tiers are **data**, not code (numbers are
-provisional):
+storage but carries no AI credits. Each paid tier bills **monthly or annual**.
+Tiers are **data**, not code (numbers are provisional):
 
 | Object | Type | Notes |
 |--------|------|-------|
-| `subscription_tiers` | table | One row per plan: `(tier PK, label, price_cents, logs_bytes, doc_bytes, ai_credits, stripe_price_id, sort_order)`. Authenticated read-all. Change a limit/price = UPDATE here. `stripe_price_id` is set after creating the Stripe Price. |
-| `user_subscriptions` | table | `(user_id PK→auth.users, tier→subscription_tiers, status, stripe_customer_id, stripe_subscription_id, current_period_end, updated_at)`. RLS: owner **read-only** — only the service role (webhook) writes, so no one can self-grant a tier. |
+| `subscription_tiers` | table | One row per plan: `(tier PK, label, price_cents, logs_bytes, doc_bytes, ai_credits, stripe_price_id, sort_order)`. Authenticated read-all. Change a limit = UPDATE here. (`stripe_price_id` is a legacy fallback only — prices now resolve by lookup_key, see below.) |
+| `user_subscriptions` | table | `(user_id PK→auth.users, tier→subscription_tiers, status, stripe_customer_id, stripe_subscription_id, current_period_end, cancel_at_period_end, billing_interval, grace_until, logs_trimmed_at, updated_at)`. RLS: owner **read-only** — only the service role (webhook) writes, so no one can self-grant a tier. |
 | `user_tier(uuid)` | fn (SECURITY DEFINER) | Effective tier: the subscription tier when `status in (active, trialing, past_due)`, else `free`. |
 | `tier_limit(uuid, type)` | fn (SECURITY DEFINER) | Byte limit for a user + storage type from their tier; falls back to `free`, then `quota_limits`. Used by the quota trigger + usage RPC. |
+| `encode_uri_component(text)` | fn | SQL parity with JS `encodeURIComponent`, so the trim job can address the right `user-files` bucket object (`{user_id}/{encoded name}`). |
+| `trim_expired_logs()` | fn (SECURITY DEFINER) | For users past their `grace_until`, deletes synced **log** files newest-first (index row + bucket object) down to the free `logs_bytes`. Scheduled daily via `pg_cron` (guarded; enable the extension or run externally). Not granted to `authenticated`. |
+
+**Prices via lookup_key (no Price ids in code):** each (tier × interval) has a
+Stripe Price tagged with a lookup_key `${tier}_${interval}` (`plus_monthly`,
+`plus_annual`, `premium_monthly`, …). Checkout and the catalogue resolve prices
+live by lookup_key, so the Stripe dashboard is the single source of truth.
+
+**Cancellation grace:** a cancelled sub ends at the period boundary (Stripe
+`customer.subscription.deleted`), dropping to free limits immediately (via
+`user_tier`), but `grace_until = period_end + 60 days` keeps the user's logs so
+they can re-subscribe/download. After grace, `trim_expired_logs()` trims them.
 
 Edge functions (all `verify_jwt = false`; checkout/portal verify the JWT
 manually like the rest of the repo, the webhook verifies the Stripe signature):
 
-- `create-checkout-session` — auth user → ensure Stripe customer (persisted on
-  `user_subscriptions`) → Checkout Session (subscription mode) for the tier's
-  `stripe_price_id` → returns the hosted URL.
+- `stripe-prices` — **public**, no auth. Reports `{ configured, prices[] }`:
+  `configured:false` when `STRIPE_SECRET_KEY` is absent (→ client free-only
+  failback), else live monthly/annual prices fetched by lookup_key.
+- `create-checkout-session` — auth user + `{ tier, interval }` → ensure Stripe
+  customer (persisted on `user_subscriptions`) → resolve Price by lookup_key →
+  Checkout Session (subscription mode) → returns the hosted URL.
 - `stripe-webhook` — **the only writer of entitlements**. Verifies the signature
   (`STRIPE_WEBHOOK_SECRET`), then on `checkout.session.completed` /
   `customer.subscription.created|updated|deleted` upserts `user_subscriptions`
-  (tier resolved from the Price id; `deleted` → `free`) via the service role.
+  (tier + interval resolved from the Price's lookup_key; sets
+  `cancel_at_period_end`; on cancellation sets `grace_until`; `deleted` → `free`)
+  via the service role.
 - `create-portal-session` — returns a Stripe Billing Portal URL for
-  manage/cancel (no in-app billing UI).
+  manage/upgrade/downgrade/cancel (no in-app billing UI).
 
 Secrets: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`.
 
 **Client wiring** (core, not the cloud-sync plugin — billing is account-level and
 PricingCards renders even with cloud disabled): `lib/billing.ts` is the pure,
-unit-tested layer (`isActiveStatus`/`effectiveTier`/`isPaidTier`/`pricingCta` +
-row shapes); `lib/billingClient.ts` is the Supabase I/O (`fetchTiers`,
-`fetchMySubscription`, `createCheckout`, `createPortal` via `functions.invoke`),
-through the same untyped escape hatch as `cloudClient.ts`. `hooks/useSubscription.ts`
-reads the tier catalogue + the user's subscription (online + account-gated,
-returns the free baseline otherwise). `PricingCards` shows live **Upgrade** /
-**Current plan** actions for signed-in users (a paid tier with no `stripe_price_id`
-stays "Coming soon" — graceful pre-config state); cloud-sync's Profile-tab
-`StoragePanel` shows the current plan + a **Manage subscription** portal link when
-subscribed. **Stripe setup (create Products/Prices, set `stripe_price_id`, secrets,
-webhook) is still operator config — see README.**
+unit-tested layer (`isActiveStatus`/`effectiveTier`/`isPaidTier`/`pricingCta`,
+plus `lookupKey`/`tiersWithPrices`/`paidTiersVisible`/`priceFor`/`formatPrice` +
+row/price shapes); `lib/billingClient.ts` is the Supabase I/O (`fetchTiers`,
+`fetchMySubscription`, `fetchStripeConfig`, `createCheckout(tier, interval)`,
+`createPortal`), through the same untyped escape hatch as `cloudClient.ts`.
+`hooks/useSubscription.ts` reads the tier catalogue + the user's subscription;
+`hooks/useStripePrices.ts` reads the live price catalogue (online, never throws).
+`PricingCards` has a **monthly/annual toggle**, shows live **Upgrade** /
+**Current plan** actions, and — the **failback** — hides the paid tiers entirely
+when `paidTiersVisible(config)` is false (only Guest + Free cards). `PlanChooser`
+(sign-up) picks tier + interval; a paid choice stashes a `lib/pendingCheckout.ts`
+intent that `components/PendingCheckoutRedirect.tsx` (mounted in `App.tsx` for
+cloud builds) redeems → Checkout on first sign-in after email confirmation.
+cloud-sync's Profile-tab `StoragePanel` shows the plan + renewal/cancellation/
+grace date + a **Manage subscription** portal link. **Stripe setup (create
+Products/Prices with the lookup_keys, secrets, webhook, enable pg_cron) is
+operator config — see README.**
 
 ---
 

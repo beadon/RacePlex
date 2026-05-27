@@ -33,6 +33,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   paid tier stays "Coming soon" until its Stripe Price is configured), and the
   **Profile** tab shows your plan with a **Manage subscription** link to the
   Stripe billing portal.
+- **Monthly & annual billing**: each paid tier now offers a monthly or annual
+  price, resolved live from Stripe by **lookup_key** (`plus_monthly`,
+  `plus_annual`, `premium_monthly`, …) so the Stripe dashboard is the single
+  source of truth — no Price ids in code. The pricing cards gain a
+  **monthly/annual toggle**, and sign-up lets you **pick a plan + interval**: a
+  paid choice creates the account first, then resumes to Stripe Checkout on your
+  first sign-in (after email confirmation). A new public `stripe-prices` edge
+  function feeds the catalogue.
+- **No-Stripe failback**: when no Stripe secret key is configured, the pricing
+  UI shows only the two free cards (Guest + Free) and hides the paid tiers
+  entirely instead of showing them as "Coming soon".
+- **Cancellation grace + log trimming**: cancelling ends service at the period
+  boundary and drops you to the free tier's limits, but your cloud logs are kept
+  for a **60-day grace window** to re-subscribe or download. After it expires, a
+  daily `pg_cron` job (`trim_expired_logs()`) trims synced logs **newest-first**
+  to the free allowance. The Profile tab surfaces the cancellation/grace date.
 - Document storage + **auto-sync**: when you're signed in, your garage
   (vehicles, setups, setup templates, notes) now backs up to the cloud
   automatically as you change it — no manual push. The "documents" storage type

@@ -16,15 +16,28 @@ const admin = (): SupabaseClient => createClient(
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
 );
 
-// Map a Stripe Price id → our tier slug (falls back to 'free' if unknown).
-async function tierForPrice(db: SupabaseClient, priceId: string | undefined): Promise<string> {
-  if (!priceId) return 'free';
+// 60-day window after a subscription ends before logs are trimmed to free.
+const GRACE_DAYS = 60;
+
+// Resolve our tier slug + billing interval from a price. Prices carry a
+// lookup_key of "{tier}_{interval}" (e.g. "pro_annual"); fall back to the
+// subscription_tiers.stripe_price_id mapping, then to free/null.
+async function tierForPrice(
+  db: SupabaseClient,
+  price: Stripe.Price | undefined,
+): Promise<{ tier: string; interval: string | null }> {
+  if (!price) return { tier: 'free', interval: null };
+  if (price.lookup_key) {
+    const [tier, interval] = price.lookup_key.split('_');
+    if (tier) return { tier, interval: interval ?? null };
+  }
+  const intervalFromRecurring = price.recurring?.interval === 'year' ? 'annual' : 'monthly';
   const { data } = await db
     .from('subscription_tiers')
     .select('tier')
-    .eq('stripe_price_id', priceId)
+    .eq('stripe_price_id', price.id)
     .maybeSingle();
-  return data?.tier ?? 'free';
+  return { tier: data?.tier ?? 'free', interval: data ? intervalFromRecurring : null };
 }
 
 // Resolve our user_id for a subscription: prefer the metadata we stamped at
@@ -54,6 +67,8 @@ function periodEnd(sub: Stripe.Subscription): string | null {
   return typeof ts === 'number' ? new Date(ts * 1000).toISOString() : null;
 }
 
+const ENTITLING_STATUSES = ['active', 'trialing', 'past_due'];
+
 async function applySubscription(
   db: SupabaseClient,
   sub: Stripe.Subscription,
@@ -65,20 +80,53 @@ async function applySubscription(
     return;
   }
 
-  const priceId = sub.items?.data?.[0]?.price?.id;
+  const price = sub.items?.data?.[0]?.price;
   const customerId = typeof sub.customer === 'string' ? sub.customer : sub.customer?.id;
-  const tier = opts.deleted ? 'free' : await tierForPrice(db, priceId);
   const status = opts.deleted ? 'canceled' : sub.status;
+  const entitled = !opts.deleted && ENTITLING_STATUSES.includes(status);
 
-  await db.from('user_subscriptions').upsert({
+  const resolved = await tierForPrice(db, price);
+  const tier = entitled ? resolved.tier : 'free';
+  const endsAt = periodEnd(sub);
+
+  // Cancellation grace: once the subscription stops entitling access, keep the
+  // user's logs for GRACE_DAYS so they can re-subscribe / download. We only
+  // *set* grace_until on the transition (don't keep pushing it later on repeat
+  // webhooks), and clear it — plus re-arm logs_trimmed_at — when access resumes.
+  let graceUntil: string | null | undefined;
+  let logsTrimmedAt: string | null | undefined;
+  if (entitled) {
+    graceUntil = null;
+    logsTrimmedAt = null;
+  } else {
+    const { data: existing } = await db
+      .from('user_subscriptions')
+      .select('grace_until')
+      .eq('user_id', userId)
+      .maybeSingle();
+    if (existing?.grace_until) {
+      graceUntil = undefined; // leave the already-set deadline untouched
+    } else {
+      const base = endsAt ? new Date(endsAt) : new Date();
+      graceUntil = new Date(base.getTime() + GRACE_DAYS * 24 * 60 * 60 * 1000).toISOString();
+    }
+  }
+
+  const row: Record<string, unknown> = {
     user_id: userId,
     tier,
     status,
     stripe_customer_id: customerId,
     stripe_subscription_id: sub.id,
-    current_period_end: periodEnd(sub),
+    current_period_end: endsAt,
+    cancel_at_period_end: !!sub.cancel_at_period_end,
+    billing_interval: entitled ? resolved.interval : null,
     updated_at: new Date().toISOString(),
-  }, { onConflict: 'user_id' });
+  };
+  if (graceUntil !== undefined) row.grace_until = graceUntil;
+  if (logsTrimmedAt !== undefined) row.logs_trimmed_at = logsTrimmedAt;
+
+  await db.from('user_subscriptions').upsert(row, { onConflict: 'user_id' });
 }
 
 Deno.serve(async (req) => {
