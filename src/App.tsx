@@ -24,6 +24,9 @@ const Terms = lazy(() => import("./pages/Terms"));
 const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const AuthCallback = lazy(() => import("./pages/AuthCallback"));
+const PendingCheckoutRedirect = lazy(() =>
+  import("./components/PendingCheckoutRedirect").then((m) => ({ default: m.PendingCheckoutRedirect })),
+);
 
 const SETTINGS_KEY = "dove-dataviewer-settings";
 
@@ -50,6 +53,7 @@ const App = () => {
         <Sonner />
         <BrowserRouter>
           <Suspense fallback={null}>
+            {enableCloud && <PendingCheckoutRedirect />}
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/privacy" element={<Privacy />} />

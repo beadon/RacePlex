@@ -187,6 +187,14 @@ function PlanSection() {
   const renews = subscription?.current_period_end
     ? new Date(subscription.current_period_end).toLocaleDateString()
     : null;
+  const cancelsAtPeriodEnd = !!subscription?.cancel_at_period_end;
+  // A cancelled subscription drops to free but keeps a grace window before logs
+  // are trimmed; the row persists (with a Stripe customer) so they can resubscribe.
+  const graceUntil = subscription?.grace_until
+    ? new Date(subscription.grace_until).toLocaleDateString()
+    : null;
+  const inGrace = !subscribed && !!graceUntil;
+  const canManage = !!subscription?.current_period_end || subscribed || inGrace;
 
   const manage = async () => {
     setBusy(true);
@@ -206,13 +214,20 @@ function PlanSection() {
         <div className="min-w-0">
           <p className="text-sm font-medium text-foreground">{loading ? "…" : label}</p>
           {subscribed && renews && (
-            <p className="text-[11px] text-muted-foreground">Renews {renews}</p>
+            <p className="text-[11px] text-muted-foreground">
+              {cancelsAtPeriodEnd ? `Cancels ${renews}` : `Renews ${renews}`}
+            </p>
           )}
-          {!subscribed && (
+          {inGrace && (
+            <p className="text-[11px] text-amber-600 dark:text-amber-500">
+              Subscription ended. Cloud logs trim to the free tier on {graceUntil} — resubscribe to keep them.
+            </p>
+          )}
+          {!subscribed && !inGrace && (
             <p className="text-[11px] text-muted-foreground">Upgrade from the Plans &amp; pricing cards.</p>
           )}
         </div>
-        {subscribed && (
+        {canManage && (
           <Button size="sm" variant="outline" className="shrink-0" disabled={busy} onClick={() => void manage()}>
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
             Manage subscription

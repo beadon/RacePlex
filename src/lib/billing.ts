@@ -18,6 +18,73 @@ export interface UserSubscriptionRow {
   tier: string;
   status: string;
   current_period_end: string | null;
+  cancel_at_period_end?: boolean;
+  billing_interval?: string | null;
+  grace_until?: string | null;
+}
+
+// Paid plans bill either monthly or annually. The slug encodes both halves of a
+// Stripe lookup_key: `${tier}_${interval}` (e.g. "pro_annual").
+export type BillingInterval = "monthly" | "annual";
+
+/** A live Stripe Price for one (tier × interval), as returned by stripe-prices. */
+export interface StripePrice {
+  tier: string;
+  interval: BillingInterval;
+  lookupKey: string;
+  priceId: string;
+  /** Amount in the currency's minor unit (cents); null for metered prices. */
+  unitAmount: number | null;
+  currency: string;
+}
+
+/** The pricing-catalogue response: whether Stripe is wired up + its live prices. */
+export interface StripeConfig {
+  configured: boolean;
+  prices: StripePrice[];
+}
+
+/** The Stripe lookup_key for a tier + interval. */
+export function lookupKey(tier: string, interval: BillingInterval): string {
+  return `${tier}_${interval}`;
+}
+
+/** The set of tiers that have at least one purchasable price configured. */
+export function tiersWithPrices(prices: StripePrice[]): Set<string> {
+  return new Set(prices.map((p) => p.tier));
+}
+
+/**
+ * Whether the paid tiers should be shown at all. The failback when Stripe isn't
+ * wired up (no secret key / no prices) is to surface only the free cards — paid
+ * tiers are hidden entirely, not shown as "coming soon".
+ */
+export function paidTiersVisible(config: StripeConfig | null | undefined): boolean {
+  return !!config?.configured && (config?.prices.length ?? 0) > 0;
+}
+
+/** Find the live price for a tier + interval, if configured. */
+export function priceFor(
+  prices: StripePrice[],
+  tier: string,
+  interval: BillingInterval,
+): StripePrice | undefined {
+  return prices.find((p) => p.tier === tier && p.interval === interval);
+}
+
+/** Format a minor-unit amount as a localized currency string (no trailing .00). */
+export function formatPrice(unitAmount: number | null | undefined, currency: string): string {
+  if (unitAmount == null) return "";
+  const major = unitAmount / 100;
+  try {
+    return new Intl.NumberFormat(undefined, {
+      style: "currency",
+      currency: currency.toUpperCase(),
+      maximumFractionDigits: Number.isInteger(major) ? 0 : 2,
+    }).format(major);
+  } catch {
+    return `${major}`;
+  }
 }
 
 // A subscription grants its tier only while the status is one of these; anything
@@ -38,6 +105,17 @@ export function effectiveTier(
 
 export function isPaidTier(tier: string): boolean {
   return tier !== "free";
+}
+
+// Tiers that exist but aren't yet self-service purchasable — shown as
+// "Coming soon" and never selectable for checkout (the create-checkout-session
+// edge function rejects them too). They can still be granted manually (e.g.
+// comping a tester) by creating the subscription in Stripe, which the webhook
+// honours. Keep this in sync with create-checkout-session's COMING_SOON set.
+export const COMING_SOON_TIERS = new Set<string>(["pro"]);
+
+export function isComingSoon(tier: string): boolean {
+  return COMING_SOON_TIERS.has(tier);
 }
 
 export type PricingCtaKind = "none" | "current" | "upgrade";

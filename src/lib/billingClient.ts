@@ -9,7 +9,12 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
-import type { SubscriptionTierRow, UserSubscriptionRow } from "./billing";
+import type {
+  BillingInterval,
+  StripeConfig,
+  SubscriptionTierRow,
+  UserSubscriptionRow,
+} from "./billing";
 
 const untyped = supabase as unknown as SupabaseClient;
 
@@ -25,17 +30,35 @@ export async function fetchTiers(): Promise<SubscriptionTierRow[]> {
 export async function fetchMySubscription(userId: string): Promise<UserSubscriptionRow | null> {
   const { data, error } = await untyped
     .from("user_subscriptions")
-    .select("user_id, tier, status, current_period_end")
+    .select("user_id, tier, status, current_period_end, cancel_at_period_end, billing_interval, grace_until")
     .eq("user_id", userId)
     .maybeSingle();
   if (error) throw new Error(`Failed to load subscription: ${error.message}`);
   return (data ?? null) as UserSubscriptionRow | null;
 }
 
-/** Start Stripe Checkout for a tier; resolves to the hosted URL to redirect to. */
-export async function createCheckout(tier: string, returnUrl: string): Promise<string> {
+/**
+ * The live pricing catalogue (whether Stripe is wired up + its prices). Never
+ * throws into render: a network/function error reads as "not configured", which
+ * makes the UI fall back to the free-only cards.
+ */
+export async function fetchStripeConfig(): Promise<StripeConfig> {
+  const { data, error } = await supabase.functions.invoke("stripe-prices", { body: {} });
+  if (error || !data) return { configured: false, prices: [] };
+  return data as StripeConfig;
+}
+
+/**
+ * Start Stripe Checkout for a tier + billing interval; resolves to the hosted
+ * URL to redirect to.
+ */
+export async function createCheckout(
+  tier: string,
+  interval: BillingInterval,
+  returnUrl: string,
+): Promise<string> {
   const { data, error } = await supabase.functions.invoke("create-checkout-session", {
-    body: { tier, returnUrl },
+    body: { tier, interval, returnUrl },
   });
   if (error) throw new Error(error.message);
   const url = (data as { url?: string } | null)?.url;

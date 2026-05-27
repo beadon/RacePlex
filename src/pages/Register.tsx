@@ -9,7 +9,10 @@ import { Gauge, ArrowLeft } from 'lucide-react';
 import { useDocumentHead } from '@/hooks/useDocumentHead';
 import { Turnstile, turnstileEnabled } from '@/components/Turnstile';
 import { PricingCards } from '@/components/PricingCards';
+import { PlanChooser, type PlanSelection } from '@/components/PlanChooser';
 import { isDisposableEmail, looksLikeEmail } from '@/lib/emailValidation';
+import { isPaidTier } from '@/lib/billing';
+import { setPendingCheckout } from '@/lib/pendingCheckout';
 
 export default function Register() {
   useDocumentHead({
@@ -23,6 +26,7 @@ export default function Register() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [plan, setPlan] = useState<PlanSelection>({ tier: 'free', interval: 'monthly' });
   const [confirmAge, setConfirmAge] = useState(false);
   const { signUp, signInWithGoogle } = useAuth();
   const navigate = useNavigate();
@@ -59,7 +63,17 @@ export default function Register() {
     if (error) {
       toast({ title: 'Registration failed', description: error.message, variant: 'destructive' });
     } else {
-      toast({ title: 'Account created', description: 'Check your email to confirm your account.' });
+      // Account-first paid flow: stash the chosen plan so checkout resumes on
+      // the user's first sign-in after confirming their email.
+      if (isPaidTier(plan.tier)) {
+        setPendingCheckout(plan.tier, plan.interval);
+        toast({
+          title: 'Account created',
+          description: 'Confirm your email, then sign in to finish checkout for your plan.',
+        });
+      } else {
+        toast({ title: 'Account created', description: 'Check your email to confirm your account.' });
+      }
       navigate('/login');
     }
   };
@@ -108,6 +122,7 @@ export default function Register() {
               <Label htmlFor="displayName">Display name <span className="text-muted-foreground font-normal">(optional)</span></Label>
               <Input id="displayName" type="text" maxLength={40} placeholder="Leave blank for a random name" value={displayName} onChange={e => setDisplayName(e.target.value)} />
             </div>
+            <PlanChooser value={plan} onChange={setPlan} />
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
               <Input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} required />
