@@ -39,6 +39,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Banned-IP expiry in the admin panel:** banning an IP now takes a selectable
   duration (1 / 7 / 30 / 90 / 365 days or permanent), defaulting to **90 days**;
   expired bans are purged automatically.
+- **Customizable engine types for vehicles**: the vehicle form's *Engine* field
+  is now a searchable combobox backed by a reusable, per-user engine list. Type
+  to filter previously used engines; if the name isn't found, create it inline.
+  Existing vehicles' engine names are auto-imported into the list, and a *manage*
+  link beside the field opens a small menu for deleting saved engines (engines
+  currently in use by a vehicle are protected from deletion). The engine list is
+  stored locally (IndexedDB) and travels with the rest of your garage data over
+  cloud sync.
 - **Terms of Service page** (`/terms`) and a rewritten **Privacy Policy** that
   now accurately reflect the optional online features — accounts, cloud sync,
   Stripe-billed plans, and AI coaching — instead of the old "nothing ever leaves
