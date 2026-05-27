@@ -26,11 +26,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     Storage files and all associated rows are permanently erased. Backed by the
     `request-account-deletion` and (cron-driven) `process-account-deletions`
     edge functions.
-- **Automatic IP-address retention (TTL):** a daily job nulls the submitter IP on
+- **Automatic data-retention (TTL):** a daily job nulls the submitter IP on
   contact messages and community submissions **90 days** after they're received,
-  and clears expired IP bans and stale sign-in rate-limit records — so
-  abuse-prevention data is minimised even without traffic to trigger the existing
-  reactive cleanup.
+  then deletes the rows in full after **1 year** (contact messages entirely;
+  community submissions once they've been reviewed — pending ones are kept for
+  moderation), and clears expired IP bans and stale sign-in rate-limit records —
+  so abuse-prevention and contact data are minimised even without traffic to
+  trigger the existing reactive cleanup.
+- **Age confirmation at sign-up:** account creation (email and Google) now
+  requires ticking a checkbox confirming you are **16 or older**, alongside the
+  existing Terms/Privacy agreement.
 - **Banned-IP expiry in the admin panel:** banning an IP now takes a selectable
   duration (1 / 7 / 30 / 90 / 365 days or permanent), defaulting to **90 days**;
   expired bans are purged automatically.

@@ -151,8 +151,10 @@ The admin system uses Lovable Cloud (Supabase) for the database. The schema is c
 
 > **Data retention (GDPR):** a daily `pg_cron` job runs
 > `purge_expired_personal_data()`, which nulls the submitter IP on `submissions`
-> and `messages` 90 days after they were received and deletes expired
-> `banned_ips` / stale `login_attempts`. Account deletion is scheduled 7 days out
+> and `messages` 90 days after they were received, deletes the rows entirely
+> after 1 year (all `messages`; `submissions` only once reviewed — pending ones
+> are kept for moderation), and deletes expired `banned_ips` / stale
+> `login_attempts`. Account deletion is scheduled 7 days out
 > (cancellable); the `process-account-deletions` worker then removes the user's
 > Storage objects and auth row. To auto-schedule that worker, add a Supabase
 > **Vault** secret named `deletion_cron_secret` and set the matching

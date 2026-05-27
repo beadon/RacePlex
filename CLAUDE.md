@@ -553,7 +553,7 @@ backend cron.
 | Object | Type | Notes |
 |--------|------|-------|
 | `account_deletions` | table | `(user_id PK→auth.users, requested_at, scheduled_for)`. RLS: owner can **select** + **delete** (cancel); **no insert policy** — only the service role schedules, so the 7-day window can't be shortened client-side. |
-| `purge_expired_personal_data()` | fn (SECURITY DEFINER) | Nulls `submitted_by_ip` on `submissions`/`messages` older than **90 days**; deletes expired `banned_ips` + stale `login_attempts`. Run daily by `pg_cron`. |
+| `purge_expired_personal_data()` | fn (SECURITY DEFINER) | (a) Nulls `submitted_by_ip` on `submissions`/`messages` older than **90 days**; (b) deletes `messages` and *reviewed* `submissions` older than **1 year** (pending submissions kept for moderation); deletes expired `banned_ips` + stale `login_attempts`. Run daily by `pg_cron`. |
 | `due_account_deletions()` | fn (SECURITY DEFINER) | User ids whose `scheduled_for <= now()`. Read by the deletion worker. |
 
 Edge functions (all `verify_jwt = false`; the two user-facing ones verify the

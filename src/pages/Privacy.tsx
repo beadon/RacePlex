@@ -307,12 +307,14 @@ const Privacy = () => {
                 exists. When you delete data or your account, we remove it from
                 active storage; a deleted account and all its data are permanently
                 erased 7 days after you request deletion (the cancellable grace
-                window described under “Your Rights”). Abuse-prevention IP
-                addresses are minimised automatically: the IP attached to a
-                contact-form message or community submission is erased{" "}
+                window described under “Your Rights”). We also minimise
+                abuse-prevention and contact data automatically: the IP attached
+                to a contact-form message or community submission is erased{" "}
                 <strong className="text-foreground">90 days</strong> after it was
-                received, and expired IP bans and sign-in rate-limit records are
-                cleared daily.
+                received; contact-form messages and reviewed community submissions
+                are then deleted in full after{" "}
+                <strong className="text-foreground">1 year</strong>; and expired
+                IP bans and sign-in rate-limit records are cleared daily.
               </p>
             </section>
 

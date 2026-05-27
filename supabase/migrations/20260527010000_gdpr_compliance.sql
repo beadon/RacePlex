@@ -1,11 +1,15 @@
 -- GDPR compliance: personal-data retention (IP TTL) + scheduled account deletion.
 --
 -- Two concerns:
---   1. Abuse-prevention IP minimisation. `submitted_by_ip` on submissions and
---      messages is nulled 90 days after the row was created; expired `banned_ips`
---      and stale `login_attempts` rows are deleted. A daily pg_cron job runs the
---      purge so data is cleared even when there's no traffic to trigger the
---      reactive cleanup the edge functions already do.
+--   1. Personal-data minimisation, in two layers:
+--        a. `submitted_by_ip` on submissions and messages is nulled 90 days
+--           after the row was created (the abuse-investigation window);
+--        b. the rows themselves are then deleted once their content is no longer
+--           needed — contact messages and *reviewed* submissions after 1 year
+--           (pending submissions are kept so they can still be moderated).
+--      Expired `banned_ips` and stale `login_attempts` rows are deleted too. A
+--      daily pg_cron job runs the purge so data is cleared even when there's no
+--      traffic to trigger the reactive cleanup the edge functions already do.
 --   2. Self-service account deletion is *scheduled*, not immediate. A 7-day grace
 --      window (reversible by the user) guards against a hijacked session wiping a
 --      user's race history. `account_deletions` holds the pending request; the
@@ -27,8 +31,7 @@ security definer
 set search_path = public
 as $$
 begin
-  -- Drop the submitter IP once the abuse-investigation window has passed; the
-  -- submission/message content itself is retained for the operator.
+  -- (a) Drop the submitter IP once the abuse-investigation window (90d) passes.
   update public.submissions
      set submitted_by_ip = null
    where submitted_by_ip is not null
@@ -38,6 +41,17 @@ begin
      set submitted_by_ip = null
    where submitted_by_ip is not null
      and created_at < now() - interval '90 days';
+
+  -- (b) Delete the rows themselves once their content is no longer needed (1y).
+  -- Contact messages (email + free-text) go entirely.
+  delete from public.messages
+   where created_at < now() - interval '1 year';
+
+  -- Reviewed submissions go; pending ones are kept so they can still be
+  -- moderated regardless of age.
+  delete from public.submissions
+   where status <> 'pending'
+     and created_at < now() - interval '1 year';
 
   -- Expired bans no longer protect anything — remove the IP entirely.
   delete from public.banned_ips
