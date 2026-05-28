@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
+import { STORE_NAMES } from "@/lib/dbUtils";
+import { onGarageChange } from "@/lib/garageEvents";
 import { formatLapTime } from "@/lib/lapCalculation";
 import type { LapSnapshot } from "@/lib/lapSnapshot";
 import { deleteSnapshot, listSnapshots } from "@/lib/lapSnapshotStorage";
@@ -58,9 +60,30 @@ export default function LapSnapshotsPanel(_props: PluginPanelProps) {
     }
   }, [user]);
 
+  // Auto-detect local-only snapshots and upload them when signed in (the same
+  // reconcile autoSync runs on sign-in, re-triggered here so opening the panel
+  // self-heals a sign-in reconcile that failed — e.g. a transient outage —
+  // without needing an app reload), then load the list. Re-runs whenever the
+  // snapshot store changes (local saves, cloud pulls).
+  const syncAndRefresh = useCallback(async () => {
+    if (user) {
+      // Failures (network/quota) are surfaced by autoSync's own toast + the
+      // list/usage read below; don't double-notify from here.
+      try {
+        await reconcileSnapshots(user.id);
+      } catch {
+        /* fall through to refresh, which shows the current cloud state */
+      }
+    }
+    await refresh();
+  }, [user, refresh]);
+
   useEffect(() => {
-    void refresh();
-  }, [refresh]);
+    void syncAndRefresh();
+    return onGarageChange((change) => {
+      if (change.store === STORE_NAMES.LAP_SNAPSHOTS) void syncAndRefresh();
+    });
+  }, [syncAndRefresh]);
 
   if (loading) return <p className="text-sm text-muted-foreground">Loading…</p>;
 

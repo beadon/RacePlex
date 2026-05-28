@@ -235,6 +235,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The Profile **Lap snapshots** panel no longer blanks out when the usage meter
   can't load; the snapshot list stays usable and the meter is treated as
   best-effort.
+- The Profile **Lap snapshots** panel now reconciles on open (uploading any
+  local-only snapshots) and refreshes live on snapshot changes, so it
+  self-heals a sign-in reconcile that failed (e.g. a transient outage) without
+  needing an app reload.
 - Cloud log uploads no longer **orphan a blob** when the server quota rejects the
   index write — the just-uploaded blob is rolled back. Any pre-existing orphans
   are reclaimed when the Cloud logs panel is opened.
