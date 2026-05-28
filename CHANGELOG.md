@@ -229,6 +229,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `NODE_AUTH_TOKEN`.)
 
 ### Fixed
+- **Lap-snapshot insert failed with `null value in column "id" of relation
+  "lap_snapshots" violates not-null constraint`** — same root pattern as the
+  missing unique constraint: when the `lap_snapshots` table pre-existed the
+  snapshots migration, `CREATE TABLE IF NOT EXISTS` skipped the whole
+  declaration, so the `id uuid primary key default gen_random_uuid()` column
+  came in without its default. `pushSnapshot` doesn't send an id (it shouldn't),
+  so the insert had nothing to fill it with. A follow-up migration re-sets the
+  column defaults idempotently so existing deployments self-repair.
 - **Lap-snapshot upsert failed with "no unique or exclusion constraint matching
   the ON CONFLICT specification"** when the `lap_snapshots` table pre-existed
   the snapshots migration — the inline `unique (user_id, course_key, engine_key)`
