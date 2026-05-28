@@ -24,10 +24,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     save/update the course fastest lap when its best lap beats (or has no) stored
     snapshot; a manual **Save as snapshot** action lives in the lap-list
     **Snapshots** picker too. A faster lap replaces the snapshot in place.
-  - **Loaded as a comparison overlay only** — never auto-plays, and is excluded
-    from playback and the video player (it rides the reference-overlay slot, not
-    the lap selection). Available next to the lap dropdown in both simple and
-    pro mode.
+  - **Loaded as the reference lap (comparison overlay)** — never auto-plays, and
+    is excluded from playback and the video player (it rides the reference-overlay
+    slot, not the lap selection). Pick one from the **Snapshots** menu next to the
+    lap dropdown (simple + pro), or from a **"Load snapshot as reference"** button
+    next to the external-reference loader on the lap times page.
   - **Local-first & unlimited on-device; cloud-synced with per-tier COUNT limits**
     (free 5 / plus 10 / premium 20 / pro 50) via a dedicated `lap_snapshots`
     table — not byte document storage. Snapshots always push on save, but a local

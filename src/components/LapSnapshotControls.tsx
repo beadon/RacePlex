@@ -17,17 +17,21 @@ interface LapSnapshotControlsProps {
   onLoad: (snap: LapSnapshot) => void;
   onClear: () => void;
   onSave: () => Promise<SaveSnapshotResult>;
+  /** Trigger button text (default "Snapshots"). */
+  triggerLabel?: string;
+  /** Show the "save current lap" action (default true). Off for a load-only entry. */
+  showSave?: boolean;
 }
 
 /**
  * Lap-list companion for snapshots: save the current lap as a "course fastest
- * lap", and load a saved snapshot as a comparison overlay. Loading a snapshot
- * NEVER affects playback or the video player — it rides the reference-overlay
- * slot, not the lap selection.
+ * lap", and load a saved snapshot as the reference lap (comparison overlay).
+ * Loading a snapshot NEVER affects playback or the video player — it rides the
+ * reference-overlay slot, not the lap selection.
  */
 export function LapSnapshotControls({
   snapshotsForCourse, activeSnapshotId, canSnapshot, hasCourse,
-  onLoad, onClear, onSave,
+  onLoad, onClear, onSave, triggerLabel = "Snapshots", showSave = true,
 }: LapSnapshotControlsProps) {
   const [open, setOpen] = useState(false);
   if (!hasCourse) return null;
@@ -51,7 +55,7 @@ export function LapSnapshotControls({
       <DialogTrigger asChild>
         <Button variant="outline" size="sm" className="h-8 gap-1.5 text-sm">
           <Camera className="h-3.5 w-3.5" />
-          <span className="hidden sm:inline">Snapshots</span>
+          <span className="hidden sm:inline">{triggerLabel}</span>
           {count > 0 && (
             <span className="ml-0.5 rounded bg-muted px-1.5 text-[11px] tabular-nums text-muted-foreground">
               {count}
@@ -64,25 +68,29 @@ export function LapSnapshotControls({
           <DialogTitle>Lap Snapshots</DialogTitle>
         </DialogHeader>
 
-        <Button
-          variant="outline"
-          size="sm"
-          className="w-full justify-start gap-2"
-          disabled={!canSnapshot}
-          onClick={() => void handleSave()}
-        >
-          <Plus className="h-4 w-4" />
-          Save current lap as snapshot
-        </Button>
-        {!canSnapshot && (
-          <p className="-mt-1 text-[11px] text-muted-foreground">
-            Assign an engine to this session to capture its fastest lap.
-          </p>
+        {showSave && (
+          <>
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full justify-start gap-2"
+              disabled={!canSnapshot}
+              onClick={() => void handleSave()}
+            >
+              <Plus className="h-4 w-4" />
+              Save current lap as snapshot
+            </Button>
+            {!canSnapshot && (
+              <p className="-mt-1 text-[11px] text-muted-foreground">
+                Assign an engine to this session to capture its fastest lap.
+              </p>
+            )}
+          </>
         )}
 
         <div className="mt-1 flex items-center justify-between">
           <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-            Compare a snapshot (this course)
+            Load as reference lap (this course)
           </p>
           {activeSnapshotId && (
             <Button variant="ghost" size="sm" className="h-6 gap-1 px-2 text-xs" onClick={onClear}>
