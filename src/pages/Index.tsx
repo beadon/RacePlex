@@ -243,6 +243,12 @@ export default function Index() {
     [referenceSpeedData, visibleRange]
   );
 
+  // The setup the driver is currently running, resolved for plugin panels.
+  const sessionSetup = useMemo(
+    () => (sessionSetupId ? setupManager.setups.find((s) => s.id === sessionSetupId) ?? null : null),
+    [sessionSetupId, setupManager.setups],
+  );
+
   // The loaded reference snapshot as a clean-lap view for plugin panels (coach).
   const activeSnapshot = useMemo<PluginSnapshot | null>(() => {
     const id = snapshots.activeSnapshotId;
@@ -300,6 +306,7 @@ export default function Index() {
     snapshotsForCourse: snapshots.snapshotsForCourse,
     activeSnapshotId: snapshots.activeSnapshotId,
     activeSnapshot,
+    sessionSetup,
     canSnapshot: snapshots.canSnapshot,
     onLoadSnapshot: snapshots.loadSnapshot,
     onClearSnapshot: snapshots.clearActive,
@@ -338,7 +345,8 @@ export default function Index() {
     deltaTopSpeed, deltaMinSpeed, lapToFastestDelta, refAvgTopSpeed, refAvgMinSpeed,
     externalRefLabel, savedFiles,
     snapshots.snapshotsForCourse, snapshots.activeSnapshotId, snapshots.canSnapshot,
-    snapshots.loadSnapshot, snapshots.clearActive, snapshots.saveSelectedLap, activeSnapshot,
+    snapshots.loadSnapshot, snapshots.clearActive, snapshots.saveSelectedLap,
+    activeSnapshot, sessionSetup,
     sessionGpsPoint, currentFileName, sessionKartId, sessionSetupId, cachedWeatherStation,
     vehicleManager.vehicles, setupManager.setups, templateManager.templates,
     videoSync.state, videoSync.actions, videoSync.handleLoadedMetadata,

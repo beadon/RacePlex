@@ -68,6 +68,8 @@ export interface SessionContextValue {
   activeSnapshotId: string | null;
   /** The loaded reference snapshot as a curated, clean-lap view for plugin panels. */
   activeSnapshot: PluginSnapshot | null;
+  /** The setup currently assigned to the session log, resolved for plugin panels. */
+  sessionSetup: VehicleSetup | null;
   canSnapshot: boolean;
   onLoadSnapshot: (snap: LapSnapshot) => void;
   onClearSnapshot: () => void;

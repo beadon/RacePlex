@@ -67,6 +67,13 @@ export interface PluginPanelProps {
   /** Unit preference: true = km/h, false = mph. */
   useKph: boolean;
   /**
+   * The setup sheet assigned to the active session log (via the file manager),
+   * or null when none is assigned. Lets a panel reason about the chassis the
+   * driver is currently running — pair with `activeSnapshot.setup` (the *frozen*
+   * setup from the reference lap) to compare against a baseline.
+   */
+  sessionSetup: VehicleSetup | null;
+  /**
    * The lap snapshot the user has loaded as the reference lap, or null. Samples
    * are the clean lap (capture buffer trimmed). Lets a panel (e.g. the coach)
    * compare the active session against a frozen course-fastest-lap baseline.
