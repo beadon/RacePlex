@@ -40,9 +40,14 @@ export default function LapSnapshotsPanel(_props: PluginPanelProps) {
       const local = await listSnapshots();
       setLocalIds(new Set(local.map((s) => s.id)));
       if (user) {
-        const [cloud, u] = await Promise.all([listCloudSnapshots(user.id), fetchSnapshotUsage()]);
+        const cloud = await listCloudSnapshots(user.id);
         setItems(cloud.map((c) => c.data));
-        setUsage(u);
+        // The usage meter is best-effort: if it can't load, still show the list.
+        try {
+          setUsage(await fetchSnapshotUsage());
+        } catch {
+          setUsage(null);
+        }
       } else {
         setItems(local);
         setUsage(null);
