@@ -124,6 +124,8 @@ async function flushPending(userId: string): Promise<void> {
 }
 
 async function runReconcile(userId: string): Promise<void> {
+  // Documents and snapshots reconcile independently: a failure in one (e.g. a
+  // missing table / quota error) must not skip the other.
   try {
     await flushPending(userId);
     const { skipped } = await reconcileDocs(userId, await pendingKeySet());
@@ -133,6 +135,15 @@ async function runReconcile(userId: string): Promise<void> {
         "error",
       );
     }
+  } catch (err) {
+    if (isQuotaError(err)) {
+      notify("Cloud document storage is full — some items didn't sync.", "error");
+    } else {
+      console.error("auto-sync document reconcile failed", err);
+    }
+  }
+
+  try {
     const snap = await reconcileSnapshots(userId);
     if (snap.skipped > 0) {
       notify(
@@ -141,11 +152,7 @@ async function runReconcile(userId: string): Promise<void> {
       );
     }
   } catch (err) {
-    if (isQuotaError(err)) {
-      notify("Cloud document storage is full — some items didn't sync.", "error");
-    } else {
-      console.error("auto-sync reconcile failed", err);
-    }
+    console.error("auto-sync snapshot reconcile failed", err);
   }
 }
 
