@@ -35,16 +35,18 @@ const PUBLIC_BACKEND_FALLBACKS = {
   VITE_SUPABASE_PUBLISHABLE_KEY:
     "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN2amxpZW92cHlpZmZicXdodGdrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEwMDQ1MzcsImV4cCI6MjA4NjU4MDUzN30.-LnwDsiT1vmWxfoLiHlK9hHqCzN9ToHeB6qkH5-A2I4",
   VITE_SUPABASE_URL: "https://svjlieovpyiffbqwhtgk.supabase.co",
-  // Admin + registration default OFF in fallbacks. The production deploy
-  // enables them via Lovable Cloud env injection ("true"). A new contributor
-  // cloning the repo without a .env should see the public app, not admin UI
-  // pointing at a backend they don't control.
-  VITE_ENABLE_ADMIN: "true",
+  // Admin + cloud default OFF in fallbacks. The production deploy enables them
+  // via Lovable Cloud env injection ("true") / committed `.env` / HTT_* build
+  // secrets. A new contributor cloning the repo without a .env must see the
+  // public, offline-first app — NOT the admin UI or live cloud-sync pointing at
+  // a backend they don't control. Anyone who hosts that build would otherwise
+  // expose admin surfaces and account features for an upstream backend.
+  VITE_ENABLE_ADMIN: "false",
   // Cloud auth + sync (public user accounts, Google sign-in, Cloud Sync Labs
-  // panel). Defaulted ON so fresh builds (including Lovable preview rebuilds
-  // without injected env) ship with the full feature set. Set to "false"
-  // explicitly via VITE_*/HTT_* if you want an offline-only build.
-  VITE_ENABLE_CLOUD: "true",
+  // panel). Defaulted OFF for the same reason — a fresh build is offline-only
+  // until the operator explicitly opts in via VITE_*/HTT_* env. The production
+  // deploy sets this to "true".
+  VITE_ENABLE_CLOUD: "false",
 } as const;
 
 // https://vitejs.dev/config/

@@ -56,10 +56,25 @@ Deno.serve(async (req) => {
 
     for (const userId of userIds) {
       try {
-        await removeUserFiles(admin, userId);
+        // Delete the auth user FIRST. It cascades profiles, sync_records,
+        // user_subscriptions, user_roles and the account_deletions row via FKs.
+        // Only once that irreversibly succeeds do we wipe the Storage blobs — so
+        // a transient auth-delete failure (429/5xx) leaves a fully intact,
+        // still-cancellable account instead of one whose files are already gone
+        // but whose rows + deletion window survive (UI would 404 on every file).
         const { error: delErr } = await admin.auth.admin.deleteUser(userId);
         if (delErr) throw delErr;
-        // The account_deletions row is removed by the auth.users FK cascade.
+
+        // Best-effort blob cleanup. The account is already gone, so a failure
+        // here only leaks orphaned objects (no row references them) — far less
+        // harmful than losing files before the account is confirmed deleted. The
+        // user is no longer in due_account_deletions, so log loudly for manual
+        // sweeping rather than failing the (successful) deletion.
+        try {
+          await removeUserFiles(admin, userId);
+        } catch (fileErr) {
+          console.error('process-account-deletions: blob cleanup failed after delete for', userId, fileErr);
+        }
         results.push({ user_id: userId, ok: true });
       } catch (e) {
         console.error('process-account-deletions: failed for', userId, e);

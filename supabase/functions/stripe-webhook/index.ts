@@ -85,6 +85,29 @@ async function applySubscription(
   const status = opts.deleted ? 'canceled' : sub.status;
   const entitled = !opts.deleted && ENTITLING_STATUSES.includes(status);
 
+  const { data: existing } = await db
+    .from('user_subscriptions')
+    .select('grace_until, stripe_subscription_id')
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  // Out-of-order protection: Stripe gives no cross-object ordering guarantee, so
+  // a delete for an OLD subscription can arrive after the user already moved to a
+  // newer one (e.g. plus canceled, pro active). Only honour a deletion for the
+  // subscription we currently track; a delete for a superseded sub is ignored so
+  // it can't demote the active entitlement.
+  if (
+    opts.deleted &&
+    existing?.stripe_subscription_id &&
+    existing.stripe_subscription_id !== sub.id
+  ) {
+    console.log(
+      'stripe-webhook: ignoring delete for superseded subscription',
+      sub.id, '(current:', existing.stripe_subscription_id, ')',
+    );
+    return;
+  }
+
   const resolved = await tierForPrice(db, price);
   const tier = entitled ? resolved.tier : 'free';
   const endsAt = periodEnd(sub);
@@ -99,11 +122,6 @@ async function applySubscription(
     graceUntil = null;
     logsTrimmedAt = null;
   } else {
-    const { data: existing } = await db
-      .from('user_subscriptions')
-      .select('grace_until')
-      .eq('user_id', userId)
-      .maybeSingle();
     if (existing?.grace_until) {
       graceUntil = undefined; // leave the already-set deadline untouched
     } else {
@@ -145,8 +163,26 @@ Deno.serve(async (req) => {
     return new Response('Invalid signature', { status: 400 });
   }
 
+  const db = admin();
+
+  // Idempotency: claim this event.id before processing. A unique violation means
+  // Stripe already delivered it (retry/replay) — acknowledge and skip so we
+  // don't re-apply (and possibly demote) subscription state.
+  const { error: claimErr } = await db
+    .from('stripe_events')
+    .insert({ id: event.id, type: event.type });
+  if (claimErr) {
+    if (claimErr.code === '23505') {
+      return new Response(JSON.stringify({ received: true, duplicate: true }), {
+        status: 200, headers: { 'Content-Type': 'application/json' },
+      });
+    }
+    // Couldn't record the claim for another reason — log and continue processing
+    // (better to risk a rare reprocess than to drop the event entirely).
+    console.error('stripe-webhook: failed to record event id', event.id, claimErr);
+  }
+
   try {
-    const db = admin();
     switch (event.type) {
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session;
@@ -169,6 +205,12 @@ Deno.serve(async (req) => {
     }
   } catch (e) {
     console.error('stripe-webhook: handler error', e);
+    // Release the claim so Stripe's retry can reprocess this event.
+    try {
+      await db.from('stripe_events').delete().eq('id', event.id);
+    } catch (relErr) {
+      console.error('stripe-webhook: failed to release event claim', event.id, relErr);
+    }
     return new Response('Handler error', { status: 500 });
   }
 

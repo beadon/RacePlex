@@ -14,7 +14,7 @@ import {
   pricingCta,
   tiersWithPrices,
 } from "@/lib/billing";
-import { createCheckout } from "@/lib/billingClient";
+import { createCheckout, createPortal } from "@/lib/billingClient";
 
 const enableCloud = import.meta.env.VITE_ENABLE_CLOUD === "true";
 
@@ -213,6 +213,20 @@ export function PricingCards({ className }: { className?: string }) {
     }
   };
 
+  // Already-subscribed users change plans through the billing portal (Stripe
+  // swaps the plan on the existing subscription with proration) — starting a new
+  // Checkout would create a duplicate, double-billed subscription.
+  const onManage = async (slug: PaidSlug) => {
+    setBusy(slug);
+    try {
+      const url = await createPortal(window.location.href);
+      window.location.href = url;
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Couldn't open the billing portal.");
+      setBusy(null);
+    }
+  };
+
   const ctaFor = (slug: "free" | PaidSlug, isPaid: boolean): ReactNode => {
     const kind = pricingCta({
       slug,
@@ -234,6 +248,15 @@ export function PricingCards({ className }: { className?: string }) {
         <Button className="w-full" disabled={isBusy} onClick={() => void onUpgrade(slug as PaidSlug)}>
           {isBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
           {isBusy ? "Redirecting…" : "Upgrade"}
+        </Button>
+      );
+    }
+    if (kind === "manage" && isPaid) {
+      const isBusy = busy === slug;
+      return (
+        <Button variant="outline" className="w-full" disabled={isBusy} onClick={() => void onManage(slug as PaidSlug)}>
+          {isBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+          {isBusy ? "Redirecting…" : "Change plan"}
         </Button>
       );
     }
