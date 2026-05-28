@@ -8,6 +8,8 @@ import type { VideoSyncState, VideoSyncActions } from '@/hooks/useVideoSync';
 import type { Vehicle } from '@/lib/vehicleStorage';
 import type { VehicleSetup } from '@/lib/setupStorage';
 import type { SetupTemplate } from '@/lib/templateStorage';
+import type { LapSnapshot } from '@/lib/lapSnapshot';
+import type { SaveSnapshotResult } from '@/hooks/useLapSnapshots';
 
 /**
  * Session-scoped state and handlers shared by the three main view tabs
@@ -59,6 +61,14 @@ export interface SessionContextValue {
   // ── External reference ────────────────────────────────────────────────────
   externalRefLabel: string | null;
   savedFiles: FileEntry[];
+
+  // ── Lap snapshots (loaded as the reference overlay) ───────────────────────
+  snapshotsForCourse: LapSnapshot[];
+  activeSnapshotId: string | null;
+  canSnapshot: boolean;
+  onLoadSnapshot: (snap: LapSnapshot) => void;
+  onClearSnapshot: () => void;
+  onSaveSnapshot: () => Promise<SaveSnapshotResult>;
 
   // ── Session metadata ──────────────────────────────────────────────────────
   sessionGpsPoint?: { lat: number; lon: number };
