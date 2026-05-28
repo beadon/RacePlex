@@ -10,6 +10,7 @@ import { useSubscription } from "@/hooks/useSubscription";
 import { isPaidTier } from "@/lib/billing";
 import { createPortal } from "@/lib/billingClient";
 import { getStorageUsage } from "./syncEngine";
+import { fetchSnapshotUsage } from "./cloudClient";
 import { getMyProfile, updateDisplayName } from "./profile";
 import { pendingCount } from "./pendingSync";
 import { formatBytes, usageFraction, type StorageTypeUsage } from "./storageTypes";
@@ -26,6 +27,7 @@ export default function StoragePanel(_props: PluginPanelProps) {
   const { user, loading } = useAuth();
   const online = useOnlineStatus();
   const [usage, setUsage] = useState<StorageTypeUsage[] | null>(null);
+  const [snapshotUsage, setSnapshotUsage] = useState<{ usedCount: number; limitCount: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(0);
 
@@ -37,6 +39,13 @@ export default function StoragePanel(_props: PluginPanelProps) {
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load storage usage");
+    }
+    // Snapshot usage is best-effort — its own RPC, so a failure here must not
+    // hide the documents/logs meters above.
+    try {
+      setSnapshotUsage(await fetchSnapshotUsage());
+    } catch {
+      setSnapshotUsage(null);
     }
   }, [user]);
 
@@ -83,12 +92,23 @@ export default function StoragePanel(_props: PluginPanelProps) {
       )}
 
       <div className="space-y-3">
-        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Storage</p>
+        <div className="flex flex-wrap items-baseline gap-x-2">
+          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Storage</p>
+          <p className="text-[11px] text-muted-foreground">Local storage is always free.</p>
+        </div>
         {error && <p className="text-xs text-destructive">{error}</p>}
         {!usage && !error && <p className="text-xs text-muted-foreground">Loading usage…</p>}
         {usage?.map((u) => (
           <Meter key={u.storageType} usage={u} />
         ))}
+        {snapshotUsage && (
+          <CountMeter
+            label="Lap snapshots"
+            hint="Frozen course-fastest-lap captures."
+            used={snapshotUsage.usedCount}
+            limit={snapshotUsage.limitCount}
+          />
+        )}
       </div>
     </div>
   );
@@ -256,6 +276,30 @@ function Meter({ usage }: { usage: StorageTypeUsage }) {
         />
       </div>
       <p className="text-[11px] text-muted-foreground">{TYPE_HINT[usage.storageType]}</p>
+    </div>
+  );
+}
+
+// Snapshots are a count-based quota (not bytes), so they need their own meter
+// rather than the byte-aware one above.
+function CountMeter({ label, hint, used, limit }: { label: string; hint: string; used: number; limit: number }) {
+  const pct = limit > 0 ? Math.min(100, Math.round((used / limit) * 100)) : 0;
+  const over = used > limit;
+  return (
+    <div className="space-y-1">
+      <div className="flex items-baseline justify-between text-sm">
+        <span className="text-foreground">{label}</span>
+        <span className={`text-xs tabular-nums ${over ? "text-destructive" : "text-muted-foreground"}`}>
+          {used} / {limit}
+        </span>
+      </div>
+      <div className="h-2 overflow-hidden rounded-full bg-muted">
+        <div
+          className={`h-full rounded-full ${over ? "bg-destructive" : "bg-primary"}`}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      <p className="text-[11px] text-muted-foreground">{hint}</p>
     </div>
   );
 }
