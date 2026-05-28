@@ -73,7 +73,7 @@ export default function CloudSyncPanel() {
   };
 
   const runPull = async () => {
-    if (!window.confirm("Pull merges your cloud copy into this device, overwriting any local records with the same name. Continue?")) return;
+    if (!window.confirm("Pull downloads your cloud copy to this device, replacing local records with the same name — unless your local copy is newer, which is kept. It doesn't change which files are synced. Continue?")) return;
     setBusy("pull");
     try {
       const r = await pullAll(user.id);

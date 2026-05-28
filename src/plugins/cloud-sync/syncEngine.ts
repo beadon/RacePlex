@@ -111,12 +111,25 @@ export async function deleteCloudFile(userId: string, name: string): Promise<voi
 export async function cleanupOrphanBlobs(userId: string): Promise<number> {
   const { data: objects, error: listErr } = await userFiles().list(userId, { limit: 1000 });
   if (listErr || !objects) return 0;
+  // TOCTOU guard: uploadBlob writes the blob BEFORE inserting its index row, so a
+  // blob that's mid-upload (or whose index insert is in flight) briefly has no
+  // row and would look like an orphan. Only consider objects older than this
+  // grace window, so a concurrent upload is never mistaken for an orphan and
+  // deleted out from under the index row that's about to commit. A missing
+  // timestamp is treated as "too new" and skipped.
+  const ORPHAN_GRACE_MS = 10 * 60 * 1000;
+  const cutoff = Date.now() - ORPHAN_GRACE_MS;
+  const aged = objects.filter((o) => {
+    const ts = o.created_at ?? o.updated_at;
+    return ts != null && new Date(ts).getTime() < cutoff;
+  });
+  if (!aged.length) return 0;
   const { data: rows } = await syncRecords()
     .select("record_key")
     .eq("user_id", userId)
     .eq("store", FILE_STORE);
   const indexed = (rows ?? []).map((r) => (r as { record_key: string }).record_key);
-  const orphans = orphanedObjectNames(objects.map((o) => o.name), indexed);
+  const orphans = orphanedObjectNames(aged.map((o) => o.name), indexed);
   if (!orphans.length) return 0;
   const { error: rmErr } = await userFiles().remove(orphans.map((n) => `${userId}/${n}`));
   if (rmErr) return 0;
@@ -180,7 +193,14 @@ export async function pushAll(userId: string): Promise<SyncSummary> {
   return { records: pushed, files, skipped };
 }
 
-/** Bring the cloud copy down into local IndexedDB. */
+/**
+ * Bring the cloud copy down into local IndexedDB. Cloud-wins on same-name
+ * collisions, EXCEPT a strictly-newer local document is kept (so a manual Pull
+ * can't silently downgrade an edit you made more recently than the cloud copy).
+ * Pulled files are downloaded but NOT auto-selected for sync — Pull is a
+ * download, not an opt-in; the user controls which files sync in the file
+ * manager.
+ */
 export async function pullAll(userId: string): Promise<SyncSummary> {
   const { data, error } = await syncRecords()
     .select("store,record_key,data")
@@ -195,9 +215,11 @@ export async function pullAll(userId: string): Promise<SyncSummary> {
       const { data: blob, error: dlError } = await userFiles().download(blobPath(userId, row.record_key));
       if (dlError || !blob) continue;
       await saveFile(row.record_key, blob);
-      await markPushed(row.record_key); // pulled files are now synced locally
       files++;
     } else if ((DOC_STORES as readonly string[]).includes(row.store)) {
+      const local = await getAccessor(row.store).getOne(row.record_key);
+      // Keep a local copy that's been edited more recently than the cloud one.
+      if (local && recordUpdatedAt(local) > recordUpdatedAt(row.data)) continue;
       await writeOne(row.store, row.data);
       records++;
     }

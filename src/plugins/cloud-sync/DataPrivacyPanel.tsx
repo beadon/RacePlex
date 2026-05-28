@@ -12,7 +12,6 @@ import {
   getPendingDeletion,
   scheduleAccountDeletion,
   sendDeletionCode,
-  verifyDeletionCode,
   type PendingDeletion,
 } from "./accountDeletion";
 
@@ -154,8 +153,9 @@ function DeleteFlow({
   const confirm = async () => {
     setStep("working");
     try {
-      await verifyDeletionCode(email, code);
-      const result = await scheduleAccountDeletion();
+      // The edge function verifies the code server-side, so we pass it straight
+      // through rather than consuming it with a client-side verify first.
+      const result = await scheduleAccountDeletion(code);
       toast.success(`Deletion scheduled for ${new Date(result.scheduled_for).toLocaleDateString()}.`);
       setCode("");
       setStep("idle");

@@ -7,6 +7,7 @@
 // file stays synced — no "modified" state needed for the blob itself.
 
 import { getPluginStore } from "@/plugins/storage";
+import { userScope } from "./activeUser";
 
 export type FileSyncState = "off" | "pending" | "synced";
 
@@ -15,8 +16,10 @@ export interface FileSyncRecord {
 }
 
 const store = getPluginStore("cloud-sync");
-const PREFIX = "file:";
-const recordKey = (name: string) => `${PREFIX}${name}`;
+// Per-user prefix so one account's file-sync selections aren't visible to (and
+// uploaded under) another account that signs in on the same browser.
+const prefix = () => `file:${userScope()}:`;
+const recordKey = (name: string) => `${prefix()}${name}`;
 
 /** Derive the UI state from a stored record. Pure — unit-tested. */
 export function fileSyncStatus(rec: FileSyncRecord | undefined): FileSyncState {
@@ -43,10 +46,11 @@ export function unselectFile(name: string): Promise<void> {
   return store.delete(recordKey(name));
 }
 
-/** File names currently selected for sync. */
+/** File names currently selected for sync (for the active user). */
 export async function listSelectedFiles(): Promise<string[]> {
+  const p = prefix();
   const keys = await store.keys();
-  return keys.filter((k) => k.startsWith(PREFIX)).map((k) => k.slice(PREFIX.length));
+  return keys.filter((k) => k.startsWith(p)).map((k) => k.slice(p.length));
 }
 
 /** Cloud file names that aren't present locally (i.e. pullable). Pure. */

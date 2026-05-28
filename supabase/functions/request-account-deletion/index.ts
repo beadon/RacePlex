@@ -1,11 +1,12 @@
 // Schedules deletion of the authenticated caller's account for 7 days out
-// (reversible). The client performs an email-OTP re-verification before calling
-// this (so a hijacked session alone can't trigger it via the normal UI); the
-// 7-day reversible window is the durable safeguard, and only the service role
-// can write the row so the window can't be shortened client-side.
+// (reversible). The caller must supply the email OTP code we mailed them, which
+// THIS function verifies server-side before scheduling — so a hijacked session
+// (stolen JWT) alone can't trigger deletion via a direct call; it would also
+// need the emailed code. Only the service role can write the row, so the 7-day
+// window can't be shortened client-side.
 //
-// Idempotent: calling again keeps the original schedule (never extends or
-// shortens an in-flight request).
+// Idempotent: if a request already exists we return it without consuming a code
+// (it's just a read); creating a new one requires a valid OTP.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -47,6 +48,7 @@ Deno.serve(async (req) => {
     );
 
     // Keep an existing request's schedule; only create one if none is pending.
+    // Returning an already-scheduled request is a read, so it needs no OTP.
     const { data: existing } = await admin
       .from('account_deletions')
       .select('requested_at, scheduled_for')
@@ -55,6 +57,28 @@ Deno.serve(async (req) => {
 
     if (existing) {
       return json({ scheduled_for: existing.scheduled_for, requested_at: existing.requested_at });
+    }
+
+    // Scheduling a NEW deletion requires the emailed OTP, verified here so the
+    // JWT alone is not enough. Verify with a fresh anon client (no session).
+    const { code } = await req.json().catch(() => ({}));
+    if (!code || typeof code !== 'string') {
+      return json({ error: 'A verification code is required' }, 400);
+    }
+    if (!user.email) {
+      return json({ error: 'Account has no email to verify against' }, 400);
+    }
+    const otpClient = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_ANON_KEY')!,
+    );
+    const { error: otpErr } = await otpClient.auth.verifyOtp({
+      email: user.email,
+      token: code.trim(),
+      type: 'email',
+    });
+    if (otpErr) {
+      return json({ error: 'Invalid or expired verification code' }, 400);
     }
 
     const now = new Date();
