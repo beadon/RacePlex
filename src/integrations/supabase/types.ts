@@ -185,7 +185,7 @@ export type Database = {
           course_key: string
           data: Json
           engine_key: string
-          id: string
+          id?: string
           updated_at?: string
           user_id: string
         }
