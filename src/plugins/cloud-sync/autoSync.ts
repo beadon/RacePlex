@@ -17,6 +17,7 @@ import { deleteCloudFile, deleteRecord, pushRecord, reconcileDocs } from "./sync
 import { clearSnapshotTombstone, pushSnapshot, reconcileSnapshots } from "./snapshotSync";
 import { clearPending, listPending, markPending, pendingKeySet } from "./pendingSync";
 import { unselectFile } from "./fileSync";
+import { setActiveUserId } from "./activeUser";
 import { pendingId } from "./merge";
 import { storageTypeForStore } from "./storageTypes";
 import { FILE_STORE } from "./syncStores";
@@ -171,6 +172,7 @@ export function startAutoSync(): void {
 
   void supabase.auth.getSession().then(({ data }) => {
     currentUserId = data.session?.user?.id ?? null;
+    setActiveUserId(currentUserId);
     if (currentUserId) void runReconcile(currentUserId);
   });
 
@@ -178,6 +180,9 @@ export function startAutoSync(): void {
     const next = session?.user?.id ?? null;
     const newlySignedIn = next !== null && next !== currentUserId;
     currentUserId = next;
+    // Re-scope the plugin-local stores BEFORE any reconcile so a reconcile only
+    // ever reads/writes the now-active user's partition.
+    setActiveUserId(next);
     if (newlySignedIn) void runReconcile(next);
   });
 

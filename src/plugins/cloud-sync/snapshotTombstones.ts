@@ -7,25 +7,27 @@
 // "don't auto-push this id" until the user saves it again (which clears it).
 
 import { getPluginStore } from "@/plugins/storage";
+import { userScope } from "./activeUser";
 
 const store = getPluginStore("cloud-sync");
-const KEY = "snapshot-tombstones";
+// Per-user so one account's cloud deletions never suppress another's pushes.
+const key = () => `snapshot-tombstones:${userScope()}`;
 
 async function read(): Promise<string[]> {
-  return (await store.get<string[]>(KEY)) ?? [];
+  return (await store.get<string[]>(key())) ?? [];
 }
 
 export async function addSnapshotTombstone(id: string): Promise<void> {
   const list = await read();
   if (!list.includes(id)) {
     list.push(id);
-    await store.set(KEY, list);
+    await store.set(key(), list);
   }
 }
 
 export async function clearSnapshotTombstone(id: string): Promise<void> {
   const list = await read();
-  if (list.includes(id)) await store.set(KEY, list.filter((x) => x !== id));
+  if (list.includes(id)) await store.set(key(), list.filter((x) => x !== id));
 }
 
 export async function snapshotTombstoneSet(): Promise<Set<string>> {

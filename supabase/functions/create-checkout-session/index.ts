@@ -87,9 +87,23 @@ Deno.serve(async (req) => {
     // Reuse the user's Stripe customer if we have one, else create + persist it.
     const { data: sub } = await admin
       .from('user_subscriptions')
-      .select('stripe_customer_id')
+      .select('stripe_customer_id, status, stripe_subscription_id')
       .eq('user_id', user.id)
       .maybeSingle();
+
+    // Block a SECOND parallel subscription. If the user already has an active
+    // subscription, a plan change must go through the Billing Portal (which
+    // swaps the plan on the existing sub with proration) — not a new Checkout
+    // Session, which would create a duplicate Stripe subscription and bill the
+    // customer twice. The client routes paid→paid clicks to the portal; this is
+    // the server-side backstop.
+    const ENTITLING = ['active', 'trialing', 'past_due'];
+    if (sub?.stripe_subscription_id && ENTITLING.includes(sub.status ?? '')) {
+      return json(
+        { error: 'You already have an active subscription. Manage your plan from the billing portal.' },
+        409,
+      );
+    }
 
     let customerId = sub?.stripe_customer_id ?? undefined;
     if (!customerId) {

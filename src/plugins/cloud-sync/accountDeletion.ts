@@ -1,11 +1,14 @@
 // Client side of self-service account deletion.
 //
 // Flow: the user proves control of the account email via a one-time code
-// (Supabase Auth email OTP — no extra mail provider needed), then we ask the
-// request-account-deletion edge function to schedule deletion 7 days out. The
-// window is reversible: cancel deletes the pending row (RLS allows the owner).
-// Until then the app shows a deletion banner. The irreversible purge is done
-// server-side by the process-account-deletions worker once the window elapses.
+// (Supabase Auth email OTP — no extra mail provider needed). The emailed code is
+// then passed to the request-account-deletion edge function, which VERIFIES it
+// server-side before scheduling deletion 7 days out. Verifying on the server (not
+// just in the UI) is what stops a stolen JWT from scheduling deletion via a
+// direct call — the caller must also possess the emailed code. The window is
+// reversible: cancel deletes the pending row (RLS allows the owner). The
+// irreversible purge is done by the process-account-deletions worker once the
+// window elapses.
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
@@ -29,15 +32,15 @@ export async function sendDeletionCode(email: string): Promise<void> {
   if (error) throw new Error(error.message);
 }
 
-/** Verify the emailed code. Resolves on success; throws on a bad/expired code. */
-export async function verifyDeletionCode(email: string, token: string): Promise<void> {
-  const { error } = await supabase.auth.verifyOtp({ email, token: token.trim(), type: "email" });
-  if (error) throw new Error(error.message);
-}
-
-/** Schedule deletion (idempotent server-side). Returns the scheduled date. */
-export async function scheduleAccountDeletion(): Promise<PendingDeletion> {
-  const { data, error } = await supabase.functions.invoke("request-account-deletion");
+/**
+ * Schedule deletion (idempotent server-side). The emailed `code` is verified by
+ * the edge function — DON'T verify it client-side first or it'll be consumed
+ * before the server can check it. Returns the scheduled date.
+ */
+export async function scheduleAccountDeletion(code: string): Promise<PendingDeletion> {
+  const { data, error } = await supabase.functions.invoke("request-account-deletion", {
+    body: { code: code.trim() },
+  });
   if (error) throw new Error(error.message);
   return data as PendingDeletion;
 }

@@ -84,6 +84,17 @@ describe("pricingCta", () => {
   it("never offers an upgrade to the free-online card", () => {
     expect(pricingCta({ ...base, slug: "free", currentTier: "pro" })).toBe("none");
   });
+
+  it("routes paid→paid changes to the portal (manage), not a new checkout", () => {
+    // On a paid tier, both an up- and a down-grade must go through the portal so
+    // we never create a second, double-billed Stripe subscription.
+    expect(pricingCta({ ...base, slug: "premium", currentTier: "plus", purchasable: true })).toBe("manage");
+    expect(pricingCta({ ...base, slug: "plus", currentTier: "premium", purchasable: true })).toBe("manage");
+  });
+
+  it("still keeps an unconfigured paid tier non-actionable even when on a paid tier", () => {
+    expect(pricingCta({ ...base, slug: "pro", currentTier: "plus", purchasable: false })).toBe("none");
+  });
 });
 
 describe("lookupKey", () => {

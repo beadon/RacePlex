@@ -120,7 +120,7 @@ export function isComingSoon(tier: string): boolean {
   return COMING_SOON_TIERS.has(tier);
 }
 
-export type PricingCtaKind = "none" | "current" | "upgrade";
+export type PricingCtaKind = "none" | "current" | "manage" | "upgrade";
 
 export interface PricingCtaInput {
   /** The card's tier slug ('free' | 'plus' | 'pro'); undefined for the offline card. */
@@ -137,11 +137,18 @@ export interface PricingCtaInput {
  * Which call-to-action a pricing card should show. Pure so it can be unit-tested.
  * "none" means render no button (informational only — e.g. signed out, the free
  * tiers, or a paid tier whose Stripe Price isn't configured yet, which keeps the
- * "Coming soon" badge).
+ * "Coming soon" badge). "manage" routes through the billing portal instead of a
+ * new Checkout Session.
  */
 export function pricingCta(i: PricingCtaInput): PricingCtaKind {
   if (!i.slug || !i.cloudEnabled || !i.signedIn) return "none";
   if (i.slug === i.currentTier) return "current";
   if (i.slug === "free") return "none";
-  return i.purchasable ? "upgrade" : "none";
+  if (!i.purchasable) return "none";
+  // A user already on a paid tier must NOT start a fresh Checkout for another
+  // paid tier — that would create a second, parallel Stripe subscription and
+  // double-bill them. Plan changes (up or down) go through the billing portal,
+  // which swaps the plan on the existing subscription. Only an upgrade from free
+  // starts a new Checkout Session.
+  return isPaidTier(i.currentTier) ? "manage" : "upgrade";
 }
