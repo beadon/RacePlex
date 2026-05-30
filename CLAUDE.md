@@ -386,12 +386,21 @@ exactly as it was the day it ran, even after the live setup is later edited.
 - **Display.** `shortRevHash()` surfaces the leading 6 hex chars (git-style). The
   **SetupsTab** list shows each setup's current would-be hash; **NotesTab** shows
   the frozen `#hash` of the session's setup revision.
+- **Orphan prune (GC).** A revision is an orphan once no `FileMetadata.sessionSetupRev`
+  points at it. `pruneSetupRevisions()` deletes orphans (pure split:
+  `findOrphanRevisionIds`); `maybePruneSetupRevisions()` throttles it to ~once every
+  `PRUNE_INTERVAL_MS` (3 days) via a localStorage timestamp and is fired
+  best-effort from `useSetupManager` on mount. Works fully offline.
 - **Sync (cloud-sync plugin):** revisions ride the **generic garage-doc engine** —
   registered in `syncStores.ts` (`DOC_STORES` + `KEY_FIELD`, keyed by `id`), so
   they push/pull as ordinary `sync_records` rows counting toward the pooled
   documents budget. No dedicated table. Being immutable + content-addressed, the
-  last-write-wins merge is a no-op on collision. **Pruning of orphan revisions and
-  later-editing are deliberate follow-ups** (not yet implemented).
+  last-write-wins merge is a no-op on collision. **Prune is local-only:** a deleted
+  orphan is **tombstoned** (`setupRevisionTombstones.ts`, per-user) rather than
+  removed from the cloud — `autoSync` skips the cloud delete and the
+  `setup-revisions` store accessor skips re-pulling a tombstoned id, so the sweep
+  isn't undone by reconcile. A fresh freeze of the same content clears the
+  tombstone. **Cloud-side GC and later-editing are deliberate follow-ups.**
 
 ---
 

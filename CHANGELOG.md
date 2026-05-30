@@ -23,7 +23,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   The setup list shows each setup's current hash; the session's Notes panel shows
   the frozen `#hash` it ran. Revisions sync to the cloud as ordinary garage
   documents (counting toward the same pooled storage budget) and stay unlimited
-  on-device. Sets up future session tagging in the file browser.
+  on-device. Sets up future session tagging in the file browser. Revisions that
+  no session references are swept automatically (a throttled ~3-day background
+  prune); the local sweep never deletes the cloud copy another device may need.
 - Cloudflare Workers deployment support: `wrangler.jsonc` (static-assets-only
   Worker serving `./dist` with single-page-application not-found handling),
   `public/_headers` (no-cache for the service workers + `index.html`, immutable

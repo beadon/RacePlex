@@ -144,6 +144,24 @@ export async function getFileMetadata(fileName: string): Promise<FileMetadata | 
   }
 }
 
+/** Every saved session's metadata — used to find which setup revisions are in use. */
+export async function listAllMetadata(): Promise<FileMetadata[]> {
+  try {
+    const db = await openDB();
+    const tx = db.transaction(META_STORE, "readonly");
+    const request = tx.objectStore(META_STORE).getAll();
+    const results = await new Promise<FileMetadata[]>((resolve, reject) => {
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    db.close();
+    return results;
+  } catch (e) {
+    console.warn("Failed to list file metadata:", e);
+    return [];
+  }
+}
+
 export async function getStorageEstimate(): Promise<{ used: number; quota: number } | null> {
   try {
     if (navigator.storage?.estimate) {

@@ -4,8 +4,11 @@ import type { SetupTemplate } from "./templateStorage";
 import {
   buildSetupRevision,
   computeSetupHash,
+  findOrphanRevisionIds,
   freezeTemplate,
+  PRUNE_INTERVAL_MS,
   shortRevHash,
+  shouldPrune,
   SHORT_HASH_LENGTH,
 } from "./setupRevision";
 
@@ -133,6 +136,38 @@ describe("freezeTemplate", () => {
   it("returns null for a missing template", () => {
     expect(freezeTemplate(null)).toBeNull();
     expect(freezeTemplate(undefined)).toBeNull();
+  });
+});
+
+describe("findOrphanRevisionIds", () => {
+  it("returns revisions no session references", () => {
+    const orphans = findOrphanRevisionIds(["a", "b", "c"], ["b"]);
+    expect(orphans.sort()).toEqual(["a", "c"]);
+  });
+
+  it("keeps every referenced revision", () => {
+    expect(findOrphanRevisionIds(["a", "b"], ["a", "b"])).toEqual([]);
+  });
+
+  it("treats everything as an orphan when nothing is referenced", () => {
+    expect(findOrphanRevisionIds(["a", "b"], [])).toEqual(["a", "b"]);
+  });
+
+  it("ignores references to revisions that no longer exist", () => {
+    expect(findOrphanRevisionIds(["a"], ["a", "ghost"])).toEqual([]);
+  });
+});
+
+describe("shouldPrune", () => {
+  it("runs when never run before", () => {
+    expect(shouldPrune(null, 1000)).toBe(true);
+    expect(shouldPrune(undefined, 1000)).toBe(true);
+  });
+
+  it("waits until the interval has elapsed", () => {
+    const last = 1_000_000;
+    expect(shouldPrune(last, last + PRUNE_INTERVAL_MS - 1)).toBe(false);
+    expect(shouldPrune(last, last + PRUNE_INTERVAL_MS)).toBe(true);
   });
 });
 

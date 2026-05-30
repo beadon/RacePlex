@@ -69,7 +69,10 @@ intentionally excluded (size). `vehicle-types`/`setup-templates` ride along
 because setups are template-driven. `setup-revisions` are immutable,
 content-addressed (id = content hash) frozen setups — they push/pull as ordinary
 garage docs; the LWW merge is a no-op on collision since the key already implies
-identical content (see *Setup Revisions* in `CLAUDE.md`).
+identical content. Their **orphan prune is local-only**: a pruned revision is
+tombstoned (`setupRevisionTombstones.ts`), so `autoSync` skips the cloud delete
+and the store accessor skips re-pulling it — the cloud copy survives for other
+devices (see *Setup Revisions* in `CLAUDE.md`).
 Most stores are IndexedDB; **`tracks` is localStorage** (only *user* tracks/courses,
 never the built-in public ones), reached through `storeAccessors.ts` — a per-store
 read/get/put seam so the engine isn't hard-wired to IndexedDB. Track edits stamp

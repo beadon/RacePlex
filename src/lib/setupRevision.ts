@@ -25,6 +25,32 @@ import type { SetupTemplate } from "./templateStorage";
 /** How many leading hex chars of the content hash we surface in the UI (git-style). */
 export const SHORT_HASH_LENGTH = 6;
 
+/** How often the orphan-revision sweep runs (3 days), throttled via localStorage. */
+export const PRUNE_INTERVAL_MS = 3 * 24 * 60 * 60 * 1000;
+
+/** True when the throttled prune is due — never run before, or the interval elapsed. */
+export function shouldPrune(
+  lastRunMs: number | null | undefined,
+  now: number,
+  intervalMs: number = PRUNE_INTERVAL_MS,
+): boolean {
+  if (lastRunMs == null) return true;
+  return now - lastRunMs >= intervalMs;
+}
+
+/**
+ * Revisions not referenced by any session are orphans (prunable). `referenced` is
+ * every `FileMetadata.sessionSetupRev` in use; a revision id absent from it has no
+ * session pointing at it and can be removed.
+ */
+export function findOrphanRevisionIds(
+  revisionIds: string[],
+  referenced: Iterable<string>,
+): string[] {
+  const keep = new Set(referenced);
+  return revisionIds.filter((id) => !keep.has(id));
+}
+
 /** The short, human-facing id for a revision hash (first 6 hex chars). */
 export function shortRevHash(hash: string): string {
   return hash.slice(0, SHORT_HASH_LENGTH);
