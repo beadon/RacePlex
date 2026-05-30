@@ -13,6 +13,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+- **Explicit deny-all RLS policy on `stripe_events`.** The Stripe webhook
+  idempotency ledger had row-level security enabled but no policy. Direct client
+  access was already denied (only the service role, which bypasses RLS, writes to
+  it), but Supabase's database linter flagged it as `rls_enabled_no_policy`. It now
+  carries an explicit `FOR ALL ... USING (false)` deny-all policy plus a table
+  comment, matching the existing `login_attempts` service-role-only pattern —
+  self-documenting defense-in-depth, no behavioural change. A full sweep confirmed
+  every table has RLS enabled with appropriate policies, every `SECURITY DEFINER`
+  function pins `search_path`, and each edge function enforces its own auth.
+
 ### Fixed
 - **Active subscription no longer reads as "Free".** The Stripe webhook could
   resolve an entitling subscription (active/trialing/past_due) down to the free
