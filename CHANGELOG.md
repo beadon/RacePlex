@@ -309,6 +309,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   pointed at an upstream backend. Production enables them explicitly.
 
 ### Fixed
+- **Auto-detected track/course is now saved automatically.** When a loaded log's
+  track and course are recognised, the session is filed under them in the browser
+  immediately — previously the detection only applied in-memory and the log stayed
+  "Untagged" until some later manual action (e.g. saving a track) happened to
+  persist it.
 - **Lap snapshots are now direction-aware.** A course driven in reverse keeps a
   separate "fastest lap" snapshot from the forward direction instead of
   overwriting it (and the position-based pace overlay refuses to compare against
