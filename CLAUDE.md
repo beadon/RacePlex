@@ -57,7 +57,7 @@ will read it tomorrow.
 | Styling | Tailwind CSS + shadcn/ui (HSL design tokens in `index.css`) |
 | Mapping | Leaflet (CartoDB + Esri tiles, cached 30 days by SW) |
 | Charts | Custom Canvas 2D (not a library — see `TelemetryChart.tsx`, `SingleSeriesChart.tsx`) |
-| Video Export | WebCodecs + [mp4-muxer](https://github.com/Vanilagy/mp4-muxer) (H.264 video + AAC audio video + AAC audio MP4 output) |
+| Video Export | WebCodecs + [mp4-muxer](https://github.com/Vanilagy/mp4-muxer) (H.264 video + AAC audio → MP4 output) |
 | State | React hooks + React Query (for admin only) |
 | Local Storage | IndexedDB (`dbUtils.ts`) for files/metadata/karts/notes/setups/video-sync/graph-prefs; localStorage for tracks & settings |
 | Backend | None for core features. Optional admin via Supabase (Lovable Cloud) |
@@ -67,128 +67,67 @@ will read it tomorrow.
 
 ## Architecture Map
 
+> Directory + entry-point level only. Leaf files are discoverable with
+> `Glob`/`Grep`; ★ marks the load-bearing entry points worth knowing by name.
+
 ```
 src/
 ├── pages/
-│   ├── Index.tsx          # Main SPA — file import, tab views, all state orchestration
+│   ├── Index.tsx          # ★ Main SPA — file import, tab views, all state orchestration
 │   ├── Admin.tsx          # Admin panel (behind VITE_ENABLE_ADMIN)
-│   ├── Login.tsx / Register.tsx / Privacy.tsx
-│   └── NotFound.tsx
+│   └── …                  # Login / Register / Privacy / Terms / NotFound
 ├── components/
-│   ├── ui/                # shadcn/ui primitives (button, dialog, tabs, etc.)
-│   ├── admin/             # Admin tabs: TracksTab, CoursesTab, SubmissionsTab, BannedIpsTab, ToolsTab, MessagesTab
-│   ├── tabs/              # Main view tabs: GraphViewTab, RaceLineTab, LapTimesTab, LabsTab
+│   ├── ui/                # shadcn/ui primitives
+│   ├── admin/             # Admin tabs (Tracks, Courses, Submissions, BannedIps, Tools, Messages)
+│   ├── tabs/              # Main view tabs (GraphView, RaceLine, LapTimes, Labs, Coach, Profile)
 │   ├── graphview/         # Pro mode: GraphPanel, GraphViewPanel, MiniMap, SingleSeriesChart, InfoBox
-│   ├── drawer/            # File manager drawer tabs: FilesTab, KartsTab, NotesTab, SetupsTab, DeviceSettingsTab, DeviceTracksTab
-│   ├── track-editor/      # Track editor sub-components
-│   ├── RaceLineView.tsx   # Leaflet map with race line, speed heatmap, braking zones
-│   ├── TelemetryChart.tsx # Canvas-based speed/telemetry chart (simple mode)
-│   ├── VideoPlayer.tsx    # Synced video playback with modular overlay system
-│   ├── video-overlays/   # Overlay system for video export
-│   │   ├── types.ts             # OverlayInstance, OverlaySettings, DataSourceDef, ThemeDef
-│   │   ├── registry.ts          # Overlay type definitions + factory
-│   │   ├── themes.ts            # Classic + Neon theme definitions
-│   │   ├── dataSourceResolver.ts # Maps data source IDs → values/ranges/units
-│   │   ├── DigitalOverlay.tsx   # Numeric value + unit display
-│   │   ├── AnalogOverlay.tsx    # Canvas needle gauge (~252° arc)
-│   │   ├── GraphOverlay.tsx     # Rolling canvas line chart
-│   │   ├── BarOverlay.tsx       # Horizontal 0-100% progress bar
-│   │   ├── BubbleOverlay.tsx    # XY joystick-style circular widget
-│   │   ├── sectorUtils.ts        # Shared sector status logic (colors, segment computation)
-│   │   ├── MapOverlay.tsx       # Mini canvas race line with position dot + optional sector coloring
-│   │   ├── PaceOverlay.tsx      # Horizontal pace delta indicator
-│   │   ├── SectorOverlay.tsx    # 3 sector bubbles with delta + sparkle animation
-│   │   ├── LapTimeOverlay.tsx   # Lap timer with optional pace mode (delta + best lap)
-│   │   ├── OverlaySettingsPanel.tsx # Add/configure/remove overlay instances
-│   │   └── VideoExportDialog.tsx    # Export dialog with quality options
-│   ├── FileImport.tsx     # Drag-and-drop file import
-│   ├── DataloggerDownload.tsx  # BLE device download UI
-│   ├── ContactDialog.tsx  # Public contact form dialog (categories shared const)
-│   └── ...
-├── hooks/
-│   ├── useSessionData.ts      # Parses imported file → ParsedData
-│   ├── useLapManagement.ts    # Lap calculation, selection, visible range
-│   ├── usePlayback.ts         # Playback cursor (shared across chart + map)
-│   ├── useReferenceLap.ts     # Reference lap overlay logic
-│   ├── useVideoSync.ts        # Video ↔ telemetry synchronization
-│   ├── useFileManager.ts      # IndexedDB file CRUD
-│   ├── useKartManager.ts      # Backward compat re-export → useVehicleManager
-│   ├── useVehicleManager.ts   # Vehicle profiles CRUD
-│   ├── useTemplateManager.ts  # Vehicle types & setup templates CRUD
-│   ├── useNoteManager.ts      # Session notes CRUD
-│   ├── useSetupManager.ts     # Generic setup sheets CRUD (template-driven)
-│   ├── useSettings.ts         # User preferences (units, smoothing, dark mode, etc.)
-│   ├── useSessionMetadata.ts  # Per-file metadata (selected track/course)
-│   └── useOnlineStatus.ts     # Navigator.onLine wrapper
+│   ├── drawer/            # File-manager drawer tabs (Files, Vehicles/Karts, Notes, Setups, Device*)
+│   ├── track-editor/      # Track editor sub-components (VisualEditor is lazy — see Bundle Splitting)
+│   ├── video-overlays/    # Video-export overlay system: registry + themes + per-widget *Overlay,
+│   │                      #   sectorUtils, dataSourceResolver, OverlaySettingsPanel, VideoExportDialog
+│   ├── RaceLineView.tsx   # Leaflet map: race line, speed heatmap, braking zones
+│   ├── TelemetryChart.tsx # Canvas speed/telemetry chart (simple mode)
+│   ├── VideoPlayer.tsx    # Synced video playback + overlay system
+│   ├── LapSnapshot*.tsx   # ★ Lap-snapshot picker (Controls) + "new fastest lap" save prompt
+│   └── …                  # FileImport, DataloggerDownload (BLE entry, lazy), ContactDialog, …
+├── hooks/                 # One concern each; Index.tsx orchestrates.
+│   ├── useSessionData.ts  # Parses imported file → ParsedData
+│   ├── useLapManagement.ts# Lap calc, selection, visible range
+│   ├── usePlayback.ts     # Shared playback cursor (chart + map)
+│   ├── useLapSnapshots.ts # ★ Lap-snapshot orchestration (capture/prompt/overlay)
+│   ├── useReferenceLap / useVideoSync / useSettings / useSessionMetadata / useOnlineStatus
+│   ├── use*Manager.ts     # IndexedDB CRUD: File, Vehicle (←Kart compat), Engine, Template, Note, Setup
+│   └── useSubscription / useStripePrices   # billing, online — see docs/backend.md
 ├── lib/
-│   ├── datalogParser.ts       # ★ Format auto-detection router (entry point for all parsing)
-│   ├── nmeaParser.ts          # NMEA 0183 text parser (fallback format)
-│   ├── ubxParser.ts           # u-blox UBX binary parser
-│   ├── vboParser.ts           # Racelogic VBO parser
-│   ├── doveParser.ts          # DovesDataLogger CSV parser
-│   ├── dovexParser.ts         # DovesDataLogger extended format (.dovex) with 8192-byte metadata header
-│   ├── alfanoParser.ts        # Alfano CSV parser
-│   ├── aimParser.ts           # AiM MyChron CSV parser
-│   ├── motecParser.ts         # MoTeC LD binary + CSV parser
-│   ├── parserUtils.ts         # Shared parser helpers (haversine, speed calc, etc.)
-│   ├── fieldResolver.ts       # Canonical field name mapping across parsers
-│   ├── courseDetection.ts     # ★ Auto course detection, direction detection, waypoint mode
-│   ├── lapCalculation.ts      # Start/finish line crossing detection → Lap[]
-│   ├── brakingZones.ts        # Braking zone detection from G-force data
-│   ├── speedEvents.ts         # Min/max speed event detection
-│   ├── speedBounds.ts         # Speed range utilities
-│   ├── gforceCalculation.ts   # G-force derivation from GPS data
-│   ├── chartUtils.ts          # Canvas chart rendering helpers
-│   ├── chartColors.ts         # Color palette for multi-series charts
-│   ├── trackUtils.ts          # Track geometry utilities (findNearestTrack: 5mi radius)
-│   ├── trackStorage.ts        # localStorage: tracks + courses (merged with public/tracks.json) + course drawings loader
-│   ├── referenceUtils.ts      # Reference lap comparison utilities
-│   ├── dbUtils.ts             # ★ Shared IndexedDB: DB_NAME, DB_VERSION, openDB(), transaction helpers
-│   ├── fileStorage.ts         # IndexedDB: raw file blobs
-│   ├── kartStorage.ts         # Old kart storage (kept for compat)
-│   ├── vehicleStorage.ts     # ★ Vehicle profiles CRUD (replaces kartStorage)
-│   ├── templateStorage.ts    # ★ Vehicle types + setup templates, default kart schema
-│   ├── noteStorage.ts         # IndexedDB: session notes
-│   ├── setupStorage.ts        # IndexedDB: kart setups
-│   ├── videoStorage.ts        # IndexedDB: video sync points + overlay settings
-│   ├── videoFileStorage.ts    # ★ IndexedDB: video file blobs + metadata (exportType, lapNumber, hasOverlays)
-│   ├── videoExport.ts         # VideoWebCodecs H.264+AAC, fallback MediaRecorder fix-webm-duration)
-│   ├── overlayCanvasRenderer.ts # Canvas-based overlay drawing for export
-│   ├── graphPrefsStorage.ts   # IndexedDB: per-session graph selections
-│   ├── bleDatalogger.ts       # Legacy barrel — re-exports from `ble/` for back-compat
-│   ├── ble/                   # Web Bluetooth: DovesLapTimer protocol, split per-concern
-│   │   ├── index.ts             # Public API barrel
-│   │   ├── types.ts             # BleConnection, FileInfo, DownloadProgress, BatteryInfo
-│   │   ├── internal.ts          # UUIDs, debug logging (not exported)
-│   │   ├── format.ts            # formatBytes / formatSpeed / formatTime
-│   │   ├── connection.ts        # isBleSupported, connectToDevice, disconnect
-│   │   ├── fileTransfer.ts      # LIST + GET file protocol (data log download)
-│   │   ├── battery.ts           # BATT protocol
-│   │   ├── settings.ts          # SLIST/SGET/SSET/SRESET settings protocol
-│   │   └── trackSync.ts         # TLIST/TGET/TPUT/TDEL track-file protocol
-│   ├── deviceTrackSync.ts     # Track sync logic: merge/compare app↔device tracks, coordinate diff
-│   ├── deviceSettingsSchema.ts # Device settings key definitions + validation
-│   ├── weatherService.ts      # OpenWeatherMap API (online-only)
-│   ├── db/                    # Admin database layer (modular, swappable)
-│   │   ├── types.ts           # ITrackDatabase interface
-│   │   ├── supabaseAdapter.ts # Supabase implementation
-│   │   └── index.ts           # Factory: getDatabase()
-│   └── utils.ts               # Tailwind cn() helper
-├── plugins/                   # ★ Plugin framework (auto-discovered via import.meta.glob)
-│   ├── types.ts               # DataViewerPlugin / PluginContext / PluginRegistry contracts
-│   ├── registry.ts            # Singleton registry + generic extension points
-│   ├── index.ts               # initPlugins() — discovery + setup (called in main.tsx)
-│   └── coaching/              # Gitignored private slot (AI coaching submodule)
-├── types/
-│   └── racing.ts              # ★ Core types: GpsSample, ParsedData, Lap, Course, Track, etc.
-├── contexts/
-│   ├── SettingsContext.tsx     # Settings provider (useKph, gForce, brakingZones, darkMode, labs)
-│   ├── DeviceContext.tsx       # Global BLE connection state provider
-│   └── AuthContext.tsx        # Admin auth context
-│   └── AuthContext.tsx        # Admin auth context
-└── integrations/supabase/     # Auto-generated — DO NOT EDIT
-    ├── client.ts
-    └── types.ts
+│   ├── datalogParser.ts   # ★ Format auto-detection router (entry point for all parsing)
+│   ├── *Parser.ts         # nmea, ubx, vbo, dove, dovex, alfano, aim, motec (+ parserUtils.ts)
+│   ├── channels.ts        # ★ Canonical channel registry (ids/labels/units/aliases) + normalizeChannels()
+│   ├── fieldResolver.ts   # Settings-facing adapter over channels.ts
+│   ├── courseDetection.ts # ★ Auto track/course/direction detection + waypoint mode
+│   ├── lapCalculation.ts  # Start/finish crossing detection → Lap[]
+│   ├── lapDelta.ts        # ★ Position-based lap delta (arc-length resample + segment-projected gap)
+│   ├── lapSnapshot.ts     # ★ Pure snapshot types/keying/buffer (course+engine identity)
+│   ├── lapSnapshotStorage.ts # ★ IndexedDB CRUD for lap snapshots (emits garageEvents)
+│   ├── dbUtils.ts         # ★ Shared IndexedDB: DB_NAME, DB_VERSION, openDB(), tx helpers
+│   ├── garageEvents.ts    # ★ Host pub/sub: storage emits {store,key,put|delete}; cloud-sync syncs off it
+│   ├── *Storage.ts        # IDB stores: file, kart(compat), vehicle, engine, template, note, setup,
+│   │                      #   video, videoFile, graphPrefs; trackStorage = localStorage (user tracks)
+│   ├── (racing math)      # brakingZones, speedEvents, speedBounds, gforceCalculation, referenceUtils, trackUtils
+│   ├── (charts/video)     # chartUtils, chartColors, videoExport, overlayCanvasRenderer
+│   ├── ble/               # Web Bluetooth DovesLapTimer protocol, split per-concern (see BLE Integration);
+│   │                      #   + bleDatalogger.ts (legacy barrel), deviceTrackSync.ts, deviceSettingsSchema.ts
+│   ├── db/                # Admin DB layer: ITrackDatabase + supabaseAdapter + getDatabase() factory
+│   ├── billing.ts         # ★ Pure subscription logic, no Supabase import — see docs/backend.md
+│   ├── billingClient.ts / pendingCheckout.ts   # Supabase billing I/O + sign-up checkout stash
+│   ├── weatherService.ts  # OpenWeatherMap (online-only)
+│   └── utils.ts           # Tailwind cn() helper
+├── plugins/               # ★ Plugin framework (auto-discovered) — see Plugin Framework section
+│   ├── (framework)        # types, registry, index, panels, mounts, storage + PluginPanelHost/PluginMount
+│   ├── cloud-sync/         # ★ First-party plugin: Supabase file + garage sync — see docs/backend.md
+│   └── coaching/           # Gitignored slot for the AI coach (npm pkg in production)
+├── types/racing.ts        # ★ Core types: GpsSample, ParsedData, Lap, Course, Track, …
+├── contexts/              # SettingsContext, DeviceContext (BLE), AuthContext (admin)
+└── integrations/supabase/ # Auto-generated — DO NOT EDIT
 ```
 
 ---
@@ -200,6 +139,7 @@ File Import (drag-drop / BLE download / file manager)
   → fileStorage.ts (save raw blob to IndexedDB)
   → useSessionData.ts (read blob, call parseDatalogFile)
     → datalogParser.ts (auto-detect format, route to specific parser)
+      → normalizeChannels() (channels.ts): rewrites every fieldMapping name + extraFields key to a canonical ChannelId (or `custom:` slug), sets display label/unit. Runs once for all formats — parsers keep emitting human names internally.
       → returns ParsedData { samples: GpsSample[], fieldMappings, bounds, duration, startDate, dovexMetadata?, parserStats? }
   → courseDetection.ts (auto-detect track, course, direction; waypoint fallback)
     → returns CourseDetectionResult { track, course, direction, laps, isWaypointMode }
@@ -227,12 +167,60 @@ A plugin absent at build time simply never loads — the app builds/runs without
 | `registry.ts` | Singleton registry: `register`/`get`/`list` + generic `contribute`/`getContributions`. Same-`id` plugins resolve by highest `priority` |
 | `index.ts` | `initPlugins()` — glob + external discovery, runs each plugin's `setup(ctx)`. Called once in `main.tsx` before render |
 | `external-plugins.d.ts` | Ambient type for the `virtual:external-plugins` module |
+| `panels.ts` | **UI panel framework**: `PluginPanel` / `PluginPanelProps` contract, `PANELS_POINT`, `PanelSlot`, `getPanelsForSlot(slot)`. The curated session snapshot is the entire surface a panel can rely on — incl. `sessionSetup` (the current session's assigned setup) + `activeSnapshot` (`PluginSnapshot`: the loaded reference lap snapshot with clean-lap samples + frozen engine/course/vehicle/setup), so a coach panel can compare the current setup against the frozen snapshot setup |
+| `PluginPanelHost.tsx` | Consumer: mounts every panel for a slot in a titled card, each wrapped in a per-panel error boundary; renders a `fallback` when none. A `chromeless` panel skips the card chrome (full-bleed); an all-chromeless slot (`isBareSlot`) drops the host's outer padding so one panel fills the tab |
+| `mounts.ts` | **Inline mount framework**: `PluginMountDef`, `MOUNTS_POINT`, `MountSlot` (`FileRow`, `FileManagerSection`), per-slot context types, `getMounts(slot)`. For injecting raw components into fixed spots in core UI |
+| `PluginMount.tsx` | Consumer: `<PluginMount slot ctx>` renders every mount for a slot (error-boundaried + Suspense), or nothing when none — safe to drop into core UI unconditionally |
+| `storage.ts` | `getPluginStore(id)`: schema-less KV scoped to one plugin, in its own IndexedDB DB (`dove-plugin-<id>`). Decoupled from core `dbUtils`. Also exposed as `ctx.storage` |
 | `coaching/` | **Gitignored** local-dev slot for the coach plugin (production loads it as an npm package) |
 
 A plugin default-exports `{ id, name, version?, priority?, setup?(ctx) }`. In
 `setup`, it contributes to named extension points
 (`ctx.registry.contribute(point, value)`); consumers read via
 `getContributions(point)`. New extension points need no registry changes.
+`ctx.storage` is a `PluginStore` (per-plugin KV) for persisting plugin state.
+
+**UI panels:** the first concrete extension point. A plugin contributes
+`PluginPanel` descriptors to `PANELS_POINT`, targeting a *slot* (host surface).
+Three slots exist today: `PanelSlot.Labs` (rendered by `LabsTab.tsx`; no
+first-party panel targets it now — it shows only when the experimental
+`enableLabs` setting is on or another plugin contributes), `PanelSlot.Coach`
+(rendered by `CoachTab.tsx` — the dedicated AI Coach tab, home for the
+`@perchwerks/eye-in-the-sky` coaching plugin), and `PanelSlot.Profile`
+(rendered by `ProfileTab.tsx`, far-right — cloud-sync contributes the Account
+sign-in panel, storage meters, and cloud-log management). All render contributed
+panels via `PluginPanelHost` and are
+**self-gating**: `Index.tsx` computes `hasLabsPanels`/`showCoach`/`showProfile`
+from `getPanelsForSlot`, so a tab appears only when a
+plugin contributes a panel to it (Labs additionally shows when the experimental
+`enableLabs` setting is on). New slots are just new strings — no framework change.
+`PluginPanelHost` wraps each panel in an error boundary **and** a `Suspense`
+boundary, so panel components can be `React.lazy` (as `cloud-sync` is). A panel
+may set `chromeless: true` to render its body without the host's card/header/
+padding — for panels that own their full layout (e.g. a full-bleed coach
+dashboard); the error boundary + Suspense still apply, and a slot whose panels
+are all chromeless (`isBareSlot`) also drops the host's outer padding.
+
+**Inline mounts:** where panels are standalone cards, *mounts* inject a raw
+component into a fixed spot in core UI. A plugin contributes a `PluginMountDef`
+to `MOUNTS_POINT`, targeting a `MountSlot`; the host renders `<PluginMount slot
+ctx={…}>` at that spot, passing a typed context as a single `ctx` prop.
+`FilesTab` exposes four: `MountSlot.FileRow` (per file row, ctx = that file),
+`MountSlot.FileManagerSection` (once under the list, ctx = the whole list),
+`MountSlot.FileManagerFooter` (near the bottom, above storage usage, ctx = the
+whole list — home for the "Download all cloud logs" bulk action), and
+`MountSlot.FileDeleteConfirm` (inside the delete-confirm banner, ctx = the target
+file + a `registerOnConfirm` hook so a plugin can run an extra action — e.g.
+cloud-sync's "also delete the cloud copy" — without the host knowing about
+cloud). New mount locations are just new slot strings.
+
+**Cloud Sync (first-party plugin, `src/plugins/cloud-sync/`):** the first
+in-repo plugin built on the panel framework — contributes the **Account** panel
+(`PanelSlot.Profile`, ordered first) plus file-manager mounts (per-file sync
+toggle, and a bulk `DownloadAllCloudLogs` in the footer). Backs the IndexedDB
+stores up to Supabase: structured stores → `sync_records` jsonb docs, raw blobs →
+the private `user-files` bucket. **Full data model, sync engine, conflict
+resolution, and backend live in `docs/backend.md`.**
 
 **AI coach (npm package):** published to the public npm registry as
 `@perchwerks/eye-in-the-sky` and listed in `optionalDependencies`. The loader in
@@ -276,7 +264,7 @@ Detection order matters: binary formats first (MoTeC LD → UBX), then text form
 | `Track` | `name`, `shortName?` (max 8 chars), `courses[]` |
 | `CourseDetectionResult` | `track`, `course`, `direction?`, `laps[]`, `isWaypointMode`, `waypointNotice?` |
 | `CourseDirection` | `'forward' \| 'reverse'` |
-| `FieldMapping` | `index`, `name`, `unit?`, `enabled` — maps extraFields to UI toggles |
+| `FieldMapping` | `index`, `name` (canonical ChannelId or `custom:` slug — the extraFields key), `label?` (display), `unit?`, `enabled` |
 | `FileMetadata` | `fileName`, `trackName`, `courseName`, `weatherStation*?`, `sessionKartId?`, `sessionSetupId?`, `fastestLapMs?`, `fastestLapNumber?` |
 
 ---
@@ -314,7 +302,7 @@ GPS data is always parseable even if metadata is corrupted. Metadata is attached
 
 ## IndexedDB Storage (`src/lib/dbUtils.ts`)
 
-Single shared database: `"dove-file-manager"`, version 9.
+Single shared database: `"dove-file-manager"`, version 11.
 
 | Store | Key | Module |
 |-------|-----|--------|
@@ -328,8 +316,70 @@ Single shared database: `"dove-file-manager"`, version 9.
 | `vehicle-types` | `id` | `templateStorage.ts` |
 | `setup-templates` | `id` | `templateStorage.ts` |
 | `session-videos` | `sessionFileName` | `videoFileStorage.ts` |
+| `engines` | `id` | `engineStorage.ts` |
+| `lap-snapshots` | `id` (indexed by `courseKey`, `engineKey`) | `lapSnapshotStorage.ts` |
 
 To add a new store: increment `DB_VERSION`, add store name to `STORE_NAMES`, add creation logic in `openDB()`, create a corresponding storage module.
+
+---
+
+## Lap Snapshots (`src/lib/lapSnapshot.ts` + `lapSnapshotStorage.ts`)
+
+Frozen "course fastest lap" captures — an immutable single-lap baseline for
+cross-session comparison (and future AI coaching).
+
+- **Identity = (course + engine).** Engine is the layman's "primary key"; the
+  chassis travels inside the frozen `setup`. Exactly one snapshot per pair — a
+  faster lap upserts in place (same deterministic `id`). `engine` is the free-text
+  `Vehicle.engine` string, matched via `engineKey` (trimmed + lowercased).
+- **What's frozen:** the lap's GPS samples **± a 5s buffer** on each side (so a
+  later start/finish nudge still fits), `lapStartMs`/`lapEndMs` markers, the
+  `Course` geometry, lap time, source file/lap, and a copy of the vehicle/setup.
+  `snapshotLapSamples()` trims the buffer back to the clean lap for overlay.
+- **Capture triggers:** assigning an engine + setup to a log prompts
+  (`LapSnapshotPromptDialog`) when its best lap beats (or has no) stored
+  snapshot; a manual "Save as snapshot" lives in `LapSnapshotControls` (the
+  lap-list **Snapshots** picker, in the header so it serves simple + pro mode).
+  Orchestrated by `useLapSnapshots`.
+- **Loaded as a comparison overlay only.** Selecting a snapshot feeds its clean
+  samples into the **external-reference slot** (`externalRefSamples`), so it
+  renders like a reference lap and is **excluded from playback + the video
+  player** — it is never an appended lap. Engine is shown in the overlay label.
+- **Sync (cloud-sync plugin):** a **dedicated `lap_snapshots` table**, but its
+  serialized payload size counts toward the **same unified per-tier byte budget**
+  as documents + logs (`subscription_tiers.total_bytes`), enforced by a trigger —
+  no separate count quota. Always pushes on save; a local delete **never**
+  propagates to the cloud (the cloud copy is removed only explicitly from
+  **Profile → Lap snapshots**, like the log menu). Cloud deletes are tombstoned
+  (`snapshotTombstones.ts`) so reconcile won't resurrect a surviving local copy.
+  `reconcileSnapshots()` pulls cloud→local additively and pushes local-only up.
+  Local storage is always unlimited.
+
+---
+
+## Cloud Sync, Subscriptions & GDPR — see `docs/backend.md`
+
+These three subsystems are **Supabase-backed** and, per the offline-first rule
+(#1), touch nothing in the core app. Their data models, RLS, triggers, edge
+functions, and client wiring are documented in
+**[`docs/backend.md`](docs/backend.md)** to keep this file focused. Read it
+before working on:
+
+- **Cloud Sync** (`src/plugins/cloud-sync/`) — per-user backup/sync of the
+  IndexedDB garage + log blobs: auto-sync off `garageEvents`, conflict resolution
+  (pending-wins + last-write-wins), the unified pooled byte quota, orphan-safety,
+  and opt-in per-file logs.
+- **Subscriptions / Stripe** — paid tiers that scale one pooled storage budget;
+  tiers are data (`subscription_tiers.total_bytes`), prices resolve by Stripe
+  lookup_key, and entitlements are written only by the webhook. Operator setup
+  (Products/Prices, secrets, `pg_cron`) is in the README.
+- **Data Rights & Retention / GDPR** — self-service export/erasure, the 7-day
+  deletion window, and automatic IP minimisation.
+
+Documents, logs, and lap snapshots all draw from **one pooled per-tier byte
+budget** (`subscription_tiers.total_bytes`: free 50 MB / plus 10 GB / premium
+100 GB / pro 500 GB), shown as a single segmented bar on the Profile tab — see
+`docs/backend.md`.
 
 ---
 
@@ -421,9 +471,22 @@ Global BLE connection state is managed by `DeviceContext.tsx`, wrapping the app 
 
 `useSettings` hook (persists to localStorage) → `SettingsContext` for tree-wide access.
 
-Key settings: `useKph`, `gForceSmoothing`, `gForceSmoothingStrength`, `brakingZoneSettings` (thresholds, duration, smoothing, color, width), `enableLabs` (hidden when no labs features), `darkMode`.
+Key settings: `useKph`, `gForceSmoothing`, `gForceSmoothingStrength`, `brakingZoneSettings` (thresholds, duration, smoothing, color, width), `enableLabs` (hidden when no labs features), `darkMode`, `deltaMethod` (`'position'` default | `'distance'` legacy), `deltaSampleMeters` (arc-length resample spacing for position delta, default 2).
 
-`fieldResolver.ts` maps parser-specific field names (e.g., "Lat G", "Lateral G", "LatG") to canonical IDs (`lat_g`) so settings apply uniformly.
+`useReferenceLap.ts` routes pace through `computeLapPace` (`lapDelta.ts`), which
+switches on `deltaMethod`. The position method is the issue #29 port; `distance`
+falls back to the legacy `calculatePace` in `referenceUtils.ts`.
+
+Channels are normalized to canonical ids at parse time (`channels.ts` →
+`normalizeChannels()`), so `extraFields` keys and `FieldMapping.name` are uniform
+across formats (e.g. every parser's lateral-g lands on `lat_g`, with display
+`label` "Lat G"). G-force is modelled as distinct ids per source — `lat_g`/`lon_g`
+(primary/GPS-derived), `lat_g_native`/`lon_g_native` (logger-native), `accel_x/y/z`
+(raw IMU) — which coexist on a sample and must never collapse. `fieldResolver.ts`
+is the settings-facing adapter (resolves names→ids for the field-default
+show/hide). `toChannelKey()` is the idempotent shim that migrates legacy
+display-name keys persisted in graph-prefs / saved overlay configs on load, so
+existing user data keeps resolving without a destructive migration.
 
 ---
 
@@ -434,8 +497,8 @@ Key settings: `useKph`, `gForceSmoothing`, `gForceSmoothingStrength`, `brakingZo
 | `VITE_SUPABASE_URL` | Client | Backend URL (auto-set) |
 | `VITE_SUPABASE_PUBLISHABLE_KEY` | Client | Backend anon key (auto-set) |
 | `VITE_SUPABASE_PROJECT_ID` | Client | Backend project ID (auto-set) |
-| `VITE_ENABLE_ADMIN` | Client | `"true"` to enable admin UI + `/login` route |
-| `VITE_ENABLE_REGISTRATION` | Client | `"true"` to enable `/register` route |
+| `VITE_ENABLE_ADMIN` | Client | `"true"` to enable admin UI + `/admin` route. `/login` is also mounted when this OR `VITE_ENABLE_CLOUD` is on. |
+| `VITE_ENABLE_CLOUD` | Client | `"true"` to enable public user accounts (Cloud Sync + Google sign-in + `/register`, `/forgot-password`, `/reset-password`, `/auth/callback`). Default `"false"` — preserves offline-first invariant. |
 | `VITE_TURNSTILE_SITE_KEY` | Client | Cloudflare Turnstile site key (optional CAPTCHA) |
 | `TURNSTILE_SECRET_KEY` | Server (edge fn) | Turnstile secret — `???` |
 | `DOVE_PLUGIN_PACKAGES` | Build | Comma-separated external plugin npm packages to load. Overrides the default (`@perchwerks/eye-in-the-sky`) when set |
@@ -458,7 +521,20 @@ npm run typecheck  # tsc -b (must use build mode to follow project references)
 npm run preview    # Preview production build
 npm test           # Vitest in watch mode
 npm run test:run   # Vitest single pass (CI-style)
+npm run test:coverage  # Vitest + v8 coverage (enforces thresholds in vitest.config.ts)
 ```
+
+> **Coverage scope (`vitest.config.ts`).** Coverage is deliberately scoped to
+> *logic worth unit-testing* — `lib/` parsers/utilities/protocol code, `hooks/`,
+> and `plugins/`. The React **view layer is excluded**: presentational
+> components (`src/components/**/*.tsx`), route/page shells (`src/pages/**`),
+> context providers (`src/contexts/**`), `App.tsx`, vendored `ui/`, and the
+> generated Supabase client. Note the exclude targets `components/**/*.tsx`
+> *only* — the `.ts` logic files under `components/video-overlays/` stay in
+> scope. Don't widen the include to pull view code back in (it tanks the number
+> with code nobody unit-tests) and don't exclude `hooks/`/`lib/` to inflate it
+> (that hides real test debt). Thresholds are floors a few points below current
+> actuals — ratchet them up as coverage grows.
 
 > **Why `tsc -b`?** The root `tsconfig.json` has `files: []` and only uses
 > `references` to point at `tsconfig.app.json` + `tsconfig.node.json`. Plain
@@ -466,9 +542,11 @@ npm run test:run   # Vitest single pass (CI-style)
 > `tsc -b` (build mode) follows references; both referenced configs have
 > `noEmit: true` so nothing is emitted.
 
-CI is split into four parallel workflows under `.github/workflows/`
-(`lint.yml`, `typecheck.yml`, `test.yml`, `build.yml`). Each runs on every PR
-and push to `main` and shows up as its own status check + README badge.
+CI is split into five parallel workflows under `.github/workflows/`
+(`lint.yml`, `typecheck.yml`, `test.yml`, `build.yml`, `coverage.yml`). Each
+runs on every PR and push to `main` and shows up as its own status check +
+README badge. `coverage.yml` also enforces the thresholds in `vitest.config.ts`,
+posts a per-PR summary comment, and publishes the % badge JSON.
 
 ---
 
@@ -520,12 +598,11 @@ independently across deploys so app-only changes don't re-download vendor code.
 
 ---
 
-Update the readme when new parsers are added and when build parameters change. Make sure to ALWAYS note new environment variables and their values (use "???" When it is a secret value) in the readme.
-
-Update the credits list when new Foss libraries are added.
-
-Never do on a server what you can do on the client, the NUMBER ONE PRIORITY for this webapp is that 99% of the features are available offline. (Things like weather, satellite view etc, are obvious exceptions).
-
-Keep code modular and reusable, fuck line count as long as you can reuse the shit out of things, rewrites to make things more reusable are always cool.
-
-ALWAYS keep CLAUDE.md updated with new files and information to help it as well.
+_Closing reminders, in the author's words (these reiterate the Golden Rules — kept
+because they set the tone): **never do on the server what you can do on the
+client** — 99% offline is the number-one priority (weather, satellite view, admin
+excepted). **Keep code modular and reusable** — fuck line count as long as you
+reuse the shit out of things; rewrites for reusability are always welcome. Keep
+`README.md` current (ALWAYS note new env vars + their values, `???` for secrets)
+and the Credits list current. And **always keep `CLAUDE.md` updated** with new
+files and architecture as you go._

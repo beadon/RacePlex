@@ -9,6 +9,8 @@ const DataloggerDownload = lazy(() =>
   import("@/components/DataloggerDownload").then((m) => ({ default: m.DataloggerDownload })),
 );
 import { listSessionVideos, deleteSessionVideo, StoredVideoMeta } from "@/lib/videoFileStorage";
+import { PluginMount } from "@/plugins/PluginMount";
+import { MountSlot } from "@/plugins/mounts";
 
 function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -94,10 +96,22 @@ export function FilesTab({
     }
   }, [confirmLoad, onLoadFile, onDataLoaded, onClose]);
 
+  // A plugin (cloud-sync) can register an extra action to run on confirm — e.g.
+  // also removing the synced copy from the cloud. The host stays cloud-agnostic.
+  const deleteConfirmAction = useRef<(() => Promise<void>) | null>(null);
+  const registerDeleteConfirm = useCallback((fn: (() => Promise<void>) | null) => {
+    deleteConfirmAction.current = fn;
+  }, []);
+
   const handleDeleteConfirm = useCallback(async () => {
     if (!confirmDelete) return;
     await onDeleteFile(confirmDelete);
-    setConfirmDelete(null);
+    try {
+      await deleteConfirmAction.current?.();
+    } finally {
+      deleteConfirmAction.current = null;
+      setConfirmDelete(null);
+    }
   }, [confirmDelete, onDeleteFile]);
 
   const handleUpload = useCallback(
@@ -156,6 +170,11 @@ export function FilesTab({
               <p className="text-sm text-foreground">
                 Delete <span className="font-mono font-medium">{confirmDelete}</span>? This cannot be undone.
               </p>
+              <PluginMount
+                key={confirmDelete}
+                slot={MountSlot.FileDeleteConfirm}
+                ctx={{ fileName: confirmDelete, registerOnConfirm: registerDeleteConfirm }}
+              />
               <div className="flex justify-end gap-2">
                 <Button variant="outline" size="sm" onClick={() => setConfirmDelete(null)}>Cancel</Button>
                 <Button variant="destructive" size="sm" onClick={handleDeleteConfirm}>Delete</Button>
@@ -167,6 +186,11 @@ export function FilesTab({
 
       {/* File List */}
       <div className="flex-1 overflow-y-auto min-h-0 p-3 space-y-1">
+        {/* Plugin-contributed file-manager section (e.g. cloud files), pinned on top. */}
+        <PluginMount
+          slot={MountSlot.FileManagerSection}
+          ctx={{ files, onSaveFile }}
+        />
         {files.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-muted-foreground gap-2">
             <FolderOpen className="w-12 h-12 opacity-30" />
@@ -206,6 +230,10 @@ export function FilesTab({
                   )}
                 </div>
               </button>
+              <PluginMount
+                slot={MountSlot.FileRow}
+                ctx={{ file, metadata: fileMetadataMap.get(file.name) }}
+              />
               <Button
                 variant="ghost"
                 size="icon"
@@ -228,6 +256,10 @@ export function FilesTab({
           ))
         )}
       </div>
+
+      {/* Plugin-contributed footer (e.g. "Download all cloud logs").
+          The mount owns its own chrome and self-hides when not applicable. */}
+      <PluginMount slot={MountSlot.FileManagerFooter} ctx={{ files, onSaveFile }} />
 
       {/* Storage Usage */}
       <div className="px-4 py-2 border-t border-border shrink-0">

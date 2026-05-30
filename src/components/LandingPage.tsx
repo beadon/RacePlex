@@ -1,4 +1,4 @@
-import { Gauge, Github, Heart, Shield, BookOpen, Play, Loader2 } from "lucide-react";
+import { Gauge, Github, Heart, Shield, BookOpen, Play, Loader2, LogIn, LogOut, FileText } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { FileImport } from "@/components/FileImport";
@@ -8,6 +8,8 @@ import { ContactDialog } from "@/components/ContactDialog";
 import { SupportedFilesDialog } from "@/components/SupportedFilesDialog";
 import { AboutDialog } from "@/components/AboutDialog";
 import { CreditsDialog } from "@/components/CreditsDialog";
+import { PricingCards } from "@/components/PricingCards";
+import { useAuth } from "@/contexts/AuthContext";
 import type { ParsedData } from "@/types/racing";
 
 interface LandingPageProps {
@@ -18,6 +20,7 @@ interface LandingPageProps {
   onLoadSample: () => void;
   isLoadingSample: boolean;
   enableAdmin: boolean;
+  enableCloud: boolean;
 }
 
 const GITHUB_LINKS: Array<{ href: string; label: string }> = [
@@ -43,8 +46,10 @@ export function LandingPage({
   onLoadSample,
   isLoadingSample,
   enableAdmin,
+  enableCloud,
 }: LandingPageProps) {
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -61,6 +66,19 @@ export function LandingPage({
             <SupportedFilesDialog />
             <AboutDialog />
             <ContactDialog variant="header" />
+            {enableCloud && (
+              user ? (
+                <Button variant="ghost" size="sm" className="gap-2" onClick={logout} title={user.email ?? undefined}>
+                  <LogOut className="w-4 h-4" />
+                  <span className="hidden sm:inline">Sign out</span>
+                </Button>
+              ) : (
+                <Button variant="ghost" size="sm" className="gap-2" onClick={() => navigate('/login')}>
+                  <LogIn className="w-4 h-4" />
+                  <span className="hidden sm:inline">Sign in</span>
+                </Button>
+              )
+            )}
             <a
               href="https://github.com/sponsors/TheAngryRaven"
               target="_blank"
@@ -75,8 +93,8 @@ export function LandingPage({
         </div>
       </header>
 
-      <main className="flex-1 flex items-center justify-center p-8">
-        <div className="w-full max-w-xl space-y-6">
+      <main className="flex-1 p-8 space-y-12">
+        <div className="mx-auto w-full max-w-xl space-y-6">
           <div className="flex justify-end items-center gap-2">
             <LocalWeatherDialog />
           </div>
@@ -86,7 +104,7 @@ export function LandingPage({
               Free Online VBO, MoTeC, AiM &amp; NMEA Telemetry Viewer
             </h1>
             <p className="text-sm text-muted-foreground">
-              Open any Racelogic VBO, MoTeC i2 (LD/CSV), AiM MyChron, Alfano, u-blox UBX, NMEA or Dove datalog right in your browser. 100% offline — your files never leave your device.
+              Open any Racelogic VBO, MoTeC i2 (LD/CSV), AiM MyChron, Alfano, u-blox UBX, NMEA or Dove datalog right in your browser. Offline-first — with optional cloud storage to sync across your devices.
             </p>
           </div>
 
@@ -111,12 +129,16 @@ export function LandingPage({
               </Button>
             </div>
           </div>
+        </div>
 
-          <div className="flex justify-center mt-3">
+        <PricingCards className="mx-auto w-full max-w-5xl" />
+
+        <div className="mx-auto w-full max-w-xl space-y-4">
+          <div className="flex justify-center">
             <BrowserCompatDialog />
           </div>
 
-          <div className="flex items-center justify-center gap-8 mt-4">
+          <div className="flex items-center justify-center gap-8">
             {GITHUB_LINKS.map((link) => (
               <a
                 key={link.href}
@@ -131,10 +153,14 @@ export function LandingPage({
             ))}
           </div>
 
-          <div className="flex items-center justify-center gap-6 mt-3 flex-wrap">
+          <div className="flex items-center justify-center gap-6 flex-wrap">
             <Link to="/privacy" className="inline-flex items-center gap-1 text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors">
               <Shield className="w-3 h-3" />
               Privacy Policy
+            </Link>
+            <Link to="/terms" className="inline-flex items-center gap-1 text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors">
+              <FileText className="w-3 h-3" />
+              Terms of Service
             </Link>
             <ContactDialog />
             <CreditsDialog />
