@@ -40,6 +40,7 @@ interface PaidTier {
   inherits: string;
   features: Feature[];
   slug: PaidSlug;
+  highlight?: boolean;
 }
 
 // Everything the always-free, fully-offline app does — no account needed. Shown
@@ -80,7 +81,6 @@ function onlineCard(variant: Variant): FreeTier {
     name: "Free",
     blurb: "Online account",
     price: "$0",
-    highlight: true,
     slug: "free",
     inherits: variant === "register" ? "Everything included with offline mode" : "Everything in Free, plus",
     features: [CLOUD_SYNC_FEATURE, "50 MB cloud storage"],
@@ -95,6 +95,7 @@ const PAID_TIERS: PaidTier[] = [
     name: "Plus",
     blurb: "For bigger garages",
     slug: "plus",
+    highlight: true,
     inherits: "Everything in Free online, plus",
     features: ["10 GB cloud storage"],
   },
@@ -311,9 +312,9 @@ export function PricingCards({ className, variant = "home" }: { className?: stri
     return null;
   };
 
-  // Two cards on sign-up centre nicely at two columns; the landing page goes up
-  // to three across (which wraps 2-over-1 at the two-column breakpoint).
-  const gridCols = variant === "register" ? "sm:grid-cols-2" : "sm:grid-cols-2 lg:grid-cols-3";
+  // Two cards on sign-up centre nicely at two columns; the landing page goes
+  // three across from the tablet breakpoint up (single column on phones).
+  const gridCols = variant === "register" ? "sm:grid-cols-2" : "sm:grid-cols-3";
 
   return (
     <section className={className}>
@@ -355,6 +356,7 @@ export function PricingCards({ className, variant = "home" }: { className?: stri
                 cadence={cadence}
                 inherits={tier.inherits}
                 features={tier.features}
+                highlight={tier.highlight}
                 cta={ctaFor(tier.slug, true)}
               />
             );

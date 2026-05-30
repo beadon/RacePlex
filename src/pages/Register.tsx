@@ -107,15 +107,6 @@ export default function Register() {
         <div className="racing-card p-6 space-y-4">
           <h2 className="text-lg font-semibold text-foreground">Create account</h2>
 
-          <Button type="button" variant="outline" className="w-full" onClick={handleGoogle} disabled={isLoading}>
-            Continue with Google
-          </Button>
-          <div className="relative flex items-center">
-            <div className="flex-grow border-t border-border" />
-            <span className="mx-3 text-xs text-muted-foreground">or</span>
-            <div className="flex-grow border-t border-border" />
-          </div>
-
           <form onSubmit={handleRegister} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
@@ -153,6 +144,15 @@ export default function Register() {
               </Button>
             </div>
           </form>
+
+          <div className="relative flex items-center">
+            <div className="flex-grow border-t border-border" />
+            <span className="mx-3 text-xs text-muted-foreground">or</span>
+            <div className="flex-grow border-t border-border" />
+          </div>
+          <Button type="button" variant="outline" className="w-full" onClick={handleGoogle} disabled={isLoading}>
+            Continue with Google
+          </Button>
 
           <p className="text-sm text-muted-foreground text-center">
             Already have an account?{' '}
