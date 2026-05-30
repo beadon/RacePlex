@@ -17,6 +17,11 @@ export function setActiveUserId(id: string | null): void {
   activeUserId = id;
 }
 
+/** The active user's id (null when signed out). For non-React callers (file source). */
+export function getActiveUserId(): string | null {
+  return activeUserId;
+}
+
 /** Key suffix identifying the active user's partition ("anon" when signed out). */
 export function userScope(): string {
   return activeUserId ?? "anon";

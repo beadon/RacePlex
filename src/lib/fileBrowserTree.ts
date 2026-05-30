@@ -6,8 +6,12 @@
 
 import type { FileEntry, FileMetadata } from "./fileStorage";
 import type { Vehicle } from "./vehicleStorage";
+import type { RemoteFile } from "@/plugins/fileSources";
 
 export type FilterMode = "none" | "engine" | "kart";
+
+/** Where a session's blob lives: on this device, or only in the cloud (pullable). */
+export type SessionLocation = "local" | "cloud";
 
 /** Sentinel track key for the bucket of sessions with no track/course tag. */
 export const UNTAGGED_TRACK = "__UNTAGGED__";
@@ -19,6 +23,9 @@ export interface BrowserSession {
   displayName: string;
   savedAt: number;
   startTime?: number;
+  /** On this device, or only in the cloud (needs a download to open). */
+  location: SessionLocation;
+  size?: number;
   trackName?: string;
   courseName?: string;
   /** Resolved engine string (frozen `sessionEngine`, else the live vehicle's). */
@@ -91,32 +98,52 @@ export function formatSessionDisplayName(
 
 // ── Building the session list ────────────────────────────────────────────────
 
-/** Flatten stored files + their metadata + the vehicle list into BrowserSessions. */
+/**
+ * Flatten stored files + their metadata + the vehicle list into BrowserSessions.
+ * `remoteFiles` (cloud files from a plugin file source) are merged in as `cloud`
+ * sessions — but only when not already present locally, so the same log never
+ * doubles up. Local always wins (it's openable without a download).
+ */
 export function buildBrowserSessions(
   files: FileEntry[],
   metaMap: Map<string, FileMetadata>,
   vehicles: Vehicle[],
+  remoteFiles: RemoteFile[] = [],
 ): BrowserSession[] {
   const vehiclesById = new Map(vehicles.map((v) => [v.id, v]));
-  return files.map((f) => {
-    const meta = metaMap.get(f.name);
+
+  const build = (
+    fileName: string,
+    location: SessionLocation,
+    savedAt: number,
+    size: number | undefined,
+  ): BrowserSession => {
+    const meta = metaMap.get(fileName);
     const vehicle = meta?.sessionKartId ? vehiclesById.get(meta.sessionKartId) : undefined;
     // Prefer the frozen engine snapshot; fall back to the live vehicle's engine.
     const engineRaw = meta?.sessionEngine ?? vehicle?.engine;
-    const engine = engineRaw?.trim() || undefined;
     return {
-      fileName: f.name,
-      displayName: formatSessionDisplayName(meta?.sessionStartTime, f.name),
-      savedAt: f.savedAt,
+      fileName,
+      displayName: formatSessionDisplayName(meta?.sessionStartTime, fileName),
+      savedAt,
       startTime: meta?.sessionStartTime,
+      location,
+      size,
       trackName: meta?.trackName?.trim() || undefined,
       courseName: meta?.courseName?.trim() || undefined,
-      engine,
+      engine: engineRaw?.trim() || undefined,
       kartId: meta?.sessionKartId || undefined,
       kartName: vehicle?.name,
       fastestLapMs: meta?.fastestLapMs,
     };
-  });
+  };
+
+  const localNames = new Set(files.map((f) => f.name));
+  const local = files.map((f) => build(f.name, "local", f.savedAt, f.size));
+  const cloud = remoteFiles
+    .filter((r) => !localNames.has(r.name))
+    .map((r) => build(r.name, "cloud", r.uploadedAt ? Date.parse(r.uploadedAt) || 0 : 0, r.size));
+  return [...local, ...cloud];
 }
 
 // ── Navigation / view computation ────────────────────────────────────────────

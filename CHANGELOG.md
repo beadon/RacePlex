@@ -14,6 +14,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Cloud logs now live in the file browser.** Logs stored in your cloud but not
+  yet on this device show **inline in the Track → Course folders** alongside local
+  logs (deduped — no more separate "Cloud files" list with doubles), marked with a
+  cloud icon. **Tap one and it downloads and opens in a single step.** The
+  **"Download all cloud logs"** button moved to **Profile → Cloud logs**, which now
+  shows your cloud logs in the same folder hierarchy (with delete).
 - **Organized file browser — Track → Course → logs, with filters.** The Files tab
   is now a folder hierarchy instead of a flat list. Sessions are filed under their
   **track**, then **course**; the final list can be grouped by **Engine** or
