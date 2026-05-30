@@ -2,12 +2,15 @@ import { describe, it, expect } from "vitest";
 import {
   DEFAULT_TOTAL_LIMIT,
   formatBytes,
+  jsonBytes,
   segmentFractions,
+  snapshotBytes,
   storageTypeForStore,
   totalUsed,
   usageFraction,
   type StorageUsage,
 } from "./storageTypes";
+import type { LapSnapshot } from "@/lib/lapSnapshot";
 
 describe("storage types (single pool)", () => {
   it("classifies the files store as logs, everything else as documents", () => {
@@ -47,6 +50,21 @@ describe("storage types (single pool)", () => {
     expect(formatBytes(1024 * 1024)).toBe("1.0 MB");
     expect(formatBytes(1024 * 1024 * 1024 - 1)).toBe("1.0 GB"); // not "1024.0 MB"
     expect(formatBytes(1024 * 1024 * 1024)).toBe("1.0 GB");
+  });
+
+  describe("jsonBytes / snapshotBytes", () => {
+    it("counts the UTF-8 byte length of the serialized value", () => {
+      expect(jsonBytes({})).toBe(2); // "{}"
+      expect(jsonBytes("ab")).toBe(4); // '"ab"'
+      // Multi-byte chars count their encoded width, not their character count.
+      expect(jsonBytes("€")).toBe(jsonBytes("aaa")); // '"€"' = 1 + 3 + 1 = 5 bytes
+    });
+
+    it("measures a snapshot as its serialized JSON", () => {
+      const snap = { id: "a", samples: [1, 2, 3] } as unknown as LapSnapshot;
+      expect(snapshotBytes(snap)).toBe(jsonBytes(snap));
+      expect(snapshotBytes(snap)).toBeGreaterThan(0);
+    });
   });
 
   describe("segmentFractions", () => {

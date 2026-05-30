@@ -11,6 +11,7 @@
 // the pooled quota triggers); sync_storage_usage() is the authoritative readout the
 // meter reads online. These client values are the offline/advisory fallback.
 
+import type { LapSnapshot } from "@/lib/lapSnapshot";
 import { FILE_STORE } from "./syncStores";
 
 /** A segment of the storage bar (also the document/log split for sync_records). */
@@ -58,6 +59,19 @@ export function segmentFractions(u: StorageUsage): Record<StorageType, number> {
   const sum = raw.documents + raw.logs + raw.snapshots;
   if (sum <= 1) return raw;
   return { documents: raw.documents / sum, logs: raw.logs / sum, snapshots: raw.snapshots / sum };
+}
+
+/**
+ * Serialized byte size of a JSON-able value — the same `data` jsonb the cloud
+ * accounts for, so the offline/local meter lines up with the server's numbers.
+ */
+export function jsonBytes(value: unknown): number {
+  return new TextEncoder().encode(JSON.stringify(value)).length;
+}
+
+/** Approximate stored size of one snapshot (its serialized JSON payload). */
+export function snapshotBytes(snap: LapSnapshot): number {
+  return jsonBytes(snap);
 }
 
 /** Human-readable byte size (B / KB / MB / GB). Rolls over at the rounded display

@@ -190,8 +190,9 @@ first-party panel targets it now — it shows only when the experimental
 `enableLabs` setting is on or another plugin contributes), `PanelSlot.Coach`
 (rendered by `CoachTab.tsx` — the dedicated AI Coach tab, home for the
 `@perchwerks/eye-in-the-sky` coaching plugin), and `PanelSlot.Profile`
-(rendered by `ProfileTab.tsx`, far-right — cloud-sync contributes the Account
-sign-in panel, storage meters, and cloud-log management). All render contributed
+(rendered by `ProfileTab.tsx`, far-right — cloud-sync contributes the merged
+Account panel (sign-in/out + display name + plan + storage, working signed out
+against local storage), lap-snapshot management, and cloud-log management). All render contributed
 panels via `PluginPanelHost` and are
 **self-gating**: `Index.tsx` computes `hasLabsPanels`/`showCoach`/`showProfile`
 from `getPanelsForSlot`, so a tab appears only when a
@@ -218,12 +219,16 @@ cloud-sync's "also delete the cloud copy" — without the host knowing about
 cloud). New mount locations are just new slot strings.
 
 **Cloud Sync (first-party plugin, `src/plugins/cloud-sync/`):** the first
-in-repo plugin built on the panel framework — contributes the **Account** panel
-(`PanelSlot.Profile`, ordered first) plus file-manager mounts (per-file sync
-toggle, and a bulk `DownloadAllCloudLogs` in the footer). Backs the IndexedDB
-stores up to Supabase: structured stores → `sync_records` jsonb docs, raw blobs →
-the private `user-files` bucket. **Full data model, sync engine, conflict
-resolution, and backend live in `docs/backend.md`.**
+in-repo plugin built on the panel framework — contributes the merged **Account**
+panel (`StoragePanel`, `PanelSlot.Profile`, ordered first — sign-in/out, display
+name, plan, and the storage bar, which falls back to `localUsage.ts` when signed
+out to show this device's local usage), the lap-snapshots + cloud-logs panels,
+plus file-manager mounts (per-file sync toggle, and a bulk `DownloadAllCloudLogs`
+in the footer). Syncing is automatic (no manual push/pull) — `autoSync` drives
+the incremental engine. Backs the IndexedDB stores up to Supabase: structured
+stores → `sync_records` jsonb docs, raw blobs → the private `user-files` bucket.
+**Full data model, sync engine, conflict resolution, and backend live in
+`docs/backend.md`.**
 
 **AI coach (npm package):** published to the public npm registry as
 `@perchwerks/eye-in-the-sky` and listed in `optionalDependencies`. The loader in

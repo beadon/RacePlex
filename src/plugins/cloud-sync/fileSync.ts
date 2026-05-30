@@ -46,13 +46,6 @@ export function unselectFile(name: string): Promise<void> {
   return store.delete(recordKey(name));
 }
 
-/** File names currently selected for sync (for the active user). */
-export async function listSelectedFiles(): Promise<string[]> {
-  const p = prefix();
-  const keys = await store.keys();
-  return keys.filter((k) => k.startsWith(p)).map((k) => k.slice(p.length));
-}
-
 /** Cloud file names that aren't present locally (i.e. pullable). Pure. */
 export function cloudOnlyNames(cloudNames: string[], localNames: Iterable<string>): string[] {
   const local = new Set(localNames);

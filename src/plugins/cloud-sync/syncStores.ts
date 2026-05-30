@@ -41,13 +41,6 @@ export const DOC_STORES = [
 /** Store whose payload is a Blob, synced through the Storage bucket. */
 export const FILE_STORE = STORE_NAMES.FILES;
 
-export interface SyncSummary {
-  records: number;
-  files: number;
-  /** Document records that didn't fit under the quota (partial push). 0 on pull. */
-  skipped: number;
-}
-
 /** Extract the cloud record_key for a store's record using its IndexedDB key path. */
 export function extractKey(store: string, record: Record<string, unknown>): string {
   const field = KEY_FIELD[store];
