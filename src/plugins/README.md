@@ -117,11 +117,17 @@ ctx.registry.contribute(MOUNTS_POINT, {
 } satisfies PluginMountDef<FileRowContext>);
 ```
 
-Today's slots: `MountSlot.FileRow` (ctx = a file + its metadata) and
-`MountSlot.FileManagerSection` (ctx = the whole file list). `cloud-sync`'s
-per-file toggle is a `FileRow` mount. A slot with no contributions renders
-nothing, so hosts add `<PluginMount>` unconditionally. New slots are just new
-strings — no framework change.
+Today's slots: `MountSlot.FileRow` (ctx = a local file + its metadata) and
+`MountSlot.FileDeleteConfirm` (ctx = the target file + a confirm hook).
+`cloud-sync`'s per-file sync toggle is a `FileRow` mount. A slot with no
+contributions renders nothing, so hosts add `<PluginMount>` unconditionally. New
+slots are just new strings — no framework change.
+
+To surface *remote* files (e.g. cloud logs) inline in the file browser, a plugin
+contributes a **`FileSource`** to `FILE_SOURCES_POINT` (`fileSources.ts`) instead
+of a mount — `{ id, listFiles(): Promise<RemoteFile[]>, download(name) }`. The
+host merges them into its Track→Course tree as `cloud` rows and pulls a blob on
+tap, so it never imports any cloud code.
 
 ## Plugin storage (`storage.ts`)
 

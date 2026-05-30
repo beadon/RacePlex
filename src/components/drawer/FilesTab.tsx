@@ -1,14 +1,17 @@
-import { useCallback, useRef, useState, useEffect, useMemo, lazy, Suspense, Fragment } from "react";
-import { Trash2, Download, Upload, FolderOpen, Folder, Loader2, Video, ChevronRight } from "lucide-react";
+import { useCallback, useRef, useState, useEffect, useMemo, lazy, Suspense } from "react";
+import { toast } from "sonner";
+import { Trash2, Download, Upload, FolderOpen, Loader2, Video, Cloud, CloudDownload } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { FileEntry, FileMetadata } from "@/lib/fileStorage";
+import { FileEntry, FileMetadata, getFileMetadata } from "@/lib/fileStorage";
 import { Vehicle } from "@/lib/vehicleStorage";
 import { parseDatalogFile } from "@/lib/datalogParser";
 import { ParsedData } from "@/types/racing";
 import {
   buildBrowserSessions, computeBrowserView, defaultNav,
-  type FilterMode, type NavState,
+  type BrowserSession, type NavState,
 } from "@/lib/fileBrowserTree";
+import { SessionBrowser } from "@/components/SessionBrowser";
+import { useFileSources, type FileSource, type RemoteFile } from "@/plugins/fileSources";
 // Lazy — keeps the BLE module in its own chunk, loaded only on device use.
 const DataloggerDownload = lazy(() =>
   import("@/components/DataloggerDownload").then((m) => ({ default: m.DataloggerDownload })),
@@ -32,8 +35,6 @@ function formatLapTime(ms: number): string {
     ? `${mins}:${secs.toFixed(3).padStart(6, "0")}`
     : secs.toFixed(3);
 }
-
-const FILTER_LABELS: Record<FilterMode, string> = { none: "None", engine: "Engine", kart: "Kart" };
 
 interface FilesTabProps {
   files: FileEntry[];
@@ -76,7 +77,20 @@ export function FilesTab({
   const [confirmLoad, setConfirmLoad] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [cloudBusy, setCloudBusy] = useState<string | null>(null);
   const [videoFiles, setVideoFiles] = useState<Map<string, StoredVideoMeta>>(new Map());
+
+  // Remote (cloud) files contributed by plugins (cloud-sync). Merged into the
+  // same tree as "cloud" rows; the host never imports any cloud code.
+  const sources = useFileSources();
+  const sourcesRef = useRef(sources);
+  sourcesRef.current = sources;
+  // Stable key (getContributions hands back a fresh [] each call, so we can't
+  // depend on the array identity without looping the effect).
+  const sourceKey = sources.map((s) => s.id).join("|");
+  const [remoteFiles, setRemoteFiles] = useState<RemoteFile[]>([]);
+  const [remoteMeta, setRemoteMeta] = useState<Map<string, FileMetadata>>(new Map());
+  const remoteSourceByName = useRef<Map<string, FileSource>>(new Map());
 
   // Folder navigation. Opens at the current session's track/course, and re-homes
   // there whenever the drawer is (re)opened or a different session is loaded.
@@ -85,9 +99,50 @@ export function FilesTab({
     if (isOpen) setNav(defaultNav(currentTrackName, currentCourseName));
   }, [isOpen, currentTrackName, currentCourseName]);
 
+  // Pull the list of cloud files (+ their synced metadata) when the drawer opens
+  // or the local set changes (e.g. after a download promotes a cloud file local).
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const localNames = new Set(files.map((f) => f.name));
+      const byName = new Map<string, FileSource>();
+      const all: RemoteFile[] = [];
+      for (const src of sourcesRef.current) {
+        let list: RemoteFile[] = [];
+        try { list = await src.listFiles(); } catch { list = []; }
+        for (const rf of list) {
+          if (!byName.has(rf.name)) { byName.set(rf.name, src); all.push(rf); }
+        }
+      }
+      if (cancelled) return;
+      remoteSourceByName.current = byName;
+      setRemoteFiles(all);
+      // Metadata for cloud-only files syncs down separately — load any the local
+      // map doesn't already have so they can be grouped by track/course.
+      const cloudOnly = all.filter((rf) => !localNames.has(rf.name) && !fileMetadataMap.has(rf.name));
+      const entries = await Promise.all(
+        cloudOnly.map(async (rf) => {
+          const m = await getFileMetadata(rf.name);
+          return m ? ([rf.name, m] as const) : null;
+        }),
+      );
+      if (cancelled) return;
+      const rm = new Map<string, FileMetadata>();
+      for (const e of entries) if (e) rm.set(e[0], e[1]);
+      setRemoteMeta(rm);
+    })();
+    return () => { cancelled = true; };
+  }, [sourceKey, files, fileMetadataMap, isOpen]);
+
+  const mergedMeta = useMemo(() => {
+    const m = new Map(fileMetadataMap);
+    for (const [k, v] of remoteMeta) if (!m.has(k)) m.set(k, v);
+    return m;
+  }, [fileMetadataMap, remoteMeta]);
+
   const sessions = useMemo(
-    () => buildBrowserSessions(files, fileMetadataMap, vehicles),
-    [files, fileMetadataMap, vehicles],
+    () => buildBrowserSessions(files, mergedMeta, vehicles, remoteFiles),
+    [files, mergedMeta, vehicles, remoteFiles],
   );
   const view = useMemo(() => computeBrowserView(sessions, nav), [sessions, nav]);
   const filesByName = useMemo(() => new Map(files.map((f) => [f.name, f])), [files]);
@@ -117,6 +172,25 @@ export function FilesTab({
       setConfirmLoad(null);
     }
   }, [confirmLoad, onLoadFile, onDataLoaded, onClose]);
+
+  // Cloud-only row tapped: pull the blob, persist it locally, then open it.
+  const handleOpenCloud = useCallback(async (name: string) => {
+    const src = remoteSourceByName.current.get(name);
+    if (!src || cloudBusy) return;
+    setCloudBusy(name);
+    try {
+      const blob = await src.download(name);
+      if (!blob) throw new Error("Download returned no data");
+      await onSaveFile(name, blob);
+      const data = await parseDatalogFile(new File([blob], name));
+      onDataLoaded(data, name);
+      onClose();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to download cloud log");
+    } finally {
+      setCloudBusy(null);
+    }
+  }, [cloudBusy, onSaveFile, onDataLoaded, onClose]);
 
   // A plugin (cloud-sync) can register an extra action to run on confirm — e.g.
   // also removing the synced copy from the cloud. The host stays cloud-agnostic.
@@ -166,31 +240,54 @@ export function FilesTab({
     [onDataLoaded, onClose],
   );
 
-  const setFilter = useCallback((filter: FilterMode) => {
-    // Keep the resolved track/course; clear any drilled-in folder.
-    setNav((prev) => ({ track: prev.track, course: prev.course, filter }));
-  }, []);
-
   const storagePercent = storageQuota > 0 ? Math.min((storageUsed / storageQuota) * 100, 100) : 0;
 
-  const renderLog = (fileName: string, displayName: string, fastestLapMs?: number) => {
-    const file = filesByName.get(fileName);
+  const renderRow = useCallback((s: BrowserSession) => {
+    // Cloud-only row: one tap downloads + opens it.
+    if (s.location === "cloud") {
+      const busy = cloudBusy === s.fileName;
+      // Greyed out (not on this device until downloaded).
+      return (
+        <div className="flex items-center gap-2 p-2 rounded-md hover:bg-muted/50 transition-colors group opacity-60">
+          <button
+            className="flex-1 text-left min-w-0 cursor-pointer disabled:opacity-60"
+            disabled={busy}
+            onClick={() => handleOpenCloud(s.fileName)}
+            title={`${s.fileName} — in the cloud, tap to download`}
+          >
+            <div className="flex items-center gap-1.5">
+              <span className="text-sm font-medium truncate text-muted-foreground">{s.displayName}</span>
+              {busy
+                ? <Loader2 className="w-3.5 h-3.5 text-primary shrink-0 animate-spin" />
+                : <Cloud className="w-3.5 h-3.5 text-muted-foreground shrink-0" />}
+            </div>
+            <div className="text-xs text-muted-foreground">
+              {s.size != null ? `${formatSize(s.size)} · ` : ""}In the cloud
+              {s.fastestLapMs != null && (
+                <span className="ml-1.5 text-primary font-medium">⚡ {formatLapTime(s.fastestLapMs)}</span>
+              )}
+            </div>
+          </button>
+          <CloudDownload className="w-4 h-4 shrink-0 text-muted-foreground" />
+        </div>
+      );
+    }
+
+    // Local row: tap to load; export + delete; plugin per-row control (sync toggle).
+    const file = filesByName.get(s.fileName);
     if (!file) return null;
-    const metadata = fileMetadataMap.get(fileName);
+    const metadata = mergedMeta.get(s.fileName);
     return (
-      <div
-        key={fileName}
-        className="flex items-center gap-2 p-2 rounded-md hover:bg-muted/50 transition-colors group"
-      >
+      <div className="flex items-center gap-2 p-2 rounded-md hover:bg-muted/50 transition-colors group">
         <button
           className="flex-1 text-left min-w-0 cursor-pointer"
-          onClick={() => setConfirmLoad(fileName)}
+          onClick={() => setConfirmLoad(s.fileName)}
         >
           <div className="flex items-center gap-1.5">
-            <span className="text-sm font-medium truncate text-foreground" title={fileName}>{displayName}</span>
-            {videoFiles.has(fileName) && (
+            <span className="text-sm font-medium truncate text-foreground" title={s.fileName}>{s.displayName}</span>
+            {videoFiles.has(s.fileName) && (
               <span title={(() => {
-                const m = videoFiles.get(fileName)!;
+                const m = videoFiles.get(s.fileName)!;
                 const parts = [m.exportType === "lap" && m.lapNumber != null ? `Lap ${m.lapNumber}` : m.exportType === "session" ? "Session" : "Source"];
                 if (m.hasOverlays) parts.push("w/ overlays");
                 parts.push(`(${formatSize(m.size)})`);
@@ -202,22 +299,17 @@ export function FilesTab({
           </div>
           <div className="text-xs text-muted-foreground">
             {formatSize(file.size)} · {new Date(file.savedAt).toLocaleDateString()}
-            {fastestLapMs != null && (
-              <span className="ml-1.5 text-primary font-medium">
-                ⚡ {formatLapTime(fastestLapMs)}
-              </span>
+            {s.fastestLapMs != null && (
+              <span className="ml-1.5 text-primary font-medium">⚡ {formatLapTime(s.fastestLapMs)}</span>
             )}
           </div>
         </button>
-        <PluginMount
-          slot={MountSlot.FileRow}
-          ctx={{ file, metadata }}
-        />
+        <PluginMount slot={MountSlot.FileRow} ctx={{ file, metadata }} />
         <Button
           variant="ghost"
           size="icon"
           className="h-7 w-7 shrink-0 opacity-60 hover:opacity-100"
-          onClick={() => onExportFile(fileName)}
+          onClick={() => onExportFile(s.fileName)}
           title="Export / Download"
         >
           <Download className="w-3.5 h-3.5" />
@@ -226,14 +318,14 @@ export function FilesTab({
           variant="ghost"
           size="icon"
           className="h-7 w-7 shrink-0 opacity-60 hover:opacity-100 hover:text-destructive"
-          onClick={() => setConfirmDelete(fileName)}
+          onClick={() => setConfirmDelete(s.fileName)}
           title="Delete"
         >
           <Trash2 className="w-3.5 h-3.5" />
         </Button>
       </div>
     );
-  };
+  }, [cloudBusy, handleOpenCloud, filesByName, mergedMeta, videoFiles, onExportFile]);
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
@@ -275,92 +367,16 @@ export function FilesTab({
 
       {/* File List */}
       <div className="flex-1 overflow-y-auto min-h-0 p-3 space-y-1">
-        {/* Plugin-contributed file-manager section (e.g. cloud files), pinned on top. */}
-        <PluginMount
-          slot={MountSlot.FileManagerSection}
-          ctx={{ files, onSaveFile }}
-        />
-        {files.length === 0 ? (
+        {files.length === 0 && remoteFiles.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-muted-foreground gap-2">
             <FolderOpen className="w-12 h-12 opacity-30" />
             <p className="text-sm">No stored files</p>
             <p className="text-xs">Upload or import files to get started</p>
           </div>
         ) : (
-          <div className="space-y-1">
-            {/* Breadcrumb — always shown so date-named logs read in context. */}
-            <div className="flex items-center flex-wrap gap-0.5 px-1 pb-1 text-sm">
-              {view.breadcrumb.map((seg, i) => {
-                const isLast = i === view.breadcrumb.length - 1;
-                return (
-                  <Fragment key={`${seg.label}-${i}`}>
-                    {i > 0 && <ChevronRight className="w-3.5 h-3.5 text-muted-foreground shrink-0" />}
-                    <button
-                      type="button"
-                      disabled={isLast}
-                      onClick={() => setNav(seg.nav)}
-                      className={isLast
-                        ? "font-semibold text-foreground truncate"
-                        : "text-muted-foreground hover:text-foreground truncate"}
-                    >
-                      {seg.label}
-                    </button>
-                  </Fragment>
-                );
-              })}
-            </div>
-
-            {/* Engine/Kart filter — only on the final log level. */}
-            {view.showFilter && (
-              <div className="flex items-center gap-2 px-1 pb-1">
-                <span className="text-xs text-muted-foreground">Group by</span>
-                <div className="flex gap-0.5 bg-muted/50 rounded-md p-0.5">
-                  {(["none", "engine", "kart"] as const).map((mode) => (
-                    <button
-                      key={mode}
-                      type="button"
-                      onClick={() => setFilter(mode)}
-                      className={`px-2.5 py-0.5 text-xs font-medium rounded transition-colors ${
-                        view.filterMode === mode
-                          ? "bg-primary text-primary-foreground"
-                          : "text-muted-foreground hover:text-foreground"
-                      }`}
-                    >
-                      {FILTER_LABELS[mode]}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Folders */}
-            {view.folders.map((folder) => (
-              <button
-                key={`${folder.kind}-${folder.key}`}
-                type="button"
-                onClick={() => setNav(folder.nav)}
-                className="w-full flex items-center gap-2 p-2 rounded-md hover:bg-muted/50 transition-colors text-left"
-              >
-                <Folder className="w-4 h-4 text-muted-foreground shrink-0" />
-                <span className="flex-1 text-sm font-medium text-foreground truncate">{folder.label}</span>
-                <span className="text-xs text-muted-foreground shrink-0">{folder.count}</span>
-                <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
-              </button>
-            ))}
-
-            {/* Logs (final list, or unconfigured logs below filter folders) */}
-            {view.sessions.map((s) => renderLog(s.fileName, s.displayName, s.fastestLapMs))}
-
-            {view.folders.length === 0 && view.sessions.length === 0 && (
-              <p className="text-xs text-muted-foreground text-center py-6">No sessions here</p>
-            )}
-          </div>
+          <SessionBrowser view={view} onNavigate={setNav} renderRow={renderRow} />
         )}
       </div>
-
-      {/* Plugin-contributed footer (e.g. "Download all cloud logs").
-          The mount owns its own chrome and self-hides when not applicable. */}
-      <PluginMount slot={MountSlot.FileManagerFooter} ctx={{ files, onSaveFile }} />
 
       {/* Storage Usage */}
       <div className="px-4 py-2 border-t border-border shrink-0">

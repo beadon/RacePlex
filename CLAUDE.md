@@ -172,7 +172,8 @@ A plugin absent at build time simply never loads — the app builds/runs without
 | `external-plugins.d.ts` | Ambient type for the `virtual:external-plugins` module |
 | `panels.ts` | **UI panel framework**: `PluginPanel` / `PluginPanelProps` contract, `PANELS_POINT`, `PanelSlot`, `getPanelsForSlot(slot)`. The curated session snapshot is the entire surface a panel can rely on — incl. `sessionSetup` (the current session's assigned setup) + `activeSnapshot` (`PluginSnapshot`: the loaded reference lap snapshot with clean-lap samples + frozen engine/course/vehicle/setup), so a coach panel can compare the current setup against the frozen snapshot setup |
 | `PluginPanelHost.tsx` | Consumer: mounts every panel for a slot in a titled card, each wrapped in a per-panel error boundary; renders a `fallback` when none. A `chromeless` panel skips the card chrome (full-bleed); an all-chromeless slot (`isBareSlot`) drops the host's outer padding so one panel fills the tab |
-| `mounts.ts` | **Inline mount framework**: `PluginMountDef`, `MOUNTS_POINT`, `MountSlot` (`FileRow`, `FileManagerSection`), per-slot context types, `getMounts(slot)`. For injecting raw components into fixed spots in core UI |
+| `mounts.ts` | **Inline mount framework**: `PluginMountDef`, `MOUNTS_POINT`, `MountSlot` (`FileRow`, `FileDeleteConfirm`), per-slot context types, `getMounts(slot)`. For injecting raw components into fixed spots in core UI |
+| `fileSources.ts` | **File-source framework**: `FILE_SOURCES_POINT`, `FileSource` (`listFiles`/`download`), `useFileSources()`. Lets a plugin feed *remote* (cloud) files into the host browser as inline `cloud` rows — host stays cloud-agnostic |
 | `PluginMount.tsx` | Consumer: `<PluginMount slot ctx>` renders every mount for a slot (error-boundaried + Suspense), or nothing when none — safe to drop into core UI unconditionally |
 | `storage.ts` | `getPluginStore(id)`: schema-less KV scoped to one plugin, in its own IndexedDB DB (`dove-plugin-<id>`). Decoupled from core `dbUtils`. Also exposed as `ctx.storage` |
 | `coaching/` | **Gitignored** local-dev slot for the coach plugin (production loads it as an npm package) |
@@ -209,22 +210,34 @@ are all chromeless (`isBareSlot`) also drops the host's outer padding.
 component into a fixed spot in core UI. A plugin contributes a `PluginMountDef`
 to `MOUNTS_POINT`, targeting a `MountSlot`; the host renders `<PluginMount slot
 ctx={…}>` at that spot, passing a typed context as a single `ctx` prop.
-`FilesTab` exposes four: `MountSlot.FileRow` (per file row, ctx = that file),
-`MountSlot.FileManagerSection` (once under the list, ctx = the whole list),
-`MountSlot.FileManagerFooter` (near the bottom, above storage usage, ctx = the
-whole list — home for the "Download all cloud logs" bulk action), and
+`FilesTab` exposes two: `MountSlot.FileRow` (per *local* file row, ctx = that
+file + metadata — cloud-sync's per-file sync toggle) and
 `MountSlot.FileDeleteConfirm` (inside the delete-confirm banner, ctx = the target
 file + a `registerOnConfirm` hook so a plugin can run an extra action — e.g.
 cloud-sync's "also delete the cloud copy" — without the host knowing about
 cloud). New mount locations are just new slot strings.
 
+**File sources (`fileSources.ts`, `FILE_SOURCES_POINT`):** the seam that puts
+*cloud* files inline in the browser without coupling the host to cloud. A plugin
+contributes a `FileSource` (`{ id, listFiles(): Promise<RemoteFile[]>,
+download(name): Promise<Blob|null> }`); `FilesTab` merges the listed files into
+the same Track→Course tree as **`location: "cloud"`** rows (deduped against local,
+local wins), and a one-tap on a cloud row calls `download` → `onSaveFile` →
+opens it. cloud-sync's source dynamic-imports `syncEngine` so Supabase stays off
+the initial bundle, and returns `[]` when signed out/offline. The shared
+**`SessionBrowser`** component (`src/components/SessionBrowser.tsx`) renders any
+`BrowserView` (breadcrumb + folders + caller-rendered rows) — used by both
+`FilesTab` and the Profile **Cloud logs** panel.
+
 **Cloud Sync (first-party plugin, `src/plugins/cloud-sync/`):** the first
 in-repo plugin built on the panel framework — contributes the merged **Account**
 panel (`StoragePanel`, `PanelSlot.Profile`, ordered first — sign-in/out, display
 name, plan, and the storage bar, which falls back to `localUsage.ts` when signed
-out to show this device's local usage), the lap-snapshots + cloud-logs panels,
-plus file-manager mounts (per-file sync toggle, and a bulk `DownloadAllCloudLogs`
-in the footer). Syncing is automatic (no manual push/pull) — `autoSync` drives
+out to show this device's local usage), the lap-snapshots + cloud-logs panels
+(the **Cloud logs** panel renders the same Track→Course `SessionBrowser` and hosts
+the "Download all cloud logs" bulk action), the per-file sync-toggle mount, and a
+**file source** that surfaces cloud-only logs inline in the file browser.
+Syncing is automatic (no manual push/pull) — `autoSync` drives
 the incremental engine. Backs the IndexedDB stores up to Supabase: structured
 stores → `sync_records` jsonb docs, raw blobs → the private `user-files` bucket.
 **Full data model, sync engine, conflict resolution, and backend live in
@@ -506,12 +519,14 @@ Pure comparison/conversion logic for merging app tracks with device track files:
 
 ---
 
-## File Browser (`FilesTab.tsx` + `lib/fileBrowserTree.ts`)
+## File Browser (`FilesTab.tsx` + `lib/fileBrowserTree.ts` + `components/SessionBrowser.tsx`)
 
 The Garage → **Files** tab is a folder hierarchy, not a flat list: **Track → Course
 → logs**, with an optional **Engine/Kart** grouping on the final list. All the tree
-+ navigation math is pure in `fileBrowserTree.ts` (unit-tested); `FilesTab` just
-renders the computed `BrowserView` (breadcrumb + folders + log rows).
++ navigation math is pure in `fileBrowserTree.ts` (unit-tested); the reusable
+presentational **`SessionBrowser`** renders the computed `BrowserView` (breadcrumb
++ folders + caller-rendered rows). `FilesTab` owns the local row chrome; the
+Profile **Cloud logs** panel reuses `SessionBrowser` with its own rows.
 
 - **Display name = the session's date/time**, derived from `sessionStartTime` (the
   first valid sample), e.g. "2/12/2026 11:15 AM" — *not* the upload time or raw
@@ -530,6 +545,12 @@ renders the computed `BrowserView` (breadcrumb + folders + log rows).
   kart at assign time, so grouping survives vehicle edits), `sessionKartId`
   (→ vehicle name), and `sessionStartTime`. Engine resolves to the snapshot first,
   then the live `Vehicle.engine`.
+- **Cloud files appear inline.** Plugins contribute remote files via a
+  `FileSource` (`FILE_SOURCES_POINT`); `buildBrowserSessions` merges them as
+  `location: "cloud"` rows (deduped against local — local wins), and their
+  metadata is read from the locally-synced `metadata` store (it pulls down even
+  when the blob doesn't). A cloud row is a one-tap **download → save → open**. No
+  separate "Cloud files" section — the offline-first host stays cloud-agnostic.
 
 ---
 

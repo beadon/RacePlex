@@ -18,11 +18,6 @@ export const MOUNTS_POINT = "ui:mounts";
 export const MountSlot = {
   /** Rendered once per file row in the file manager. Context: that file. */
   FileRow: "file-row",
-  /** Rendered once below the file list. Context: the whole list. */
-  FileManagerSection: "file-manager-section",
-  /** Rendered near the bottom of the file manager (above storage usage).
-   *  Context: the whole list. Home for the "Download all cloud logs" action. */
-  FileManagerFooter: "file-manager-footer",
   /** Rendered inside the file delete-confirm banner. Context: the target file +
    *  a hook to run an extra action when the user confirms the delete. */
   FileDeleteConfirm: "file-delete-confirm",
@@ -33,13 +28,6 @@ export type MountSlot = (typeof MountSlot)[keyof typeof MountSlot];
 export interface FileRowContext {
   file: FileEntry;
   metadata?: FileMetadata;
-}
-
-/** Context handed to a `MountSlot.FileManagerSection` component. */
-export interface FileManagerSectionContext {
-  files: FileEntry[];
-  /** Persist a (e.g. cloud-pulled) blob into local storage. */
-  onSaveFile: (name: string, blob: Blob) => Promise<void>;
 }
 
 /** Context handed to a `MountSlot.FileDeleteConfirm` component. */

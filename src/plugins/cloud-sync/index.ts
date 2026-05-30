@@ -5,17 +5,16 @@ import type { DataViewerPlugin } from "@/plugins/types";
 import { PANELS_POINT, PanelSlot, type PluginPanel } from "@/plugins/panels";
 import {
   MOUNTS_POINT, MountSlot,
-  type PluginMountDef, type FileRowContext, type FileManagerSectionContext,
+  type PluginMountDef, type FileRowContext,
   type FileDeleteConfirmContext,
 } from "@/plugins/mounts";
+import { FILE_SOURCES_POINT, type FileSource } from "@/plugins/fileSources";
+import { getActiveUserId } from "./activeUser";
 
-// The per-file toggle, cloud-only list, and bulk-download button: lazy so the
-// file-manager drawer doesn't pull the sync engine onto its chunk until they
-// render (see Bundle Splitting in CLAUDE.md).
+// The per-file toggle + delete toggle: lazy so the file-manager drawer doesn't
+// pull the sync engine onto its chunk until they render (see Bundle Splitting).
 const FileSyncToggle = lazy(() => import("./FileSyncToggle"));
 const FileDeleteToggle = lazy(() => import("./FileDeleteToggle"));
-const CloudFilesSection = lazy(() => import("./CloudFilesSection"));
-const DownloadAllCloudLogs = lazy(() => import("./DownloadAllCloudLogs"));
 // Profile tab panels: merged account + storage meters, and cloud-log management.
 // Lazy so the Supabase sync engine + storage modules load only when the Profile
 // tab is opened, keeping the initial bundle lean.
@@ -37,15 +36,6 @@ const plugin: DataViewerPlugin = {
     // stays hidden unless another plugin contributes there.
     if (!enableCloud) return;
 
-    // "Download all cloud logs" bulk action at the bottom of the file list.
-    // (Sign-in itself lives on the Profile tab — see StoragePanel below.)
-    ctx.registry.contribute(MOUNTS_POINT, {
-      id: "cloud-sync-download-all",
-      slot: MountSlot.FileManagerFooter,
-      order: 0,
-      component: DownloadAllCloudLogs,
-    } satisfies PluginMountDef<FileManagerSectionContext>);
-
     // Per-file sync toggle injected into each file-manager row.
     ctx.registry.contribute(MOUNTS_POINT, {
       id: "cloud-sync-file-toggle",
@@ -63,14 +53,36 @@ const plugin: DataViewerPlugin = {
       component: FileDeleteToggle,
     } satisfies PluginMountDef<FileDeleteConfirmContext>);
 
-    // Cloud-only files (in the cloud, not on this device) listed under the file
-    // list, each with a per-file pull.
-    ctx.registry.contribute(MOUNTS_POINT, {
-      id: "cloud-sync-cloud-files",
-      slot: MountSlot.FileManagerSection,
-      order: 0,
-      component: CloudFilesSection,
-    } satisfies PluginMountDef<FileManagerSectionContext>);
+    // Cloud files appear INLINE in the host's Track→Course browser as "cloud"
+    // rows. The sync engine stays off the initial bundle via dynamic import; an
+    // unavailable source (signed out / offline) resolves to nothing.
+    ctx.registry.contribute(FILE_SOURCES_POINT, {
+      id: "cloud-sync",
+      async listFiles() {
+        const userId = getActiveUserId();
+        if (!userId) return [];
+        try {
+          const { listCloudFiles } = await import("./syncEngine");
+          const cloud = await listCloudFiles(userId);
+          return cloud.map((c) => ({ name: c.name, size: c.size, uploadedAt: c.uploadedAt }));
+        } catch {
+          return [];
+        }
+      },
+      async download(name) {
+        const userId = getActiveUserId();
+        if (!userId) return null;
+        const { downloadCloudFile } = await import("./syncEngine");
+        const blob = await downloadCloudFile(userId, name);
+        // A pulled cloud file is, by definition, already in sync — record it so
+        // its row shows as synced rather than as a fresh local-only file.
+        if (blob) {
+          const { markPushed } = await import("./fileSync");
+          await markPushed(name);
+        }
+        return blob;
+      },
+    } satisfies FileSource);
 
     // Profile tab: merged account + storage. Signed in it shows display name,
     // sign-out, plan, and cloud usage; signed out it offers sign-in and the same

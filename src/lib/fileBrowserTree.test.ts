@@ -19,6 +19,8 @@ function session(over: Partial<BrowserSession>): BrowserSession {
     displayName: over.displayName ?? "name",
     savedAt: over.savedAt ?? 0,
     startTime: over.startTime,
+    location: over.location ?? "local",
+    size: over.size,
     trackName: over.trackName,
     courseName: over.courseName,
     engine: over.engine,
@@ -70,6 +72,27 @@ describe("buildBrowserSessions", () => {
     expect(a.trackName).toBeUndefined();
     expect(a.engine).toBeUndefined();
     expect(a.displayName).toBe("a.dove");
+    expect(a.location).toBe("local");
+    expect(a.size).toBe(1);
+  });
+
+  it("merges remote (cloud) files as cloud sessions, deduped against local", () => {
+    const metaMap = new Map<string, FileMetadata>([
+      ["a.dove", { fileName: "a.dove", trackName: "OKC", courseName: "CW", sessionStartTime: 1 }],
+      ["c.dove", { fileName: "c.dove", trackName: "OKC", courseName: "CW", sessionStartTime: 3 }],
+    ]);
+    const remote = [
+      { name: "a.dove", size: 9, uploadedAt: "2026-01-01T00:00:00Z" }, // also local → ignored
+      { name: "c.dove", size: 7, uploadedAt: "2026-01-02T00:00:00Z" }, // cloud-only
+    ];
+    const sessions = buildBrowserSessions(files, metaMap, vehicles, remote);
+    expect(sessions.map((s) => s.fileName).sort()).toEqual(["a.dove", "b.dove", "c.dove"]);
+    const a = sessions.find((s) => s.fileName === "a.dove")!;
+    const c = sessions.find((s) => s.fileName === "c.dove")!;
+    expect(a.location).toBe("local"); // local wins over the cloud copy
+    expect(c.location).toBe("cloud");
+    expect(c.size).toBe(7);
+    expect(c.trackName).toBe("OKC"); // cloud-only file resolves its synced metadata
   });
 });
 
