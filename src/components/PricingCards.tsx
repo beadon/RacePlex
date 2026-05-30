@@ -48,8 +48,6 @@ interface PaidTier {
 const OFFLINE_FEATURES: string[] = [
   "Full data viewer",
   "Bluetooth (BLE) device connectivity",
-  "Save logs to your device",
-  "Import MoTeC, AiM, VBO, Alfano & more",
   "Reference-lap overlay & comparison",
   "Braking zones & G-force analysis",
   "Add overlays & export videos",
@@ -83,7 +81,7 @@ function onlineCard(variant: Variant): FreeTier {
     price: "$0",
     slug: "free",
     inherits: variant === "register" ? "Everything included with offline mode" : "Everything in Free, plus",
-    features: [CLOUD_SYNC_FEATURE, "50 MB cloud storage"],
+    features: [CLOUD_SYNC_FEATURE, "Fastest laps & synced setups — always free", "50 MB cloud storage"],
   };
 }
 
@@ -97,7 +95,7 @@ const PAID_TIERS: PaidTier[] = [
     slug: "plus",
     highlight: true,
     inherits: "Everything in Free online, plus",
-    features: ["10 GB cloud storage"],
+    features: ["10 GB cloud storage", "You're helping support the project ❤️"],
   },
   {
     name: "Premium",
