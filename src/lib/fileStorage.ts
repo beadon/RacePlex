@@ -21,6 +21,9 @@ export interface FileMetadata {
   // Session kart/setup link
   sessionKartId?: string;
   sessionSetupId?: string;
+  // Immutable revision (content hash) of the setup as it was when assigned, so
+  // this session keeps the exact setup it ran even if the live one is edited.
+  sessionSetupRev?: string;
   // Fastest lap cache
   fastestLapMs?: number;
   fastestLapNumber?: number;
