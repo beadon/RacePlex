@@ -12,6 +12,7 @@ import { formatLapTime } from "@/lib/lapCalculation";
 import type { LapSnapshot } from "@/lib/lapSnapshot";
 import { deleteSnapshot, listSnapshots } from "@/lib/lapSnapshotStorage";
 import { deleteCloudSnapshot, listCloudSnapshots, reconcileSnapshots } from "./snapshotSync";
+import { formatBytes, snapshotBytes } from "./storageTypes";
 
 function formatDate(ms?: number): string {
   if (!ms) return "";
@@ -169,6 +170,7 @@ export default function LapSnapshotsPanel(_props: PluginPanelProps) {
                     </p>
                     <p className="truncate text-[11px] text-muted-foreground">
                       {snap.trackName} — {snap.courseName}
+                      {` · ${formatBytes(snapshotBytes(snap))}`}
                       {formatDate(snap.recordedAt ?? snap.createdAt) && ` · ${formatDate(snap.recordedAt ?? snap.createdAt)}`}
                       {user && onDevice && " · on this device"}
                     </p>

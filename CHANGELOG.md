@@ -220,6 +220,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   rejects **disposable / temporary email** addresses.
 
 ### Changed
+- **Profile page tidy-up.** The separate *Account* and *Profile* boxes are merged
+  into one card: your display name with the **Sign out** button beside it, plan,
+  and storage. The manual **Push / Pull** buttons are gone — syncing is automatic,
+  so they're no longer needed.
+- **Storage & snapshots work signed out.** The storage bar now appears when you're
+  logged out too, measuring this device's **local** storage (garage + logs +
+  snapshots) against the browser's quota. Lap snapshots now show their **file
+  size** in the list, signed in or out.
 - File metadata writes now go through a single read-merge helper, fixing cases
   where tagging a track or saving a setup could drop other saved details (kart,
   setup, fastest lap, weather).

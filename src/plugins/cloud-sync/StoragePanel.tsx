@@ -1,5 +1,9 @@
-import { useCallback, useEffect, useState } from "react";
-import { Check, CloudOff, CreditCard, Loader2, Pencil, User as UserIcon, X } from "lucide-react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { Link } from "react-router-dom";
+import {
+  Check, CloudOff, CreditCard, Loader2, LogOut, Pencil,
+  User as UserIcon, WifiOff, X,
+} from "lucide-react";
 import { toast } from "sonner";
 import type { PluginPanelProps } from "@/plugins/panels";
 import { Button } from "@/components/ui/button";
@@ -9,7 +13,9 @@ import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { useSubscription } from "@/hooks/useSubscription";
 import { isPaidTier } from "@/lib/billing";
 import { createPortal } from "@/lib/billingClient";
+import { onGarageChange } from "@/lib/garageEvents";
 import { getStorageUsage } from "./syncEngine";
+import { getLocalStorageUsage } from "./localUsage";
 import { getMyProfile, updateDisplayName } from "./profile";
 import { pendingCount } from "./pendingSync";
 import {
@@ -25,20 +31,26 @@ const SEGMENTS: { key: StorageType; label: string; color: string }[] = [
   { key: "documents", label: "Garage", color: "bg-emerald-500" },
 ];
 
-// Scratch-pad profile panel: your (editable, unique) display name + cloud storage
-// usage against the single pooled per-tier budget (documents + logs + snapshots).
+// Merged account + profile panel: your display name + (when signed in) sign-out,
+// plan, and cloud storage usage; signed out it offers sign-in and still shows the
+// storage bar measured against this device's local storage. Everything here works
+// offline — the cloud is an optional backup, not a requirement.
 export default function StoragePanel(_props: PluginPanelProps) {
-  const { user, loading } = useAuth();
+  const { user, loading, logout } = useAuth();
   const online = useOnlineStatus();
   const [usage, setUsage] = useState<StorageUsage | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(0);
 
   const refresh = useCallback(async () => {
-    if (!user) return;
-    setPending(await pendingCount());
     try {
-      setUsage(await getStorageUsage());
+      if (user) {
+        setPending(await pendingCount());
+        setUsage(await getStorageUsage());
+      } else {
+        setPending(0);
+        setUsage(await getLocalStorageUsage());
+      }
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load storage usage");
@@ -46,27 +58,37 @@ export default function StoragePanel(_props: PluginPanelProps) {
   }, [user]);
 
   // Re-read on mount and whenever connectivity flips (pending changes flush on
-  // reconnect, so the count + usage should refresh then).
+  // reconnect). Signed out, also track on-device garage changes live, so the
+  // local meter reflects imports/deletes immediately; signed in, the server
+  // usage updates post-sync, so the extra reads aren't worth the network cost.
   useEffect(() => {
     void refresh();
-  }, [refresh, online]);
+    if (user) return;
+    return onGarageChange(() => void refresh());
+  }, [refresh, online, user]);
 
   if (loading) return <p className="text-sm text-muted-foreground">Loading…</p>;
 
   if (!user) {
     return (
-      <div className="space-y-2">
-        <p className="text-sm font-medium text-foreground">Not signed in</p>
-        <p className="text-xs text-muted-foreground">
-          Sign in under Account (above) to back up your garage and see your storage usage.
-        </p>
+      <div className="space-y-5">
+        <SignInPrompt />
+        <StorageSection usage={usage} error={error} local />
       </div>
     );
   }
 
   return (
     <div className="space-y-5">
-      <DisplayName userId={user.id} email={user.email ?? ""} />
+      <DisplayName
+        userId={user.id}
+        email={user.email ?? ""}
+        action={
+          <Button variant="ghost" size="sm" className="shrink-0 self-start text-muted-foreground" onClick={logout}>
+            <LogOut className="mr-1.5 h-4 w-4" /> Sign out
+          </Button>
+        }
+      />
 
       <PlanSection />
 
@@ -87,20 +109,52 @@ export default function StoragePanel(_props: PluginPanelProps) {
         </p>
       )}
 
-      <div className="space-y-3">
-        <div className="flex flex-wrap items-baseline gap-x-2">
-          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Storage</p>
-          <p className="text-[11px] text-muted-foreground">Local storage is always free.</p>
-        </div>
-        {error && <p className="text-xs text-destructive">{error}</p>}
-        {!usage && !error && <p className="text-xs text-muted-foreground">Loading usage…</p>}
-        {usage && <StorageBar usage={usage} />}
-      </div>
+      <StorageSection usage={usage} error={error} local={false} />
     </div>
   );
 }
 
-function DisplayName({ userId, email }: { userId: string; email: string }) {
+// Sign-in entry point (moved here from the old Account panel): Google one-tap plus
+// email sign-in / registration. Offline disables it with a hint.
+function SignInPrompt() {
+  const { signInWithGoogle } = useAuth();
+  const online = useOnlineStatus();
+  const [busy, setBusy] = useState(false);
+
+  const handleGoogle = async () => {
+    setBusy(true);
+    const { error } = await signInWithGoogle();
+    if (error) {
+      setBusy(false);
+      toast.error(error.message || "Google sign-in failed");
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <p className="text-xs text-muted-foreground">
+        Sign in to back up and sync your files, garage and notes across devices.
+        Everything here still works offline against this device — Cloud Sync is optional.
+      </p>
+      <div className="flex flex-col gap-2">
+        <Button variant="outline" onClick={handleGoogle} disabled={busy || !online}>
+          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Continue with Google"}
+        </Button>
+        <div className="grid grid-cols-2 gap-2">
+          <Button asChild variant="secondary"><Link to="/login?next=/">Sign in</Link></Button>
+          <Button asChild><Link to="/register">Create account</Link></Button>
+        </div>
+      </div>
+      {!online && (
+        <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <WifiOff className="h-3.5 w-3.5" /> You're offline — sign-in needs a connection.
+        </p>
+      )}
+    </div>
+  );
+}
+
+function DisplayName({ userId, email, action }: { userId: string; email: string; action?: ReactNode }) {
   const [name, setName] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
@@ -179,6 +233,7 @@ function DisplayName({ userId, email }: { userId: string; email: string }) {
         )}
         <p className="truncate text-xs text-muted-foreground">{email}</p>
       </div>
+      {action}
     </div>
   );
 }
@@ -244,11 +299,31 @@ function PlanSection() {
   );
 }
 
+// The storage heading + bar, shared between the signed-in (cloud) and signed-out
+// (local) views. `local` swaps the cloud-quota framing for an on-device one.
+function StorageSection({
+  usage, error, local,
+}: { usage: StorageUsage | null; error: string | null; local: boolean }) {
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-baseline gap-x-2">
+        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Storage</p>
+        <p className="text-[11px] text-muted-foreground">
+          {local ? "Stored on this device." : "Local storage is always free."}
+        </p>
+      </div>
+      {error && <p className="text-xs text-destructive">{error}</p>}
+      {!usage && !error && <p className="text-xs text-muted-foreground">Loading usage…</p>}
+      {usage && <StorageBar usage={usage} local={local} />}
+    </div>
+  );
+}
+
 // One pooled byte budget, drawn as a single stacked bar: logs + snapshots + garage
-// data share the tier limit (like a phone's storage screen). Segments are coloured;
-// the empty remainder is muted. Over the limit, segments fill the whole bar and the
-// readout turns destructive.
-function StorageBar({ usage }: { usage: StorageUsage }) {
+// data share the limit (like a phone's storage screen). Segments are coloured; the
+// empty remainder is muted. Over the limit, segments fill the whole bar and the
+// readout turns destructive. `local` measures this device against the browser quota.
+function StorageBar({ usage, local }: { usage: StorageUsage; local: boolean }) {
   const used = totalUsed(usage);
   const over = used > usage.totalLimit;
   const fractions = segmentFractions(usage);
@@ -281,12 +356,18 @@ function StorageBar({ usage }: { usage: StorageUsage }) {
         ))}
       </div>
 
-      <p className="text-[11px] text-muted-foreground">
-        Garage data and snapshots always sync, even when you're full — they still
-        count toward your storage, but only logs stop syncing when the cap is reached.
-      </p>
+      {local ? (
+        <p className="text-[11px] text-muted-foreground">
+          Measured against this device's storage. Sign in to back it up to the cloud.
+        </p>
+      ) : (
+        <p className="text-[11px] text-muted-foreground">
+          Garage data and snapshots always sync, even when you're full — they still
+          count toward your storage, but only logs stop syncing when the cap is reached.
+        </p>
+      )}
 
-      {over && (
+      {over && !local && (
         <p className="text-[11px] text-destructive">
           You're over your plan's storage. New cloud syncs are saved locally until you free up space or upgrade.
         </p>

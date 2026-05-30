@@ -9,18 +9,16 @@ import {
   type FileDeleteConfirmContext,
 } from "@/plugins/mounts";
 
-// The panel pulls in the Supabase sync engine + storage modules, so it's lazy:
-// the chunk loads only when the Profile tab is opened, keeping the initial
-// bundle lean (see Bundle Splitting in CLAUDE.md).
-const CloudSyncPanel = lazy(() => import("./CloudSyncPanel"));
-// Likewise the per-file toggle, cloud-only list, and bulk-download button: lazy
-// so the file-manager drawer doesn't pull the sync engine onto its chunk until
-// they render.
+// The per-file toggle, cloud-only list, and bulk-download button: lazy so the
+// file-manager drawer doesn't pull the sync engine onto its chunk until they
+// render (see Bundle Splitting in CLAUDE.md).
 const FileSyncToggle = lazy(() => import("./FileSyncToggle"));
 const FileDeleteToggle = lazy(() => import("./FileDeleteToggle"));
 const CloudFilesSection = lazy(() => import("./CloudFilesSection"));
 const DownloadAllCloudLogs = lazy(() => import("./DownloadAllCloudLogs"));
-// Profile tab panels: storage usage meters + account, and cloud-log management.
+// Profile tab panels: merged account + storage meters, and cloud-log management.
+// Lazy so the Supabase sync engine + storage modules load only when the Profile
+// tab is opened, keeping the initial bundle lean.
 const StoragePanel = lazy(() => import("./StoragePanel"));
 const CloudLogsPanel = lazy(() => import("./CloudLogsPanel"));
 const LapSnapshotsPanel = lazy(() => import("./LapSnapshotsPanel"));
@@ -40,7 +38,7 @@ const plugin: DataViewerPlugin = {
     if (!enableCloud) return;
 
     // "Download all cloud logs" bulk action at the bottom of the file list.
-    // (Sign-in itself lives on the Profile tab — see CloudSyncPanel below.)
+    // (Sign-in itself lives on the Profile tab — see StoragePanel below.)
     ctx.registry.contribute(MOUNTS_POINT, {
       id: "cloud-sync-download-all",
       slot: MountSlot.FileManagerFooter,
@@ -74,21 +72,12 @@ const plugin: DataViewerPlugin = {
       component: CloudFilesSection,
     } satisfies PluginMountDef<FileManagerSectionContext>);
 
-    // Profile tab: account / sign-in + manual push/pull (the login moved here
-    // from the file manager). Ordered first so it's the top of the Profile tab.
-    ctx.registry.contribute(PANELS_POINT, {
-      id: "cloud-sync-account",
-      title: "Account",
-      slot: PanelSlot.Profile,
-      order: -10,
-      icon: User,
-      component: CloudSyncPanel,
-    } satisfies PluginPanel);
-
-    // Profile tab: storage usage meters (document + log storage types).
+    // Profile tab: merged account + storage. Signed in it shows display name,
+    // sign-out, plan, and cloud usage; signed out it offers sign-in and the same
+    // storage bar measured against this device. Ordered first (top of the tab).
     ctx.registry.contribute(PANELS_POINT, {
       id: "cloud-sync-storage",
-      title: "Profile",
+      title: "Account",
       slot: PanelSlot.Profile,
       order: 0,
       icon: User,

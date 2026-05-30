@@ -1,11 +1,10 @@
-// Push/pull sync engine.
+// Cloud sync engine.
 //
-// Manual, directional sync (no background daemon): "push" mirrors local data up
-// to the cloud, "pull" brings the cloud copy down. On a key collision the active
-// direction wins (push → cloud takes local; pull → local takes cloud). Neither
-// direction deletes the other side's extra records, so sync is additive — a
-// missing record is never inferred as a deletion. (Deletion propagation and
-// timestamp-based merge are deliberate follow-ups.)
+// Incremental, timestamp-aware sync (no manual push/pull buttons): garage docs
+// reconcile two-way by each record's own `updatedAt` (last-write-wins) via
+// `reconcileDocs`, individual writes flush through `pushRecord`/`deleteRecord`,
+// and the background daemon (autoSync) drives it. Sync is additive for the
+// stores it owns — a missing record is never inferred as a deletion.
 //
 // All structured stores are handled generically through IndexedDB + jsonb, so
 // adding a new syncable store is a single entry in syncStores.ts. File blobs
@@ -14,12 +13,10 @@
 import { getFile, saveFile } from "@/lib/fileStorage";
 import { getAccessor } from "./storeAccessors";
 import { fetchStorageUsage, isQuotaError, syncRecords, userFiles, type SyncRecordRow } from "./cloudClient";
-import { DOC_STORES, FILE_STORE, extractKey, type SyncSummary } from "./syncStores";
-import { listSelectedFiles, markPushed, orphanedObjectNames } from "./fileSync";
+import { DOC_STORES, FILE_STORE, extractKey } from "./syncStores";
+import { markPushed, orphanedObjectNames } from "./fileSync";
 import { DEFAULT_TOTAL_LIMIT, type StorageUsage } from "./storageTypes";
 import { decideSync, pendingId, recordUpdatedAt } from "./merge";
-
-export type { SyncSummary };
 
 /** Storage object path for a file blob, scoped to the user's folder. */
 function blobPath(userId: string, name: string): string {
@@ -167,64 +164,6 @@ async function pushDocRows(rows: SyncRecordRow[]): Promise<{ pushed: number; ski
     else throw new Error(`Failed to push documents: ${rowErr.message}`);
   }
   return { pushed, skipped };
-}
-
-/**
- * Mirror local data up to the cloud: all structured (garage) records, plus only
- * the files the user has selected for sync.
- */
-export async function pushAll(userId: string): Promise<SyncSummary> {
-  const rows: SyncRecordRow[] = [];
-  for (const store of DOC_STORES) {
-    for (const record of await readAll(store)) {
-      rows.push({ user_id: userId, store, record_key: extractKey(store, record), data: record });
-    }
-  }
-  const { pushed, skipped } = await pushDocRows(rows);
-
-  let files = 0;
-  for (const name of await listSelectedFiles()) {
-    if (await uploadBlob(userId, name)) {
-      await markPushed(name);
-      files++;
-    }
-  }
-
-  return { records: pushed, files, skipped };
-}
-
-/**
- * Bring the cloud copy down into local IndexedDB. Cloud-wins on same-name
- * collisions, EXCEPT a strictly-newer local document is kept (so a manual Pull
- * can't silently downgrade an edit you made more recently than the cloud copy).
- * Pulled files are downloaded but NOT auto-selected for sync — Pull is a
- * download, not an opt-in; the user controls which files sync in the file
- * manager.
- */
-export async function pullAll(userId: string): Promise<SyncSummary> {
-  const { data, error } = await syncRecords()
-    .select("store,record_key,data")
-    .eq("user_id", userId);
-  if (error) throw new Error(`Failed to read cloud records: ${error.message}`);
-
-  const rows = (data ?? []) as Pick<SyncRecordRow, "store" | "record_key" | "data">[];
-  let records = 0;
-  let files = 0;
-  for (const row of rows) {
-    if (row.store === FILE_STORE) {
-      const { data: blob, error: dlError } = await userFiles().download(blobPath(userId, row.record_key));
-      if (dlError || !blob) continue;
-      await saveFile(row.record_key, blob);
-      files++;
-    } else if ((DOC_STORES as readonly string[]).includes(row.store)) {
-      const local = await getAccessor(row.store).getOne(row.record_key);
-      // Keep a local copy that's been edited more recently than the cloud one.
-      if (local && recordUpdatedAt(local) > recordUpdatedAt(row.data)) continue;
-      await writeOne(row.store, row.data);
-      records++;
-    }
-  }
-  return { records, files, skipped: 0 };
 }
 
 // ── Incremental (auto) sync ──────────────────────────────────────────────────

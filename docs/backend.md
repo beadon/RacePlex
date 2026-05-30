@@ -14,8 +14,8 @@
 
 Optional per-user backup/sync of the IndexedDB stores (see CLAUDE.md → IndexedDB
 Storage) to Supabase. Built as a first-party plugin (Labs + Profile panels),
-online-only (accepted offline-first exception). Manual push/pull remains
-(`CloudSyncPanel`), but the **document tier now auto-syncs**, and is
+online-only (accepted offline-first exception). There are **no manual push/pull
+buttons** — the **document tier auto-syncs**, and is
 **offline-aware + conflict-safe**: storage modules emit `garageEvents` on
 write/delete, and `autoSync.ts` (started in `setup`, dynamically imported to stay
 off the initial bundle) debounces and incrementally **upserts / deletes** the one
@@ -31,7 +31,7 @@ offline or whose push failed is recorded in a persistent **pending set**
 **priority-1** (replacing the cloud copy); everything else merges by newest
 `updatedAt` (the record's logical edit time — never the server row time).
 `reconcileDocs` does the two-way merge (pull cloud-newer, push local-newer/-only),
-skipping pending keys. Its push (and `pushAll`'s) goes through `pushDocRows`: one
+skipping pending keys. Its push goes through `pushDocRows`: one
 optimistic batch, falling back to per-record upserts if the server quota trigger
 rejects the batch — so an over-limit local set still **partial-syncs** everything
 that fits and reports a `skipped` count (surfaced as a toast) rather than failing
@@ -98,9 +98,9 @@ decoded name has no index row (`orphanedObjectNames`, pure + tested).
 
 Files are **opt-in per file** (`fileSync.ts`): a `FileRow` mount adds a toggle to
 each file-manager row (`off` → `pending` → `synced`), and the selection set lives
-in the plugin's own KV store (`getPluginStore("cloud-sync")`). `pushAll` uploads
-all garage docs but only the *selected* files; `pushFile` handles a single
-toggle. A `FileManagerSection` mount (`CloudFilesSection`) lists **all** cloud
+in the plugin's own KV store (`getPluginStore("cloud-sync")`). `pushFile` uploads
+a single file's blob when its toggle is switched on. A `FileManagerSection` mount
+(`CloudFilesSection`) lists **all** cloud
 files — ones already on this device are marked present, others get a per-file
 pull; pulling persists via `ctx.onSaveFile` (which refreshes the list). A
 dedicated Cloud *tab* (a new garage-tab mount slot), `modified` detection, and a
