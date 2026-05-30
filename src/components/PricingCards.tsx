@@ -95,7 +95,11 @@ const PAID_TIERS: PaidTier[] = [
     slug: "plus",
     highlight: true,
     inherits: "Everything in Free online, plus",
-    features: ["10 GB cloud storage", "You're helping support the project ❤️"],
+    features: [
+      "10 GB cloud storage",
+      "Video uploads & sharing (coming soon)",
+      "You're helping support the project ❤️",
+    ],
   },
   {
     name: "Premium",
