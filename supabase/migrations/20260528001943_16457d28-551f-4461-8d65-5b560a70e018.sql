@@ -272,22 +272,22 @@ grant all on public.user_subscriptions to service_role;
 drop policy if exists "Users read own subscription" on public.user_subscriptions;
 create policy "Users read own subscription" on public.user_subscriptions for select to authenticated using (auth.uid() = user_id);
 
-create or replace function public.user_tier(p_user_id uuid)
+create or replace function public.user_tier(p_user uuid)
 returns text language sql stable security definer set search_path = public as $$
   select coalesce(
     (select tier from public.user_subscriptions
-      where user_id = p_user_id
+      where user_id = p_user
         and status in ('active','trialing','past_due')),
     'free');
 $$;
 
 grant execute on function public.user_tier(uuid) to authenticated;
 
-create or replace function public.tier_limit(p_user_id uuid, p_type text)
+create or replace function public.tier_limit(p_user uuid, p_type text)
 returns bigint language sql stable security definer set search_path = public as $$
   select coalesce(
     (select case p_type when 'logs' then logs_bytes when 'documents' then doc_bytes end
-       from public.subscription_tiers where tier = public.user_tier(p_user_id)),
+       from public.subscription_tiers where tier = public.user_tier(p_user)),
     (select case p_type when 'logs' then logs_bytes when 'documents' then doc_bytes end
        from public.subscription_tiers where tier = 'free'),
     (select max_bytes from public.quota_limits where storage_type = p_type));
@@ -363,13 +363,13 @@ create policy "Users read own deletion" on public.account_deletions for select t
 drop policy if exists "Users cancel own deletion" on public.account_deletions;
 create policy "Users cancel own deletion" on public.account_deletions for delete to authenticated using (auth.uid() = user_id);
 
-create or replace function public.encode_uri_component(p text)
+create or replace function public.encode_uri_component(p_text text)
 returns text language sql immutable as $$
   select string_agg(
     case when c ~ '[A-Za-z0-9\-_.!~*''()]' then c
          else regexp_replace(encode(convert_to(c,'UTF8'),'hex'),'(..)','%\1','g') end,
     '')
-  from regexp_split_to_table(p, '') as c;
+  from regexp_split_to_table(p_text, '') as c;
 $$;
 
 create or replace function public.purge_expired_personal_data()
@@ -387,7 +387,7 @@ end;
 $$;
 
 create or replace function public.due_account_deletions()
-returns table(user_id uuid) language sql stable security definer set search_path = public as $$
+returns setof uuid language sql stable security definer set search_path = public as $$
   select user_id from public.account_deletions where scheduled_for <= now();
 $$;
 
@@ -398,6 +398,10 @@ alter table public.user_subscriptions
   add column if not exists grace_until timestamptz,
   add column if not exists logs_trimmed_at timestamptz;
 
+-- Drop first: the incremental 20260528000000 migration already created this
+-- with `returns integer`, and create-or-replace cannot change a return type.
+-- A later migration (20260529105524) re-establishes the integer-returning form.
+drop function if exists public.trim_expired_logs();
 create or replace function public.trim_expired_logs()
 returns void language plpgsql security definer set search_path = public as $$
 declare
