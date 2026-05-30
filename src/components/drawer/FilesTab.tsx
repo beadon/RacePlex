@@ -246,8 +246,9 @@ export function FilesTab({
     // Cloud-only row: one tap downloads + opens it.
     if (s.location === "cloud") {
       const busy = cloudBusy === s.fileName;
+      // Greyed out (not on this device until downloaded).
       return (
-        <div className="flex items-center gap-2 p-2 rounded-md hover:bg-muted/50 transition-colors group">
+        <div className="flex items-center gap-2 p-2 rounded-md hover:bg-muted/50 transition-colors group opacity-60">
           <button
             className="flex-1 text-left min-w-0 cursor-pointer disabled:opacity-60"
             disabled={busy}
@@ -255,7 +256,7 @@ export function FilesTab({
             title={`${s.fileName} — in the cloud, tap to download`}
           >
             <div className="flex items-center gap-1.5">
-              <span className="text-sm font-medium truncate text-foreground">{s.displayName}</span>
+              <span className="text-sm font-medium truncate text-muted-foreground">{s.displayName}</span>
               {busy
                 ? <Loader2 className="w-3.5 h-3.5 text-primary shrink-0 animate-spin" />
                 : <Cloud className="w-3.5 h-3.5 text-muted-foreground shrink-0" />}
@@ -267,7 +268,7 @@ export function FilesTab({
               )}
             </div>
           </button>
-          <CloudDownload className="w-4 h-4 shrink-0 text-muted-foreground opacity-60" />
+          <CloudDownload className="w-4 h-4 shrink-0 text-muted-foreground" />
         </div>
       );
     }

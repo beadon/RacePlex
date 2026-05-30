@@ -143,9 +143,10 @@ export default function CloudLogsPanel(_props: PluginPanelProps) {
     const isConfirming = confirming === s.fileName;
     return (
       <div className="rounded-md border border-border">
-        <div className="flex items-center gap-2 px-3 py-2">
+        {/* Cloud-only rows are greyed out (not on this device until downloaded). */}
+        <div className={`flex items-center gap-2 px-3 py-2${onDevice ? "" : " opacity-60"}`}>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm text-foreground" title={s.fileName}>{s.displayName}</p>
+            <p className={`truncate text-sm ${onDevice ? "text-foreground" : "text-muted-foreground"}`} title={s.fileName}>{s.displayName}</p>
             <p className="text-[11px] text-muted-foreground">
               {formatDate(cf?.uploadedAt)}
               {cf?.size != null && ` · ${formatBytes(cf.size)}`}
