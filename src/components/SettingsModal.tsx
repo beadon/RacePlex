@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Settings, Eye, EyeOff, Gauge, Activity, Circle, HardDrive, FlaskConical, Sun, Moon, RefreshCw, Timer } from "lucide-react";
+import { Settings, Eye, EyeOff, Gauge, Activity, Circle, HardDrive, FlaskConical, Sun, Moon, RefreshCw, Timer, ChevronDown } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { AppSettings } from "@/hooks/useSettings";
 import { FIELD_CATEGORIES, CanonicalFieldId } from "@/lib/fieldResolver";
+import { cn } from "@/lib/utils";
 
 interface SettingsModalProps {
   settings: AppSettings;
@@ -33,7 +34,7 @@ export function SettingsModal({
           <Settings className="w-4 h-4" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md max-h-[85vh] flex flex-col">
+      <DialogContent className="sm:max-w-2xl max-h-[85vh] flex flex-col">
         <DialogHeader className="flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <Settings className="w-5 h-5" />
@@ -42,6 +43,8 @@ export function SettingsModal({
         </DialogHeader>
 
         <div className="space-y-6 py-4 overflow-y-auto flex-1 min-h-0 pr-3 scrollbar-thin">
+          {/* Compact toggle settings — responsive 2-column grid on tablet+ */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-6">
           {/* Theme Toggle */}
           <div className="space-y-3">
             <div className="flex items-center gap-2">
@@ -63,8 +66,6 @@ export function SettingsModal({
               </div>
             </div>
           </div>
-
-          <Separator />
 
           {/* Auto-Save Files */}
           <div className="space-y-3">
@@ -88,8 +89,6 @@ export function SettingsModal({
               />
             </div>
           </div>
-
-          <Separator />
 
           {/* Speed Unit */}
           <div className="space-y-3">
@@ -133,7 +132,11 @@ export function SettingsModal({
                 onCheckedChange={(checked) => onSettingsChange({ gForceSmoothing: checked })}
               />
             </div>
-            {settings.gForceSmoothing && (
+          </div>
+
+          {/* G-Force Smoothing Strength — full width when visible */}
+          {settings.gForceSmoothing && (
+            <div className="space-y-3 sm:col-span-2">
               <div className="pl-6 space-y-2">
                 <div className="flex items-center justify-between">
                   <Label className="text-sm text-muted-foreground">Smoothing Strength</Label>
@@ -154,8 +157,8 @@ export function SettingsModal({
                   <span className="text-xs text-muted-foreground">Max</span>
                 </div>
               </div>
-            )}
-          </div>
+            </div>
+          )}
 
           {/* G-Force Source for Simple Mode */}
           <div className="space-y-3">
@@ -220,11 +223,14 @@ export function SettingsModal({
             </div>
           </div>
 
-          {/* Braking Zone Detection */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <Circle className="w-4 h-4 text-blue-500" />
-              <h3 className="font-medium">Braking Zone Detection</h3>
+          </div>
+
+          {/* Braking Zone Detection — collapsible, full width */}
+          <CollapsibleSection
+            icon={<Circle className="w-4 h-4 text-primary" />}
+            title="Braking Zone Detection"
+          >
+            <div className="pl-6">
               <span className="text-xs bg-muted px-1.5 py-0.5 rounded text-muted-foreground">Experimental</span>
             </div>
             <p className="text-xs text-muted-foreground pl-6">
@@ -444,16 +450,13 @@ export function SettingsModal({
                 Reset to Defaults
               </Button>
             </div>
-          </div>
+          </CollapsibleSection>
 
-          <Separator />
-
-          {/* Default Field Visibility */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <Eye className="w-4 h-4 text-muted-foreground" />
-              <h3 className="font-medium">Default Field Visibility</h3>
-            </div>
+          {/* Default Field Visibility — collapsible, full width */}
+          <CollapsibleSection
+            icon={<Eye className="w-4 h-4 text-primary" />}
+            title="Default Field Visibility"
+          >
             <p className="text-xs text-muted-foreground pl-6">
               Choose which data fields are visible by default when loading a file. Hidden fields can still be enabled manually.
             </p>
@@ -499,7 +502,7 @@ export function SettingsModal({
                 </div>
               </div>
             ))}
-          </div>
+          </CollapsibleSection>
 
           <Separator />
 
@@ -511,6 +514,32 @@ export function SettingsModal({
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+interface CollapsibleSectionProps {
+  icon: React.ReactNode;
+  title: string;
+  defaultOpen?: boolean;
+  children: React.ReactNode;
+}
+
+function CollapsibleSection({ icon, title, defaultOpen = false, children }: CollapsibleSectionProps) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="space-y-3">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="flex w-full items-center gap-2 font-medium text-foreground"
+      >
+        {icon}
+        <h3 className="font-medium">{title}</h3>
+        <ChevronDown className={cn("w-4 h-4 transition-transform ml-auto", open && "rotate-180")} />
+      </button>
+      {open && <div className="space-y-3">{children}</div>}
+    </div>
   );
 }
 
