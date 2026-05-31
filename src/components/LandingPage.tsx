@@ -1,4 +1,4 @@
-import { Gauge, Github, Heart, Shield, BookOpen, Play, Loader2, LogIn, LogOut, FileText } from "lucide-react";
+import { Gauge, Github, Heart, Shield, BookOpen, Play, Loader2, LogIn, LogOut, FileText, Cpu } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { FileImport } from "@/components/FileImport";
@@ -27,6 +27,7 @@ const GITHUB_LINKS: Array<{ href: string; label: string }> = [
   { href: "https://github.com/TheAngryRaven/DovesDataViewer", label: "View on GitHub" },
   { href: "https://github.com/TheAngryRaven/DovesDataLogger", label: "View Datalogger" },
   { href: "https://github.com/TheAngryRaven/DovesLapTimer", label: "View Timer Library" },
+  { href: "https://github.com/TheAngryRaven/DataViewer_coach", label: "Coach Plugin" },
 ];
 
 /**
@@ -99,14 +100,30 @@ export function LandingPage({
             <LocalWeatherDialog />
           </div>
 
-          <div className="text-center space-y-2">
+          <div className="text-center">
             <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
               Free Online VBO, MoTeC, AiM &amp; NMEA Telemetry Viewer
             </h1>
-            <p className="text-sm text-muted-foreground">
-              Open any Racelogic VBO, MoTeC i2 (LD/CSV), AiM MyChron, Alfano, u-blox UBX, NMEA or Dove datalog right in your browser. Offline-first — with optional cloud storage to sync across your devices.
-            </p>
           </div>
+
+          <a
+            href="https://github.com/TheAngryRaven/DovesDataLogger"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex flex-col items-center gap-3 rounded-xl border border-primary/30 bg-primary/5 px-6 py-6 text-center transition-colors hover:border-primary hover:bg-primary/10 sm:flex-row sm:text-left"
+          >
+            <Cpu className="h-8 w-8 shrink-0 text-primary" />
+            <div className="space-y-1">
+              <h3 className="text-base font-semibold text-foreground">Build your own datalogger</h3>
+              <p className="text-sm text-muted-foreground">
+                The DovesDataLogger is fully open source — grab the hardware design and firmware to build your own GPS telemetry logger.
+              </p>
+            </div>
+            <Button variant="default" size="sm" className="mt-2 shrink-0 gap-2 sm:ml-auto sm:mt-0">
+              <Github className="h-4 w-4" />
+              Get Started
+            </Button>
+          </a>
 
           <FileImport
             onDataLoaded={onDataLoaded}
@@ -176,6 +193,20 @@ export function LandingPage({
           </div>
         </div>
       </main>
+
+      <footer className="border-t border-border px-6 py-4">
+        <p className="text-center text-xs text-muted-foreground">
+          Operated by{" "}
+          <a
+            href="https://PerchWerks.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
+          >
+            PerchWerks LLC
+          </a>
+        </p>
+      </footer>
     </div>
   );
 }
