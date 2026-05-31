@@ -132,11 +132,7 @@ export function SettingsModal({
                 onCheckedChange={(checked) => onSettingsChange({ gForceSmoothing: checked })}
               />
             </div>
-          </div>
-
-          {/* G-Force Smoothing Strength — full width when visible */}
-          {settings.gForceSmoothing && (
-            <div className="space-y-3 sm:col-span-2">
+            {settings.gForceSmoothing && (
               <div className="pl-6 space-y-2">
                 <div className="flex items-center justify-between">
                   <Label className="text-sm text-muted-foreground">Smoothing Strength</Label>
@@ -157,8 +153,8 @@ export function SettingsModal({
                   <span className="text-xs text-muted-foreground">Max</span>
                 </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
 
           {/* G-Force Source for Simple Mode */}
           <div className="space-y-3">
@@ -229,10 +225,8 @@ export function SettingsModal({
           <CollapsibleSection
             icon={<Circle className="w-4 h-4 text-primary" />}
             title="Braking Zone Detection"
+            badge={<span className="text-xs bg-muted px-1.5 py-0.5 rounded text-muted-foreground">Experimental</span>}
           >
-            <div className="pl-6">
-              <span className="text-xs bg-muted px-1.5 py-0.5 rounded text-muted-foreground">Experimental</span>
-            </div>
             <p className="text-xs text-muted-foreground pl-6">
               Tune the detection algorithm for identifying braking zones on the map.
             </p>
@@ -520,11 +514,12 @@ export function SettingsModal({
 interface CollapsibleSectionProps {
   icon: React.ReactNode;
   title: string;
+  badge?: React.ReactNode;
   defaultOpen?: boolean;
   children: React.ReactNode;
 }
 
-function CollapsibleSection({ icon, title, defaultOpen = false, children }: CollapsibleSectionProps) {
+function CollapsibleSection({ icon, title, badge, defaultOpen = false, children }: CollapsibleSectionProps) {
   const [open, setOpen] = useState(defaultOpen);
   return (
     <div className="space-y-3">
@@ -536,6 +531,7 @@ function CollapsibleSection({ icon, title, defaultOpen = false, children }: Coll
       >
         {icon}
         <h3 className="font-medium">{title}</h3>
+        {badge}
         <ChevronDown className={cn("w-4 h-4 transition-transform ml-auto", open && "rotate-180")} />
       </button>
       {open && <div className="space-y-3">{children}</div>}
