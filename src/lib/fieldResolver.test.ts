@@ -94,7 +94,19 @@ describe("getFieldAliases", () => {
 describe("FIELD_CATEGORIES", () => {
   it("groups fields under named categories", () => {
     const names = FIELD_CATEGORIES.map((c) => c.category);
-    expect(names).toEqual(["GPS Data", "Computed", "Sensors"]);
+    expect(names).toEqual(["GPS Data", "Computed", "Motion (IMU)", "Sensors"]);
+  });
+
+  it("exposes horizontal accuracy under GPS Data", () => {
+    const gps = FIELD_CATEGORIES.find((c) => c.category === "GPS Data");
+    const ids = gps?.fields.map((f) => f.canonicalId) ?? [];
+    expect(ids).toContain("h_acc");
+  });
+
+  it("places the raw accelerometer axes in the Motion (IMU) category", () => {
+    const imu = FIELD_CATEGORIES.find((c) => c.category === "Motion (IMU)");
+    const ids = imu?.fields.map((f) => f.canonicalId) ?? [];
+    expect(ids).toEqual(["accel_x", "accel_y", "accel_z"]);
   });
 
   it("every field references a real canonical id resolvable back to itself", () => {

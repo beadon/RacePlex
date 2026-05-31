@@ -22,6 +22,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   subscription to free (it keeps the existing paid tier instead).
 
 ### Added
+- **More fields in Settings → field defaults.** The show/hide field list now
+  includes **horizontal accuracy** (`H Accuracy`, under GPS Data) and the **raw
+  IMU accelerometer axes** (`Accel X/Y/Z`) under a new **Motion (IMU)** category,
+  so you can default-show or default-hide them like any other channel.
 - **Change your plan from your profile.** Subscribers now get a **Change plan**
   button alongside **Manage subscription** in **Profile → Plan**. It deep-links
   straight into Stripe's change-plan screen (swapping your storage tier / billing

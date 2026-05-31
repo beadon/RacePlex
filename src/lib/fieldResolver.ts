@@ -63,6 +63,7 @@ export const FIELD_CATEGORIES: FieldCategory[] = [
       { canonicalId: 'altitude', label: "Altitude", description: "GPS altitude in meters" },
       { canonicalId: 'satellites', label: "Satellites", description: "Number of GPS satellites" },
       { canonicalId: 'hdop', label: "HDOP", description: "Horizontal dilution of precision" },
+      { canonicalId: 'h_acc', label: "H Accuracy", description: "Estimated horizontal position accuracy (m)" },
     ],
   },
   {
@@ -71,6 +72,15 @@ export const FIELD_CATEGORIES: FieldCategory[] = [
     fields: [
       { canonicalId: 'lat_g', label: "Lateral G", description: "Lateral acceleration (computed)" },
       { canonicalId: 'lon_g', label: "Longitudinal G", description: "Longitudinal acceleration (computed)" },
+    ],
+  },
+  {
+    category: "Motion (IMU)",
+    description: "Raw accelerometer data from the device's IMU",
+    fields: [
+      { canonicalId: 'accel_x', label: "Accel X", description: "Raw IMU acceleration, X axis" },
+      { canonicalId: 'accel_y', label: "Accel Y", description: "Raw IMU acceleration, Y axis" },
+      { canonicalId: 'accel_z', label: "Accel Z", description: "Raw IMU acceleration, Z axis" },
     ],
   },
   {
