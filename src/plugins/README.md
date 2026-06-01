@@ -174,7 +174,11 @@ automated in the coach repo via a GitHub Actions workflow that runs
 
 1. List the package in `optionalDependencies` in the app's `package.json` and
    run `npm install` to refresh the lockfile, then commit both. No `.npmrc` or
-   token is needed — it's the default public registry.
+   token is needed — it's the default public registry. The version is pinned to
+   a **tilde patch range** (e.g. `~0.4.1`) so coach **patch** releases (`0.4.x`)
+   are picked up automatically on the next install, while a minor/major bump
+   (`0.5.0`+) stays an explicit, reviewed change — bump the tilde base when you
+   intend to adopt a new minor.
 2. The loader in `vite.config.ts` defaults to `@perchwerks/eye-in-the-sky`, so
    the standard build picks it up with no env configuration. Override the
    candidate list via the `DOVE_PLUGIN_PACKAGES` env var (comma-separated) if
