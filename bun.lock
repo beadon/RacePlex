@@ -60,7 +60,7 @@
         "vitest": "^4.1.6",
       },
       "optionalDependencies": {
-        "@perchwerks/eye-in-the-sky": "0.4.1",
+        "@perchwerks/eye-in-the-sky": "~0.4.1",
       },
     },
   },
