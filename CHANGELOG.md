@@ -37,6 +37,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the existing per-submission review/approve flow is unchanged. (Legacy
   single-course submissions still work.)
 
+- **Track editor sector lines now save the moment you release a drag marker.**
+  In the visual editor, adjusting the Start/Finish, Sector 2, or Sector 3 line no
+  longer requires a separate "Done" click to commit — each line is written to the
+  form as soon as you let go of a marker. The footer button is relabeled "Close"
+  for line tools (it just dismisses the editor; your edits are already saved) and
+  stays "Done" for the layout Draw tool, which still finalizes the drawing on
+  click. Removes a confusing extra step where dragging a line and switching tools
+  silently discarded the change.
 ## [2.0.0] - 2026-06-03
 
 ### Fixed
