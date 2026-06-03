@@ -14,6 +14,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **G-G diagram (friction circle).** A new pro-mode graph plotting lateral vs.
+  longitudinal G as a scatter, so you can see how much of the tyre's grip
+  envelope you're using — the classic "are you driving the corners of the
+  circle" view from MoTeC / Race Studio. Add it from the graph picker
+  ("G-G Diagram"); it shows concentric 0.5 g grip rings, your session's cloud,
+  the reference lap's cloud (when one is selected) for comparison, and the live
+  point as you scrub. Uses GPS-derived `lat_g`/`lon_g` (or the logger-native
+  pair when the HW G-force source is selected), with the same smoothing as the
+  other G-force charts.
 - **Distance vs. time chart scale.** The analysis charts (simple-mode telemetry
   chart and pro-mode graphs) can now plot against **track distance** instead of
   elapsed time, so laps line up corner-for-corner — the way Race Studio / MoTeC
