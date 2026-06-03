@@ -286,7 +286,7 @@ Detection order matters: binary formats first (MoTeC LD → UBX), then text form
 | `ParserStats` | `totalRows`, `acceptedRows`, `rejected: { nanFields, zeroCoords, outOfRange, speedCap, teleportation, incompleteRow }` |
 | `DovexMetadata` | `datetime?`, `driver?`, `course?`, `shortName?`, `bestLapMs?`, `optimalMs?`, `lapTimesMs?[]` |
 | `Lap` | `lapNumber`, `startTime/endTime`, `lapTimeMs`, speed stats, `startIndex/endIndex`, `sectors?` |
-| `Course` | `name`, `lengthFt?`, `startFinishA/B` (lat/lon), optional `sector2/sector3` lines |
+| `Course` | `name`, `lengthFt?`, `startFinishA/B` (lat/lon), optional `sector2/sector3` lines, optional `layout?` (`{lat,lon}[]` user-drawn outline) |
 | `Track` | `name`, `shortName?` (max 8 chars), `courses[]` |
 | `CourseDetectionResult` | `track`, `course`, `direction?`, `laps[]`, `isWaypointMode`, `waypointNotice?` |
 | `CourseDirection` | `'forward' \| 'reverse'` |
@@ -467,9 +467,11 @@ The `course_layouts` table stores polyline drawings of track layouts (1:1 with c
 
 **Access**: Admin-only RLS (same pattern as courses table). Layout lengths (in feet) ARE exported to track JSON files as `lengthFt`.
 
-**Draw tool**: In the VisualEditor, a "Draw" button allows clicking on the satellite map to build a polyline outline. This manual drawing tool is **admin-only** (`isAdminEditor={true}` in CoursesTab).
+**Draw tool**: In the VisualEditor, a "Draw" button allows clicking on the satellite map to build a polyline outline. It is shown whenever `showDrawTool` is set — **available to all users**, not just admin (the old `isAdminEditor` gate was removed). User-drawn (or lap-generated) outlines are persisted on `Course.layout` (a `{lat, lon}[]` polyline) through the normal track-storage CRUD, so they ride cloud-sync and travel with a community submission. Built-in courses still get their outline from `public/drawings.json` (see `loadCourseDrawings`); when editing, the user's own `course.layout` takes precedence over the built-in drawing.
 
-**Generate Drawing**: A "Generate" button (visible when laps are available and `showDrawTool` is true) lets users select a lap and auto-populate the drawing from that lap's GPS samples. Always available in user-side TrackEditor when session data is loaded. Laps and samples are threaded from `Index.tsx` → `TrackEditor` → `VisualEditor`.
+**Manage Tracks (home screen)**: `FileImport` renders a **Manage Tracks** button (below "Download from Datalogger") that opens `TrackEditor` via its `triggerButton` + `startInManage` props — the track manager is reachable with no datalog loaded. The create-flow dialogs (`AddTrackDialog`/`AddCourseDialog`) pass `isNewTrack`/`showDrawTool` so location search + manual drawing are available there.
+
+**Generate Drawing**: A "Generate" button (visible when laps are available and `showDrawTool` is true) lets users select a lap and auto-populate the drawing from that lap's GPS samples. Available in user-side TrackEditor when session data is loaded. Laps and samples are threaded from `Index.tsx` → `TrackEditor` → `VisualEditor` (and into the create-flow dialogs). The drawing state lives in `useTrackEditorForm` (`formLayout`) and is written into the course via `buildCourse()`.
 
 **"Generate Course Mapping" button**: Placeholder in admin CoursesTab — will eventually produce fingerprint data for automatic track detection on the DovesDataLogger hardware.
 

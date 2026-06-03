@@ -322,7 +322,6 @@ export function CoursesTab() {
             onSector3Change={handleVisualSector3}
             isNewTrack={!editingId}
             showDrawTool={true}
-            isAdminEditor={true}
             layoutPoints={layoutPoints}
             onLayoutChange={handleLayoutChange}
           />

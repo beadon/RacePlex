@@ -25,6 +25,13 @@ export interface Course {
   sector2?: SectorLine; // Optional sector 2 line
   sector3?: SectorLine; // Optional sector 3 line
   isUserDefined?: boolean; // true if user added/modified this course
+  /**
+   * User-drawn (or lap-generated) track outline — an ordered polyline of
+   * {lat, lon} points. Persisted alongside the course so it rides cloud-sync
+   * and travels with a community submission. Built-in courses get their outline
+   * from public/drawings.json instead (see loadCourseDrawings).
+   */
+  layout?: Array<{ lat: number; lon: number }>;
 }
 
 // Helper to check if course has valid sector lines

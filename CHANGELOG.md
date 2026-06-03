@@ -13,6 +13,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Manage your tracks straight from the home screen.** A new **Manage Tracks**
+  button (below "Download from Datalogger") opens the track manager without
+  having to load a datalog first — search for a location, drop the start/finish
+  and sector lines, and **draw the track outline** by clicking the map. The
+  manual **Draw** tool (previously admin-only) is now available to everyone; when
+  a datalog *is* loaded the editor still offers **Generate from lap** to build the
+  outline from your GPS trace. Drawings you make are saved with the course and
+  travel with it (cloud sync + community submissions).
+
 ### Changed
 - **"Submit to DB" is now a one-tap bulk contribution instead of a coordinate
   form.** The old flow made you hand-fill latitudes/longitudes for one course at
