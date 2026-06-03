@@ -57,6 +57,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   actually loaded.
 
 ### Changed
+- **The track/course editor is visual-only and fully auto-saving now.** The
+  Manual/Visual toggle (a leftover dev fallback) is gone — every track manager
+  uses the map editor. Drawn outlines and dragged start/finish & sector lines
+  save the instant you make the change, so the editor's old Done/Close button is
+  removed too. A persistent hint — *"Drawing an outline helps on-device course
+  detection. Click to place points."* — now shows in the editor across all the
+  managers.
 - **Adding a track is just a name now.** "Add Track" no longer makes you place a
   start/finish line and define a course up front — a track is simply a name plus
   an auto-filled short name. Courses (each with their own start/finish line) are
