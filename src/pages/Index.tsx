@@ -233,7 +233,8 @@ export default function Index() {
     enableLabs: settings.enableLabs,
     darkMode: settings.darkMode,
     gForceSource: settings.gForceSource,
-  }), [useKph, settings.gForceSmoothing, settings.gForceSmoothingStrength, brakingZoneSettings, settings.enableLabs, settings.darkMode, settings.gForceSource]);
+    chartXAxis: settings.chartXAxis,
+  }), [useKph, settings.gForceSmoothing, settings.gForceSmoothingStrength, brakingZoneSettings, settings.enableLabs, settings.darkMode, settings.gForceSource, settings.chartXAxis]);
 
   // Memoize sliced data arrays to avoid recreating on every render
   const slicedPaceData = useMemo(

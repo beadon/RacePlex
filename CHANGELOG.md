@@ -13,6 +13,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Distance vs. time chart scale.** The analysis charts (simple-mode telemetry
+  chart and pro-mode graphs) can now plot against **track distance** instead of
+  elapsed time, so laps line up corner-for-corner — the way Race Studio / MoTeC
+  analysis works. A new **Chart Scale** toggle in Settings switches between
+  Distance and Time; **Distance is the default**. Distance tick labels follow
+  the speed unit (MPH → ft/mi, KPH → m/km).
+
 ## [2.0.0] - 2026-06-03
 
 ### Fixed
