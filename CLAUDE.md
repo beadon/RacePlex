@@ -80,7 +80,7 @@ src/
 │   ├── ui/                # shadcn/ui primitives
 │   ├── admin/             # Admin tabs (Tracks, Courses, Submissions, BannedIps, Tools, Messages)
 │   ├── tabs/              # View tabs (GraphView, RaceLine, LapTimes, Labs, Coach; Profile is mounted in the drawer)
-│   ├── graphview/         # Pro mode: GraphPanel, GraphViewPanel, MiniMap, SingleSeriesChart, InfoBox
+│   ├── graphview/         # Pro mode: GraphPanel, GraphViewPanel, MiniMap, SingleSeriesChart, GGDiagram, InfoBox
 │   ├── drawer/            # File-manager drawer tabs (Files, Vehicles/Karts, Notes, Setups, Device*)
 │   ├── track-editor/      # Track editor sub-components (VisualEditor is lazy — see Bundle Splitting)
 │   ├── video-overlays/    # Video-export overlay system: registry + themes + per-widget *Overlay,
@@ -635,6 +635,16 @@ in *absolute* distance/time from the lap origin (`0` = start-finish) rather than
 window-relative. The range-slider crop handles (`formatRangeLabel`, built in
 `Index.tsx`) follow the same scale — cumulative distance from the lap start in
 distance mode, elapsed time otherwise.
+
+The **G-G diagram** (friction circle) is a pro-mode graph
+(`graphview/GGDiagram.tsx`) added from the `GraphPanel` picker as the `__gg__`
+key. It scatters lateral vs longitudinal G (lat on X, accel-positive lon on Y)
+for the visible window, overlays the reference lap's cloud and the live scrub
+point, and draws concentric 0.5 g grip rings. The data prep is pure + unit-tested
+in `lib/ggDiagram.ts` (`pickGForcePair` honoring `gForceSource` → GPS `lat_g`/
+`lon_g` or native `lat_g_native`/`lon_g_native`; `computeGGPoints` with per-axis
+smoothing; `computeGGAxisMax` for the symmetric, clamped axis range). Raw IMU
+`accel_*` is intentionally excluded — it isn't guaranteed grip-frame-aligned.
 
 Channels are normalized to canonical ids at parse time (`channels.ts` →
 `normalizeChannels()`), so `extraFields` keys and `FieldMapping.name` are uniform
