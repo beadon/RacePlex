@@ -94,6 +94,22 @@ describe('buildSubmissionPlan', () => {
     expect(plan.pendingCount).toBe(1);
   });
 
+  it('derives a short name for a new track that never got one', () => {
+    const merged: Track[] = [
+      ...builtin,
+      {
+        name: 'Sunshine Speed Park',
+        // no shortName set (e.g. created before short names were captured)
+        isUserDefined: true,
+        courses: [{ ...course('Loop'), isUserDefined: true }],
+      },
+    ];
+    const plan = buildSubmissionPlan(merged, builtin);
+    const group = plan.groups.find((g) => g.trackName === 'Sunshine Speed Park')!;
+    expect(group.shortName).toBe('SSP');
+    expect(group.courses[0].trackShortName).toBe('SSP');
+  });
+
   it('classifies a user course added to a built-in track as new_course (track "edited")', () => {
     const merged: Track[] = [
       {

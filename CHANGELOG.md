@@ -24,6 +24,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   remembers what you've already submitted so unchanged courses aren't re-sent
   (editing a course later re-flags it). Adding a course to a built-in track shows
   that track as **Edited** (it adds the course; it never overwrites the track).
+- **Track creation now captures a short name, auto-filled from the long name.**
+  The "Add Track" form has a **Short Name** field (max 8 chars) that fills in
+  live as you type the track name (e.g. "Orlando Kart Center" → "OKC") until you
+  edit it yourself. Tracks created before this — or otherwise missing a short
+  name — get one auto-derived at submit time, so contributing them is never
+  blocked.
 - **Bulk submissions are grouped for admin review.** The `submit-track` edge
   function now accepts many courses in one request and tags them with a shared
   `batch_id`; the admin Submissions tab groups a user's upload together with

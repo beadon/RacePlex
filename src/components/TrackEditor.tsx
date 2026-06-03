@@ -244,7 +244,7 @@ function CourseDrawingMini({ points, size = 36 }: { points: Array<{ lat: number;
   const handleAddTrack = async () => {
     const course = form.buildCourse();
     if (!course || !form.formTrackName.trim()) return;
-    await addTrackToStorage(form.formTrackName.trim(), course);
+    await addTrackToStorage(form.formTrackName.trim(), course, form.formTrackShortName.trim() || undefined);
     await refreshTracks();
     setTempTrackName(form.formTrackName.trim());
     setTempCourseName(course.name);

@@ -19,6 +19,7 @@
  */
 
 import type { Course, Track } from '@/types/racing';
+import { deriveShortName } from '@/lib/trackUtils';
 
 /** Flat snake_case coordinate payload — the shape the edge fn + DB expect. */
 export interface CourseSubmissionData {
@@ -172,6 +173,11 @@ export function buildSubmissionPlan(
 
   for (const track of merged) {
     const isNewTrack = !!track.isUserDefined;
+    // A new track needs a short name; auto-derive one if it never got set so the
+    // contribution isn't blocked (the create flow now fills this in up front).
+    const resolvedShortName = isNewTrack
+      ? (track.shortName?.trim() || deriveShortName(track.name) || undefined)
+      : track.shortName;
     const courses: SubmissionCourse[] = [];
 
     for (const course of track.courses) {
@@ -203,7 +209,7 @@ export function buildSubmissionPlan(
 
       courses.push({
         trackName: track.name,
-        trackShortName: track.shortName,
+        trackShortName: resolvedShortName,
         courseName: course.name,
         type,
         change,
@@ -217,7 +223,7 @@ export function buildSubmissionPlan(
     if (courses.length === 0) continue;
     groups.push({
       trackName: track.name,
-      shortName: track.shortName,
+      shortName: resolvedShortName,
       trackStatus: isNewTrack ? 'new' : 'edited',
       courses,
     });
