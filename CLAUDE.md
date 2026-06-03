@@ -95,6 +95,7 @@ src/
 │   ├── useLapManagement.ts# Lap calc, selection, visible range
 │   ├── usePlayback.ts     # Shared playback cursor (chart + map)
 │   ├── useLapSnapshots.ts # ★ Lap-snapshot orchestration (capture/prompt/overlay)
+│   ├── useLapOverlays.ts  # Multi-lap map-overlay selection (lap/snapshot ids → OverlayLine[])
 │   ├── useReferenceLap / useVideoSync / useSettings / useSessionMetadata / useOnlineStatus
 │   ├── use*Manager.ts     # IndexedDB CRUD: File, Vehicle (←Kart compat), Engine, Template, Note, Setup
 │   └── useSubscription / useStripePrices   # billing, online — see docs/backend.md
@@ -107,6 +108,7 @@ src/
 │   ├── lapCalculation.ts  # Start/finish crossing detection → Lap[]
 │   ├── lapDelta.ts        # ★ Position-based lap delta (arc-length resample + segment-projected gap)
 │   ├── fileBrowserTree.ts # ★ Pure file-browser hierarchy: Track→Course→logs, engine/kart filter, breadcrumbs, smart collapse
+│   ├── lapOverlays.ts     # ★ Pure multi-lap map-overlay logic: id format, palette, resolve selections → OverlayLine[], unionBounds
 │   ├── lapSnapshot.ts     # ★ Pure snapshot types/keying/buffer (course+engine identity)
 │   ├── lapSnapshotStorage.ts # ★ IndexedDB CRUD for lap snapshots (emits garageEvents)
 │   ├── setupRevision.ts  # ★ Pure content-addressed setup history: hash + freeze (immutable revisions)
@@ -655,6 +657,25 @@ in `lib/ggDiagram.ts` (`pickGForcePair` honoring `gForceSource` → GPS `lat_g`/
 `lon_g` or native `lat_g_native`/`lon_g_native`; `computeGGPoints` with per-axis
 smoothing; `computeGGAxisMax` for the symmetric, clamped axis range). Raw IMU
 `accel_*` is intentionally excluded — it isn't guaranteed grip-frame-aligned.
+
+The **multi-lap overlay** draws extra laps/snapshots across **all four data
+views at once**: racing lines on both maps (`RaceLineView` + `MiniMap`) and
+distance-aligned traces on both chart types (`TelemetryChart` speed +
+`SingleSeriesChart` per-series), with per-lap values in the cursor tooltip.
+Selection is per-lap (`LapTable` "Map" column) + per-snapshot
+(`LapSnapshotControls`), held by `useLapOverlays` as stable ids (`lap:<n>` /
+`snap:<id>`) and resolved by the pure, unit-tested `lib/lapOverlays.ts`
+(`resolveOverlayLines` → `OverlayLine[]` with palette colors; `unionBounds` to
+fit map overlays that run outside the active lap). `SessionContext` carries
+`overlayLines` + `onToggleOverlay`. **The current lap always renders on top** —
+maps put overlays in a layer beneath the current heatmap; charts draw overlay
+traces before the current line. Chart overlays distance-align each lap onto the
+current lap via `alignByDistance` (`referenceUtils.ts`), over the full lap then
+sliced to the visible window (anchored at start-finish, like the reference);
+synthetic `__pace__`/`__braking_g__` series don't overlay. **Phase 1 is raw
+absolute GPS** (same-session laps share a receiver, so they register without
+correction); cross-session drift-alignment and external/cross-logger sources are
+deferred — see `docs/plans/multi-lap-overlay.md`.
 
 Channels are normalized to canonical ids at parse time (`channels.ts` →
 `normalizeChannels()`), so `extraFields` keys and `FieldMapping.name` are uniform
