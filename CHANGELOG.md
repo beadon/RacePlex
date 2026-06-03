@@ -39,8 +39,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Lap-generated outlines are resampled instead of using every raw sample.**
   "Generate from lap" previously copied the full logger-rate GPS trace (hundreds
   to thousands of unevenly-spaced points). It now arc-length-resamples to an even
-  ~5 m spacing, producing a clean, compact outline (typically a couple hundred
-  points for a kart track) that's lighter to store and submit.
+  spacing scaled to track length — 5 m for karting tracks, ramping up to 10 m for
+  long road courses (2→4 miles) — producing a clean, compact outline that's
+  lighter to store and submit.
 - **"Submit to DB" is now a one-tap bulk contribution instead of a coordinate
   form.** The old flow made you hand-fill latitudes/longitudes for one course at
   a time. Now the app diffs everything you've created locally against the

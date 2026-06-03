@@ -5,20 +5,13 @@ import { Input } from '@/components/ui/input';
 import { toast } from '@/hooks/use-toast';
 import { SectorLine } from '@/types/racing';
 import type { Lap, GpsSample } from '@/types/racing';
-import { resamplePolyline } from '@/lib/trackUtils';
+import { resamplePolyline, calculatePolylineLength, generatedDrawingSpacing } from '@/lib/trackUtils';
 import L from 'leaflet';
 
 export interface GpsPoint {
   lat: number;
   lon: number;
 }
-
-/**
- * Spacing (meters) for a lap-generated outline. The raw lap is logged at the
- * full device rate; an outline only needs a coarse, evenly-spaced polyline —
- * ~5 m keeps a kart track around a couple hundred points while staying smooth.
- */
-const GENERATED_DRAWING_SPACING_M = 5;
 
 export type VisualEditorTool = 'startFinish' | 'sector2' | 'sector3' | 'draw' | null;
 export type EditorMode = 'manual' | 'visual';
@@ -612,8 +605,10 @@ export function VisualEditor({
     }
     // The raw lap is the full logger rate (10–25 Hz) — far denser than an
     // outline needs, and unevenly so (more points in slow corners). Arc-length
-    // resample to a fixed spacing for a clean, compact polyline.
-    const points = resamplePolyline(rawPoints, GENERATED_DRAWING_SPACING_M);
+    // resample to an even spacing scaled to track length for a clean, compact
+    // polyline (5 m for karting up to 10 m for long road courses).
+    const spacing = generatedDrawingSpacing(calculatePolylineLength(rawPoints));
+    const points = resamplePolyline(rawPoints, spacing);
     setDrawPoints(points);
     updateDrawPolyline(points);
     // Fit map to the generated drawing
