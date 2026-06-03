@@ -58,16 +58,27 @@ sandbox).
 
 ---
 
-## Phase 2 (later) — alignment + more sources
+## Phase 1.5 (done) — overlays everywhere
 
+Pulled forward from the original phase-2 list mid-phase-1:
+- ✅ **Simple-mode RaceLineView** overlay parity (racing lines + legend).
+- ✅ **Per-overlay traces on the charts** (`TelemetryChart` speed + `SingleSeriesChart`
+  per-series), distance-aligned via `alignByDistance`, with per-lap cursor-tooltip
+  values. Current lap always on top.
+
+## Phase 2 (remaining) — alignment + external sources
+
+These two are one feature in practice (external laps are what introduce real drift),
+and together they close the "align data from different loggers" half of the critique.
+
+- **External / cross-logger file overlays**: add laps from *other saved files* as
+  overlay sources (a new `OverlaySource`/id kind, e.g. `file:<name>:<lap>`), resolved
+  by loading + parsing like the external-reference flow already does.
 - **Spatial drift-correction**: optional "align lines" toggle that rigidly registers
   each overlay onto the primary lap (translation, optionally Kabsch rotation) using
   the existing `resampleByDistance` + `projectToPlane` correspondences in
   `lapDelta.ts`. Cancels GPS offset between sessions/loggers while preserving the
   real racing-line shape. Same-session laps need none (shared receiver).
-- **External / cross-logger file overlays** as additional sources.
-- **Simple-mode RaceLineView** overlay parity.
-- Possible per-overlay channel comparison on the charts.
 
 ---
 
