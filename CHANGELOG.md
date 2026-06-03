@@ -13,7 +13,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-06-03
+
+### Fixed
+- **Spurious sign-out on page refresh (and the paid plan card vanishing with
+  it).** The auth bootstrap awaited a Supabase RPC (`has_role`) *inside* the
+  `onAuthStateChange` callback. supabase-js holds the GoTrue cross-tab Web Lock
+  for the duration of that callback, so the awaited call deadlocked token
+  refresh on reload — signing the user out and, downstream, collapsing the
+  subscription to the free tier (hiding the paid plan card). The admin-role
+  lookup is now deferred out of the callback; session/user state is set
+  synchronously. (Symptom only cleared on a full browser restart, since the
+  contended Web Lock survives reloads.)
+
 ### Changed
+- **Pricing cards now clarify that paid plans only cover cloud backups.** Every
+  storage line on the plan cards (home + sign-up) carries an asterisk to a new
+  footnote spelling out that storage on your own device is always unlimited and
+  free — paid tiers only back your datalogs up to the cloud (and help support
+  development). Removes the common confusion that you have to pay to keep using
+  the app or to store logs locally.
+- **Coverage badge now publishes to a GitHub Gist instead of a `badges` branch.**
+  The orphan `badges` branch caused Cloudflare Workers Builds to repeatedly try
+  (and fail) to deploy a branch with no app in it. The `coverage.yml` workflow
+  now pushes the badge `%`/color to a gist via `Schneegans/dynamic-badges-action`
+  (repo secret `GIST_TOKEN` + variable `COVERAGE_GIST_ID`), drops its
+  `contents: write` permission, and no longer creates a Git branch. See the
+  README "Coverage badge" section for setup.
 - **Bumped the optional AI coach plugin (`@perchwerks/eye-in-the-sky`) from
   `0.3.0` to `0.4.1`, and pinned it to a tilde patch range (`~0.4.1`)** so coach
   `0.4.x` patch releases are picked up automatically on the next install, while a
@@ -531,5 +557,6 @@ open-source project scaffolding and a bundle-size pass.
   admin, pro view, file-manager drawer, BLE download, and the Leaflet editor off
   the first-load path.
 
-[Unreleased]: https://github.com/TheAngryRaven/DovesDataViewer/compare/v1.5.0...HEAD
+[Unreleased]: https://github.com/TheAngryRaven/DovesDataViewer/compare/v2.0.0...HEAD
+[2.0.0]: https://github.com/TheAngryRaven/DovesDataViewer/compare/v1.5.0...v2.0.0
 [1.5.0]: https://github.com/TheAngryRaven/DovesDataViewer/compare/V1.0.0...v1.5.0
