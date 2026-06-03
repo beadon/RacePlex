@@ -5,6 +5,7 @@ import {
   buildBrowserSessions,
   computeBrowserView,
   defaultNav,
+  filesTaggedWithCourse,
   formatSessionDisplayName,
   ROOT_NAV,
   UNTAGGED_TRACK,
@@ -217,5 +218,51 @@ describe("defaultNav", () => {
     expect(defaultNav("OKC", "CW")).toEqual({ track: "OKC", course: "CW", filter: "none" });
     expect(defaultNav("OKC", null)).toEqual({ track: "OKC", course: undefined, filter: "none" });
     expect(defaultNav(null, null)).toEqual(ROOT_NAV);
+  });
+});
+
+describe("filesTaggedWithCourse", () => {
+  function meta(over: Partial<FileMetadata>): FileMetadata {
+    return {
+      fileName: over.fileName ?? "f",
+      trackName: over.trackName ?? "",
+      courseName: over.courseName ?? "",
+      sessionStartTime: over.sessionStartTime,
+      fastestLapMs: over.fastestLapMs,
+    };
+  }
+
+  const records = [
+    meta({ fileName: "a", trackName: "OKC", courseName: "CW", sessionStartTime: 100, fastestLapMs: 60000 }),
+    meta({ fileName: "b", trackName: "OKC", courseName: "CW", sessionStartTime: 300 }),
+    meta({ fileName: "c", trackName: "OKC", courseName: "CCW", sessionStartTime: 200 }),
+    meta({ fileName: "d", trackName: "Daytona", courseName: "CW", sessionStartTime: 400 }),
+  ];
+
+  it("returns only logs tagged with the course, newest first", () => {
+    const result = filesTaggedWithCourse(records, "OKC", "CW");
+    expect(result.map((r) => r.fileName)).toEqual(["b", "a"]);
+    expect(result[1].fastestLapMs).toBe(60000);
+  });
+
+  it("labels each log by its session date/time", () => {
+    const t = new Date(2026, 1, 12, 11, 15).getTime();
+    const result = filesTaggedWithCourse([meta({ fileName: "x", trackName: "OKC", courseName: "CW", sessionStartTime: t })], "OKC", "CW");
+    expect(result[0].displayName).toBe("2/12/2026 11:15 AM");
+  });
+
+  it("excludes the current file", () => {
+    const result = filesTaggedWithCourse(records, "OKC", "CW", "b");
+    expect(result.map((r) => r.fileName)).toEqual(["a"]);
+  });
+
+  it("matches the course across tracks when no track is given", () => {
+    const result = filesTaggedWithCourse(records, undefined, "CW");
+    expect(result.map((r) => r.fileName)).toEqual(["d", "b", "a"]);
+  });
+
+  it("returns nothing without a course", () => {
+    expect(filesTaggedWithCourse(records, "OKC", undefined)).toEqual([]);
+    expect(filesTaggedWithCourse(records, "OKC", "  ")).toEqual([]);
   });
 });

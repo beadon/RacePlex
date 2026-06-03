@@ -96,6 +96,46 @@ export function formatSessionDisplayName(
   return `${date} ${h}:${mm} ${ampm}`;
 }
 
+/** A saved log tagged with a given course, labeled by its session date/time. */
+export interface CourseFileEntry {
+  fileName: string;
+  displayName: string;
+  startTime?: number;
+  fastestLapMs?: number;
+}
+
+/**
+ * The saved logs tagged with `courseName` (and `trackName` when given), labeled
+ * by session date/time and newest-first — the source list for the Overlays
+ * menu's "add laps from another session of this course" picker. Matching is
+ * trimmed/exact on the tag strings; `excludeFileName` drops the current session
+ * (its own laps are already addable straight from the lap list).
+ */
+export function filesTaggedWithCourse(
+  meta: FileMetadata[],
+  trackName: string | undefined,
+  courseName: string | undefined,
+  excludeFileName?: string,
+): CourseFileEntry[] {
+  const course = courseName?.trim();
+  if (!course) return [];
+  const track = trackName?.trim();
+  return meta
+    .filter(
+      (m) =>
+        m.fileName !== excludeFileName &&
+        m.courseName?.trim() === course &&
+        (!track || m.trackName?.trim() === track),
+    )
+    .map((m) => ({
+      fileName: m.fileName,
+      displayName: formatSessionDisplayName(m.sessionStartTime, m.fileName),
+      startTime: m.sessionStartTime,
+      fastestLapMs: m.fastestLapMs,
+    }))
+    .sort((a, b) => (b.startTime ?? 0) - (a.startTime ?? 0));
+}
+
 // ── Building the session list ────────────────────────────────────────────────
 
 /**

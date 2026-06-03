@@ -45,8 +45,9 @@ import { useLapManagement } from "@/hooks/useLapManagement";
 import { useReferenceLap, useExternalReference } from "@/hooks/useReferenceLap";
 import { useLapSnapshots } from "@/hooks/useLapSnapshots";
 import { useLapOverlays } from "@/hooks/useLapOverlays";
+import type { OverlayLine } from "@/lib/lapOverlays";
 import { LapSnapshotControls } from "@/components/LapSnapshotControls";
-import { OverlayFilePicker } from "@/components/OverlayFilePicker";
+import { OverlaysMenu } from "@/components/OverlaysMenu";
 import { LapSnapshotPromptDialog } from "@/components/LapSnapshotPromptDialog";
 import { useSessionMetadata } from "@/hooks/useSessionMetadata";
 import { useVideoSync } from "@/hooks/useVideoSync";
@@ -205,6 +206,23 @@ export default function Index() {
     setReferenceLapNumber(null);
     snapshots.setActiveSnapshotId(null);
   }, [handleSelectExternalLap, setReferenceLapNumber, snapshots]);
+
+  // Promote one of the active overlay lines to the comparison reference lap. A
+  // same-session `lap:` overlay sets the in-session reference (so it highlights
+  // in the lap table); cross-session overlays feed the external-reference slot.
+  const handleSetOverlayReference = useCallback((line: OverlayLine) => {
+    if (line.id.startsWith('lap:')) {
+      const lapNumber = Number(line.id.slice(line.id.indexOf(':') + 1));
+      if (Number.isFinite(lapNumber)) {
+        handleSetReferenceWithClear(lapNumber);
+        return;
+      }
+    }
+    externalRef.setExternalRefSamples(line.samples);
+    externalRef.setExternalRefLabel(line.label);
+    setReferenceLapNumber(null);
+    snapshots.setActiveSnapshotId(null);
+  }, [handleSetReferenceWithClear, externalRef, setReferenceLapNumber, snapshots]);
 
   // Assigning an engine/setup may set a new course fastest lap → prompt to save.
   const handleSaveSessionSetupWithSnapshot = useCallback(async (kartId: string | null, setupId: string | null) => {
@@ -535,14 +553,16 @@ export default function Index() {
             onToggleOverlay={toggleOverlay}
           />
 
-          <OverlayFilePicker
+          <OverlaysMenu
             hasCourse={!!selectedCourse}
-            savedFiles={savedFiles}
+            trackName={selection?.trackName}
+            courseName={selectedCourse?.name}
+            currentFileName={currentFileName}
             overlayLines={overlayLines}
             onLoadOverlayFile={loadOverlayFile}
             onAddExternalOverlay={addExternalOverlay}
             onToggleOverlay={toggleOverlay}
-            onOpen={refreshSavedFiles}
+            onSetOverlayReference={handleSetOverlayReference}
           />
 
           <SettingsModal settings={settings} onSettingsChange={setSettings} onToggleFieldDefault={toggleFieldDefault} />
