@@ -17,7 +17,7 @@ const VisualEditor = lazy(() =>
 import { CourseForm } from './CourseForm';
 import type { CourseFormProps } from '@/hooks/useTrackEditorForm';
 import type { GpsPoint } from './VisualEditor';
-import type { SectorLine } from '@/types/racing';
+import type { SectorLine, Lap, GpsSample } from '@/types/racing';
 
 interface AddCourseDialogProps {
   open: boolean;
@@ -35,6 +35,11 @@ interface AddCourseDialogProps {
   onSector2Change: (line: SectorLine) => void;
   onSector3Change: (line: SectorLine) => void;
   initialCenter?: GpsPoint | null;
+  /** Drawing support — draw the outline manually or generate it from a lap. */
+  layoutPoints?: Array<{ lat: number; lon: number }>;
+  onLayoutChange?: (points: Array<{ lat: number; lon: number }>) => void;
+  laps?: Lap[];
+  samples?: GpsSample[];
 }
 
 export function AddCourseDialog({
@@ -45,6 +50,7 @@ export function AddCourseDialog({
   startFinishA, startFinishB, sector2, sector3,
   onStartFinishChange, onSector2Change, onSector3Change,
   initialCenter,
+  layoutPoints, onLayoutChange, laps, samples,
 }: AddCourseDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -68,6 +74,12 @@ export function AddCourseDialog({
                 onStartFinishChange={onStartFinishChange}
                 onSector2Change={onSector2Change}
                 onSector3Change={onSector3Change}
+                isNewTrack={true}
+                showDrawTool={true}
+                layoutPoints={layoutPoints}
+                onLayoutChange={onLayoutChange}
+                laps={laps}
+                samples={samples}
               />
             </Suspense>
             <div className="space-y-3">

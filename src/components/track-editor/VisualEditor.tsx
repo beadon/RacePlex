@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { toast } from '@/hooks/use-toast';
 import { SectorLine } from '@/types/racing';
 import type { Lap, GpsSample } from '@/types/racing';
+import { resamplePolyline, calculatePolylineLength, generatedDrawingSpacing } from '@/lib/trackUtils';
 import L from 'leaflet';
 
 export interface GpsPoint {
@@ -29,8 +30,6 @@ interface VisualEditorProps {
   initialCenter?: GpsPoint | null;
   /** Whether to show the Draw/Generate tools */
   showDrawTool?: boolean;
-  /** Whether the caller is an admin (shows manual Draw button) */
-  isAdminEditor?: boolean;
   /** Existing layout drawing to display as a static polyline */
   layoutPoints?: Array<{ lat: number; lon: number }>;
   /** Show a button to toggle visibility of known drawing */
@@ -48,7 +47,6 @@ interface VisualEditorToolbarProps {
   onToolChange: (tool: VisualEditorTool) => void;
   onDone: () => void;
   showDrawTool?: boolean;
-  isAdminEditor?: boolean;
   drawPointCount?: number;
   canToggleKnownDrawing?: boolean;
   showKnownDrawing?: boolean;
@@ -59,7 +57,7 @@ interface VisualEditorToolbarProps {
   onGenerateFromLap?: (lapNumber: number) => void;
 }
 
-function VisualEditorToolbar({ activeTool, onToolChange, onDone, showDrawTool, isAdminEditor, drawPointCount = 0, canToggleKnownDrawing = false, showKnownDrawing = true, onToggleKnownDrawing, onUndoDraw, onClearDraw, laps, onGenerateFromLap }: VisualEditorToolbarProps) {
+function VisualEditorToolbar({ activeTool, onToolChange, onDone, showDrawTool, drawPointCount = 0, canToggleKnownDrawing = false, showKnownDrawing = true, onToggleKnownDrawing, onUndoDraw, onClearDraw, laps, onGenerateFromLap }: VisualEditorToolbarProps) {
   const [showLapPicker, setShowLapPicker] = useState(false);
 
   const handleStartFinish = () => {
@@ -131,7 +129,7 @@ function VisualEditorToolbar({ activeTool, onToolChange, onDone, showDrawTool, i
           <Timer className="w-3.5 h-3.5" />
           Sector 3
         </Button>
-        {showDrawTool && isAdminEditor && (
+        {showDrawTool && (
             <Button
               variant={activeTool === 'draw' ? 'default' : 'outline'}
               size="sm"
@@ -226,7 +224,7 @@ export function VisualEditor({
   startFinishA, startFinishB, sector2, sector3,
   onStartFinishChange, onSector2Change, onSector3Change, onDone,
   isNewTrack = false, initialCenter: initialCenterProp = null,
-  showDrawTool = false, isAdminEditor = false, layoutPoints: layoutPointsProp, showKnownDrawingToggle = false, onLayoutChange,
+  showDrawTool = false, layoutPoints: layoutPointsProp, showKnownDrawingToggle = false, onLayoutChange,
   laps, samples,
 }: VisualEditorProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -598,13 +596,19 @@ export function VisualEditor({
     const lap = laps.find(l => l.lapNumber === lapNumber);
     if (!lap) return;
     const lapSamples = samples.slice(lap.startIndex, lap.endIndex + 1);
-    const points = lapSamples
+    const rawPoints = lapSamples
       .filter(s => s.lat !== 0 && s.lon !== 0)
       .map(s => ({ lat: s.lat, lon: s.lon }));
-    if (points.length < 2) {
+    if (rawPoints.length < 2) {
       toast({ title: 'Not enough GPS data', description: 'This lap has insufficient GPS points for a drawing', variant: 'destructive' });
       return;
     }
+    // The raw lap is the full logger rate (10–25 Hz) — far denser than an
+    // outline needs, and unevenly so (more points in slow corners). Arc-length
+    // resample to an even spacing scaled to track length for a clean, compact
+    // polyline (5 m for karting up to 10 m for long road courses).
+    const spacing = generatedDrawingSpacing(calculatePolylineLength(rawPoints));
+    const points = resamplePolyline(rawPoints, spacing);
     setDrawPoints(points);
     updateDrawPolyline(points);
     // Fit map to the generated drawing
@@ -869,7 +873,6 @@ export function VisualEditor({
         onToolChange={handleToolChange}
         onDone={handleDone}
         showDrawTool={showDrawTool}
-        isAdminEditor={isAdminEditor}
         drawPointCount={drawPoints.length}
         canToggleKnownDrawing={showKnownDrawingToggle && drawPoints.length > 1}
         showKnownDrawing={showKnownDrawing}

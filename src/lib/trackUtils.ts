@@ -110,6 +110,29 @@ export function formatTrackLength(meters: number): string {
   return `${Math.round(feet).toLocaleString()} ft / ${Math.round(meters).toLocaleString()} m`;
 }
 
+const MILE_METERS = 1609.344;
+
+/**
+ * Resample spacing (meters) for a lap-generated track outline, scaled to track
+ * length. Short tracks (karting) stay fine at 5 m; from 2 miles the spacing
+ * ramps linearly up to 10 m by 4 miles and is capped there — so long road
+ * courses don't generate an excessively dense outline.
+ *
+ * `lengthMeters` is the lap distance. NaN / non-positive lengths fall back to
+ * the minimum spacing.
+ */
+export function generatedDrawingSpacing(lengthMeters: number): number {
+  const MIN = 5;
+  const MAX = 10;
+  const rampStart = 2 * MILE_METERS;
+  const rampEnd = 4 * MILE_METERS;
+  // `!(... > rampStart)` also catches NaN and lengths at/below the ramp start.
+  if (!(lengthMeters > rampStart)) return MIN;
+  if (lengthMeters >= rampEnd) return MAX;
+  const t = (lengthMeters - rampStart) / (rampEnd - rampStart);
+  return MIN + t * (MAX - MIN);
+}
+
 /**
  * Resample a polyline to evenly spaced points.
  * Walks along the path segment-by-segment, emitting a new interpolated

@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Track, TrackCourseSelection } from '@/types/racing';
 import {
   loadTracks,
+  loadDefaultTracks,
   addTrack as addTrackToStorage,
   addCourse as addCourseToStorage,
   updateCourse,
@@ -15,6 +16,8 @@ import {
   loadCourseDrawings,
   CourseDrawing,
 } from '@/lib/trackStorage';
+import { buildSubmissionPlan } from '@/lib/trackSubmission';
+import { loadSubmittedRecords } from '@/lib/submittedTracksStorage';
 import { abbreviateTrackName } from '@/lib/trackUtils';
 import {
   Select,
@@ -48,14 +51,30 @@ import { Send } from 'lucide-react';
 import type { Lap, GpsSample } from '@/types/racing';
 
 interface TrackCourseEditorProps {
-  selection: TrackCourseSelection | null;
-  onSelectionChange: (selection: TrackCourseSelection | null) => void;
+  selection?: TrackCourseSelection | null;
+  onSelectionChange?: (selection: TrackCourseSelection | null) => void;
   compact?: boolean;
   laps?: Lap[];
   samples?: GpsSample[];
+  /**
+   * Render a custom button that opens the editor (e.g. the landing-page "Manage
+   * Tracks" entry). When set, the editor renders only this trigger + its dialogs
+   * instead of the compact selection label.
+   */
+  triggerButton?: React.ReactNode;
+  /** Open straight into the manage (track/course CRUD) view. */
+  startInManage?: boolean;
 }
 
-export function TrackEditor({ selection, onSelectionChange, compact = false, laps, samples }: TrackCourseEditorProps) {
+export function TrackEditor({
+  selection = null,
+  onSelectionChange,
+  compact = false,
+  laps,
+  samples,
+  triggerButton,
+  startInManage = false,
+}: TrackCourseEditorProps) {
   const [tracks, setTracks] = useState<Track[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSelectDialogOpen, setIsSelectDialogOpen] = useState(false);
@@ -66,6 +85,9 @@ export function TrackEditor({ selection, onSelectionChange, compact = false, lap
   const [tempCourseName, setTempCourseName] = useState<string>('');
   const [isJsonViewOpen, setIsJsonViewOpen] = useState(false);
   const [courseDrawings, setCourseDrawings] = useState<Record<string, CourseDrawing[]>>({});
+  // Courses that still differ from the community DB (drives the always-visible
+  // "Submit to DB" button: greyed out when there's nothing new to send).
+  const [pendingSubmissionCount, setPendingSubmissionCount] = useState(0);
 
   const form = useTrackEditorForm();
 /** Mini SVG preview of a course drawing outline */
@@ -115,6 +137,16 @@ function CourseDrawingMini({ points, size = 36 }: { points: Array<{ lat: number;
     setTracks(loaded);
     return loaded;
   }, []);
+
+  // Recompute how many courses still need submitting (uses the same diffing the
+  // submit dialog does, so the button greys out when nothing is pending).
+  const refreshPendingSubmissionCount = useCallback(async () => {
+    const defaults = await loadDefaultTracks();
+    const plan = buildSubmissionPlan(tracks, defaults, loadSubmittedRecords());
+    setPendingSubmissionCount(plan.pendingCount);
+  }, [tracks]);
+
+  useEffect(() => { refreshPendingSubmissionCount(); }, [refreshPendingSubmissionCount]);
 
   const selectedTrack = tracks.find(t => t.name === tempTrackName);
   const availableCourses = selectedTrack?.courses ?? [];
@@ -211,11 +243,11 @@ function CourseDrawingMini({ points, size = 36 }: { points: Array<{ lat: number;
   const handleCourseChange = (courseName: string) => setTempCourseName(courseName);
 
   const handleApplySelection = () => {
-    if (!tempTrackName || !tempCourseName) { onSelectionChange(null); }
+    if (!tempTrackName || !tempCourseName) { onSelectionChange?.(null); }
     else {
       const track = tracks.find(t => t.name === tempTrackName);
       const course = track?.courses.find(c => c.name === tempCourseName);
-      if (track && course) onSelectionChange({ trackName: tempTrackName, courseName: tempCourseName, course });
+      if (track && course) onSelectionChange?.({ trackName: tempTrackName, courseName: tempCourseName, course });
     }
     setIsSelectDialogOpen(false);
     setIsManageMode(false);
@@ -265,6 +297,7 @@ function CourseDrawingMini({ points, size = 36 }: { points: Array<{ lat: number;
         startFinishB: course.startFinishB,
         sector2: course.sector2,
         sector3: course.sector3,
+        layout: course.layout,
       });
     }
     await refreshTracks();
@@ -313,6 +346,10 @@ function CourseDrawingMini({ points, size = 36 }: { points: Array<{ lat: number;
     onStartFinishChange: form.handleVisualStartFinishChange,
     onSector2Change: form.handleVisualSector2Change,
     onSector3Change: form.handleVisualSector3Change,
+    layoutPoints: form.formLayout,
+    onLayoutChange: form.handleVisualLayoutChange,
+    laps,
+    samples,
   } as const;
 
   const addTrackDialogProps = {
@@ -330,6 +367,10 @@ function CourseDrawingMini({ points, size = 36 }: { points: Array<{ lat: number;
     onStartFinishChange: form.handleVisualStartFinishChange,
     onSector2Change: form.handleVisualSector2Change,
     onSector3Change: form.handleVisualSector3Change,
+    layoutPoints: form.formLayout,
+    onLayoutChange: form.handleVisualLayoutChange,
+    laps,
+    samples,
   } as const;
 
   // Track/Course selection UI (shared between compact dialog and non-compact inline)
@@ -387,7 +428,8 @@ function CourseDrawingMini({ points, size = 36 }: { points: Array<{ lat: number;
                     showDrawTool={true}
                     laps={laps}
                     samples={samples}
-                    layoutPoints={resolveCourseDrawing(selectedTrack, form.editingCourse?.courseName)}
+                    layoutPoints={form.formLayout.length >= 2 ? form.formLayout : resolveCourseDrawing(selectedTrack, form.editingCourse?.courseName)}
+                    onLayoutChange={form.handleVisualLayoutChange}
                     showKnownDrawingToggle={true}
                   />
                 </Suspense>
@@ -460,12 +502,16 @@ function CourseDrawingMini({ points, size = 36 }: { points: Array<{ lat: number;
           <Button variant="outline" onClick={() => setIsJsonViewOpen(true)} disabled={!selectedTrack}>
             <Code className="w-4 h-4 mr-2" />View JSON
           </Button>
-          {tracks.some(t => t.isUserDefined || t.courses.some(c => c.isUserDefined)) && (
-            <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1">
             <SubmitTrackDialog
+              onSubmitted={refreshPendingSubmissionCount}
               trigger={
-                <Button className="animate-attention-glow">
-                  <Send className="w-4 h-4 mr-2" />Submit to DB
+                <Button
+                  className={pendingSubmissionCount > 0 ? 'animate-attention-glow' : ''}
+                  disabled={pendingSubmissionCount === 0}
+                >
+                  <Send className="w-4 h-4 mr-2" />
+                  Submit to DB{pendingSubmissionCount > 0 ? ` (${pendingSubmissionCount})` : ''}
                 </Button>
               }
             />
@@ -480,13 +526,12 @@ function CourseDrawingMini({ points, size = 36 }: { points: Array<{ lat: number;
                 </button>
               </TooltipTrigger>
               <TooltipContent className="max-w-xs">
-                <p>Sharing your track configurations to the database helps the
-                project grow — your tracks become available to everyone, so the
-                community spends less time mapping and more time driving.</p>
+                <p>{pendingSubmissionCount === 0
+                  ? 'Nothing new to share right now — create or edit a track/course (or add a drawing) and it\'ll show up here to contribute.'
+                  : 'Sharing your track configurations to the database helps the project grow — your tracks become available to everyone, so the community spends less time mapping and more time driving.'}</p>
               </TooltipContent>
             </Tooltip>
-            </div>
-          )}
+          </div>
         </div>
         <Button variant="outline" onClick={() => setIsManageMode(false)}>Back to Selection</Button>
       </div>
@@ -520,6 +565,44 @@ function CourseDrawingMini({ points, size = 36 }: { points: Array<{ lat: number;
     </Dialog>
   );
 
+  // Open the editor dialog, optionally jumping straight into manage mode.
+  const openEditor = () => {
+    if (startInManage) setIsManageMode(true);
+    setIsSelectDialogOpen(true);
+  };
+
+  const selectDialog = (
+    <Dialog open={isSelectDialogOpen} onOpenChange={(open) => { setIsSelectDialogOpen(open); if (!open) { setIsManageMode(false); form.setEditingCourse(null); form.resetForm(); } }}>
+      <DialogTrigger asChild><span className="sr-only">Open track selector</span></DialogTrigger>
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader><DialogTitle>{isManageMode ? 'Manage Tracks & Courses' : 'Select Track & Course'}</DialogTitle></DialogHeader>
+        {!isManageMode ? (
+          <>
+            {selectionUI}
+            <div className="flex gap-2 pt-4">
+              <Button onClick={handleApplySelection} className="flex-1">Apply</Button>
+              <Button variant="outline" onClick={() => setIsManageMode(true)}><Settings className="w-4 h-4 mr-2" />Manage</Button>
+            </div>
+          </>
+        ) : manageModeContent}
+      </DialogContent>
+    </Dialog>
+  );
+
+  // Custom-trigger mode (e.g. the landing-page "Manage Tracks" button): render
+  // just the trigger + the dialogs, no compact selection label.
+  if (triggerButton) {
+    return (
+      <>
+        <span onClick={openEditor} className="contents">{triggerButton}</span>
+        {selectDialog}
+        {jsonViewDialog}
+        <AddCourseDialog {...addCourseDialogProps} />
+        <AddTrackDialog {...addTrackDialogProps} />
+      </>
+    );
+  }
+
   if (compact) {
     const displayLabel = selection ? `${abbreviateTrackName(selection.trackName)} : ${selection.courseName}` : 'No track selected';
 
@@ -532,22 +615,7 @@ function CourseDrawingMini({ points, size = 36 }: { points: Array<{ lat: number;
           </Button>
         </div>
 
-        <Dialog open={isSelectDialogOpen} onOpenChange={(open) => { setIsSelectDialogOpen(open); if (!open) { setIsManageMode(false); form.setEditingCourse(null); form.resetForm(); } }}>
-          <DialogTrigger asChild><span className="sr-only">Open track selector</span></DialogTrigger>
-          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader><DialogTitle>{isManageMode ? 'Manage Tracks & Courses' : 'Select Track & Course'}</DialogTitle></DialogHeader>
-            {!isManageMode ? (
-              <>
-                {selectionUI}
-                <div className="flex gap-2 pt-4">
-                  <Button onClick={handleApplySelection} className="flex-1">Apply</Button>
-                  <Button variant="outline" onClick={() => setIsManageMode(true)}><Settings className="w-4 h-4 mr-2" />Manage</Button>
-                </div>
-              </>
-            ) : manageModeContent}
-          </DialogContent>
-        </Dialog>
-
+        {selectDialog}
         {jsonViewDialog}
         <AddCourseDialog {...addCourseDialogProps} />
         <AddTrackDialog {...addTrackDialogProps} />
@@ -562,7 +630,7 @@ function CourseDrawingMini({ points, size = 36 }: { points: Array<{ lat: number;
         <Button onClick={() => {
           const track = tracks.find(t => t.name === tempTrackName);
           const course = track?.courses.find(c => c.name === tempCourseName);
-          if (track && course) onSelectionChange({ trackName: tempTrackName, courseName: tempCourseName, course });
+          if (track && course) onSelectionChange?.({ trackName: tempTrackName, courseName: tempCourseName, course });
         }} className="w-full"><Check className="w-4 h-4 mr-2" />Apply Selection</Button>
       )}
       <AddCourseDialog {...addCourseDialogProps} />
