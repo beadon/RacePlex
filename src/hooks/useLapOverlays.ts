@@ -91,7 +91,9 @@ export function useLapOverlays({
   );
 
   // Add (or no-op if present) a lap from a loaded external file as an overlay.
-  const addExternalOverlay = useCallback((fileName: string, lapNumber: number) => {
+  // `displayName` (the session's date/time label) is preferred for the legend so
+  // raw file names never leak into the UI — falls back to the file name.
+  const addExternalOverlay = useCallback((fileName: string, lapNumber: number, displayName?: string) => {
     const cached = parsedFiles.current.get(fileName);
     if (!cached) return;
     const lap = cached.laps.find((l) => l.lapNumber === lapNumber);
@@ -100,7 +102,8 @@ export function useLapOverlays({
     if (samples.length < 2) return;
 
     const id = externalOverlayId(fileName, lapNumber);
-    const shortName = fileName.length > 22 ? `${fileName.slice(0, 21)}…` : fileName;
+    const baseName = displayName?.trim() || fileName;
+    const shortName = baseName.length > 22 ? `${baseName.slice(0, 21)}…` : baseName;
     const label = `${shortName} · L${lapNumber} · ${formatLapTime(lap.lapTimeMs)}`;
     setExternalOverlays((prev) => ({ ...prev, [id]: { samples, label } }));
     setOverlaySelections((prev) => (prev.includes(id) ? prev : [...prev, id]));

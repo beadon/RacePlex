@@ -664,8 +664,18 @@ views at once**: racing lines on both maps (`RaceLineView` + `MiniMap`) and
 distance-aligned traces on both chart types (`TelemetryChart` speed +
 `SingleSeriesChart` per-series), with per-lap values in the cursor tooltip.
 Selection: per-lap (`LapTable` "Map" column), per-snapshot
-(`LapSnapshotControls`), and laps from **other saved files** via
-`OverlayFilePicker` (load+parse on demand, cached in `useLapOverlays`). Held as
+(`LapSnapshotControls`), and laps from **other saved files** via the header
+**`OverlaysMenu`** (load+parse on demand, cached in `useLapOverlays`). The
+`OverlaysMenu` is a three-section dialog: **Current overlays** (each line
+promotable to the comparison reference via `onSetOverlayReference` — the active
+reference is highlighted by matching `referenceLapNumber`/`externalRefLabel` —
+or removable), **Current session laps** (toggle this session's laps as overlays
+without the lap list), and **Add from other logs** — the other sessions tagged
+with the *current course*, listed by date/time (`filesTaggedWithCourse` in
+`fileBrowserTree.ts`, never raw file names). It replaces the old "External Ref"
+bar (`ExternalRefBar`), which is now hidden-but-kept behind
+`SHOW_EXTERNAL_REF_BAR` in `LapTable`; references are still also set from the
+per-row **Ref** buttons. Held as
 stable ids (`lap:<n>` / `snap:<id>` / `file:<lap>\x1f<name>`) and resolved by the
 pure, unit-tested `lib/lapOverlays.ts` (`resolveOverlayLines` → `OverlayLine[]`
 with palette colors, external samples from a cache; `unionBounds` to fit map

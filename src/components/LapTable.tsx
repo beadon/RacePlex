@@ -12,6 +12,13 @@ import { FileEntry } from '@/lib/fileStorage';
 import { useSettingsContext } from '@/contexts/SettingsContext';
 import { haversineDistance, METERS_TO_FEET } from '@/lib/parserUtils';
 
+/**
+ * Feature flag: the old "External Ref" bar at the top of the lap list is hidden
+ * now that references are set from the header Overlays menu and the per-row Ref
+ * buttons. Left in place (not deleted) so it can be re-enabled quickly.
+ */
+const SHOW_EXTERNAL_REF_BAR: boolean = false;
+
 interface LapTableProps {
   laps: Lap[];
   course: Course | null;
@@ -134,7 +141,10 @@ export const LapTable = memo(function LapTable({ laps, course, samples, onLapSel
 
   return (
     <div className="h-full overflow-auto scrollbar-thin">
-      {hasExternalRefProps && (
+      {/* The external-reference bar is superseded by the header "Overlays" menu
+          (set references there) + the per-row Ref/Map controls below. Kept
+          mounted-but-hidden for now in case we need to fall back. */}
+      {SHOW_EXTERNAL_REF_BAR && hasExternalRefProps && (
         <ExternalRefBar
           externalRefLabel={externalRefLabel ?? null}
           savedFiles={savedFiles}
