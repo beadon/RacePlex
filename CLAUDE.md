@@ -55,7 +55,7 @@ will read it tomorrow.
 | Framework | React 18 + TypeScript |
 | Build | Vite + vite-plugin-pwa (`/service-worker.js` active SW, `/sw.js` cleanup kill-switch) |
 | Styling | Tailwind CSS + shadcn/ui (HSL design tokens in `index.css`) |
-| Mapping | Leaflet (CartoDB + Esri tiles, cached 30 days by SW) |
+| Mapping | Leaflet (CartoDB + Esri tiles, cached 30 days by SW; satellite view has an Esri **Wayback** imagery-date picker — `lib/satelliteImagery.ts` — to dodge cloud cover) |
 | Charts | Custom Canvas 2D (not a library — see `TelemetryChart.tsx`, `SingleSeriesChart.tsx`) |
 | Video Export | WebCodecs + [mp4-muxer](https://github.com/Vanilagy/mp4-muxer) (H.264 video + AAC audio → MP4 output) |
 | State | React hooks + React Query (for admin only) |
@@ -97,6 +97,7 @@ src/
 │   ├── useLapSnapshots.ts # ★ Lap-snapshot orchestration (capture/prompt/overlay)
 │   ├── useLapOverlays.ts  # Multi-lap map-overlay selection (lap/snapshot ids → OverlayLine[])
 │   ├── useReferenceLap / useVideoSync / useSettings / useSessionMetadata / useOnlineStatus
+│   ├── useWaybackImagery.ts# Lazy-loads the Esri Wayback release list on first open of the satellite imagery-date picker (off the initial path; never runs offline)
 │   ├── use*Manager.ts     # IndexedDB CRUD: File, Vehicle (←Kart compat), Engine, Template, Note, Setup
 │   └── useSubscription / useStripePrices   # billing, online — see docs/backend.md
 ├── lib/
@@ -122,6 +123,7 @@ src/
 │   │                      #   video, videoFile, graphPrefs; trackStorage = localStorage (user tracks)
 │   ├── (racing math)      # brakingZones, speedEvents, speedBounds, gforceCalculation, referenceUtils, trackUtils
 │   ├── (charts/video)     # chartUtils, chartColors, videoExport, overlayCanvasRenderer
+│   ├── satelliteImagery.ts # ★ Pure Esri Wayback parsing: waybackconfig.json → date-sorted release list + Leaflet tile URLs (online-only satellite imagery-date picker; useWaybackImagery hook lazy-loads it)
 │   ├── ble/               # Web Bluetooth DovesLapTimer protocol, split per-concern (see BLE Integration);
 │   │                      #   + bleDatalogger.ts (legacy barrel), deviceTrackSync.ts, deviceSettingsSchema.ts
 │   ├── db/                # Admin DB layer: ITrackDatabase + supabaseAdapter + getDatabase() factory

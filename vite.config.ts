@@ -268,6 +268,21 @@ export default defineConfig(({ mode }) => {
                 },
               },
             },
+            {
+              // Esri Wayback historical satellite imagery (date-picker tiles).
+              urlPattern: /^https:\/\/wayback\.maptiles\.arcgis\.com\/.*/i,
+              handler: "CacheFirst",
+              options: {
+                cacheName: "map-tiles-wayback",
+                expiration: {
+                  maxEntries: 500,
+                  maxAgeSeconds: 60 * 60 * 24 * 30,
+                },
+                cacheableResponse: {
+                  statuses: [0, 200],
+                },
+              },
+            },
           ],
         },
       }),

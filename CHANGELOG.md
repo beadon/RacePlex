@@ -14,6 +14,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Pick the satellite imagery date (dodge clouds).** The default Esri satellite
+  basemap is a single best-available mosaic, so whatever clouds or seasonal cover
+  were in that capture are baked in. The race-line map's satellite view now has a
+  date picker (powered by Esri Wayback) to step back to an earlier, cloud-free
+  capture of the same track. Online-only and lazy-loaded — it never runs for
+  offline users or anyone on the default imagery.
 - **Collapse the overlay legend on the maps.** The multi-lap overlay legend
   (both the race-line map and the pro-mode MiniMap) now has a collapse toggle.
   With many overlays loaded the per-lap list can bury the map under labels, so
