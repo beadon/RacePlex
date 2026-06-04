@@ -10,7 +10,7 @@ import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { useSettingsContext } from '@/contexts/SettingsContext';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Moon, Satellite, Square, WifiOff, CloudSun, FileText, X, Crosshair, Eye, EyeOff } from 'lucide-react';
+import { Moon, Satellite, Square, WifiOff, CloudSun, FileText, X, Crosshair, List, ChevronDown, ChevronUp } from 'lucide-react';
 import { WeatherPanel } from '@/components/WeatherPanel';
 import { LocalWeatherDialog } from '@/components/LocalWeatherDialog';
 import { WeatherStation, WeatherData } from '@/lib/weatherService';
@@ -67,9 +67,9 @@ interface RaceLineViewProps {
   /** Whether cross-session overlays are drift-aligned onto the current lap. */
   alignOverlays?: boolean;
   onToggleAlignOverlays?: () => void;
-  /** Show the overlay racing lines on the map (selections survive when off). */
-  overlaysVisible?: boolean;
-  onToggleOverlaysVisible?: () => void;
+  /** Expand the overlay legend (per-lap list). Racing lines stay drawn when collapsed. */
+  showOverlayLegend?: boolean;
+  onToggleOverlayLegend?: () => void;
 }
 
 // Get speed color (green -> yellow -> orange -> red)
@@ -151,7 +151,7 @@ function createSpeedEventIcon(event: SpeedEvent, useKph: boolean): L.DivIcon {
   });
 }
 
-export function RaceLineView({ samples, allSamples, referenceSamples = [], currentIndex, course, bounds, paceDiff = null, paceDiffLabel = 'best', deltaTopSpeed = null, deltaMinSpeed = null, referenceLapNumber = null, lapToFastestDelta = null, showOverlays = true, lapTimeMs = null, refAvgTopSpeed = null, refAvgMinSpeed = null, sessionGpsPoint, sessionStartDate, cachedWeatherStation, onWeatherStationResolved, isAllLaps, parserStats, overlayLines = [], rangeStart = 0, onRemoveOverlay, alignOverlays, onToggleAlignOverlays, overlaysVisible = true, onToggleOverlaysVisible }: RaceLineViewProps) {
+export function RaceLineView({ samples, allSamples, referenceSamples = [], currentIndex, course, bounds, paceDiff = null, paceDiffLabel = 'best', deltaTopSpeed = null, deltaMinSpeed = null, referenceLapNumber = null, lapToFastestDelta = null, showOverlays = true, lapTimeMs = null, refAvgTopSpeed = null, refAvgMinSpeed = null, sessionGpsPoint, sessionStartDate, cachedWeatherStation, onWeatherStationResolved, isAllLaps, parserStats, overlayLines = [], rangeStart = 0, onRemoveOverlay, alignOverlays, onToggleAlignOverlays, showOverlayLegend = true, onToggleOverlayLegend }: RaceLineViewProps) {
   const { useKph, brakingZoneSettings } = useSettingsContext();
   // Use allSamples for statistics if provided, otherwise fall back to samples
   const samplesForStats = allSamples ?? samples;
@@ -160,10 +160,8 @@ export function RaceLineView({ samples, allSamples, referenceSamples = [], curre
   // cropping the range shrinks them on the map exactly like the heatmap line
   // (`samples` is already the cropped window; `samplesForStats` is the full lap).
   const drawnOverlayLines = useMemo(
-    () => overlaysVisible
-      ? cropOverlayLinesToWindow(overlayLines, samplesForStats, rangeStart, rangeStart + samples.length - 1)
-      : [],
-    [overlaysVisible, overlayLines, samplesForStats, rangeStart, samples.length],
+    () => cropOverlayLinesToWindow(overlayLines, samplesForStats, rangeStart, rangeStart + samples.length - 1),
+    [overlayLines, samplesForStats, rangeStart, samples.length],
   );
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
@@ -578,19 +576,20 @@ export function RaceLineView({ samples, allSamples, referenceSamples = [], curre
       {/* Multi-lap overlay legend - bottom center */}
       {overlayLines.length > 0 && (
         <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-[1000] flex max-w-[70%] flex-wrap items-center justify-center gap-x-3 gap-y-1 rounded bg-card/90 backdrop-blur-sm border border-border px-2.5 py-1.5">
-          {/* Show/hide the overlay lines without dropping the selections — keeps a
-              crowded line-up (5+ overlays) from overwhelming the map. */}
-          {onToggleOverlaysVisible && (
+          {/* Collapse the per-lap list without touching the racing lines — keeps a
+              crowded line-up (5+ overlays) from burying the map under labels. */}
+          {onToggleOverlayLegend && (
             <button
-              onClick={onToggleOverlaysVisible}
-              className={`flex items-center gap-1.5 text-xs font-mono ${overlaysVisible ? 'text-primary' : 'text-muted-foreground'}`}
-              title={overlaysVisible ? 'Hide overlay lines' : `Show ${overlayLines.length} overlay line${overlayLines.length === 1 ? '' : 's'}`}
+              onClick={onToggleOverlayLegend}
+              className={`flex items-center gap-1.5 text-xs font-mono ${showOverlayLegend ? 'text-primary' : 'text-muted-foreground'}`}
+              title={showOverlayLegend ? 'Collapse overlay list' : `Show overlay list (${overlayLines.length})`}
             >
-              {overlaysVisible ? <Eye className="w-3 h-3 shrink-0" /> : <EyeOff className="w-3 h-3 shrink-0" />}
-              <span>{overlaysVisible ? 'Overlays' : `${overlayLines.length} hidden`}</span>
+              <List className="w-3 h-3 shrink-0" />
+              <span>{showOverlayLegend ? 'Overlays' : `${overlayLines.length} overlay${overlayLines.length === 1 ? '' : 's'}`}</span>
+              {showOverlayLegend ? <ChevronDown className="w-3 h-3 shrink-0" /> : <ChevronUp className="w-3 h-3 shrink-0" />}
             </button>
           )}
-          {overlaysVisible && onToggleAlignOverlays && overlayLines.some(l => !l.id.startsWith('lap:')) && (
+          {showOverlayLegend && onToggleAlignOverlays && overlayLines.some(l => !l.id.startsWith('lap:')) && (
             <button
               onClick={onToggleAlignOverlays}
               className={`flex items-center gap-1.5 text-xs font-mono ${alignOverlays ? 'text-primary' : 'text-muted-foreground'}`}
@@ -600,7 +599,7 @@ export function RaceLineView({ samples, allSamples, referenceSamples = [], curre
               <span>Align: {alignOverlays ? 'on' : 'off'}</span>
             </button>
           )}
-          {overlaysVisible && overlayLines.map(line => (
+          {showOverlayLegend && overlayLines.map(line => (
             <div key={line.id} className="flex items-center gap-1.5 text-xs font-mono">
               <span className="inline-block w-2.5 h-2.5 rounded-sm shrink-0" style={{ backgroundColor: line.color }} />
               <span className="truncate max-w-[140px] text-foreground/90">{line.label}</span>

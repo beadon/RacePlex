@@ -7,7 +7,7 @@ import { detectBrakingZones, BrakingZoneConfig } from '@/lib/brakingZones';
 import { unionBounds, cropOverlayLinesToWindow, type OverlayLine } from '@/lib/lapOverlays';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { useSettingsContext } from '@/contexts/SettingsContext';
-import { Moon, Satellite, Square, WifiOff, Zap, Octagon, Map as MapIcon, X, Crosshair, Eye, EyeOff } from 'lucide-react';
+import { Moon, Satellite, Square, WifiOff, Zap, Octagon, Map as MapIcon, X, Crosshair, List, ChevronDown, ChevronUp } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 
 type MapStyle = 'dark' | 'satellite' | 'none';
@@ -59,22 +59,20 @@ interface MiniMapProps {
   /** Whether cross-session overlays are drift-aligned onto the current lap. */
   alignOverlays?: boolean;
   onToggleAlignOverlays?: () => void;
-  /** Show the overlay racing lines on the map (selections survive when off). */
-  overlaysVisible?: boolean;
-  onToggleOverlaysVisible?: () => void;
+  /** Expand the overlay legend (per-lap list). Racing lines stay drawn when collapsed. */
+  showOverlayLegend?: boolean;
+  onToggleOverlayLegend?: () => void;
 }
 
-export function MiniMap({ samples, allSamples, referenceSamples = [], currentIndex, course, bounds, isAllLaps, overlayLines = [], rangeStart = 0, onRemoveOverlay, alignOverlays, onToggleAlignOverlays, overlaysVisible = true, onToggleOverlaysVisible }: MiniMapProps) {
+export function MiniMap({ samples, allSamples, referenceSamples = [], currentIndex, course, bounds, isAllLaps, overlayLines = [], rangeStart = 0, onRemoveOverlay, alignOverlays, onToggleAlignOverlays, showOverlayLegend = true, onToggleOverlayLegend }: MiniMapProps) {
   const { useKph, brakingZoneSettings } = useSettingsContext();
 
   // Crop overlay racing lines to the same playback window as the active lap, so
   // cropping the range shrinks them on the map exactly like the heatmap line
   // (`samples` is the cropped window; `allSamples` is the full current lap).
   const drawnOverlayLines = useMemo(
-    () => overlaysVisible
-      ? cropOverlayLinesToWindow(overlayLines, allSamples, rangeStart, rangeStart + samples.length - 1)
-      : [],
-    [overlaysVisible, overlayLines, allSamples, rangeStart, samples.length],
+    () => cropOverlayLinesToWindow(overlayLines, allSamples, rangeStart, rangeStart + samples.length - 1),
+    [overlayLines, allSamples, rangeStart, samples.length],
   );
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
@@ -268,17 +266,18 @@ export function MiniMap({ samples, allSamples, referenceSamples = [], currentInd
       {/* Overlay legend - lower right */}
       {overlayLines.length > 0 && (
         <div className="absolute bottom-2 right-2 z-[1000] max-w-[55%] max-h-[40%] overflow-y-auto rounded bg-card/90 backdrop-blur-sm border border-border p-1.5 space-y-1 scrollbar-thin">
-          {onToggleOverlaysVisible && (
+          {onToggleOverlayLegend && (
             <button
-              onClick={onToggleOverlaysVisible}
-              className={`flex w-full items-center gap-1.5 text-[11px] font-mono ${overlaysVisible ? 'text-primary' : 'text-muted-foreground'}`}
-              title={overlaysVisible ? 'Hide overlay lines' : `Show ${overlayLines.length} overlay line${overlayLines.length === 1 ? '' : 's'}`}
+              onClick={onToggleOverlayLegend}
+              className={`flex w-full items-center gap-1.5 text-[11px] font-mono ${showOverlayLegend ? 'text-primary' : 'text-muted-foreground'}`}
+              title={showOverlayLegend ? 'Collapse overlay list' : `Show overlay list (${overlayLines.length})`}
             >
-              {overlaysVisible ? <Eye className="w-3 h-3 shrink-0" /> : <EyeOff className="w-3 h-3 shrink-0" />}
-              <span>{overlaysVisible ? 'Overlay lines' : `${overlayLines.length} hidden`}</span>
+              <List className="w-3 h-3 shrink-0" />
+              <span>{showOverlayLegend ? 'Overlays' : `${overlayLines.length} overlay${overlayLines.length === 1 ? '' : 's'}`}</span>
+              {showOverlayLegend ? <ChevronDown className="w-3 h-3 shrink-0 ml-auto" /> : <ChevronUp className="w-3 h-3 shrink-0 ml-auto" />}
             </button>
           )}
-          {overlaysVisible && onToggleAlignOverlays && overlayLines.some(l => !l.id.startsWith('lap:')) && (
+          {showOverlayLegend && onToggleAlignOverlays && overlayLines.some(l => !l.id.startsWith('lap:')) && (
             <button
               onClick={onToggleAlignOverlays}
               className={`flex w-full items-center gap-1.5 text-[11px] font-mono ${alignOverlays ? 'text-primary' : 'text-muted-foreground'}`}
@@ -288,7 +287,7 @@ export function MiniMap({ samples, allSamples, referenceSamples = [], currentInd
               <span>Align lines: {alignOverlays ? 'on' : 'off'}</span>
             </button>
           )}
-          {overlaysVisible && overlayLines.map(line => (
+          {showOverlayLegend && overlayLines.map(line => (
             <div key={line.id} className="flex items-center gap-1.5 text-[11px] font-mono">
               <span className="inline-block w-2.5 h-2.5 rounded-sm shrink-0" style={{ backgroundColor: line.color }} />
               <span className="truncate text-foreground/90">{line.label}</span>

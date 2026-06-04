@@ -69,8 +69,8 @@ export interface GraphViewPanelProps {
   onRemoveOverlay?: (id: string) => void;
   alignOverlays?: boolean;
   onToggleAlignOverlays?: () => void;
-  overlaysVisible?: boolean;
-  onToggleOverlaysVisible?: () => void;
+  showOverlayLegend?: boolean;
+  onToggleOverlayLegend?: () => void;
 }
 
 export function GraphViewPanel(props: GraphViewPanelProps) {
@@ -161,8 +161,8 @@ export function GraphViewPanel(props: GraphViewPanelProps) {
                 onRemoveOverlay={props.onRemoveOverlay}
                 alignOverlays={props.alignOverlays}
                 onToggleAlignOverlays={props.onToggleAlignOverlays}
-                overlaysVisible={props.overlaysVisible}
-                onToggleOverlaysVisible={props.onToggleOverlaysVisible}
+                showOverlayLegend={props.showOverlayLegend}
+                onToggleOverlayLegend={props.onToggleOverlayLegend}
               />
             </ResizablePanel>
           </ResizablePanelGroup>

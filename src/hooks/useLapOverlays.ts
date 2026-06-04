@@ -43,10 +43,10 @@ export function useLapOverlays({
   const [overlaySelections, setOverlaySelections] = useState<string[]>([]);
   const [externalOverlays, setExternalOverlays] = useState<Record<string, ExternalOverlay>>({});
   const [alignOverlays, setAlignOverlays] = useState(true);
-  // View-only toggle: hide the overlay racing lines from the maps (and their
-  // legend) without dropping the selections, so a crowded line-up (5+ overlays)
-  // can be tucked away without re-picking each lap. Selections survive.
-  const [overlaysVisible, setOverlaysVisible] = useState(true);
+  // View-only toggle: collapse the overlay *legend* (the per-lap list shown on
+  // the maps) without touching the racing lines themselves, so a crowded line-up
+  // (5+ overlays) doesn't bury the map under labels. Lines stay drawn.
+  const [showOverlayLegend, setShowOverlayLegend] = useState(true);
   // Parsed external files (samples + laps) cached by name, for the picker.
   const parsedFiles = useRef<Map<string, { samples: GpsSample[]; laps: Lap[] }>>(new Map());
 
@@ -73,7 +73,7 @@ export function useLapOverlays({
 
   const clearOverlays = useCallback(() => setOverlaySelections([]), []);
   const toggleAlignOverlays = useCallback(() => setAlignOverlays((v) => !v), []);
-  const toggleOverlaysVisible = useCallback(() => setOverlaysVisible((v) => !v), []);
+  const toggleOverlayLegend = useCallback(() => setShowOverlayLegend((v) => !v), []);
 
   // Load another saved file and compute its laps for the current course (for the
   // overlay picker). Returns the lap list, or null when it can't be used.
@@ -137,8 +137,8 @@ export function useLapOverlays({
     clearOverlays,
     alignOverlays,
     toggleAlignOverlays,
-    overlaysVisible,
-    toggleOverlaysVisible,
+    showOverlayLegend,
+    toggleOverlayLegend,
     loadOverlayFile,
     addExternalOverlay,
   };
