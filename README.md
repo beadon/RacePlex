@@ -500,7 +500,7 @@ Built on the shoulders of these incredible open-source projects and free service
 - [Leaflet](https://leafletjs.com) · [OpenStreetMap](https://www.openstreetmap.org)
 - [TanStack Query](https://tanstack.com/query) · [Sonner](https://sonner.emilkowal.dev) · [react-resizable-panels](https://github.com/bvaughn/react-resizable-panels)
 - [mp4-muxer](https://github.com/Vanilagy/mp4-muxer) · [Savitzky-Golay (ml.js)](https://github.com/mljs/savitzky-golay) · [JSZip](https://stuk.github.io/jszip) · [fix-webm-duration](https://github.com/yusitnikov/fix-webm-duration)
-- [IEM ASOS (Iowa State)](https://mesonet.agron.iastate.edu) · [NWS API](https://www.weather.gov/documentation/services-web-api)
+- [IEM ASOS (Iowa State)](https://mesonet.agron.iastate.edu) · [NWS API](https://www.weather.gov/documentation/services-web-api) · [Open-Meteo](https://open-meteo.com) (global weather fallback, CC-BY 4.0)
 - [MoTeC i2](https://www.motec.com.au) (file format reference)
 - [libxrk](https://github.com/m3rlin45/libxrk) (MIT) + [TrackDataAnalysis](https://github.com/racer-coder/TrackDataAnalysis) (MIT) — AiM XRK/XRZ parser (Rust → WebAssembly)
 

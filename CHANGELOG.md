@@ -14,6 +14,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Worldwide weather.** Session + local weather now work outside the US. The
+  precise US path is unchanged (nearest NWS/ASOS station → historical METAR), but
+  when there's no US station (e.g. a session in Europe) it falls back to
+  [Open-Meteo](https://open-meteo.com)'s free, keyless, global historical
+  reanalysis by lat/lon — so temperature, humidity, pressure, density altitude,
+  and wind resolve anywhere. The source is shown in the widget ("Open-Meteo") and
+  cached per session like the station lookup.
 - **Native AiM `.xrk` / `.xrz` import.** MyChron / SoloDL binary logs can now be
   opened directly — drag in a `.xrk` (or zlib-compressed `.xrz`) and it flows
   through the normal analysis/plot pipeline like any other format, including as a

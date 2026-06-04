@@ -16,6 +16,7 @@ const CREDITS: ReadonlyArray<readonly [name: string, url: string]> = [
   ["TanStack Query", "https://tanstack.com/query"],
   ["IEM ASOS (Iowa State)", "https://mesonet.agron.iastate.edu"],
   ["NWS API", "https://www.weather.gov/documentation/services-web-api"],
+  ["Open-Meteo", "https://open-meteo.com"],
   ["Savitzky-Golay (ml.js)", "https://github.com/mljs/savitzky-golay"],
   ["Sonner", "https://sonner.emilkowal.dev"],
   ["react-resizable-panels", "https://github.com/bvaughn/react-resizable-panels"],
