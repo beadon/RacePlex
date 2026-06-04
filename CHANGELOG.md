@@ -21,6 +21,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   reanalysis by lat/lon — so temperature, humidity, pressure, density altitude,
   and wind resolve anywhere. The source is shown in the widget ("Open-Meteo") and
   cached per session like the station lookup.
+- **Pick the satellite imagery date (dodge clouds).** The default Esri satellite
+  basemap is a single best-available mosaic, so whatever clouds or seasonal cover
+  were in that capture are baked in. The race-line map's satellite view now has a
+  date picker (powered by Esri Wayback) to step back to an earlier, cloud-free
+  capture of the same track. Online-only and lazy-loaded — it never runs for
+  offline users or anyone on the default imagery.
 - **Native AiM `.xrk` / `.xrz` import.** MyChron / SoloDL binary logs can now be
   opened directly — drag in a `.xrk` (or zlib-compressed `.xrz`) and it flows
   through the normal analysis/plot pipeline like any other format, including as a
