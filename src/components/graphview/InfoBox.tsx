@@ -35,6 +35,7 @@ interface InfoBoxProps {
   sessionSetupId: string | null;
   onSaveSessionSetup: (kartId: string | null, setupId: string | null) => Promise<void>;
   onOpenSetupEditor?: (setupId: string) => void;
+  onOpenGarage?: (garageTab?: 'files' | 'vehicles' | 'setups' | 'notes') => void;
   videoState?: VideoSyncState;
   videoActions?: VideoSyncActions;
   onVideoLoadedMetadata?: () => void;
@@ -57,7 +58,7 @@ export function InfoBox({
   filteredSamples, course, lapTimeMs, paceDiff, paceDiffLabel,
   deltaTopSpeed, deltaMinSpeed, referenceLapNumber, lapToFastestDelta,
   sessionGpsPoint, sessionStartDate, cachedWeatherStation, onWeatherStationResolved,
-  vehicles, setups, templates, sessionKartId, sessionSetupId, onSaveSessionSetup, onOpenSetupEditor,
+  vehicles, setups, templates, sessionKartId, sessionSetupId, onSaveSessionSetup, onOpenSetupEditor, onOpenGarage,
   videoState, videoActions, onVideoLoadedMetadata, currentSample,
   visibleSamples, allSamples, currentIndex, fieldMappings, laps, selectedLapNumber,
   referenceSamples, paceData, sessionFileName,
@@ -252,6 +253,16 @@ export function InfoBox({
                   </SelectContent>
                 </Select>
                 <Button className="w-full" size="sm" onClick={handleSave} disabled={isSaved}>Save Selection</Button>
+                {onOpenGarage && (
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    size="sm"
+                    onClick={() => onOpenGarage(vehicles.length > 0 ? 'setups' : 'vehicles')}
+                  >
+                    Open Garage
+                  </Button>
+                )}
               </div>
             )}
           </>

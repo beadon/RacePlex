@@ -31,6 +31,7 @@ export const GraphViewTab = memo(function GraphViewTab() {
       sessionKartId={s.sessionKartId}
       sessionSetupId={s.sessionSetupId}
       onSaveSessionSetup={s.onSaveSessionSetup}
+      onOpenGarage={s.onOpenGarage}
       visibleRange={s.visibleRange}
       onRangeChange={s.onRangeChange}
       minRange={s.minRange}

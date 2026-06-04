@@ -80,6 +80,10 @@ export function LapSnapshotControls({
           <DialogTitle>Lap Snapshots</DialogTitle>
         </DialogHeader>
 
+        <p className="text-xs text-muted-foreground">
+          You can only save one snapshot per engine per course. It records the full lap data, along with the setup information from the recorded session.
+        </p>
+
         {showSave && (
           <>
             <Button

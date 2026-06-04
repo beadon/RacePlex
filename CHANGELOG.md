@@ -14,6 +14,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **"Open Garage" shortcut in the Pro vehicle tab.** When no vehicle is linked to
+  the session, the Pro-view **Vehicle** tab now shows an **Open Garage** button
+  below **Save Selection** that opens the file-manager drawer straight to the
+  relevant Garage sub-tab — **Vehicles** when you have no vehicles yet, or
+  **Setups** when you already have one — so you can create what you need without
+  hunting for the tab.
+- **Inline helper text in the Overlays and Snapshots menus.** The Overlays menu
+  now notes that overlays are separate from the main reference lap (where deltas
+  are calculated from), and the Snapshots menu explains that you can save one
+  snapshot per engine per course, capturing the full lap plus the session's setup
+  information.
+- **Video panel note when empty.** The "No video loaded" state now mentions that
+  segmented videos are not yet supported.
 - **Overlays menu — manage overlay lines and set references in one place.** The
   header **Overlays** button (renamed from "Overlay file") now opens a
   three-section menu: **Current overlays** lists every active overlay line, lets

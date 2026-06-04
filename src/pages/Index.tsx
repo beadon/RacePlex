@@ -397,6 +397,7 @@ export default function Index() {
     onFieldToggle: sessionData.handleFieldToggle,
     onWeatherStationResolved: sessionMeta.handleWeatherStationResolved,
     onSaveSessionSetup: handleSaveSessionSetupWithSnapshot,
+    onOpenGarage: fileManager.open,
     formatRangeLabel,
   }), [
     data, visibleSamples, filteredSamples, referenceSamples, currentSample, fieldMappings,
@@ -418,7 +419,7 @@ export default function Index() {
     handleSelectExternalLapWithClear, handleClearExternalRefWithSnapshot, handleLoadFileForRef,
     refreshSavedFiles, handleRangeChange,
     sessionData.handleFieldToggle, sessionMeta.handleWeatherStationResolved,
-    handleSaveSessionSetupWithSnapshot, formatRangeLabel,
+    handleSaveSessionSetupWithSnapshot, fileManager.open, formatRangeLabel,
   ]);
 
   // Shared FileManagerDrawer props
@@ -435,6 +436,7 @@ export default function Index() {
     onSaveFile: fileManager.saveFile,
     onDataLoaded: handleDataLoaded,
     autoSave: settings.autoSaveFiles,
+    initialGarageTab: fileManager.initialGarageTab,
     showProfile,
     vehicles: vehicleManager.vehicles,
     vehicleTypes: templateManager.vehicleTypes,
@@ -463,6 +465,7 @@ export default function Index() {
   }), [
     fileManager.isOpen, fileManager.files, fileManager.fileMetadataMap, fileManager.storageUsed, fileManager.storageQuota,
     fileManager.close, fileManager.loadFile, fileManager.removeFile, fileManager.exportFile, fileManager.saveFile,
+    fileManager.initialGarageTab,
     handleDataLoaded, settings.autoSaveFiles, showProfile,
     vehicleManager.vehicles, vehicleManager.addVehicle, vehicleManager.updateVehicle, vehicleManager.removeVehicle,
     templateManager.vehicleTypes, templateManager.templates, templateManager.addVehicleType, templateManager.removeVehicleType,
@@ -569,7 +572,7 @@ export default function Index() {
           />
 
           <SettingsModal settings={settings} onSettingsChange={setSettings} onToggleFieldDefault={toggleFieldDefault} />
-          <Button variant="outline" size="icon" className="h-8 w-8" onClick={fileManager.open}>
+          <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => fileManager.open()}>
             <FolderOpen className="w-4 h-4" />
           </Button>
         </div>

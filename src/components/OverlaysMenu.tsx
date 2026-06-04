@@ -154,6 +154,10 @@ export function OverlaysMenu({
           <DialogTitle>Overlays</DialogTitle>
         </DialogHeader>
 
+        <p className="text-xs text-muted-foreground">
+          Overlays are technically separate from the main reference lap — the reference lap is where deltas are calculated from.
+        </p>
+
         <div className="overflow-y-auto flex-1 -mx-2 px-2 divide-y divide-border">
           {/* ── Section 1: current overlays ────────────────────────────── */}
           <Collapsible open={showCurrent} onOpenChange={setShowCurrent}>
