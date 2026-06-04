@@ -5,7 +5,8 @@ import { G_FORCE_FIELDS, applySmoothingToValues, computeSmoothingWindowSize, det
 import { useSettingsContext } from '@/contexts/SettingsContext';
 import { getChartColors } from '@/lib/chartColors';
 import { buildChartAxis } from '@/lib/chartAxis';
-import { alignByDistance } from '@/lib/referenceUtils';
+import { alignByDistance, alignValuesByDistance } from '@/lib/referenceUtils';
+import { computeBrakingGSeriesSG, gToBrakePercent } from '@/lib/brakingZones';
 import type { OverlayLine } from '@/lib/lapOverlays';
 import { GraphResizeHandle } from './GraphResizeHandle';
 
@@ -41,7 +42,7 @@ export function SingleSeriesChart({
   allSamples, rangeStart, overlayLines = [],
   height, onHeightChange,
 }: SingleSeriesChartProps) {
-  const { useKph, gForceSmoothing, gForceSmoothingStrength, darkMode, chartXAxis } = useSettingsContext();
+  const { useKph, gForceSmoothing, gForceSmoothingStrength, darkMode, chartXAxis, brakingZoneSettings } = useSettingsContext();
   const chartColors = useMemo(() => getChartColors(darkMode), [darkMode]);
   const axis = useMemo(
     () => buildChartAxis(samples, chartXAxis, { useKph, fullSamples: allSamples, rangeStart }),
@@ -90,14 +91,27 @@ export function SingleSeriesChart({
   }, [rawValues, isGForce, smoothingWindowSize]);
 
   // Distance-align each overlay lap's value for this series onto the current
-  // lap. Only for real measured series (speed / channels) — the synthetic pace
-  // and brake-% series are reference-relative / derived, so they don't overlay.
+  // lap. The synthetic pace series is reference-relative, so it can't overlay;
+  // brake % is derived per-lap (computed below), every other series reads
+  // straight off the sample.
   const overlaySeries = useMemo(() => {
-    if (isPace || isBrakingG) return [];
+    if (isPace) return [];
     const full = allSamples ?? samples;
     if (overlayLines.length === 0 || full.length === 0) return [];
     const start = rangeStart ?? 0;
     const end = start + samples.length;
+    if (isBrakingG) {
+      // Derive each overlay lap's brake % from its own samples, then align it
+      // onto the current lap's distance axis (mirrors the reference brake line).
+      return overlayLines.map((line) => {
+        const brakePct = gToBrakePercent(
+          computeBrakingGSeriesSG(line.samples, brakingZoneSettings.graphWindow),
+          brakingZoneSettings.brakeMaxG,
+        );
+        const values = alignValuesByDistance(full, line.samples, brakePct).slice(start, end);
+        return { id: line.id, color: line.color, label: line.label, values };
+      });
+    }
     const getValue = isSpeed
       ? (s: GpsSample) => (useKph ? s.speedKph : s.speedMph)
       : (s: GpsSample) => s.extraFields[seriesKey];
@@ -111,7 +125,7 @@ export function SingleSeriesChart({
       }
       return { id: line.id, color: line.color, label: line.label, values };
     });
-  }, [overlayLines, allSamples, samples, rangeStart, isSpeed, isPace, isBrakingG, isGForce, seriesKey, useKph, smoothingWindowSize]);
+  }, [overlayLines, allSamples, samples, rangeStart, isSpeed, isPace, isBrakingG, isGForce, seriesKey, useKph, smoothingWindowSize, brakingZoneSettings.graphWindow, brakingZoneSettings.brakeMaxG]);
 
   // Speed glitch filtering
   const interpolateIndices = useMemo(() => {

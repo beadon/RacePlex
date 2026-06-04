@@ -3,6 +3,8 @@ import { X } from 'lucide-react';
 import { GpsSample } from '@/types/racing';
 import { computeSmoothingWindowSize } from '@/lib/chartUtils';
 import { pickGForcePair, computeGGPoints, computeGGAxisMax } from '@/lib/ggDiagram';
+import { alignValuesByDistance } from '@/lib/referenceUtils';
+import type { OverlayLine } from '@/lib/lapOverlays';
 import { useSettingsContext } from '@/contexts/SettingsContext';
 import { getChartColors } from '@/lib/chartColors';
 import { GraphResizeHandle } from './GraphResizeHandle';
@@ -13,6 +15,8 @@ export const GG_DEFAULT_HEIGHT = 240;
 interface GGDiagramProps {
   samples: GpsSample[];
   referenceSamples?: GpsSample[];
+  /** Selected multi-lap overlays — an alternative comparison cloud (toggle). */
+  overlayLines?: OverlayLine[];
   currentIndex: number;
   label: string;
   onDelete: () => void;
@@ -22,10 +26,13 @@ interface GGDiagramProps {
   onHeightChange?: (height: number) => void;
 }
 
+type CompareMode = 'ref' | 'overlays';
+type BoxAxis = 'lat' | 'lon';
+
 const SESSION_COLOR = 'hsl(180, 70%, 55%)'; // cyan cloud (matches speed series)
 const CURRENT_COLOR = 'hsl(0, 75%, 55%)';   // red current point
 
-export function GGDiagram({ samples, referenceSamples, currentIndex, label, onDelete, height, onHeightChange }: GGDiagramProps) {
+export function GGDiagram({ samples, referenceSamples, overlayLines = [], currentIndex, label, onDelete, height, onHeightChange }: GGDiagramProps) {
   const { gForceSmoothing, gForceSmoothingStrength, gForceSource, darkMode } = useSettingsContext();
   const chartColors = useMemo(() => getChartColors(darkMode), [darkMode]);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -36,6 +43,18 @@ export function GGDiagram({ samples, referenceSamples, currentIndex, label, onDe
   const committedHeight = height ?? GG_DEFAULT_HEIGHT;
   const [cardHeight, setCardHeight] = useState(committedHeight);
   useEffect(() => { setCardHeight(committedHeight); }, [committedHeight]);
+
+  const hasReference = !!referenceSamples && referenceSamples.length > 0;
+  const hasOverlays = overlayLines.length > 0;
+
+  // Which comparison cloud to draw beneath the session. Falls back to whichever
+  // source is present; the header toggle only shows when both exist.
+  const [compareMode, setCompareMode] = useState<CompareMode>('ref');
+  const activeMode: CompareMode = compareMode === 'overlays' && !hasOverlays
+    ? 'ref'
+    : compareMode === 'ref' && !hasReference && hasOverlays
+      ? 'overlays'
+      : compareMode;
 
   const smoothingWindow = useMemo(
     () => computeSmoothingWindowSize(gForceSmoothing, gForceSmoothingStrength),
@@ -49,12 +68,67 @@ export function GGDiagram({ samples, referenceSamples, currentIndex, label, onDe
     [samples, pair, smoothingWindow],
   );
   const refPoints = useMemo(
-    () => (pair && referenceSamples && referenceSamples.length > 0
-      ? computeGGPoints(referenceSamples, pair, smoothingWindow)
+    () => (pair && hasReference
+      ? computeGGPoints(referenceSamples!, pair, smoothingWindow)
       : []),
-    [referenceSamples, pair, smoothingWindow],
+    [referenceSamples, hasReference, pair, smoothingWindow],
   );
-  const axisMax = useMemo(() => computeGGAxisMax(sessionPoints, refPoints), [sessionPoints, refPoints]);
+  // One cloud per selected overlay lap, each drawn in its own line color.
+  const overlayClouds = useMemo(
+    () => (pair
+      ? overlayLines.map((line) => ({
+          color: line.color,
+          points: computeGGPoints(line.samples, pair, smoothingWindow),
+        }))
+      : []),
+    [overlayLines, pair, smoothingWindow],
+  );
+
+  const axisMax = useMemo(
+    () => computeGGAxisMax(
+      sessionPoints,
+      ...(activeMode === 'overlays' ? overlayClouds.map((c) => c.points) : [refPoints]),
+    ),
+    [sessionPoints, refPoints, overlayClouds, activeMode],
+  );
+
+  // Which axis the readout box lists. Lateral by default — showing both lat and
+  // lon for every cloud gets noisy fast, so the box toggles between them.
+  const [boxAxis, setBoxAxis] = useState<BoxAxis>('lat');
+
+  // Per-cloud readout rows for the info box: the session plus the active
+  // comparison set, each carrying lat/lon series aligned to the current lap so a
+  // single scrub index reads the same track position across every cloud.
+  const boxRows = useMemo(() => {
+    if (!pair || sessionPoints.length === 0) return [];
+    const rows: { color: string; label: string; lat: (number | null)[]; lon: (number | null)[] }[] = [
+      {
+        color: SESSION_COLOR,
+        label: 'Session',
+        lat: sessionPoints.map((p) => (p ? p.x : null)),
+        lon: sessionPoints.map((p) => (p ? p.y : null)),
+      },
+    ];
+    if (activeMode === 'overlays') {
+      overlayLines.forEach((line, i) => {
+        const pts = overlayClouds[i]?.points ?? [];
+        rows.push({
+          color: line.color,
+          label: line.label,
+          lat: alignValuesByDistance(samples, line.samples, pts.map((p) => (p ? p.x : null))),
+          lon: alignValuesByDistance(samples, line.samples, pts.map((p) => (p ? p.y : null))),
+        });
+      });
+    } else if (hasReference) {
+      rows.push({
+        color: chartColors.refLine,
+        label: 'Reference',
+        lat: alignValuesByDistance(samples, referenceSamples!, refPoints.map((p) => (p ? p.x : null))),
+        lon: alignValuesByDistance(samples, referenceSamples!, refPoints.map((p) => (p ? p.y : null))),
+      });
+    }
+    return rows;
+  }, [pair, sessionPoints, activeMode, overlayLines, overlayClouds, hasReference, referenceSamples, refPoints, samples, chartColors.refLine]);
 
   // Resize observer
   useEffect(() => {
@@ -151,24 +225,20 @@ export function GGDiagram({ samples, referenceSamples, currentIndex, label, onDe
       ctx.globalAlpha = 1;
     };
 
-    drawCloud(refPoints, chartColors.refLine, 0.5);
+    if (activeMode === 'overlays') {
+      for (const cloud of overlayClouds) drawCloud(cloud.points, cloud.color, 0.5);
+    } else {
+      drawCloud(refPoints, chartColors.refLine, 0.5);
+    }
     drawCloud(sessionPoints, SESSION_COLOR, 0.45);
 
-    // Current point.
+    // Current point (its numeric readout lives in the HTML info box below).
     const cur = sessionPoints[currentIndex];
     if (cur) {
       ctx.beginPath();
       ctx.fillStyle = CURRENT_COLOR;
       ctx.arc(sx(cur.x), sy(cur.y), 4, 0, Math.PI * 2);
       ctx.fill();
-
-      // Readout in the bottom-right corner (clear of the header + delete button).
-      ctx.fillStyle = chartColors.axisText;
-      ctx.font = '10px JetBrains Mono, monospace';
-      ctx.textAlign = 'right';
-      ctx.textBaseline = 'bottom';
-      ctx.fillText(`Lon ${cur.y >= 0 ? '+' : ''}${cur.y.toFixed(2)}g`, dimensions.width - 4, dimensions.height - 4);
-      ctx.fillText(`Lat ${cur.x >= 0 ? '+' : ''}${cur.x.toFixed(2)}g`, dimensions.width - 4, dimensions.height - 16);
     }
 
     // Source badge, bottom-left.
@@ -177,7 +247,7 @@ export function GGDiagram({ samples, referenceSamples, currentIndex, label, onDe
     ctx.textAlign = 'left';
     ctx.textBaseline = 'bottom';
     ctx.fillText(pair.source, 4, dimensions.height - 4);
-  }, [dimensions, sessionPoints, refPoints, axisMax, currentIndex, pair, chartColors]);
+  }, [dimensions, sessionPoints, refPoints, overlayClouds, activeMode, axisMax, currentIndex, pair, chartColors]);
 
   return (
     <div className="relative border-b border-border flex flex-col" style={{ height: `${cardHeight}px` }}>
@@ -195,6 +265,44 @@ export function GGDiagram({ samples, referenceSamples, currentIndex, label, onDe
       <div ref={containerRef} className="flex-1 w-full min-h-0 overflow-hidden">
         <canvas ref={canvasRef} className="block w-full h-full" />
       </div>
+
+      {/* Bottom-right: comparison/axis toggles above a per-cloud value readout. */}
+      {boxRows.length > 0 && (
+        <div className="absolute bottom-2 right-2 z-10 flex flex-col items-end gap-1">
+          <div className="flex gap-1">
+            {hasReference && hasOverlays && (
+              <button
+                onClick={() => setCompareMode(activeMode === 'overlays' ? 'ref' : 'overlays')}
+                className="px-1.5 py-0.5 rounded border border-border bg-background/80 text-[10px] font-mono text-muted-foreground hover:bg-muted/50 transition-colors"
+                title="Toggle the comparison cloud between the reference lap and the selected overlays"
+              >
+                {activeMode === 'overlays' ? 'Overlays' : 'Ref'}
+              </button>
+            )}
+            <button
+              onClick={() => setBoxAxis((a) => (a === 'lat' ? 'lon' : 'lat'))}
+              className="px-1.5 py-0.5 rounded border border-border bg-background/80 text-[10px] font-mono text-muted-foreground hover:bg-muted/50 transition-colors"
+              title="Toggle the readout between lateral and longitudinal G"
+            >
+              {boxAxis === 'lat' ? 'Lat G' : 'Lon G'}
+            </button>
+          </div>
+          <div className="rounded border border-border bg-background/80 px-1.5 py-1 font-mono text-[10px] leading-tight">
+            {boxRows.map((row) => {
+              const v = boxAxis === 'lat' ? row.lat[currentIndex] : row.lon[currentIndex];
+              const text = v === null || v === undefined ? '—' : `${v >= 0 ? '+' : ''}${v.toFixed(2)}g`;
+              return (
+                <div key={row.label} className="flex items-center justify-end gap-1.5">
+                  <span className="max-w-[120px] truncate" style={{ color: row.color }}>
+                    {row.label}
+                  </span>
+                  <span className="tabular-nums text-foreground">{text}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
       <GraphResizeHandle
         height={cardHeight}
         onResize={setCardHeight}
