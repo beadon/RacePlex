@@ -13,6 +13,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **About dialog feature list refreshed.** The home-screen **About** popup now
+  lists the analysis features added across the last two releases — the G-G
+  diagram, distance/time chart axis, multi-lap overlay (including laps from past
+  sessions and other loggers), lap snapshots (fastest lap per engine/course), and
+  frozen per-session setup history.
+
 ## [2.1.0] - 2026-06-04
 
 ### Changed
