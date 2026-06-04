@@ -46,6 +46,8 @@ interface FileManagerDrawerProps {
   onSaveFile: (name: string, blob: Blob) => Promise<void>;
   onDataLoaded: (data: ParsedData, fileName?: string) => void;
   autoSave: boolean;
+  // Garage sub-tab to open straight to (defaults to "files").
+  initialGarageTab?: GarageTab;
   // Profile tab is gated on a plugin (cloud-sync) contributing a Profile panel.
   showProfile: boolean;
   // Vehicle props
@@ -82,6 +84,7 @@ interface FileManagerDrawerProps {
 export function FileManagerDrawer({
   isOpen, files, fileMetadataMap, storageUsed, storageQuota,
   onClose, onLoadFile, onDeleteFile, onExportFile, onSaveFile, onDataLoaded, autoSave,
+  initialGarageTab = "files",
   showProfile,
   vehicles, vehicleTypes, templates,
   onAddVehicle, onUpdateVehicle, onRemoveVehicle,
@@ -102,11 +105,11 @@ export function FileManagerDrawer({
   useEffect(() => {
     if (isOpen) {
       setTopTab("garage");
-      setGarageTab("files");
+      setGarageTab(initialGarageTab);
       setDeviceTab("settings");
       setBattery(null);
     }
-  }, [isOpen]);
+  }, [isOpen, initialGarageTab]);
 
   // Fetch battery on connect / when switching to device tab
   const fetchBattery = useCallback(async () => {

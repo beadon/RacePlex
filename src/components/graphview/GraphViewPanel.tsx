@@ -45,6 +45,7 @@ export interface GraphViewPanelProps {
   sessionSetupId: string | null;
   onSaveSessionSetup: (kartId: string | null, setupId: string | null) => Promise<void>;
   onOpenSetupEditor?: (setupId: string) => void;
+  onOpenGarage?: (garageTab?: 'files' | 'vehicles' | 'setups' | 'notes') => void;
   // Range slider
   visibleRange: [number, number];
   onRangeChange: (range: [number, number]) => void;
@@ -116,6 +117,7 @@ export function GraphViewPanel(props: GraphViewPanelProps) {
                 sessionSetupId={props.sessionSetupId}
                 onSaveSessionSetup={props.onSaveSessionSetup}
                 onOpenSetupEditor={props.onOpenSetupEditor}
+                onOpenGarage={props.onOpenGarage}
                 videoState={props.videoState}
                 videoActions={props.videoActions}
                 onVideoLoadedMetadata={props.onVideoLoadedMetadata}

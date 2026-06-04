@@ -119,6 +119,8 @@ export interface SessionContextValue {
   onFieldToggle: (fieldName: string) => void;
   onWeatherStationResolved: (station: WeatherStation) => void;
   onSaveSessionSetup: (kartId: string | null, setupId: string | null) => Promise<void>;
+  /** Open the file-manager drawer, optionally straight to a Garage sub-tab. */
+  onOpenGarage: (garageTab?: 'files' | 'vehicles' | 'setups' | 'notes') => void;
   formatRangeLabel: (idx: number) => string;
 }
 
