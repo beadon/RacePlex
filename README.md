@@ -98,7 +98,7 @@ All formats are auto-detected on import:
 | Framework | React 18 + TypeScript |
 | Build | Vite |
 | Styling | Tailwind CSS + shadcn/ui |
-| Mapping | Leaflet (OpenStreetMap) |
+| Mapping | Leaflet (CARTO basemaps + Esri World Imagery / Wayback) |
 | Charts | Custom Canvas 2D renderer |
 | Video Export | WebCodecs + [mp4-muxer](https://github.com/Vanilagy/mp4-muxer) (H.264 MP4) |
 | State | React Query |
@@ -497,7 +497,7 @@ Built on the shoulders of these incredible open-source projects and free service
 
 - [React](https://react.dev) · [Vite](https://vite.dev) · [TypeScript](https://www.typescriptlang.org)
 - [Tailwind CSS](https://tailwindcss.com) · [shadcn/ui](https://ui.shadcn.com) · [Radix UI](https://www.radix-ui.com) · [Lucide Icons](https://lucide.dev)
-- [Leaflet](https://leafletjs.com) · [OpenStreetMap](https://www.openstreetmap.org)
+- [Leaflet](https://leafletjs.com) · [CARTO basemaps](https://carto.com) · [Esri World Imagery & Wayback](https://livingatlas.arcgis.com/wayback/) (satellite + historical imagery dates)
 - [TanStack Query](https://tanstack.com/query) · [Sonner](https://sonner.emilkowal.dev) · [react-resizable-panels](https://github.com/bvaughn/react-resizable-panels)
 - [mp4-muxer](https://github.com/Vanilagy/mp4-muxer) · [Savitzky-Golay (ml.js)](https://github.com/mljs/savitzky-golay) · [JSZip](https://stuk.github.io/jszip) · [fix-webm-duration](https://github.com/yusitnikov/fix-webm-duration)
 - [IEM ASOS (Iowa State)](https://mesonet.agron.iastate.edu) · [NWS API](https://www.weather.gov/documentation/services-web-api)
