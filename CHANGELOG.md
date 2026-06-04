@@ -14,6 +14,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Glowing setup-status indicator in the tab bar.** When the loaded session has
+  no setup assigned, an exclamation icon glows just right of the **Coach** tab.
+  It glows **red** when there's nothing to assign yet — clicking opens the Garage
+  to **Vehicles** (or **Setups** if you already have a vehicle), where the empty
+  states now read "No vehicles yet" / "No setups yet" in red. It glows **orange**
+  when setups exist but this session isn't linked to one — clicking opens the
+  Garage **Notes** tab, which now shows an orange reminder that "a setup should
+  be saved for historical data comparisons."
 - **"Open Garage" shortcut in the Pro vehicle tab.** When no vehicle is linked to
   the session, the Pro-view **Vehicle** tab now shows an **Open Garage** button
   below **Save Selection** that opens the file-manager drawer straight to the
