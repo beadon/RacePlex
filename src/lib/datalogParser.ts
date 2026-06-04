@@ -8,6 +8,7 @@ import { parseDovexFile, isDovexFormat } from './dovexParser';
 import { parseAlfanoFile, isAlfanoFormat } from './alfanoParser';
 import { parseAimFile, isAimFormat } from './aimParser';
 import { isMotecLdFormat, parseMotecLdFile, isMotecCsvFormat, parseMotecCsvFile } from './motecParser';
+import { isXrkFile, parseXrkFile, type XrkProgressCallback } from './xrk/xrkImporter';
 
 /**
  * Unified datalog parser that auto-detects format and routes to appropriate parser.
@@ -20,10 +21,17 @@ import { isMotecLdFormat, parseMotecLdFile, isMotecCsvFormat, parseMotecCsvFile 
  * - Dove CSV format (simple CSV with Unix timestamps)
  * - Alfano CSV format (Alfano data loggers)
  * - AiM CSV format (MyChron 5/6, Race Studio 3 exports)
+ * - AiM XRK/XRZ binary format (MyChron/SoloDL — parsed in-browser via libxrk + Pyodide)
  * - NMEA text format (CSV with NMEA sentences, .nmea files)
+ *
+ * `onProgress` only fires for the async, worker-backed XRK path (Pyodide load +
+ * parse); every other format parses synchronously and ignores it.
  */
-export async function parseDatalogFile(file: File): Promise<ParsedData> {
-  return normalizeChannels(await routeDatalogFile(file));
+export async function parseDatalogFile(
+  file: File,
+  onProgress?: XrkProgressCallback,
+): Promise<ParsedData> {
+  return normalizeChannels(await routeDatalogFile(file, onProgress));
 }
 
 /**
@@ -33,14 +41,23 @@ export function parseDatalogContent(content: string | ArrayBuffer): ParsedData {
   return normalizeChannels(routeDatalogContent(content));
 }
 
-async function routeDatalogFile(file: File): Promise<ParsedData> {
+async function routeDatalogFile(
+  file: File,
+  onProgress?: XrkProgressCallback,
+): Promise<ParsedData> {
   const buffer = await file.arrayBuffer();
-  
+
+  // AiM XRK/XRZ binary — detected by extension or `<h` magic. Parsed in a
+  // Pyodide worker (libxrk), so this branch is async + the only one with progress.
+  if (isXrkFile(file.name, buffer)) {
+    return parseXrkFile(file, onProgress);
+  }
+
   // Check MoTeC LD binary format first (different magic bytes from UBX)
   if (isMotecLdFormat(buffer)) {
     return parseMotecLdFile(buffer);
   }
-  
+
   // Check if it's UBX binary format
   if (isUbxFormat(buffer)) {
     return parseUbxFile(buffer);
@@ -85,6 +102,14 @@ async function routeDatalogFile(file: File): Promise<ParsedData> {
 
 function routeDatalogContent(content: string | ArrayBuffer): ParsedData {
   if (content instanceof ArrayBuffer) {
+    // AiM XRK needs the async, worker-backed importer (Pyodide). This sync entry
+    // point can't run it — used for reference/overlay loads — so fail clearly
+    // rather than mis-detecting the binary as a text format.
+    if (isXrkFile("", content)) {
+      throw new Error(
+        "AiM .xrk/.xrz files can only be opened as the main session, not used as a reference or overlay source.",
+      );
+    }
     if (isMotecLdFormat(content)) {
       return parseMotecLdFile(content);
     }

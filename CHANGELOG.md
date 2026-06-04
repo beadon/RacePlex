@@ -13,6 +13,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Native AiM `.xrk` / `.xrz` import.** MyChron / SoloDL binary logs can now be
+  opened directly — drag in a `.xrk` (or zlib-compressed `.xrz`) and it flows
+  through the normal analysis/plot pipeline like any other format. Parsing runs
+  **entirely client-side** via [libxrk](https://github.com/m3rlin45/libxrk) on
+  [Pyodide](https://pyodide.org) (CPython on WebAssembly) in a Web Worker, so a
+  large session never freezes the UI. This is the one importer that needs the
+  network on first use — the Pyodide runtime + parser wheel download once, then
+  are service-worker-cached so later imports work offline. Import progress
+  (runtime load → parse → extract) is shown inline.
+
 ### Changed
 - **About dialog feature list refreshed.** The home-screen **About** popup now
   lists the analysis features added across the last two releases — the G-G

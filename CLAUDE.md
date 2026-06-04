@@ -102,6 +102,8 @@ src/
 ├── lib/
 │   ├── datalogParser.ts   # ★ Format auto-detection router (entry point for all parsing)
 │   ├── *Parser.ts         # nmea, ubx, vbo, dove, dovex, alfano, aim, motec (+ parserUtils.ts)
+│   ├── xrk/               # ★ AiM .xrk/.xrz importer — libxrk on Pyodide (WASM), in a Web Worker
+│   │                      #   (xrkImporter entry, xrkWorker, xrkClient, pure xrkMapping, xrkConfig/Types)
 │   ├── channels.ts        # ★ Canonical channel registry (ids/labels/units/aliases) + normalizeChannels()
 │   ├── fieldResolver.ts   # Settings-facing adapter over channels.ts
 │   ├── courseDetection.ts # ★ Auto track/course/direction detection + waypoint mode
@@ -277,7 +279,31 @@ Each parser exports two functions:
 3. Update `README.md` supported formats table
 4. Update this file's architecture map
 
-Detection order matters: binary formats first (MoTeC LD → UBX), then text formats from most-specific to least (VBO → MoTeC CSV → Dovex → Dove → Alfano → AiM → NMEA fallback).
+Detection order matters: AiM XRK/XRZ first (binary, by extension/`<h` magic), then other binary formats (MoTeC LD → UBX), then text formats from most-specific to least (VBO → MoTeC CSV → Dovex → Dove → Alfano → AiM CSV → NMEA fallback).
+
+### AiM XRK/XRZ (`src/lib/xrk/`) — the async exception
+
+AiM's native binary logs don't fit the sync `parseXxxFile` contract: they're
+parsed by **libxrk on Pyodide (CPython→WASM) in a Web Worker**. Flow:
+`isXrkFile()` (extension or `<h` magic) → `parseXrkFile(file, onProgress?)` →
+worker (`xrkWorker.ts`) boots Pyodide from a CDN, loads numpy/pyarrow,
+`micropip`-installs the **self-hosted wheel** (`public/xrk/`, relative URL),
+runs libxrk, resamples to the GPS timebase, and posts channels back as
+transferable `Float64Array`s → pure `xrkMapping.ts` builds `ParsedData` (then the
+router's `normalizeChannels` canonicalises it). Key facts:
+
+- **Only the async `parseDatalogFile()` path supports XRK** (FileImport + reopen
+  from FilesTab). The sync `parseDatalogContent()` (reference/overlay loads)
+  throws a clear error for XRK — it can't run the worker.
+- **Online-first, then cached** — the one importer that needs the network on
+  first use (offline-first exception). Pyodide runtime + wheel are
+  runtime-cached by the SW (`pyodide-runtime`/`xrk-wheel` caches in
+  `vite.config.ts`); the wheel is **not** precached.
+- **Pinned together**: `XRK_PYODIDE_VERSION` + `XRK_WHEEL_FILENAME`
+  (`xrkConfig.ts`) — the wheel's Emscripten ABI must match the Pyodide release.
+  Rebuild with `scripts/build-xrk-wheel.sh`. Licenses: `public/xrk/THIRD-PARTY-NOTICES.txt`.
+- `onProgress` is threaded `parseDatalogFile` → router → `parseXrkFile` (XRK
+  only); other formats ignore it.
 
 ---
 
