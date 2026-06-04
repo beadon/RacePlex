@@ -232,6 +232,7 @@ export function GraphPanel({
                   key={key}
                   samples={samples}
                   referenceSamples={referenceSamples}
+                  overlayLines={overlayLines}
                   currentIndex={currentIndex}
                   label={getLabel(key)}
                   onDelete={() => removeGraph(key)}

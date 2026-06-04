@@ -3,26 +3,43 @@ import { X } from 'lucide-react';
 import { GpsSample } from '@/types/racing';
 import { computeSmoothingWindowSize } from '@/lib/chartUtils';
 import { pickGForcePair, computeGGPoints, computeGGAxisMax } from '@/lib/ggDiagram';
+import type { OverlayLine } from '@/lib/lapOverlays';
 import { useSettingsContext } from '@/contexts/SettingsContext';
 import { getChartColors } from '@/lib/chartColors';
 
 interface GGDiagramProps {
   samples: GpsSample[];
   referenceSamples?: GpsSample[];
+  /** Selected multi-lap overlays — an alternative comparison cloud (toggle). */
+  overlayLines?: OverlayLine[];
   currentIndex: number;
   label: string;
   onDelete: () => void;
 }
 
+type CompareMode = 'ref' | 'overlays';
+
 const SESSION_COLOR = 'hsl(180, 70%, 55%)'; // cyan cloud (matches speed series)
 const CURRENT_COLOR = 'hsl(0, 75%, 55%)';   // red current point
 
-export function GGDiagram({ samples, referenceSamples, currentIndex, label, onDelete }: GGDiagramProps) {
+export function GGDiagram({ samples, referenceSamples, overlayLines = [], currentIndex, label, onDelete }: GGDiagramProps) {
   const { gForceSmoothing, gForceSmoothingStrength, gForceSource, darkMode } = useSettingsContext();
   const chartColors = useMemo(() => getChartColors(darkMode), [darkMode]);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+
+  const hasReference = !!referenceSamples && referenceSamples.length > 0;
+  const hasOverlays = overlayLines.length > 0;
+
+  // Which comparison cloud to draw beneath the session. Falls back to whichever
+  // source is present; the header toggle only shows when both exist.
+  const [compareMode, setCompareMode] = useState<CompareMode>('ref');
+  const activeMode: CompareMode = compareMode === 'overlays' && !hasOverlays
+    ? 'ref'
+    : compareMode === 'ref' && !hasReference && hasOverlays
+      ? 'overlays'
+      : compareMode;
 
   const smoothingWindow = useMemo(
     () => computeSmoothingWindowSize(gForceSmoothing, gForceSmoothingStrength),
@@ -36,12 +53,29 @@ export function GGDiagram({ samples, referenceSamples, currentIndex, label, onDe
     [samples, pair, smoothingWindow],
   );
   const refPoints = useMemo(
-    () => (pair && referenceSamples && referenceSamples.length > 0
-      ? computeGGPoints(referenceSamples, pair, smoothingWindow)
+    () => (pair && hasReference
+      ? computeGGPoints(referenceSamples!, pair, smoothingWindow)
       : []),
-    [referenceSamples, pair, smoothingWindow],
+    [referenceSamples, hasReference, pair, smoothingWindow],
   );
-  const axisMax = useMemo(() => computeGGAxisMax(sessionPoints, refPoints), [sessionPoints, refPoints]);
+  // One cloud per selected overlay lap, each drawn in its own line color.
+  const overlayClouds = useMemo(
+    () => (pair
+      ? overlayLines.map((line) => ({
+          color: line.color,
+          points: computeGGPoints(line.samples, pair, smoothingWindow),
+        }))
+      : []),
+    [overlayLines, pair, smoothingWindow],
+  );
+
+  const axisMax = useMemo(
+    () => computeGGAxisMax(
+      sessionPoints,
+      ...(activeMode === 'overlays' ? overlayClouds.map((c) => c.points) : [refPoints]),
+    ),
+    [sessionPoints, refPoints, overlayClouds, activeMode],
+  );
 
   // Resize observer
   useEffect(() => {
@@ -138,7 +172,11 @@ export function GGDiagram({ samples, referenceSamples, currentIndex, label, onDe
       ctx.globalAlpha = 1;
     };
 
-    drawCloud(refPoints, chartColors.refLine, 0.5);
+    if (activeMode === 'overlays') {
+      for (const cloud of overlayClouds) drawCloud(cloud.points, cloud.color, 0.5);
+    } else {
+      drawCloud(refPoints, chartColors.refLine, 0.5);
+    }
     drawCloud(sessionPoints, SESSION_COLOR, 0.45);
 
     // Current point.
@@ -164,13 +202,22 @@ export function GGDiagram({ samples, referenceSamples, currentIndex, label, onDe
     ctx.textAlign = 'left';
     ctx.textBaseline = 'bottom';
     ctx.fillText(pair.source, 4, dimensions.height - 4);
-  }, [dimensions, sessionPoints, refPoints, axisMax, currentIndex, pair, chartColors]);
+  }, [dimensions, sessionPoints, refPoints, overlayClouds, activeMode, axisMax, currentIndex, pair, chartColors]);
 
   return (
     <div className="relative border-b border-border" style={{ minHeight: '200px', height: '240px' }}>
-      <div className="absolute top-1 left-2 z-10 flex items-center gap-1.5 pointer-events-none">
-        <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: SESSION_COLOR }} />
-        <span className="text-xs font-mono text-muted-foreground">{label}</span>
+      <div className="absolute top-1 left-2 z-10 flex items-center gap-1.5">
+        <div className="w-2.5 h-2.5 rounded-full pointer-events-none" style={{ backgroundColor: SESSION_COLOR }} />
+        <span className="text-xs font-mono text-muted-foreground pointer-events-none">{label}</span>
+        {hasReference && hasOverlays && (
+          <button
+            onClick={() => setCompareMode(activeMode === 'overlays' ? 'ref' : 'overlays')}
+            className="ml-1 px-1.5 py-0.5 rounded border border-border text-[10px] font-mono text-muted-foreground hover:bg-muted/50 transition-colors"
+            title="Toggle the comparison cloud between the reference lap and the selected overlays"
+          >
+            {activeMode === 'overlays' ? 'Overlays' : 'Ref'}
+          </button>
+        )}
       </div>
       <button
         onClick={onDelete}

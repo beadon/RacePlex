@@ -14,6 +14,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Brake % graph now overlays your selected laps.** In Pro view, the computed
+  **Brake %** chart draws a line per active overlay lap/snapshot (distance-aligned,
+  in each overlay's color), matching the reference brake line — so you can compare
+  braking across every overlaid lap, not just the reference.
+- **G-G diagram: toggle the comparison cloud between Ref and Overlays.** When you
+  have both a reference lap and selected overlays, the G-G diagram header shows a
+  **Ref / Overlays** toggle that swaps the cloud drawn beneath your session — view
+  the friction circle of your selected overlay laps (each in its own color) instead
+  of only the reference.
 - **"Open Garage" shortcut in the Pro vehicle tab.** When no vehicle is linked to
   the session, the Pro-view **Vehicle** tab now shows an **Open Garage** button
   below **Save Selection** that opens the file-manager drawer straight to the
