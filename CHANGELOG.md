@@ -29,6 +29,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   it); slow ones — chiefly the new AiM XRK path — show a live status message so
   it's clear the app is working, not stuck.
 
+### Fixed
+- **Session date/time on untagged logs.** A session's start time is now recorded
+  on import even when its track isn't in the database yet (common for AiM XRK
+  logs from new venues), so the file browser shows the proper date/time name
+  instead of the raw filename, and the weather lookup has a timestamp to work
+  with. AiM XRK's separate log-date + log-time fields are combined into a real
+  timestamp (parsed explicitly so it works on Safari/iOS too).
+
 ### Changed
 - **About dialog feature list refreshed.** The home-screen **About** popup now
   lists the analysis features added across the last two releases — the G-G

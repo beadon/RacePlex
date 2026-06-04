@@ -181,29 +181,69 @@ export function mapXrkToParsedData(raw: XrkRawResult, _fileName: string): Parsed
   };
 }
 
+const valid = (d: Date): Date | undefined => (Number.isNaN(d.getTime()) ? undefined : d);
+
 /**
- * Best-effort wall-clock start time from libxrk metadata. AiM exposes the log
- * date/time under a few possible keys; an unparseable value just yields
- * undefined (the app falls back to the first sample for browser display names).
+ * Parse libxrk's date/time strings explicitly. libxrk emits US `MM/DD/YYYY` +
+ * `HH:MM:SS` — we build the Date from components rather than `new Date(string)`,
+ * which is implementation-defined for that format and rejected by Safari/iOS
+ * (this is a PWA). Returns undefined if the date doesn't match.
+ */
+function parseLibxrkDateTime(date: string, time?: string): Date | undefined {
+  const dm = date.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (!dm) return undefined;
+  const month = Number(dm[1]) - 1;
+  const day = Number(dm[2]);
+  const year = Number(dm[3]);
+  let h = 0;
+  let m = 0;
+  let s = 0;
+  const tm = time?.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+  if (tm) {
+    h = Number(tm[1]);
+    m = Number(tm[2]);
+    s = Number(tm[3] ?? 0);
+  }
+  return valid(new Date(year, month, day, h, m, s));
+}
+
+/**
+ * Best-effort wall-clock start time from libxrk metadata. libxrk exposes the log
+ * date + time as separate strings (`Log Date` "11/04/2025" + `Log Time`
+ * "15:50:07"), which we combine so the session carries the real time of day (the
+ * weather lookup + browser display name need more than a midnight date). Falls
+ * back to a date-only or epoch value; an unparseable value yields undefined.
  */
 export function parseXrkStartDate(metadata: Record<string, string | number>): Date | undefined {
-  const candidates = [
-    metadata["Log Date"],
-    metadata["Log Time"],
-    metadata["Date"],
-    metadata["Time"],
-    metadata["datetime"],
-  ];
-  for (const c of candidates) {
-    if (typeof c === "number" && Number.isFinite(c)) {
-      // Epoch seconds vs milliseconds heuristic.
-      const ms = c > 1e12 ? c : c * 1000;
-      const d = new Date(ms);
-      if (!Number.isNaN(d.getTime())) return d;
-    }
-    if (typeof c === "string") {
-      const d = new Date(c);
-      if (!Number.isNaN(d.getTime())) return d;
+  const str = (key: string): string | undefined => {
+    const v = metadata[key];
+    return typeof v === "string" && v.trim() ? v.trim() : undefined;
+  };
+
+  // Numeric epoch (seconds or ms).
+  const epoch = metadata["datetime"];
+  if (typeof epoch === "number" && Number.isFinite(epoch)) {
+    const d = valid(new Date(epoch > 1e12 ? epoch : epoch * 1000));
+    if (d) return d;
+  }
+
+  // libxrk's explicit MM/DD/YYYY + HH:MM:SS pairs (cross-browser safe).
+  for (const [dateKey, timeKey] of [
+    ["Log Date", "Log Time"],
+    ["Date", "Time"],
+  ]) {
+    const date = str(dateKey);
+    if (!date) continue;
+    const d = parseLibxrkDateTime(date, str(timeKey));
+    if (d) return d;
+  }
+
+  // Last-resort: hand anything else to the engine's Date parser (ISO etc.).
+  for (const key of ["datetime", "Log Date", "Date"]) {
+    const v = str(key);
+    if (v) {
+      const d = valid(new Date(v));
+      if (d) return d;
     }
   }
   return undefined;

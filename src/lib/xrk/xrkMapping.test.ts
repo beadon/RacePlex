@@ -115,6 +115,21 @@ describe("mapXrkToParsedData", () => {
 });
 
 describe("parseXrkStartDate", () => {
+  it("combines libxrk's separate Log Date + Log Time into one timestamp", () => {
+    const d = parseXrkStartDate({ "Log Date": "11/04/2025", "Log Time": "15:50:07" });
+    expect(d?.getFullYear()).toBe(2025);
+    expect(d?.getMonth()).toBe(10); // November
+    expect(d?.getDate()).toBe(4);
+    expect(d?.getHours()).toBe(15); // time of day preserved, not midnight
+    expect(d?.getMinutes()).toBe(50);
+  });
+
+  it("falls back to a date-only value when there's no time", () => {
+    const d = parseXrkStartDate({ "Log Date": "01/23/2016" });
+    expect(d?.getFullYear()).toBe(2016);
+    expect(d?.getHours()).toBe(0);
+  });
+
   it("parses a string date from metadata", () => {
     const d = parseXrkStartDate({ Date: "2025-11-04 15:50:00" });
     expect(d?.getFullYear()).toBe(2025);
