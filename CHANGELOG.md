@@ -16,10 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - **Desktop text labels on header controls.** On large (desktop) screens the
   **Settings** and **Garage** buttons in the header, the **track selection**
-  (pencil) button, and the **Snapshots** control now show a text label next to
-  their icon, taking advantage of the extra real estate. On tablet and mobile
-  these stay icon-only — the Snapshots control keeps its count bubble at every
-  size.
+  (pencil) button, and the **Snapshots** and **Overlays** controls now show a
+  text label next to their icon, taking advantage of the extra real estate. On
+  tablet and mobile these stay icon-only — the Snapshots and Overlays controls
+  keep their count bubble at every size.
 
 ### Added
 - **"Open Garage" shortcut in the Pro vehicle tab.** When no vehicle is linked to
