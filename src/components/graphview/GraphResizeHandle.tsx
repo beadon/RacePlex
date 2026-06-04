@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 
 /** Min/max pixel height a pro-mode graph can be dragged to. */
 export const GRAPH_MIN_HEIGHT = 120;
@@ -19,6 +19,11 @@ interface GraphResizeHandleProps {
  * A slim drag bar pinned to the bottom of a graph card. Pointer-drag adjusts the
  * card's height; the parent owns the height value (so it can persist per session).
  * Shared by SingleSeriesChart + GGDiagram.
+ *
+ * Uses pointer capture so the drag keeps tracking even when the finger/cursor
+ * leaves the slim handle — without it, mobile touches escape the 8px target and
+ * the browser reclaims the gesture as a scroll (firing pointercancel), which is
+ * why the drag would only move a few pixels at a time.
  */
 export function GraphResizeHandle({
   height,
@@ -28,42 +33,41 @@ export function GraphResizeHandle({
   max = GRAPH_MAX_HEIGHT,
 }: GraphResizeHandleProps) {
   const [dragging, setDragging] = useState(false);
+  const draggingRef = useRef(false);
   const startY = useRef(0);
   const startH = useRef(height);
   const latest = useRef(height);
 
-  const onPointerMove = useCallback((e: PointerEvent) => {
+  const onPointerDown = useCallback((e: React.PointerEvent) => {
+    e.preventDefault();
+    e.currentTarget.setPointerCapture(e.pointerId);
+    startY.current = e.clientY;
+    startH.current = height;
+    latest.current = height;
+    draggingRef.current = true;
+    setDragging(true);
+  }, [height]);
+
+  const onPointerMove = useCallback((e: React.PointerEvent) => {
+    if (!draggingRef.current) return;
     const next = Math.max(min, Math.min(max, startH.current + (e.clientY - startY.current)));
     latest.current = next;
     onResize(next);
   }, [min, max, onResize]);
 
-  const onPointerUp = useCallback(() => {
-    window.removeEventListener('pointermove', onPointerMove);
-    window.removeEventListener('pointerup', onPointerUp);
+  const endDrag = useCallback(() => {
+    if (!draggingRef.current) return;
+    draggingRef.current = false;
     setDragging(false);
     onCommit(latest.current);
-  }, [onPointerMove, onCommit]);
-
-  const onPointerDown = useCallback((e: React.PointerEvent) => {
-    e.preventDefault();
-    startY.current = e.clientY;
-    startH.current = height;
-    latest.current = height;
-    setDragging(true);
-    window.addEventListener('pointermove', onPointerMove);
-    window.addEventListener('pointerup', onPointerUp);
-  }, [height, onPointerMove, onPointerUp]);
-
-  // Safety net: detach window listeners if we unmount mid-drag.
-  useEffect(() => () => {
-    window.removeEventListener('pointermove', onPointerMove);
-    window.removeEventListener('pointerup', onPointerUp);
-  }, [onPointerMove, onPointerUp]);
+  }, [onCommit]);
 
   return (
     <div
       onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={endDrag}
+      onPointerCancel={endDrag}
       className="group/handle shrink-0 h-2 flex items-center justify-center cursor-ns-resize z-20 touch-none"
       title="Drag to resize"
       role="separator"
