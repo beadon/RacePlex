@@ -9,6 +9,7 @@ import { parseAlfanoFile, isAlfanoFormat } from './alfanoParser';
 import { parseAimFile, isAimFormat } from './aimParser';
 import { isMotecLdFormat, parseMotecLdFile, isMotecCsvFormat, parseMotecCsvFile } from './motecParser';
 import { isXrkFile, parseXrkFile, type XrkProgressCallback } from './xrk/xrkImporter';
+import { beginFileLoading, updateFileLoading, endFileLoading } from './fileLoadingState';
 
 /**
  * Unified datalog parser that auto-detects format and routes to appropriate parser.
@@ -26,12 +27,27 @@ import { isXrkFile, parseXrkFile, type XrkProgressCallback } from './xrk/xrkImpo
  *
  * `onProgress` only fires for the async, worker-backed XRK path (Pyodide load +
  * parse); every other format parses synchronously and ignores it.
+ *
+ * Brackets the whole load with the `fileLoadingState` overlay so every "open a
+ * file as the session" path (import, file-manager reopen, cloud open) dims the
+ * screen while it works. Fast formats finish in the same tick (overlay never
+ * paints); the slow XRK path streams its phase messages into the overlay.
  */
 export async function parseDatalogFile(
   file: File,
   onProgress?: XrkProgressCallback,
 ): Promise<ParsedData> {
-  return normalizeChannels(await routeDatalogFile(file, onProgress));
+  beginFileLoading("Loading telemetry…");
+  try {
+    return normalizeChannels(
+      await routeDatalogFile(file, (progress) => {
+        updateFileLoading(progress.message);
+        onProgress?.(progress);
+      }),
+    );
+  } finally {
+    endFileLoading();
+  }
 }
 
 /**

@@ -23,6 +23,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   network on first use — the Pyodide runtime + parser wheel download once, then
   are service-worker-cached so later imports work offline. Import progress
   (runtime load → parse → extract) is shown inline.
+- **Full-screen loading overlay on file open.** Loading a datalog now dims the
+  screen with a spinner while it parses — automatic for imports, file-manager
+  reopens, and cloud-file opens. Fast formats finish instantly (you won't see
+  it); slow ones — chiefly the new AiM XRK path — show a live status message so
+  it's clear the app is working, not stuck.
 
 ### Changed
 - **About dialog feature list refreshed.** The home-screen **About** popup now
