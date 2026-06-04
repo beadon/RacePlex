@@ -175,6 +175,21 @@ export function alignByDistance(
   otherSamples: GpsSample[],
   getValue: (s: GpsSample) => number | undefined,
 ): (number | null)[] {
+  return alignValuesByDistance(currentSamples, otherSamples, otherSamples.map(getValue));
+}
+
+/**
+ * Like `alignByDistance`, but for a *derived* series that isn't stored on the
+ * sample: the values to align live in a parallel array indexed 1:1 to
+ * `otherSamples` (e.g. a computed brake-% series). For each current sample,
+ * interpolate the other lap's value at the same cumulative distance — `null`
+ * beyond the other lap's length or where the source value is missing.
+ */
+export function alignValuesByDistance(
+  currentSamples: GpsSample[],
+  otherSamples: GpsSample[],
+  values: (number | null | undefined)[],
+): (number | null)[] {
   if (currentSamples.length === 0 || otherSamples.length === 0) return [];
 
   const curD = calculateDistanceArray(currentSamples);
@@ -193,12 +208,12 @@ export function alignByDistance(
       if (refD[mid] <= target) lo = mid; else hi = mid;
     }
 
-    const v1 = getValue(otherSamples[lo]);
-    if (v1 === undefined) { out.push(null); continue; }
-    const v2 = getValue(otherSamples[hi]);
+    const v1 = values[lo];
+    if (v1 === undefined || v1 === null) { out.push(null); continue; }
+    const v2 = values[hi];
     const d1 = refD[lo];
     const d2 = refD[hi];
-    if (d2 === d1 || v2 === undefined) { out.push(v1); continue; }
+    if (d2 === d1 || v2 === undefined || v2 === null) { out.push(v1); continue; }
     out.push(v1 + ((target - d1) / (d2 - d1)) * (v2 - v1));
   }
 

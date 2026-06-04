@@ -22,6 +22,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   keep their count bubble at every size.
 
 ### Added
+- **Brake % graph now overlays your selected laps.** In Pro view, the computed
+  **Brake %** chart draws a line per active overlay lap/snapshot (distance-aligned,
+  in each overlay's color), matching the reference brake line — so you can compare
+  braking across every overlaid lap, not just the reference.
+- **G-G diagram: comparison cloud toggle + per-cloud value readout.** The G-G
+  diagram now has a bottom-right info box listing the live G value for every cloud
+  on the scrub point (session + the active comparison set, each in its own color),
+  with two toggles above it: **Ref / Overlays** swaps the comparison cloud drawn
+  beneath your session (reference lap vs. the selected overlay laps, each in its
+  own color), and **Lat G / Lon G** switches the readout between lateral and
+  longitudinal so the box stays readable.
 - **Glowing setup-status indicator in the tab bar.** When the loaded session has
   no setup assigned, an exclamation icon glows just right of the **Coach** tab.
   It glows **red** when there's nothing to assign yet — clicking opens the Garage
