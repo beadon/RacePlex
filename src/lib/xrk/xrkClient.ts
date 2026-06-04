@@ -1,14 +1,9 @@
-// Main-thread client for the XRK Pyodide worker.
+// Main-thread client for the XRK wasm worker.
 //
 // Spawns a short-lived module worker, hands it the file bytes (transferred), and
 // resolves with the raw parsed channels — surfacing progress along the way. The
-// worker is always terminated when we're done (success, error, or timeout) so
-// the ~heavy Pyodide runtime is reclaimed.
+// worker is always terminated when we're done (success, error, or timeout).
 
-import {
-  XRK_PYODIDE_INDEX_URL,
-  XRK_WHEEL_PATH,
-} from "./xrkConfig";
 import type {
   XrkParseRequest,
   XrkProgress,
@@ -17,14 +12,10 @@ import type {
 } from "./xrkTypes";
 
 /** Hard ceiling so a wedged worker can never hang the import UI forever. */
-const PARSE_TIMEOUT_MS = 5 * 60_000;
+const PARSE_TIMEOUT_MS = 2 * 60_000;
 
 export interface RunXrkOptions {
   onProgress?: (progress: XrkProgress) => void;
-  /** Override the wheel URL (tests); defaults to the self-hosted static asset. */
-  wheelUrl?: string;
-  /** Override the Pyodide indexURL (tests). */
-  indexUrl?: string;
 }
 
 /**
@@ -36,8 +27,6 @@ export async function runXrkWorker(
   options: RunXrkOptions = {},
 ): Promise<XrkRawResult> {
   const buffer = await file.arrayBuffer();
-  const wheelUrl = options.wheelUrl ?? new URL(XRK_WHEEL_PATH, location.href).href;
-  const indexUrl = options.indexUrl ?? XRK_PYODIDE_INDEX_URL;
 
   const worker = new Worker(new URL("./xrkWorker.ts", import.meta.url), {
     type: "module",
@@ -85,8 +74,6 @@ export async function runXrkWorker(
       type: "parse",
       fileName: file.name,
       buffer,
-      wheelUrl,
-      indexUrl,
     };
     worker.postMessage(request, [buffer]);
   });

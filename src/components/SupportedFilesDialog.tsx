@@ -15,7 +15,7 @@ const PRIMARY_FORMATS = [
   },
   {
     name: "AiM XRK / XRZ (Binary)",
-    body: <>AiM's native binary telemetry from MyChron / SoloDL loggers, including the zlib-compressed <code className="text-primary">.xrz</code> variant. Parsed entirely in your browser via <a href="https://github.com/m3rlin45/libxrk" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">libxrk</a> on Pyodide (WebAssembly) — the one format that needs a network connection on first use, after which the parser is cached for offline use. Extensions: <code className="text-primary">.xrk</code>, <code className="text-primary">.xrz</code></>,
+    body: <>AiM's native binary telemetry from MyChron / SoloDL loggers, including the zlib-compressed <code className="text-primary">.xrz</code> variant. Parsed entirely in your browser by <a href="https://github.com/m3rlin45/libxrk" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">libxrk</a> compiled to WebAssembly — fast and fully offline, like every other format. Extensions: <code className="text-primary">.xrk</code>, <code className="text-primary">.xrz</code></>,
   },
   {
     name: "NMEA / CSV (Tab-Delimited)",

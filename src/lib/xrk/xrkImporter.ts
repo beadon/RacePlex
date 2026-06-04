@@ -1,6 +1,6 @@
 // Public entry point for AiM .xrk/.xrz import — the isolated module the format
 // router calls, mirroring the other parsers' `isXxxFormat` / `parseXxxFile`
-// contract (async here, because parsing runs in a Pyodide worker).
+// contract (async here, because parsing runs in a wasm worker).
 
 import { ParsedData } from "@/types/racing";
 import { XRK_EXTENSIONS } from "./xrkConfig";
@@ -32,7 +32,7 @@ export type XrkProgressCallback = (progress: XrkProgress) => void;
 
 /**
  * Parse an AiM `.xrk`/`.xrz` `File` into the app's `ParsedData`. Heavy lifting
- * (Pyodide + libxrk) runs in a worker; this just orchestrates and maps the
+ * (libxrk wasm) runs in a worker; this just orchestrates and maps the
  * result. Throws a user-facing `Error` on failure — never crashes the caller.
  */
 export async function parseXrkFile(

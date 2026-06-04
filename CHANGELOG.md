@@ -16,13 +16,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - **Native AiM `.xrk` / `.xrz` import.** MyChron / SoloDL binary logs can now be
   opened directly — drag in a `.xrk` (or zlib-compressed `.xrz`) and it flows
-  through the normal analysis/plot pipeline like any other format. Parsing runs
-  **entirely client-side** via [libxrk](https://github.com/m3rlin45/libxrk) on
-  [Pyodide](https://pyodide.org) (CPython on WebAssembly) in a Web Worker, so a
-  large session never freezes the UI. This is the one importer that needs the
-  network on first use — the Pyodide runtime + parser wheel download once, then
-  are service-worker-cached so later imports work offline. Import progress
-  (runtime load → parse → extract) is shown inline.
+  through the normal analysis/plot pipeline like any other format, including as a
+  **reference lap or multi-lap overlay** and for lap snapshots. Parsing runs
+  **entirely client-side** by [libxrk](https://github.com/m3rlin45/libxrk)'s
+  pure-Rust core **compiled to a ~200 KB WebAssembly module** (no Pyodide/Python),
+  in a Web Worker so a large session never freezes the UI. It's **fully offline**
+  (the wasm is precached) and fast — a typical session parses in tens to a couple
+  hundred milliseconds. Import progress (load → parse → align) is shown inline.
 - **Full-screen loading overlay on file open.** Loading a datalog now dims the
   screen with a spinner while it parses — automatic for imports, file-manager
   reopens, and cloud-file opens. Fast formats finish instantly (you won't see

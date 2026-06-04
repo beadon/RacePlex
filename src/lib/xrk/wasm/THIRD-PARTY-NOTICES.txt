@@ -1,10 +1,12 @@
-Third-party notices for the bundled AiM XRK/XRZ parser wheel
+Third-party notices for the bundled AiM XRK/XRZ parser (wasm)
 ============================================================
 
-The file `libxrk-*-pyodide_*_wasm32.whl` in this directory is a WebAssembly
-(Pyodide) build of libxrk, used by Dove's DataViewer to parse AiM .xrk/.xrz
-telemetry files entirely in the browser. It is redistributed unmodified under
-the MIT License.
+`xrk_wasm_bg.wasm` + `xrk_wasm.js` in this directory are a WebAssembly build of
+libxrk's pure-Rust core, used by Dove's DataViewer to parse AiM .xrk/.xrz
+telemetry files entirely in the browser. Built from source by
+scripts/build-xrk-wasm.sh via the wrapper crate in xrk-wasm/ (which depends on
+libxrk at the revision pinned in xrk-wasm/Cargo.toml). Redistributed under the
+MIT License.
 
 libxrk
 ------
@@ -37,7 +39,5 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-The wheel is built from source by scripts/build-xrk-wheel.sh. At runtime it is
-loaded by the Pyodide CPython-on-WebAssembly runtime, which carries its own
-license (https://pyodide.org/). numpy and pyarrow (Pyodide packages) are loaded
-alongside it under their respective licenses.
+The wasm also statically links these MIT/Apache-2.0 Rust crates: binrw, flate2
+(miniz_oxide), wasm-bindgen, serde, serde-wasm-bindgen.

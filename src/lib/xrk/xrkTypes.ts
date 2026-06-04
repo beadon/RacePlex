@@ -1,17 +1,15 @@
-// Shared message protocol + payload types for the XRK Pyodide worker.
+// Shared message protocol + payload types for the XRK wasm worker.
 //
-// The worker boots Pyodide off the main thread, runs libxrk on the uploaded
-// bytes, and ships the parsed channels back as transferable typed-array buffers
-// (no giant JSON — sessions are large). The pure mapping in `xrkMapping.ts`
-// turns this raw shape into the app's `ParsedData`.
+// The worker instantiates the libxrk wasm module off the main thread, parses the
+// uploaded bytes, resamples channels onto the GPS timebase, and ships the result
+// back as transferable typed-array buffers (no giant JSON — sessions are large).
+// The pure mapping in `xrkMapping.ts` turns this raw shape into `ParsedData`.
 
 /** Progress phases surfaced to the UI while a session is parsed. */
 export type XrkPhase =
-  | "boot" // spawning worker / loading the Pyodide runtime
-  | "packages" // loadPackage(numpy, pyarrow, micropip)
-  | "wheel" // micropip.install(libxrk wheel)
+  | "boot" // spawning worker / instantiating the wasm module (one-time)
   | "parse" // libxrk reading the binary
-  | "extract" // pulling channels into typed arrays
+  | "extract" // resampling channels onto the GPS timebase
   | "done";
 
 export interface XrkProgress {
@@ -21,11 +19,11 @@ export interface XrkProgress {
   ratio?: number;
 }
 
-/** One telemetry channel, already flattened to a single value-per-timecode column. */
+/** One telemetry channel, already resampled onto the single shared timebase. */
 export interface XrkChannel {
   /** libxrk channel name, e.g. "GPS Latitude", "Engine RPM", "WT". */
   name: string;
-  /** libxrk unit string, e.g. "km/h", "rpm", "°C", "g" (may be empty). */
+  /** libxrk unit string, e.g. "m/s", "rpm", "°C", "g" (may be empty). */
   unit: string;
   /** Float64 values aligned 1:1 with `timecodes`. */
   values: Float64Array;
@@ -33,9 +31,8 @@ export interface XrkChannel {
 
 /**
  * Raw, transport-friendly result of parsing one session. Every channel shares
- * the single `timecodes` axis (the worker resamples to the GPS timebase so each
- * row is one GPS fix). `metadata` is libxrk's session-metadata dict, stringified
- * to primitives; `laps` is libxrk's lap table (informational — the app
+ * the single `timecodes` axis (the GPS fix timebase). `metadata` is libxrk's
+ * session-metadata dict; `laps` is libxrk's lap table (informational — the app
  * recomputes laps from the selected course).
  */
 export interface XrkRawResult {
@@ -51,10 +48,6 @@ export interface XrkParseRequest {
   type: "parse";
   fileName: string;
   buffer: ArrayBuffer;
-  /** Absolute URL of the self-hosted libxrk wheel (resolved on the main thread). */
-  wheelUrl: string;
-  /** Absolute Pyodide indexURL (CDN). */
-  indexUrl: string;
 }
 
 /** worker -> main */

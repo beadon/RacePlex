@@ -22,10 +22,10 @@ import { beginFileLoading, updateFileLoading, endFileLoading } from './fileLoadi
  * - Dove CSV format (simple CSV with Unix timestamps)
  * - Alfano CSV format (Alfano data loggers)
  * - AiM CSV format (MyChron 5/6, Race Studio 3 exports)
- * - AiM XRK/XRZ binary format (MyChron/SoloDL — parsed in-browser via libxrk + Pyodide)
+ * - AiM XRK/XRZ binary format (MyChron/SoloDL — parsed in-browser via libxrk wasm)
  * - NMEA text format (CSV with NMEA sentences, .nmea files)
  *
- * `onProgress` only fires for the async, worker-backed XRK path (Pyodide load +
+ * `onProgress` only fires for the async, worker-backed XRK path (wasm load +
  * parse); every other format parses synchronously and ignores it.
  *
  * Brackets the whole load with the `fileLoadingState` overlay so every "open a
@@ -64,7 +64,7 @@ async function routeDatalogFile(
   const buffer = await file.arrayBuffer();
 
   // AiM XRK/XRZ binary — detected by extension or `<h` magic. Parsed in a
-  // Pyodide worker (libxrk), so this branch is async + the only one with progress.
+  // wasm worker (libxrk), so this branch is async + the only one with progress.
   if (isXrkFile(file.name, buffer)) {
     return parseXrkFile(file, onProgress);
   }
@@ -118,13 +118,13 @@ async function routeDatalogFile(
 
 function routeDatalogContent(content: string | ArrayBuffer): ParsedData {
   if (content instanceof ArrayBuffer) {
-    // AiM XRK needs the async, worker-backed importer (Pyodide). This sync entry
-    // point can't run it — used for reference/overlay loads — so fail clearly
-    // rather than mis-detecting the binary as a text format.
+    // AiM XRK needs the async, worker-backed importer (wasm). This sync entry
+    // point can't run it, so fail clearly rather than mis-detecting the binary as
+    // a text format. In practice nothing reaches here with XRK — every "load a
+    // file" path (session, reference, overlay) uses async parseDatalogFile; the
+    // remaining sync callers (BLE download, bundled sample) are never XRK.
     if (isXrkFile("", content)) {
-      throw new Error(
-        "AiM .xrk/.xrz files can only be opened as the main session, not used as a reference or overlay source.",
-      );
+      throw new Error("AiM .xrk/.xrz files must be parsed via parseDatalogFile (async).");
     }
     if (isMotecLdFormat(content)) {
       return parseMotecLdFile(content);

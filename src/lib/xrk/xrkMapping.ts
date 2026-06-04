@@ -1,6 +1,6 @@
 // Pure mapping: libxrk's raw channel arrays -> the app's `ParsedData`.
 //
-// Kept free of Pyodide/worker concerns so it is fully unit-testable with
+// Kept free of wasm/worker concerns so it is fully unit-testable with
 // synthetic channel data. The output uses the app's human display names (e.g.
 // "Lat G", "RPM") exactly like every other parser; `normalizeChannels()` (run by
 // the format router) then canonicalises them to channel ids. GPS

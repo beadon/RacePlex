@@ -3,7 +3,7 @@
 // importing React. `parseDatalogFile()` brackets every session load with
 // begin/end; the <FileLoadingOverlay> subscribes and dims the screen. Fast
 // formats finish in the same tick (overlay never paints); slow ones — notably
-// AiM XRK on Pyodide — show the spinner + live phase message.
+// AiM XRK parsing — show the spinner + live phase message.
 
 export interface FileLoadingState {
   /** Human-readable status shown under the spinner. */

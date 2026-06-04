@@ -11,7 +11,7 @@ import {
  * Driven by the `fileLoadingState` pub/sub (bracketed around every session load
  * in `parseDatalogFile`), so it's automatic for imports, file-manager reopens,
  * and cloud-file opens alike. Most loads are instant and never paint it; the
- * slow path (AiM XRK on Pyodide) shows the live phase message.
+ * slow path (AiM XRK parsing) shows the live phase message.
  */
 export function FileLoadingOverlay() {
   const [state, setState] = useState<FileLoadingState | null>(getFileLoading());

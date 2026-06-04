@@ -82,14 +82,12 @@ All formats are auto-detected on import:
 | MoTeC LD | MoTeC native binary | `.ld` |
 | NMEA | Standard GPS sentences | `.nmea`, `.txt`, `.csv` |
 
-> **AiM XRK/XRZ** is parsed by [libxrk](https://github.com/m3rlin45/libxrk)
-> running in the browser via [Pyodide](https://pyodide.org) (CPython on
-> WebAssembly). Unlike every other format it is **online-only on first use** —
-> the Pyodide runtime (~10 MB) loads from a CDN and the libxrk wheel from
-> `/xrk/` — but the runtime + wheel are then service-worker-cached, so repeat
-> imports work offline. Everything still runs **client-side**; nothing is
-> uploaded. See [AiM XRK / XRZ import](#aim-xrk--xrz-import) for how the wheel is
-> built and pinned.
+> **AiM XRK/XRZ** is parsed by [libxrk](https://github.com/m3rlin45/libxrk)'s
+> pure-Rust core **compiled to a small (~200 KB) WebAssembly module** — no
+> Pyodide, no Python. It runs entirely **client-side** in a Web Worker, is fully
+> **offline** (the wasm is precached), and parses a typical session in tens to a
+> couple hundred milliseconds. See
+> [AiM XRK / XRZ import](#aim-xrk--xrz-import) for how the wasm is built and pinned.
 
 ---
 
@@ -449,51 +447,47 @@ Release history is tracked in **[CHANGELOG.md](CHANGELOG.md)**.
 ## AiM XRK / XRZ import
 
 AiM's native binary logs (`.xrk`, and zlib-compressed `.xrz`) are parsed
-**entirely in the browser** by [libxrk](https://github.com/m3rlin45/libxrk) — a
-Rust + Cython extension — running under [Pyodide](https://pyodide.org)
-(CPython compiled to WebAssembly). No server round-trip; nothing is uploaded.
+**entirely in the browser** by [libxrk](https://github.com/m3rlin45/libxrk)'s
+**pure-Rust core compiled to WebAssembly** (no Pyodide, no Python). No server
+round-trip; nothing is uploaded. XRK behaves like every other format — fast,
+fully offline, and usable as the main session, a reference, or an overlay.
 
 **How it runs (`src/lib/xrk/`):**
 
-- Pyodide is **lazy-loaded only when an XRK/XRZ file is imported** (not on page
-  boot), inside a **Web Worker** so a large session never freezes the UI.
-- The worker loads the pinned Pyodide runtime + `numpy`/`pyarrow` from a CDN,
-  `micropip`-installs the self-hosted libxrk wheel from `/xrk/`, runs libxrk on
-  the uploaded bytes, resamples to the GPS timebase, and ships channels back as
-  transferable `Float64Array` buffers (no giant JSON).
+- The wasm module (`src/lib/xrk/wasm/`, ~200 KB, precached) is instantiated in a
+  **Web Worker** the first time an XRK/XRZ file is parsed, so building a large
+  session's arrays never freezes the UI.
+- `xrkWorker.ts` runs libxrk on the uploaded bytes, then `xrkResample.ts` (pure,
+  unit-tested) aligns every channel onto the GPS timebase (interpolate vs
+  forward-fill per channel), and the worker ships the result back as transferable
+  `Float64Array` buffers.
 - `xrkMapping.ts` (pure, unit-tested) turns those channels into the app's
-  `ParsedData` — GPS Latitude/Longitude/Speed/Heading become the sample
-  primaries; the rest map to the canonical channel registry (`channels.ts`).
-- Progress (runtime load → parse → extract) is surfaced in the import UI.
+  `ParsedData` — GPS Latitude/Longitude/Speed become the sample primaries; the
+  rest map to the canonical channel registry (`channels.ts`).
+- Progress (load → parse → align) is surfaced in the import UI.
 
-**Online-first, then cached.** This is the one importer that needs the network
-on first use (the offline-first exception, like weather + satellite tiles). The
-Pyodide runtime and the wheel are then cached by the service worker
-(`pyodide-runtime` / `xrk-wheel` runtime caches), so subsequent imports work
-offline.
-
-**Page weight & timing** (3.1 MB `.xrk` / 4.4 MB `.xrz`, measured in Node
-Pyodide 0.27.3 — browser is comparable):
+**Page weight & timing** (3.1 MB `.xrk` / 4.4 MB `.xrz`, measured in Node — the
+browser is comparable):
 
 | Cost | When | Size / time |
 |------|------|-------------|
-| App bundle delta | every load | ~negligible — a few KB of eager glue; the worker is a separate ~3 KB lazy chunk |
-| Pyodide runtime + numpy/pyarrow | first XRK import (cached after) | ~10 MB download, ~8–10 s cold load |
-| libxrk wheel (`public/xrk/`) | first XRK import (cached after) | ~0.37 MB, <1 s install |
-| Parse | per file | ~3.2 s (3.1 MB / 4.7k samples) · ~3.8 s (4.4 MB / 42k samples) |
+| App bundle delta | every load | ~negligible — a few KB of eager glue; the worker is a separate ~6 KB lazy chunk |
+| libxrk wasm (`src/lib/xrk/wasm/`) | first XRK import (precached) | **~200 KB** (~81 KB gzipped), instantiate in ~tens of ms |
+| Parse | per file | **~0.1 s** (3.1 MB / 4.7k samples) · **~0.3 s** (4.4 MB / 42k samples) |
 
-**Building / updating the wheel.** The wheel is committed at
-`public/xrk/libxrk-*-pyodide_2024_0_wasm32.whl` and its filename/ABI are pinned
-in `src/lib/xrk/xrkConfig.ts`. To rebuild (e.g. to bump libxrk or Pyodide), run:
+**Building / updating the wasm.** The artifacts are committed under
+`src/lib/xrk/wasm/`, built from libxrk's pure-Rust core via the thin wrapper
+crate in `xrk-wasm/` (which pins the libxrk revision in `xrk-wasm/Cargo.toml`).
+To rebuild (e.g. to bump libxrk), run:
 
 ```bash
-scripts/build-xrk-wheel.sh   # needs rustup + uv; mirrors libxrk's pyodide.yml CI
+scripts/build-xrk-wasm.sh   # needs rustup + (auto-downloads) wasm-bindgen
 ```
 
-The wheel's Emscripten ABI **must** match the pinned Pyodide version
-(`XRK_PYODIDE_VERSION`) — a wheel built for one Pyodide release will not load in
-another. Bump the version, the wheel, and `XRK_WHEEL_FILENAME` together. License
-notices for libxrk + TrackDataAnalysis ship at `public/xrk/THIRD-PARTY-NOTICES.txt`.
+Bump the libxrk `rev` in `xrk-wasm/Cargo.toml` + the `wasm-bindgen` version in
+the build script together, then re-run it and commit the regenerated artifacts.
+License notices for libxrk + TrackDataAnalysis ship at
+`src/lib/xrk/wasm/THIRD-PARTY-NOTICES.txt`.
 
 ---
 
@@ -508,7 +502,7 @@ Built on the shoulders of these incredible open-source projects and free service
 - [mp4-muxer](https://github.com/Vanilagy/mp4-muxer) · [Savitzky-Golay (ml.js)](https://github.com/mljs/savitzky-golay) · [JSZip](https://stuk.github.io/jszip) · [fix-webm-duration](https://github.com/yusitnikov/fix-webm-duration)
 - [IEM ASOS (Iowa State)](https://mesonet.agron.iastate.edu) · [NWS API](https://www.weather.gov/documentation/services-web-api)
 - [MoTeC i2](https://www.motec.com.au) (file format reference)
-- [Pyodide](https://pyodide.org) · [libxrk](https://github.com/m3rlin45/libxrk) (MIT) + [TrackDataAnalysis](https://github.com/racer-coder/TrackDataAnalysis) (MIT) — in-browser AiM XRK/XRZ parsing
+- [libxrk](https://github.com/m3rlin45/libxrk) (MIT) + [TrackDataAnalysis](https://github.com/racer-coder/TrackDataAnalysis) (MIT) — AiM XRK/XRZ parser (Rust → WebAssembly)
 
 Optional admin backend powered by [Supabase](https://supabase.com) via Lovable Cloud.
 

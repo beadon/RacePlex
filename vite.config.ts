@@ -225,7 +225,7 @@ export default defineConfig(({ mode }) => {
           cleanupOutdatedCaches: true,
           clientsClaim: true,
           skipWaiting: true,
-          globPatterns: ["**/*.{js,css,html,ico,png,svg,woff,woff2,json,nmea}"],
+          globPatterns: ["**/*.{js,css,html,ico,png,svg,woff,woff2,json,nmea,wasm}"],
           globIgnores: ["**/tracks.zip"],
           navigateFallbackDenylist: [/^\/~oauth/],
           runtimeCaching: [
@@ -266,33 +266,6 @@ export default defineConfig(({ mode }) => {
                 cacheableResponse: {
                   statuses: [0, 200],
                 },
-              },
-            },
-            {
-              // AiM XRK import is online-only on first use, but cache the Pyodide
-              // runtime (CDN) + the self-hosted libxrk wheel so repeat imports
-              // work offline. Pinned, immutable URLs — safe to CacheFirst.
-              urlPattern: /^https:\/\/cdn\.jsdelivr\.net\/pyodide\/.*/i,
-              handler: "CacheFirst",
-              options: {
-                cacheName: "pyodide-runtime",
-                expiration: {
-                  maxEntries: 60,
-                  maxAgeSeconds: 60 * 60 * 24 * 90,
-                },
-                cacheableResponse: { statuses: [0, 200] },
-              },
-            },
-            {
-              urlPattern: ({ url }) => url.pathname.startsWith("/xrk/"),
-              handler: "CacheFirst",
-              options: {
-                cacheName: "xrk-wheel",
-                expiration: {
-                  maxEntries: 4,
-                  maxAgeSeconds: 60 * 60 * 24 * 90,
-                },
-                cacheableResponse: { statuses: [0, 200] },
               },
             },
           ],

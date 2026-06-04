@@ -35,8 +35,8 @@ export function FileImport({ onDataLoaded, onOpenFileManager, autoSave, autoSave
         if (autoSave && autoSaveFile) {
           try { await autoSaveFile(file.name, file); } catch (e) { console.warn("Auto-save failed:", e); }
         }
-        // The progress callback only fires for the AiM XRK/XRZ path (Pyodide
-        // load + parse can take a few seconds); other formats parse instantly.
+        // The progress callback only fires for the AiM XRK/XRZ path (wasm parse
+        // runs in a worker); other formats parse instantly.
         const data = await parseDatalogFile(file, (p) => setProgress(p.message));
         onDataLoaded(data, file.name);
       } catch (e) {
