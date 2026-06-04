@@ -3,7 +3,9 @@ import { Plus } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RangeSlider } from '@/components/RangeSlider';
 import { SingleSeriesChart } from './SingleSeriesChart';
+import { GGDiagram } from './GGDiagram';
 import { GpsSample, FieldMapping } from '@/types/racing';
+import type { OverlayLine } from '@/lib/lapOverlays';
 import { calculatePace, calculateReferenceSpeed, calculateDistanceArray } from '@/lib/referenceUtils';
 import { computeBrakingGSeriesSG, gToBrakePercent } from '@/lib/brakingZones';
 import { useSettingsContext } from '@/contexts/SettingsContext';
@@ -27,14 +29,16 @@ interface GraphPanelProps {
   minRange: number;
   formatRangeLabel: (idx: number) => string;
   sessionFileName: string | null;
+  overlayLines?: OverlayLine[];
 }
 
 export function GraphPanel({
   samples, filteredSamples, referenceSamples, fieldMappings, currentIndex, onScrub,
-  visibleRange, onRangeChange, minRange, formatRangeLabel, sessionFileName,
+  visibleRange, onRangeChange, minRange, formatRangeLabel, sessionFileName, overlayLines = [],
 }: GraphPanelProps) {
   const { useKph, brakingZoneSettings } = useSettingsContext();
   const [activeGraphs, setActiveGraphs] = useState<string[]>([]);
+  const [graphHeights, setGraphHeights] = useState<Record<string, number>>({});
   const loadedFileRef = useRef<string | null>(null);
 
   // Load saved graph prefs when session changes
@@ -42,15 +46,21 @@ export function GraphPanel({
     if (!sessionFileName || sessionFileName === loadedFileRef.current) return;
     loadedFileRef.current = sessionFileName;
     loadGraphPrefs(sessionFileName).then(saved => {
-      if (saved.length > 0) setActiveGraphs(saved);
+      if (saved.activeGraphs.length > 0) setActiveGraphs(saved.activeGraphs);
+      setGraphHeights(saved.graphHeights);
     }).catch(() => {});
   }, [sessionFileName]);
 
-  // Persist whenever activeGraphs change (skip initial empty state before load)
+  // Persist whenever active graphs or their heights change (skip initial empty
+  // state before load).
   useEffect(() => {
     if (!sessionFileName || loadedFileRef.current !== sessionFileName) return;
-    saveGraphPrefs(sessionFileName, activeGraphs).catch(() => {});
-  }, [activeGraphs, sessionFileName]);
+    saveGraphPrefs(sessionFileName, activeGraphs, graphHeights).catch(() => {});
+  }, [activeGraphs, graphHeights, sessionFileName]);
+
+  const setGraphHeight = useCallback((key: string, height: number) => {
+    setGraphHeights(prev => ({ ...prev, [key]: height }));
+  }, []);
 
   const hasReference = referenceSamples.length > 0;
 
@@ -136,6 +146,13 @@ export function GraphPanel({
     return filteredSamples.some(s => s.extraFields['lat_g'] !== undefined);
   }, [filteredSamples]);
 
+  const hasNativeG = useMemo(() => {
+    return filteredSamples.some(s => s.extraFields['lat_g_native'] !== undefined);
+  }, [filteredSamples]);
+
+  // The G-G diagram needs a lateral/longitudinal g pair (GPS-derived or native).
+  const hasGForce = hasGpsG || hasNativeG;
+
   const hasBothSources = hasHwAccel && hasGpsG;
 
   // Available data sources
@@ -147,6 +164,9 @@ export function GraphPanel({
       sources.push({ key: '__pace__', label: 'Pace (Δs)' });
     }
     sources.push({ key: '__braking_g__', label: hasBothSources ? 'Brake % (GPS)' : 'Brake % (computed)' });
+    if (hasGForce) {
+      sources.push({ key: '__gg__', label: 'G-G Diagram' });
+    }
     fieldMappings.forEach(f => {
       const display = f.label ?? f.name;
       let label = display + (f.unit ? ` (${f.unit})` : '');
@@ -161,7 +181,7 @@ export function GraphPanel({
       sources.push({ key: f.name, label });
     });
     return sources;
-  }, [fieldMappings, useKph, hasReference, hasBothSources]);
+  }, [fieldMappings, useKph, hasReference, hasBothSources, hasGForce]);
 
   const unusedSources = useMemo(() => {
     return availableSources.filter(s => !activeGraphs.includes(s.key));
@@ -175,6 +195,12 @@ export function GraphPanel({
 
   const removeGraph = useCallback((key: string) => {
     setActiveGraphs(prev => prev.filter(k => k !== key));
+    setGraphHeights(prev => {
+      if (!(key in prev)) return prev;
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
   }, []);
 
   const getColor = (key: string) => {
@@ -214,18 +240,37 @@ export function GraphPanel({
         ) : (
           <>
             {activeGraphs.map(key => (
-              <SingleSeriesChart
-                key={key}
-                samples={samples}
-                seriesKey={key}
-                currentIndex={currentIndex}
-                onScrub={onScrub}
-                color={getColor(key)}
-                label={getLabel(key)}
-                onDelete={() => removeGraph(key)}
-                referenceValues={referenceValuesByKey[key]?.slice(visibleRange[0], visibleRange[1] + 1) ?? null}
-                brakingGValues={key === '__braking_g__' ? brakingGFull.slice(visibleRange[0], visibleRange[1] + 1) : undefined}
-              />
+              key === '__gg__' ? (
+                <GGDiagram
+                  key={key}
+                  samples={samples}
+                  referenceSamples={referenceSamples}
+                  overlayLines={overlayLines}
+                  currentIndex={currentIndex}
+                  label={getLabel(key)}
+                  onDelete={() => removeGraph(key)}
+                  height={graphHeights[key]}
+                  onHeightChange={(h) => setGraphHeight(key, h)}
+                />
+              ) : (
+                <SingleSeriesChart
+                  key={key}
+                  samples={samples}
+                  seriesKey={key}
+                  currentIndex={currentIndex}
+                  onScrub={onScrub}
+                  color={getColor(key)}
+                  label={getLabel(key)}
+                  onDelete={() => removeGraph(key)}
+                  referenceValues={referenceValuesByKey[key]?.slice(visibleRange[0], visibleRange[1] + 1) ?? null}
+                  brakingGValues={key === '__braking_g__' ? brakingGFull.slice(visibleRange[0], visibleRange[1] + 1) : undefined}
+                  allSamples={filteredSamples}
+                  rangeStart={visibleRange[0]}
+                  overlayLines={overlayLines}
+                  height={graphHeights[key]}
+                  onHeightChange={(h) => setGraphHeight(key, h)}
+                />
+              )
             ))}
             {/* Add more button */}
             {unusedSources.length > 0 && (

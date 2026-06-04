@@ -10,12 +10,16 @@ import {
   getFileMetadata,
 } from "@/lib/fileStorage";
 
+/** Garage sub-tabs the drawer can be opened directly to. */
+export type GarageTabKey = "files" | "vehicles" | "setups" | "notes";
+
 export function useFileManager() {
   const [isOpen, setIsOpen] = useState(false);
   const [files, setFiles] = useState<FileEntry[]>([]);
   const [fileMetadataMap, setFileMetadataMap] = useState<Map<string, FileMetadata>>(new Map());
   const [storageUsed, setStorageUsed] = useState(0);
   const [storageQuota, setStorageQuota] = useState(0);
+  const [initialGarageTab, setInitialGarageTab] = useState<GarageTabKey>("files");
 
   const refresh = useCallback(async () => {
     const [fileList, estimate] = await Promise.all([listFiles(), getStorageEstimate()]);
@@ -38,7 +42,11 @@ export function useFileManager() {
     setFileMetadataMap(map);
   }, []);
 
-  const open = useCallback(() => {
+  // Accepts an optional garage sub-tab to open straight to. Guarded against
+  // being wired directly as an event handler (e.g. onClick), where the first
+  // argument would be a MouseEvent rather than a tab key.
+  const open = useCallback((garageTab?: GarageTabKey) => {
+    setInitialGarageTab(typeof garageTab === "string" ? garageTab : "files");
     setIsOpen(true);
     refresh();
   }, [refresh]);
@@ -84,6 +92,7 @@ export function useFileManager() {
     fileMetadataMap,
     storageUsed,
     storageQuota,
+    initialGarageTab,
     open,
     close,
     refresh,

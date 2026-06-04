@@ -9,6 +9,7 @@ import type { Vehicle } from '@/lib/vehicleStorage';
 import type { VehicleSetup } from '@/lib/setupStorage';
 import type { SetupTemplate } from '@/lib/templateStorage';
 import type { LapSnapshot } from '@/lib/lapSnapshot';
+import type { OverlayLine } from '@/lib/lapOverlays';
 import type { SaveSnapshotResult } from '@/hooks/useLapSnapshots';
 import type { PluginSnapshot } from '@/plugins/panels';
 
@@ -75,6 +76,18 @@ export interface SessionContextValue {
   onClearSnapshot: () => void;
   onSaveSnapshot: (force?: boolean) => Promise<SaveSnapshotResult>;
 
+  // ── Multi-lap overlays (extra racing lines on the maps + graphs) ──────────
+  overlaySelections: string[];
+  overlayLines: OverlayLine[];
+  onToggleOverlay: (id: string) => void;
+  /** Drift-align cross-session overlays onto the current lap (map only). */
+  alignOverlays: boolean;
+  onToggleAlignOverlays: () => void;
+  /** Load another saved file's laps for the overlay picker. */
+  onLoadOverlayFile: (fileName: string) => Promise<Array<{ lapNumber: number; lapTimeMs: number }> | null>;
+  /** Add a lap from a loaded external file as an overlay. */
+  onAddExternalOverlay: (fileName: string, lapNumber: number) => void;
+
   // ── Session metadata ──────────────────────────────────────────────────────
   sessionGpsPoint?: { lat: number; lon: number };
   sessionStartDate?: Date;
@@ -106,6 +119,8 @@ export interface SessionContextValue {
   onFieldToggle: (fieldName: string) => void;
   onWeatherStationResolved: (station: WeatherStation) => void;
   onSaveSessionSetup: (kartId: string | null, setupId: string | null) => Promise<void>;
+  /** Open the file-manager drawer, optionally straight to a Garage sub-tab. */
+  onOpenGarage: (garageTab?: 'files' | 'vehicles' | 'setups' | 'notes') => void;
   formatRangeLabel: (idx: number) => string;
 }
 

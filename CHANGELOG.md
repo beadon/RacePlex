@@ -14,6 +14,152 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **Desktop text labels on header controls.** On large (desktop) screens the
+  **Settings** and **Garage** buttons in the header, the **track selection**
+  (pencil) button, and the **Snapshots** and **Overlays** controls now show a
+  text label next to their icon, taking advantage of the extra real estate. On
+  tablet and mobile these stay icon-only — the Snapshots and Overlays controls
+  keep their count bubble at every size.
+
+### Added
+- **Resizable Pro-mode graphs.** Each graph in the Pro view (and the G-G diagram)
+  now has a drag handle along its bottom edge — grab it and drag up/down to set
+  that graph's height individually. Heights are saved per session (and sync with
+  the rest of your graph layout when cloud sync is on), so a layout you tune for
+  one log comes back the next time you open it.
+- **Brake % graph now overlays your selected laps.** In Pro view, the computed
+  **Brake %** chart draws a line per active overlay lap/snapshot (distance-aligned,
+  in each overlay's color), matching the reference brake line — so you can compare
+  braking across every overlaid lap, not just the reference.
+- **G-G diagram: comparison cloud toggle + per-cloud value readout.** The G-G
+  diagram now has a bottom-right info box listing the live G value for every cloud
+  on the scrub point (session + the active comparison set, each in its own color),
+  with two toggles above it: **Ref / Overlays** swaps the comparison cloud drawn
+  beneath your session (reference lap vs. the selected overlay laps, each in its
+  own color), and **Lat G / Lon G** switches the readout between lateral and
+  longitudinal so the box stays readable.
+- **Glowing setup-status indicator in the tab bar.** When the loaded session has
+  no setup assigned, an exclamation icon glows just right of the **Coach** tab.
+  It glows **red** when there's nothing to assign yet — clicking opens the Garage
+  to **Vehicles** (or **Setups** if you already have a vehicle), where the empty
+  states now read "No vehicles yet" / "No setups yet" in red. It glows **orange**
+  when setups exist but this session isn't linked to one — clicking opens the
+  Garage **Notes** tab, which now shows an orange reminder that "a setup should
+  be saved for historical data comparisons."
+- **"Open Garage" shortcut in the Pro vehicle tab.** When no vehicle is linked to
+  the session, the Pro-view **Vehicle** tab now shows an **Open Garage** button
+  below **Save Selection** that opens the file-manager drawer straight to the
+  relevant Garage sub-tab — **Vehicles** when you have no vehicles yet, or
+  **Setups** when you already have one — so you can create what you need without
+  hunting for the tab.
+- **Inline helper text in the Overlays and Snapshots menus.** The Overlays menu
+  now notes that overlays are separate from the main reference lap (where deltas
+  are calculated from), and the Snapshots menu explains that you can save one
+  snapshot per engine per course, capturing the full lap plus the session's setup
+  information.
+- **Video panel note when empty.** The "No video loaded" state now mentions that
+  segmented videos are not yet supported.
+- **Overlays menu — manage overlay lines and set references in one place.** The
+  header **Overlays** button (renamed from "Overlay file") now opens a
+  three-section menu: **Current overlays** lists every active overlay line, lets
+  you promote any of them to the comparison **reference lap** (the active
+  reference stays highlighted), and remove them; **Current session laps** toggles
+  this session's laps on/off as overlays without leaving the view (the lap list
+  still works too); and **Add from other logs** lists the other saved sessions
+  tagged with the *current course* — shown by date/time, never raw file names — so
+  you can pull in more laps. Snapshots are still added from the separate Snapshots
+  menu. The old "External Ref" bar at the top of the lap list is hidden
+  (references are now set from the Overlays menu and the per-row **Ref** buttons).
+- **Overlay laps from other sessions/loggers, with drift alignment.** The
+  multi-lap overlay can pull laps from **other saved files** — open **Overlays**
+  (next to Snapshots), pick a log, and toggle its laps onto the maps +
+  graphs alongside your current session. Because logs from different days/devices
+  carry a GPS offset, an **Align lines** toggle on the map legend rigidly
+  registers cross-session overlays (snapshots + external-file laps) onto your
+  current lap so the racing lines actually sit on top of each other — same-session
+  laps are left untouched (they already share a receiver). Alignment is map-only;
+  the graphs compare by distance and were already drift-immune. This closes the
+  "align data from different loggers" gap. See `docs/plans/multi-lap-overlay.md`.
+- **Build version + commit stamp in the home-page footer.** The landing page now
+  shows the running app version and the short git commit hash (e.g.
+  `v2.0.0 · 837b514`), baked in at build time. The hash links to that commit on
+  GitHub and the build date shows on hover, so it's easy to tell which revision
+  is deployed and when something changed. On **preview/non-`main` builds** the
+  stamp instead reads **`<branch> · <hash> · <commit time>`**, so you can tell at
+  a glance which branch a beta deployment is running.
+- **Preview builds shout that they're previews.** On any non-`main` build the
+  footer turns amber (standing out in light *and* dark mode) and adds a warning:
+  the branch runs on a preview database, accounts can be wiped at any time, don't
+  rely on anything but local data, and — if payments are ever enabled — never
+  enter real payment information.
+- **Manage your tracks straight from the home screen.** A new **Manage Tracks**
+  button (below "Download from Datalogger") opens the track manager without
+  having to load a datalog first — search for a location, drop the start/finish
+  and sector lines, and **draw the track outline** by clicking the map. The
+  manual **Draw** tool (previously admin-only) is now available to everyone; when
+  a datalog *is* loaded the editor still offers **Generate from lap** to build the
+  outline from your GPS trace. Drawings you make are saved with the course and
+  travel with it (cloud sync + community submissions).
+- **Track drawings are now part of a community submission.** When you submit a
+  track/course that has a drawn (or generated) outline, the outline rides along
+  with it — flagged with a **+ drawing** badge in the review screen. Adding or
+  changing a drawing re-flags an otherwise-unchanged course so it can be
+  contributed. In the admin **Submissions** tab, a submitted drawing shows a
+  thumbnail preview and an **Apply to course layout** button that saves it onto
+  the matching DB course (so it flows into the exported drawings).
+- **Preview deployments can target a Supabase preview-branch database.** Builds
+  on a non-production branch (Cloudflare Workers Builds / Pages) now prefer
+  parallel `*_PREVIEW` build variables (e.g. `HTT_SUPABASE_URL_PREVIEW`), so
+  beta/preview URLs point at a Supabase branch database instead of production.
+  Production (`main`) builds and local dev are unaffected. See the README
+  "Preview-branch backend" deployment section.
+
+### Fixed
+- **Cropping the playback range now crops the overlay racing lines on the map
+  too.** Narrowing the range slider shrank the active lap's heatmap line (and the
+  comparison charts) to the selected section, but the overlaid laps/snapshots on
+  the race-line map and Pro mini-map stayed drawn at full lap length. They now
+  crop to the same on-track window as the active lap, so every line on the map
+  reflects the cropped section.
+- **The track dropdown works again after loading a log.** Opening the
+  track/course selector from the header (or the track manager) put its dropdowns
+  *behind* the dialog, so picking a different track did nothing. The dropdown now
+  layers above the dialog and is fully clickable.
+- **Course thumbnails now show for outlines you drew yourself.** A course you
+  drew (or generated) on the home-screen track manager kept its outline but
+  didn't render the little preview thumbnail in the course list — the preview
+  only looked at community-DB drawings. It now prefers the course's own drawn
+  outline, so your drawing shows up immediately.
+- **The home-screen track manager no longer shows "Back to Selection."** With no
+  datalog loaded there's no session selection to return to, so the button (which
+  dropped you onto an empty track/course picker) is hidden unless a session is
+  actually loaded.
+
+### Changed
+- **The track/course editor is visual-only and fully auto-saving now.** The
+  Manual/Visual toggle (a leftover dev fallback) is gone — every track manager
+  uses the map editor. Drawn outlines and dragged start/finish & sector lines
+  save the instant you make the change, so the editor's old Done/Close button is
+  removed too. A persistent hint — *"Drawing an outline helps on-device course
+  detection. Click to place points."* — now shows in the editor across all the
+  managers.
+- **Adding a track is just a name now.** "Add Track" no longer makes you place a
+  start/finish line and define a course up front — a track is simply a name plus
+  an auto-filled short name. Courses (each with their own start/finish line) are
+  added afterwards from the track's course list, the same way everywhere a track
+  can be created. When a log loads on an unknown track, the prompt walks you
+  through it in two quick steps: create the track, then add its first course.
+- **"Submit to DB" is always visible now, greyed out when there's nothing to
+  send.** Previously the button only appeared once you had local tracks. It now
+  shows whenever the track manager is open and uses the upload-diffing logic to
+  enable itself only when you actually have new/changed courses (or drawings) to
+  contribute, with the pending count in the label.
+- **Lap-generated outlines are resampled instead of using every raw sample.**
+  "Generate from lap" previously copied the full logger-rate GPS trace (hundreds
+  to thousands of unevenly-spaced points). It now arc-length-resamples to an even
+  spacing scaled to track length — 5 m for karting tracks, ramping up to 10 m for
+  long road courses (2→4 miles) — producing a clean, compact outline that's
+  lighter to store and submit.
 - **"Submit to DB" is now a one-tap bulk contribution instead of a coordinate
   form.** The old flow made you hand-fill latitudes/longitudes for one course at
   a time. Now the app diffs everything you've created locally against the
@@ -45,6 +191,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   stays "Done" for the layout Draw tool, which still finalizes the drawing on
   click. Removes a confusing extra step where dragging a line and switching tools
   silently discarded the change.
+### Added
+- **Multi-lap overlay across the maps and graphs.** Select extra laps/snapshots
+  to compare and they now draw everywhere at once: as racing lines on **both**
+  the simple Race Line map and the pro mini-map, **and** as distance-aligned
+  traces on the telemetry charts (the simple speed chart and every pro graph),
+  with each lap's value shown in the cursor tooltip. Toggle the **Map** column in
+  the lap list to add a lap, or the *Spline* button in the snapshot list to add a
+  snapshot; each gets a distinct color with an on-map legend (tap ✕ to remove).
+  The **current lap always renders on top** in every view. (Phase 1:
+  current-session laps + snapshots, raw GPS. Cross-session drift-alignment and
+  external-file/cross-logger overlays are planned follow-ups — see
+  `docs/plans/multi-lap-overlay.md`.)
+- **G-G diagram (friction circle).** A new pro-mode graph plotting lateral vs.
+  longitudinal G as a scatter, so you can see how much of the tyre's grip
+  envelope you're using — the classic "are you driving the corners of the
+  circle" view from MoTeC / Race Studio. Add it from the graph picker
+  ("G-G Diagram"); it shows concentric 0.5 g grip rings, your session's cloud,
+  the reference lap's cloud (when one is selected) for comparison, and the live
+  point as you scrub. Uses GPS-derived `lat_g`/`lon_g` (or the logger-native
+  pair when the HW G-force source is selected), with the same smoothing as the
+  other G-force charts.
+- **Distance vs. time chart scale.** The analysis charts (simple-mode telemetry
+  chart and pro-mode graphs) can now plot against **track distance** instead of
+  elapsed time, so laps line up corner-for-corner — the way Race Studio / MoTeC
+  analysis works. A new **Chart Scale** toggle in Settings switches between
+  Distance and Time; **Distance is the default**. Distance tick labels follow
+  the speed unit (MPH → ft/mi, KPH → m/km).
+  - The X-axis is **anchored at the start-finish line**: tick labels read in
+    *absolute* distance/time from the lap start (e.g. 450 m → 780 m), not from
+    the cropped window — `0` is always the start line. Cropping with the range
+    handles still zooms the graph; the handles themselves are now labelled in
+    the same distance/time scale.
+
 ## [2.0.0] - 2026-06-03
 
 ### Fixed

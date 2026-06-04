@@ -9,6 +9,7 @@ import {
   calculatePolylineLength,
   formatTrackLength,
   resamplePolyline,
+  generatedDrawingSpacing,
 } from "./trackUtils";
 import { haversineDistance } from "./parserUtils";
 
@@ -298,5 +299,32 @@ describe("resamplePolyline", () => {
       const step = haversineDistance(out[i - 1].lat, out[i - 1].lon, out[i].lat, out[i].lon);
       expect(step).toBeCloseTo(100, -1);
     }
+  });
+});
+
+// ─── generatedDrawingSpacing ────────────────────────────────────────────────────
+
+describe("generatedDrawingSpacing", () => {
+  const MILE = 1609.344;
+
+  it("uses the 5m minimum for short (karting) tracks under 2 miles", () => {
+    expect(generatedDrawingSpacing(0)).toBe(5);
+    expect(generatedDrawingSpacing(800)).toBe(5);
+    expect(generatedDrawingSpacing(2 * MILE)).toBe(5); // exactly at the ramp start
+  });
+
+  it("caps at 10m for tracks at or beyond 4 miles", () => {
+    expect(generatedDrawingSpacing(4 * MILE)).toBe(10);
+    expect(generatedDrawingSpacing(10 * MILE)).toBe(10);
+  });
+
+  it("ramps linearly from 5m to 10m between 2 and 4 miles", () => {
+    expect(generatedDrawingSpacing(3 * MILE)).toBeCloseTo(7.5, 5); // midpoint
+    expect(generatedDrawingSpacing(2.5 * MILE)).toBeCloseTo(6.25, 5);
+  });
+
+  it("falls back to the minimum for NaN / negative lengths", () => {
+    expect(generatedDrawingSpacing(NaN)).toBe(5);
+    expect(generatedDrawingSpacing(-100)).toBe(5);
   });
 });

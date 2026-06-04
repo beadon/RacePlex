@@ -38,6 +38,11 @@ export const RaceLineTab = memo(function RaceLineTab({ showOverlays }: RaceLineT
           onWeatherStationResolved={s.onWeatherStationResolved}
           isAllLaps={s.isAllLaps}
           parserStats={s.parserStats}
+          overlayLines={s.overlayLines}
+          rangeStart={s.visibleRange[0]}
+          onRemoveOverlay={s.onToggleOverlay}
+          alignOverlays={s.alignOverlays}
+          onToggleAlignOverlays={s.onToggleAlignOverlays}
         />
       }
       bottomPanel={
@@ -52,6 +57,9 @@ export const RaceLineTab = memo(function RaceLineTab({ showOverlays }: RaceLineT
               paceData={s.paceData}
               referenceSpeedData={s.referenceSpeedData}
               hasReference={s.hasReference}
+              allSamples={s.filteredSamples}
+              rangeStart={s.visibleRange[0]}
+              overlayLines={s.overlayLines}
             />
           </div>
           {s.filteredSamples.length > 0 && (

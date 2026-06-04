@@ -43,8 +43,10 @@ export function useTrackEditorForm() {
   const [formLonB, setFormLonB] = useState('');
   const [formSector2, setFormSector2] = useState<SectorFormState>({ aLat: '', aLon: '', bLat: '', bLon: '' });
   const [formSector3, setFormSector3] = useState<SectorFormState>({ aLat: '', aLon: '', bLat: '', bLon: '' });
+  // The drawn/generated course outline (polyline). Travels into the created
+  // course and rides cloud-sync + community submission.
+  const [formLayout, setFormLayout] = useState<Array<{ lat: number; lon: number }>>([]);
   const [editingCourse, setEditingCourse] = useState<{ trackName: string; courseName: string } | null>(null);
-  const [editorMode, setEditorMode] = useState<'manual' | 'visual'>('visual');
 
   const resetForm = useCallback(() => {
     setFormTrackName(''); setFormTrackShortName(''); setShortNameTouched(false);
@@ -52,6 +54,7 @@ export function useTrackEditorForm() {
     setFormLatA(''); setFormLonA(''); setFormLatB(''); setFormLonB('');
     setFormSector2({ aLat: '', aLon: '', bLat: '', bLon: '' });
     setFormSector3({ aLat: '', aLon: '', bLat: '', bLon: '' });
+    setFormLayout([]);
   }, []);
 
   // Editing the long name auto-fills the short name (until the user overrides it).
@@ -81,8 +84,9 @@ export function useTrackEditorForm() {
     const s2 = parseSectorLine(formSector2);
     const s3 = parseSectorLine(formSector3);
     if (s2 && s3) { course.sector2 = s2; course.sector3 = s3; }
+    if (formLayout.length >= 2) course.layout = formLayout;
     return course;
-  }, [formCourseName, formLatA, formLonA, formLatB, formLonB, formSector2, formSector3]);
+  }, [formCourseName, formLatA, formLonA, formLatB, formLonB, formSector2, formSector3, formLayout]);
 
   const openEditCourse = useCallback((trackName: string, course: Course) => {
     setEditingCourse({ trackName, courseName: course.name });
@@ -100,6 +104,7 @@ export function useTrackEditorForm() {
       aLat: course.sector3.a.lat.toString(), aLon: course.sector3.a.lon.toString(),
       bLat: course.sector3.b.lat.toString(), bLon: course.sector3.b.lon.toString()
     } : { aLat: '', aLon: '', bLat: '', bLon: '' });
+    setFormLayout(course.layout ?? []);
   }, []);
 
   const handleSector2Change = useCallback((field: 'aLat' | 'aLon' | 'bLat' | 'bLon', value: string) => {
@@ -136,6 +141,10 @@ export function useTrackEditorForm() {
     });
   }, []);
 
+  const handleVisualLayoutChange = useCallback((points: Array<{ lat: number; lon: number }>) => {
+    setFormLayout(points);
+  }, []);
+
   // Parsed form values for VisualEditor props
   const visualEditorStartFinishA = formLatA && formLonA ? { lat: parseFloat(formLatA), lon: parseFloat(formLonA) } : null;
   const visualEditorStartFinishB = formLatB && formLonB ? { lat: parseFloat(formLatB), lon: parseFloat(formLonB) } : null;
@@ -159,8 +168,8 @@ export function useTrackEditorForm() {
     formCourseName, setFormCourseName,
     formLatA, formLonA, formLatB, formLonB,
     formSector2, formSector3,
+    formLayout,
     editingCourse, setEditingCourse,
-    editorMode, setEditorMode,
     resetForm,
     buildCourse,
     openEditCourse,
@@ -169,6 +178,7 @@ export function useTrackEditorForm() {
     handleVisualStartFinishChange,
     handleVisualSector2Change,
     handleVisualSector3Change,
+    handleVisualLayoutChange,
     visualEditorStartFinishA,
     visualEditorStartFinishB,
     visualEditorSector2,

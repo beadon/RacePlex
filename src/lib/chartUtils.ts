@@ -11,6 +11,9 @@ export const G_FORCE_FIELDS_HW = ['accel_x', 'accel_y'];
 /** All G-force field names (for smoothing detection). */
 export const G_FORCE_FIELDS = [...G_FORCE_FIELDS_GPS, ...G_FORCE_FIELDS_HW];
 
+/** Which G-force source the user prefers in the analysis charts. */
+export type GForceSource = 'gps' | 'hw';
+
 /**
  * Map a smoothing strength (0-100) to a window size for moving average.
  * Returns odd numbers for symmetric smoothing. Range: 1-15.

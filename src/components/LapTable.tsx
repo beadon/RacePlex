@@ -1,15 +1,23 @@
 import { memo, useMemo } from 'react';
 import { Lap, courseHasSectors, Course, GpsSample } from '@/types/racing';
 import { formatLapTime, formatSectorTime, calculateOptimalLap } from '@/lib/lapCalculation';
-import { Trophy, Zap, Snail, Target } from 'lucide-react';
+import { Trophy, Zap, Snail, Target, Spline } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ExternalRefBar } from '@/components/ExternalRefBar';
 import { LapSnapshotControls } from '@/components/LapSnapshotControls';
 import type { LapSnapshot } from '@/lib/lapSnapshot';
+import { overlayId, type OverlayLine } from '@/lib/lapOverlays';
 import type { SaveSnapshotResult } from '@/hooks/useLapSnapshots';
 import { FileEntry } from '@/lib/fileStorage';
 import { useSettingsContext } from '@/contexts/SettingsContext';
 import { haversineDistance, METERS_TO_FEET } from '@/lib/parserUtils';
+
+/**
+ * Feature flag: the old "External Ref" bar at the top of the lap list is hidden
+ * now that references are set from the header Overlays menu and the per-row Ref
+ * buttons. Left in place (not deleted) so it can be re-enabled quickly.
+ */
+const SHOW_EXTERNAL_REF_BAR: boolean = false;
 
 interface LapTableProps {
   laps: Lap[];
@@ -33,9 +41,12 @@ interface LapTableProps {
   onLoadSnapshot?: (snap: LapSnapshot) => void;
   onClearSnapshot?: () => void;
   onSaveSnapshot?: (force?: boolean) => Promise<SaveSnapshotResult>;
+  // Map overlays (extra racing lines)
+  overlayLines?: OverlayLine[];
+  onToggleOverlay?: (id: string) => void;
 }
 
-export const LapTable = memo(function LapTable({ laps, course, samples, onLapSelect, selectedLapNumber, referenceLapNumber, onSetReference, externalRefLabel, savedFiles, onLoadFileForRef, onSelectExternalLap, onClearExternalRef, onRefreshSavedFiles, snapshotsForCourse, activeSnapshotId, canSnapshot, onLoadSnapshot, onClearSnapshot, onSaveSnapshot }: LapTableProps) {
+export const LapTable = memo(function LapTable({ laps, course, samples, onLapSelect, selectedLapNumber, referenceLapNumber, onSetReference, externalRefLabel, savedFiles, onLoadFileForRef, onSelectExternalLap, onClearExternalRef, onRefreshSavedFiles, snapshotsForCourse, activeSnapshotId, canSnapshot, onLoadSnapshot, onClearSnapshot, onSaveSnapshot, overlayLines = [], onToggleOverlay }: LapTableProps) {
   const { useKph } = useSettingsContext();
 
   const showSectors = courseHasSectors(course);
@@ -130,7 +141,10 @@ export const LapTable = memo(function LapTable({ laps, course, samples, onLapSel
 
   return (
     <div className="h-full overflow-auto scrollbar-thin">
-      {hasExternalRefProps && (
+      {/* The external-reference bar is superseded by the header "Overlays" menu
+          (set references there) + the per-row Ref/Map controls below. Kept
+          mounted-but-hidden for now in case we need to fall back. */}
+      {SHOW_EXTERNAL_REF_BAR && hasExternalRefProps && (
         <ExternalRefBar
           externalRefLabel={externalRefLabel ?? null}
           savedFiles={savedFiles}
@@ -149,6 +163,8 @@ export const LapTable = memo(function LapTable({ laps, course, samples, onLapSel
               onSave={onSaveSnapshot}
               triggerLabel="Load snapshot as reference"
               showSave={false}
+              overlayLines={overlayLines}
+              onToggleOverlay={onToggleOverlay}
             />
           ) : undefined}
         />
@@ -157,6 +173,7 @@ export const LapTable = memo(function LapTable({ laps, course, samples, onLapSel
         <thead className="sticky top-0 bg-card">
           <tr className="text-left text-xs text-muted-foreground uppercase tracking-wider">
             <th className="px-2 py-3 font-medium w-16">Ref</th>
+            {onToggleOverlay && <th className="px-1 py-3 font-medium w-10 text-center" title="Show lap line on map">Map</th>}
             <th className="px-4 py-3 font-medium">Lap</th>
             <th className="px-4 py-3 font-medium">Time</th>
             {showSectors && (
@@ -205,6 +222,23 @@ export const LapTable = memo(function LapTable({ laps, course, samples, onLapSel
                     {isReference ? 'Ref' : 'Set Ref'}
                   </Button>
                 </td>
+                {onToggleOverlay && (() => {
+                  const ovId = overlayId('lap', lap.lapNumber);
+                  const overlay = overlayLines.find((l) => l.id === ovId);
+                  return (
+                    <td className="px-1 py-3 text-center" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        className="rounded p-1.5 transition-colors hover:bg-muted/50"
+                        style={{ color: overlay ? overlay.color : undefined }}
+                        title={overlay ? 'Hide lap line on map' : 'Show lap line on map'}
+                        aria-pressed={!!overlay}
+                        onClick={() => onToggleOverlay(ovId)}
+                      >
+                        <Spline className={`w-4 h-4 ${overlay ? '' : 'text-muted-foreground'}`} />
+                      </button>
+                    </td>
+                  );
+                })()}
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-2">
                     <span className="font-mono text-sm">{lap.lapNumber}</span>

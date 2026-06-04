@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, lazy, Suspense } from "react";
-import { Gauge, Map, ListOrdered, BarChart3, FolderOpen, Play, Pause, Eye, EyeOff, FlaskConical } from "lucide-react";
+import { Gauge, Map, ListOrdered, BarChart3, FolderOpen, Play, Pause, Eye, EyeOff, FlaskConical, AlertCircle } from "lucide-react";
 import { LandingPage } from "@/components/LandingPage";
 import { TrackEditor } from "@/components/TrackEditor"; // still used in compact header
 import { RaceLineTab } from "@/components/tabs/RaceLineTab";
@@ -29,11 +29,14 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ParsedData } from "@/types/racing";
+import { calculateDistanceArray } from "@/lib/referenceUtils";
+import { formatAxisDistance } from "@/lib/chartAxis";
 import { usePanelsForSlot, PanelSlot } from "@/plugins/panels";
 import { TrackPromptDialog } from "@/components/TrackPromptDialog";
 import { useSettings } from "@/hooks/useSettings";
 import { usePlayback } from "@/hooks/usePlayback";
 import { useFileManager } from "@/hooks/useFileManager";
+import { getSetupIndicator, type SetupIndicator } from "@/lib/setupStatus";
 import { useVehicleManager } from "@/hooks/useVehicleManager";
 import { useNoteManager } from "@/hooks/useNoteManager";
 import { useSetupManager } from "@/hooks/useSetupManager";
@@ -42,7 +45,10 @@ import { useSessionData } from "@/hooks/useSessionData";
 import { useLapManagement } from "@/hooks/useLapManagement";
 import { useReferenceLap, useExternalReference } from "@/hooks/useReferenceLap";
 import { useLapSnapshots } from "@/hooks/useLapSnapshots";
+import { useLapOverlays } from "@/hooks/useLapOverlays";
+import type { OverlayLine } from "@/lib/lapOverlays";
 import { LapSnapshotControls } from "@/components/LapSnapshotControls";
+import { OverlaysMenu } from "@/components/OverlaysMenu";
 import { LapSnapshotPromptDialog } from "@/components/LapSnapshotPromptDialog";
 import { useSessionMetadata } from "@/hooks/useSessionMetadata";
 import { useVideoSync } from "@/hooks/useVideoSync";
@@ -85,7 +91,7 @@ export default function Index() {
     filteredSamples, visibleSamples, visibleRange, currentIndex, filteredBounds,
     setSelectedLapNumber, setReferenceLapNumber, setCurrentIndex,
     handleSelectionChange, handleLapSelect, handleLapDropdownChange,
-    handleSetReference, handleScrub, handleRangeChange, formatRangeLabel,
+    handleSetReference, handleScrub, handleRangeChange, formatRangeLabel: formatRangeLabelTime,
   } = lapMgmt;
 
   // External reference
@@ -133,6 +139,17 @@ export default function Index() {
   // contributes a Profile panel (i.e. the cloud build flag is on).
   const showProfile = usePanelsForSlot(PanelSlot.Profile).length > 0;
 
+  // Setup-status nag: when the loaded session has no setup assigned, glow an
+  // exclamation in the tab bar (decision lives in the pure getSetupIndicator).
+  const setupIndicator = useMemo(
+    () => getSetupIndicator({
+      sessionSetupId,
+      setupCount: setupManager.setups.length,
+      vehicleCount: vehicleManager.vehicles.length,
+    }),
+    [sessionSetupId, setupManager.setups.length, vehicleManager.vehicles.length],
+  );
+
   // Video sync for Labs tab
   const videoSync = useVideoSync({
     samples: visibleSamples,
@@ -175,6 +192,19 @@ export default function Index() {
     onClearOverlay: handleClearExternalRef,
   });
 
+  // Multi-lap overlay (maps + graphs): which laps/snapshots/external-file laps
+  // to draw, plus cross-session drift alignment.
+  const {
+    overlaySelections, overlayLines, toggleOverlay,
+    alignOverlays, toggleAlignOverlays, loadOverlayFile, addExternalOverlay,
+  } = useLapOverlays({
+    data,
+    laps,
+    snapshotsForCourse: snapshots.snapshotsForCourse,
+    selectedCourse,
+    currentLapSamples: filteredSamples,
+  });
+
   // Reference-lap handlers: clear the other side when one is set.
   const handleSetReferenceWithClear = useCallback((lapNumber: number) => {
     handleSetReference(lapNumber);
@@ -188,6 +218,23 @@ export default function Index() {
     setReferenceLapNumber(null);
     snapshots.setActiveSnapshotId(null);
   }, [handleSelectExternalLap, setReferenceLapNumber, snapshots]);
+
+  // Promote one of the active overlay lines to the comparison reference lap. A
+  // same-session `lap:` overlay sets the in-session reference (so it highlights
+  // in the lap table); cross-session overlays feed the external-reference slot.
+  const handleSetOverlayReference = useCallback((line: OverlayLine) => {
+    if (line.id.startsWith('lap:')) {
+      const lapNumber = Number(line.id.slice(line.id.indexOf(':') + 1));
+      if (Number.isFinite(lapNumber)) {
+        handleSetReferenceWithClear(lapNumber);
+        return;
+      }
+    }
+    externalRef.setExternalRefSamples(line.samples);
+    externalRef.setExternalRefLabel(line.label);
+    setReferenceLapNumber(null);
+    snapshots.setActiveSnapshotId(null);
+  }, [handleSetReferenceWithClear, externalRef, setReferenceLapNumber, snapshots]);
 
   // Assigning an engine/setup may set a new course fastest lap → prompt to save.
   const handleSaveSessionSetupWithSnapshot = useCallback(async (kartId: string | null, setupId: string | null) => {
@@ -225,6 +272,23 @@ export default function Index() {
   const isAllLaps = selectedLapNumber === null;
   const minRange = Math.min(10, Math.floor(filteredSamples.length / 10));
 
+  // Crop-handle labels follow the chart X-axis scale: cumulative distance from
+  // the lap start (start-finish line) in distance mode, elapsed time otherwise.
+  const filteredDistances = useMemo(
+    () => (settings.chartXAxis === 'distance' ? calculateDistanceArray(filteredSamples) : null),
+    [settings.chartXAxis, filteredSamples],
+  );
+  const formatRangeLabel = useCallback(
+    (idx: number) => {
+      if (filteredDistances) {
+        const d = filteredDistances[idx];
+        return d === undefined ? "" : formatAxisDistance(d, useKph);
+      }
+      return formatRangeLabelTime(idx);
+    },
+    [filteredDistances, useKph, formatRangeLabelTime],
+  );
+
   const settingsContextValue = useMemo(() => ({
     useKph,
     gForceSmoothing: settings.gForceSmoothing,
@@ -233,7 +297,8 @@ export default function Index() {
     enableLabs: settings.enableLabs,
     darkMode: settings.darkMode,
     gForceSource: settings.gForceSource,
-  }), [useKph, settings.gForceSmoothing, settings.gForceSmoothingStrength, brakingZoneSettings, settings.enableLabs, settings.darkMode, settings.gForceSource]);
+    chartXAxis: settings.chartXAxis,
+  }), [useKph, settings.gForceSmoothing, settings.gForceSmoothingStrength, brakingZoneSettings, settings.enableLabs, settings.darkMode, settings.gForceSource, settings.chartXAxis]);
 
   // Memoize sliced data arrays to avoid recreating on every render
   const slicedPaceData = useMemo(
@@ -313,6 +378,13 @@ export default function Index() {
     onLoadSnapshot: snapshots.loadSnapshot,
     onClearSnapshot: snapshots.clearActive,
     onSaveSnapshot: snapshots.saveSelectedLap,
+    overlaySelections,
+    overlayLines,
+    onToggleOverlay: toggleOverlay,
+    alignOverlays,
+    onToggleAlignOverlays: toggleAlignOverlays,
+    onLoadOverlayFile: loadOverlayFile,
+    onAddExternalOverlay: addExternalOverlay,
     sessionGpsPoint,
     sessionStartDate: data?.startDate,
     sessionFileName: currentFileName,
@@ -337,6 +409,7 @@ export default function Index() {
     onFieldToggle: sessionData.handleFieldToggle,
     onWeatherStationResolved: sessionMeta.handleWeatherStationResolved,
     onSaveSessionSetup: handleSaveSessionSetupWithSnapshot,
+    onOpenGarage: fileManager.open,
     formatRangeLabel,
   }), [
     data, visibleSamples, filteredSamples, referenceSamples, currentSample, fieldMappings,
@@ -348,6 +421,8 @@ export default function Index() {
     externalRefLabel, savedFiles,
     snapshots.snapshotsForCourse, snapshots.activeSnapshotId, snapshots.canSnapshot,
     snapshots.loadSnapshot, snapshots.clearActive, snapshots.saveSelectedLap,
+    overlaySelections, overlayLines, toggleOverlay,
+    alignOverlays, toggleAlignOverlays, loadOverlayFile, addExternalOverlay,
     activeSnapshot, sessionSetup,
     sessionGpsPoint, currentFileName, sessionKartId, sessionSetupId, cachedWeatherStation,
     vehicleManager.vehicles, setupManager.setups, templateManager.templates,
@@ -356,7 +431,7 @@ export default function Index() {
     handleSelectExternalLapWithClear, handleClearExternalRefWithSnapshot, handleLoadFileForRef,
     refreshSavedFiles, handleRangeChange,
     sessionData.handleFieldToggle, sessionMeta.handleWeatherStationResolved,
-    handleSaveSessionSetupWithSnapshot, formatRangeLabel,
+    handleSaveSessionSetupWithSnapshot, fileManager.open, formatRangeLabel,
   ]);
 
   // Shared FileManagerDrawer props
@@ -373,6 +448,7 @@ export default function Index() {
     onSaveFile: fileManager.saveFile,
     onDataLoaded: handleDataLoaded,
     autoSave: settings.autoSaveFiles,
+    initialGarageTab: fileManager.initialGarageTab,
     showProfile,
     vehicles: vehicleManager.vehicles,
     vehicleTypes: templateManager.vehicleTypes,
@@ -401,6 +477,7 @@ export default function Index() {
   }), [
     fileManager.isOpen, fileManager.files, fileManager.fileMetadataMap, fileManager.storageUsed, fileManager.storageQuota,
     fileManager.close, fileManager.loadFile, fileManager.removeFile, fileManager.exportFile, fileManager.saveFile,
+    fileManager.initialGarageTab,
     handleDataLoaded, settings.autoSaveFiles, showProfile,
     vehicleManager.vehicles, vehicleManager.addVehicle, vehicleManager.updateVehicle, vehicleManager.removeVehicle,
     templateManager.vehicleTypes, templateManager.templates, templateManager.addVehicleType, templateManager.removeVehicleType,
@@ -487,17 +564,35 @@ export default function Index() {
             onLoad={snapshots.loadSnapshot}
             onClear={snapshots.clearActive}
             onSave={snapshots.saveSelectedLap}
+            overlayLines={overlayLines}
+            onToggleOverlay={toggleOverlay}
+          />
+
+          <OverlaysMenu
+            hasCourse={!!selectedCourse}
+            trackName={selection?.trackName}
+            courseName={selectedCourse?.name}
+            currentFileName={currentFileName}
+            laps={laps}
+            overlayLines={overlayLines}
+            referenceLapNumber={referenceLapNumber}
+            externalRefLabel={externalRefLabel}
+            onLoadOverlayFile={loadOverlayFile}
+            onAddExternalOverlay={addExternalOverlay}
+            onToggleOverlay={toggleOverlay}
+            onSetOverlayReference={handleSetOverlayReference}
           />
 
           <SettingsModal settings={settings} onSettingsChange={setSettings} onToggleFieldDefault={toggleFieldDefault} />
-          <Button variant="outline" size="icon" className="h-8 w-8" onClick={fileManager.open}>
+          <Button variant="outline" size="sm" className="h-8 gap-1.5 px-2 lg:px-3" onClick={() => fileManager.open()}>
             <FolderOpen className="w-4 h-4" />
+            <span className="hidden lg:inline">Garage</span>
           </Button>
         </div>
       </header>
 
       <main className="flex-1 min-h-0 overflow-hidden flex flex-col">
-        <TabBar topPanelView={topPanelView} setTopPanelView={setTopPanelView} laps={laps} showOverlays={showOverlays} onToggleOverlays={() => setShowOverlays(v => !v)} showLabs={showLabs} showCoach={showCoach} />
+        <TabBar topPanelView={topPanelView} setTopPanelView={setTopPanelView} laps={laps} showOverlays={showOverlays} onToggleOverlays={() => setShowOverlays(v => !v)} showLabs={showLabs} showCoach={showCoach} setupIndicator={setupIndicator} onSetupIndicatorClick={() => setupIndicator && fileManager.open(setupIndicator.target)} />
 
 
         <div className="flex-1 min-h-0 overflow-hidden">
@@ -536,7 +631,7 @@ export default function Index() {
 }
 
 /** Tab navigation bar for the main data view */
-function TabBar({ topPanelView, setTopPanelView, laps, showOverlays, onToggleOverlays, showLabs, showCoach }: {
+function TabBar({ topPanelView, setTopPanelView, laps, showOverlays, onToggleOverlays, showLabs, showCoach, setupIndicator, onSetupIndicatorClick }: {
   topPanelView: TopPanelView;
   setTopPanelView: (view: TopPanelView) => void;
   laps: { lapNumber: number }[];
@@ -544,6 +639,8 @@ function TabBar({ topPanelView, setTopPanelView, laps, showOverlays, onToggleOve
   onToggleOverlays: () => void;
   showLabs: boolean;
   showCoach: boolean;
+  setupIndicator: SetupIndicator | null;
+  onSetupIndicatorClick: () => void;
 }) {
   const tabClass = (view: TopPanelView) =>
     `flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors ${
@@ -575,6 +672,32 @@ function TabBar({ topPanelView, setTopPanelView, laps, showOverlays, onToggleOve
         <button onClick={() => setTopPanelView("coach")} className={tabClass("coach")}>
           <Gauge className="w-4 h-4" /> <span className="hidden sm:inline">Coach</span>
         </button>
+      )}
+      {setupIndicator && (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={onSetupIndicatorClick}
+                aria-label="Session setup not configured"
+                className={`flex items-center px-3 py-2 animate-pulse transition-opacity hover:opacity-70 ${
+                  setupIndicator.tone === "red"
+                    ? "text-destructive drop-shadow-[0_0_6px_hsl(var(--destructive))]"
+                    : "text-orange-500 drop-shadow-[0_0_6px_rgba(249,115,22,0.85)]"
+                }`}
+              >
+                <AlertCircle className="w-5 h-5" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>
+                {setupIndicator.tone === "red"
+                  ? "No vehicle or setup saved yet — click to add one"
+                  : "No setup saved for this session — click to configure"}
+              </p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       )}
       {topPanelView === "raceline" && (
         <div className="ml-auto mr-3">

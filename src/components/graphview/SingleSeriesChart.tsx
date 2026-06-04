@@ -4,6 +4,14 @@ import { GpsSample } from '@/types/racing';
 import { G_FORCE_FIELDS, applySmoothingToValues, computeSmoothingWindowSize, detectSpeedGlitchIndices, interpolateGlitchSpeed } from '@/lib/chartUtils';
 import { useSettingsContext } from '@/contexts/SettingsContext';
 import { getChartColors } from '@/lib/chartColors';
+import { buildChartAxis } from '@/lib/chartAxis';
+import { alignByDistance, alignValuesByDistance } from '@/lib/referenceUtils';
+import { computeBrakingGSeriesSG, gToBrakePercent } from '@/lib/brakingZones';
+import type { OverlayLine } from '@/lib/lapOverlays';
+import { GraphResizeHandle } from './GraphResizeHandle';
+
+/** Default height (px) for a single-series chart card. */
+export const SINGLE_SERIES_DEFAULT_HEIGHT = 180;
 
 interface SingleSeriesChartProps {
   samples: GpsSample[];
@@ -15,19 +23,41 @@ interface SingleSeriesChartProps {
   onDelete: () => void;
   referenceValues?: (number | null)[] | null;
   brakingGValues?: number[];
+  /** Full lap samples + the visible window's start index, for absolute
+   *  (start-finish-anchored) X-axis labels while the window stays zoomed. */
+  allSamples?: GpsSample[];
+  rangeStart?: number;
+  /** Extra laps/snapshots to overlay (distance-aligned) for this series. */
+  overlayLines?: OverlayLine[];
+  /** Committed card height (px); defaults to SINGLE_SERIES_DEFAULT_HEIGHT. */
+  height?: number;
+  /** Persist a new card height (fired on resize-drag release). */
+  onHeightChange?: (height: number) => void;
 }
 
 export function SingleSeriesChart({
   samples, seriesKey, currentIndex, onScrub,
   color, label, onDelete,
   referenceValues = null, brakingGValues,
+  allSamples, rangeStart, overlayLines = [],
+  height, onHeightChange,
 }: SingleSeriesChartProps) {
-  const { useKph, gForceSmoothing, gForceSmoothingStrength, darkMode } = useSettingsContext();
+  const { useKph, gForceSmoothing, gForceSmoothingStrength, darkMode, chartXAxis, brakingZoneSettings } = useSettingsContext();
   const chartColors = useMemo(() => getChartColors(darkMode), [darkMode]);
+  const axis = useMemo(
+    () => buildChartAxis(samples, chartXAxis, { useKph, fullSamples: allSamples, rangeStart }),
+    [samples, chartXAxis, useKph, allSamples, rangeStart],
+  );
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   const [isDragging, setIsDragging] = useState(false);
+
+  // Live card height — driven by the resize handle, seeded from the committed
+  // prop and re-synced whenever the parent's value changes.
+  const committedHeight = height ?? SINGLE_SERIES_DEFAULT_HEIGHT;
+  const [cardHeight, setCardHeight] = useState(committedHeight);
+  useEffect(() => { setCardHeight(committedHeight); }, [committedHeight]);
 
   const isSpeed = seriesKey === 'speed';
   const isPace = seriesKey === '__pace__';
@@ -59,6 +89,43 @@ export function SingleSeriesChart({
     }
     return rawValues;
   }, [rawValues, isGForce, smoothingWindowSize]);
+
+  // Distance-align each overlay lap's value for this series onto the current
+  // lap. The synthetic pace series is reference-relative, so it can't overlay;
+  // brake % is derived per-lap (computed below), every other series reads
+  // straight off the sample.
+  const overlaySeries = useMemo(() => {
+    if (isPace) return [];
+    const full = allSamples ?? samples;
+    if (overlayLines.length === 0 || full.length === 0) return [];
+    const start = rangeStart ?? 0;
+    const end = start + samples.length;
+    if (isBrakingG) {
+      // Derive each overlay lap's brake % from its own samples, then align it
+      // onto the current lap's distance axis (mirrors the reference brake line).
+      return overlayLines.map((line) => {
+        const brakePct = gToBrakePercent(
+          computeBrakingGSeriesSG(line.samples, brakingZoneSettings.graphWindow),
+          brakingZoneSettings.brakeMaxG,
+        );
+        const values = alignValuesByDistance(full, line.samples, brakePct).slice(start, end);
+        return { id: line.id, color: line.color, label: line.label, values };
+      });
+    }
+    const getValue = isSpeed
+      ? (s: GpsSample) => (useKph ? s.speedKph : s.speedMph)
+      : (s: GpsSample) => s.extraFields[seriesKey];
+    return overlayLines.map((line) => {
+      let values = alignByDistance(full, line.samples, getValue).slice(start, end);
+      if (isGForce && smoothingWindowSize > 1) {
+        values = applySmoothingToValues(
+          values.map((v) => (v === null ? undefined : v)),
+          smoothingWindowSize,
+        ).map((v) => (v === undefined ? null : v));
+      }
+      return { id: line.id, color: line.color, label: line.label, values };
+    });
+  }, [overlayLines, allSamples, samples, rangeStart, isSpeed, isPace, isBrakingG, isGForce, seriesKey, useKph, smoothingWindowSize, brakingZoneSettings.graphWindow, brakingZoneSettings.brakeMaxG]);
 
   // Speed glitch filtering
   const interpolateIndices = useMemo(() => {
@@ -130,6 +197,15 @@ export function SingleSeriesChart({
       }
     }
 
+    // Expand range to fit overlay lap values too
+    for (const overlay of overlaySeries) {
+      const nums = overlay.values.filter((v): v is number => v !== null);
+      if (nums.length > 0) {
+        minVal = Math.min(minVal, ...nums);
+        maxVal = Math.max(maxVal, ...nums);
+      }
+    }
+
     if (isSpeed) { minVal = 0; maxVal = Math.ceil(maxVal / 10) * 10; }
     if (isBrakingG) { minVal = 0; maxVal = 100; } // 0-100% fixed range
     if (isPace) {
@@ -149,13 +225,29 @@ export function SingleSeriesChart({
       for (let i = 0; i < samples.length; i++) {
         const rv = referenceValues[i];
         if (rv === null || rv === undefined) { refDrawing = false; continue; }
-        const x = padding.left + (i / (samples.length - 1)) * chartWidth;
+        const x = padding.left + axis.fracAt(i) * chartWidth;
         const y = padding.top + (1 - (rv - minVal) / range) * chartHeight;
         if (!refDrawing) { ctx.moveTo(x, y); refDrawing = true; }
         else { ctx.lineTo(x, y); }
       }
       ctx.stroke();
       ctx.setLineDash([]);
+    }
+
+    // Draw overlay lap lines (behind the main line — current lap stays on top)
+    for (const overlay of overlaySeries) {
+      ctx.beginPath();
+      ctx.strokeStyle = overlay.color;
+      ctx.lineWidth = 1.5;
+      let drawing = false;
+      for (let i = 0; i < samples.length; i++) {
+        const v = overlay.values[i];
+        if (v === null || v === undefined) { drawing = false; continue; }
+        const x = padding.left + axis.fracAt(i) * chartWidth;
+        const y = padding.top + (1 - (v - minVal) / range) * chartHeight;
+        if (!drawing) { ctx.moveTo(x, y); drawing = true; } else { ctx.lineTo(x, y); }
+      }
+      ctx.stroke();
     }
 
     // Draw zero line for pace and braking G
@@ -193,7 +285,7 @@ export function SingleSeriesChart({
         lastValidIndex = i;
       }
 
-      const x = padding.left + (i / (samples.length - 1)) * chartWidth;
+      const x = padding.left + axis.fracAt(i) * chartWidth;
       const y = padding.top + (1 - (val - minVal) / range) * chartHeight;
 
       if (!isDrawing) { ctx.moveTo(x, y); isDrawing = true; }
@@ -212,22 +304,16 @@ export function SingleSeriesChart({
       ctx.fillText(fmt, padding.left - 6, y + 3);
     }
 
-    // X axis labels (time)
+    // X axis labels (time or distance, per chartXAxis setting)
     ctx.textAlign = 'center';
-    const startTime = samples[0].t / 1000;
-    const endTime = samples[samples.length - 1].t / 1000;
-    const duration = endTime - startTime;
     for (let i = 0; i <= timeGridCount; i += 2) {
-      const time = (duration / timeGridCount) * i;
       const x = padding.left + (chartWidth / timeGridCount) * i;
-      const mins = Math.floor(time / 60);
-      const secs = (time % 60).toFixed(0).padStart(2, '0');
-      ctx.fillText(`${mins}:${secs}`, x, dimensions.height - 6);
+      ctx.fillText(axis.label(i / timeGridCount), x, dimensions.height - 6);
     }
 
     // Scrub cursor
     if (currentIndex >= 0 && currentIndex < samples.length) {
-      const x = padding.left + (currentIndex / (samples.length - 1)) * chartWidth;
+      const x = padding.left + axis.fracAt(currentIndex) * chartWidth;
       ctx.beginPath();
       ctx.moveTo(x, padding.top);
       ctx.lineTo(x, padding.top + chartHeight);
@@ -235,7 +321,7 @@ export function SingleSeriesChart({
       ctx.lineWidth = 2;
       ctx.stroke();
 
-      // Current value tooltip
+      // Current value tooltip — current lap first, then each overlay lap.
       const displayVal = values[currentIndex];
       if (displayVal !== undefined) {
         const unit = isPace ? 's' : isBrakingG ? 'G' : isSpeed ? (useKph ? ' kph' : ' mph') : '';
@@ -253,32 +339,49 @@ export function SingleSeriesChart({
           }
         }
 
-        const fullText = mainText + deltaText;
-        const boxWidth = Math.max(90, ctx.measureText(fullText).width + 12);
-        const boxX = Math.min(x + 8, dimensions.width - boxWidth - 10);
-
-        ctx.fillStyle = chartColors.tooltipBg;
-        ctx.fillRect(boxX, padding.top + 4, boxWidth, 18);
-        ctx.strokeStyle = chartColors.tooltipBorder;
-        ctx.lineWidth = 1;
-        ctx.strokeRect(boxX, padding.top + 4, boxWidth, 18);
-
-        ctx.textAlign = 'left';
         ctx.font = '10px JetBrains Mono, monospace';
 
-        // Draw main value
-        ctx.fillStyle = color;
-        ctx.fillText(mainText, boxX + 4, padding.top + 16);
+        // Overlay rows (value at the cursor for each overlaid lap)
+        const overlayRows = overlaySeries
+          .map((o) => ({ color: o.color, label: o.label, v: o.values[currentIndex] }))
+          .filter((r): r is { color: string; label: string; v: number } => r.v !== null && r.v !== undefined)
+          .map((r) => ({
+            color: r.color,
+            text: `${r.label.length > 16 ? `${r.label.slice(0, 15)}…` : r.label}: ${r.v.toFixed(1)}`,
+          }));
 
-        // Draw delta in separate color
+        let boxWidth = ctx.measureText(mainText + deltaText).width;
+        for (const r of overlayRows) boxWidth = Math.max(boxWidth, ctx.measureText(r.text).width);
+        boxWidth = Math.max(90, boxWidth + 12);
+        const boxHeight = 18 + overlayRows.length * 14;
+        const boxX = Math.min(x + 8, dimensions.width - boxWidth - 10);
+        const boxY = padding.top + 4;
+
+        ctx.fillStyle = chartColors.tooltipBg;
+        ctx.fillRect(boxX, boxY, boxWidth, boxHeight);
+        ctx.strokeStyle = chartColors.tooltipBorder;
+        ctx.lineWidth = 1;
+        ctx.strokeRect(boxX, boxY, boxWidth, boxHeight);
+
+        ctx.textAlign = 'left';
+
+        // Main value (current lap, on top)
+        ctx.fillStyle = color;
+        ctx.fillText(mainText, boxX + 4, boxY + 12);
         if (deltaText) {
           const mainWidth = ctx.measureText(mainText).width;
           ctx.fillStyle = chartColors.deltaText;
-          ctx.fillText(deltaText, boxX + 4 + mainWidth, padding.top + 16);
+          ctx.fillText(deltaText, boxX + 4 + mainWidth, boxY + 12);
         }
+
+        // Overlay rows beneath
+        overlayRows.forEach((r, idx) => {
+          ctx.fillStyle = r.color;
+          ctx.fillText(r.text, boxX + 4, boxY + 12 + (idx + 1) * 14);
+        });
       }
     }
-  }, [samples, values, currentIndex, dimensions, color, isSpeed, isPace, isBrakingG, useKph, interpolateIndices, referenceValues, chartColors]);
+  }, [samples, values, currentIndex, dimensions, color, isSpeed, isPace, isBrakingG, useKph, interpolateIndices, referenceValues, chartColors, axis, overlaySeries]);
 
   // Scrub handling
   const handleScrub = useCallback((clientX: number) => {
@@ -289,8 +392,8 @@ export function SingleSeriesChart({
     const chartWidth = rect.width - padding.left - padding.right;
     const x = clientX - rect.left - padding.left;
     const ratio = Math.max(0, Math.min(1, x / chartWidth));
-    onScrub(Math.round(ratio * (samples.length - 1)));
-  }, [samples, onScrub]);
+    onScrub(axis.indexAt(ratio));
+  }, [samples, onScrub, axis]);
 
   const handleMouseDown = (e: React.MouseEvent) => { setIsDragging(true); handleScrub(e.clientX); };
   const handleMouseMove = (e: React.MouseEvent) => { if (isDragging) handleScrub(e.clientX); };
@@ -299,7 +402,7 @@ export function SingleSeriesChart({
   const handleTouchMove = (e: React.TouchEvent) => { if (isDragging) handleScrub(e.touches[0].clientX); };
 
   return (
-    <div className="relative border-b border-border" style={{ minHeight: '150px', height: '180px' }}>
+    <div className="relative border-b border-border flex flex-col" style={{ height: `${cardHeight}px` }}>
       {/* Header */}
       <div className="absolute top-1 left-2 z-10 flex items-center gap-1.5">
         <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
@@ -314,7 +417,7 @@ export function SingleSeriesChart({
       </button>
       <div
         ref={containerRef}
-        className="w-full h-full min-h-0 overflow-hidden cursor-crosshair"
+        className="flex-1 w-full min-h-0 overflow-hidden cursor-crosshair"
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
@@ -325,6 +428,11 @@ export function SingleSeriesChart({
       >
         <canvas ref={canvasRef} className="block w-full h-full" />
       </div>
+      <GraphResizeHandle
+        height={cardHeight}
+        onResize={setCardHeight}
+        onCommit={(h) => { setCardHeight(h); onHeightChange?.(h); }}
+      />
     </div>
   );
 }

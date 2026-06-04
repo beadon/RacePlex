@@ -1,6 +1,7 @@
 import { useCallback, useState, lazy, Suspense } from "react";
-import { Upload, FileText, FolderOpen, Loader2 } from "lucide-react";
+import { Upload, FileText, FolderOpen, Loader2, Map } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { TrackEditor } from "@/components/TrackEditor";
 import { parseDatalogFile } from "@/lib/datalogParser";
 import { ParsedData } from "@/types/racing";
 // Lazy so the BLE module (Web Bluetooth protocol) stays out of the initial
@@ -110,6 +111,21 @@ export function FileImport({ onDataLoaded, onOpenFileManager, autoSave, autoSave
         <Suspense fallback={null}>
           <DataloggerDownload onDataLoaded={onDataLoaded} autoSave={autoSave} autoSaveFile={autoSaveFile} />
         </Suspense>
+      </div>
+
+      {/* Track manager — create/draw tracks & courses without loading a datalog.
+          With no session loaded the visual editor offers location search + manual
+          drawing; once a datalog is open the header editor adds "Generate from lap". */}
+      <div className="flex justify-center">
+        <TrackEditor
+          startInManage
+          triggerButton={
+            <Button variant="outline">
+              <Map className="w-4 h-4 mr-2" />
+              Manage Tracks
+            </Button>
+          }
+        />
       </div>
 
       {fileName && !error && <p className="text-sm text-muted-foreground font-mono">Loaded: {fileName}</p>}

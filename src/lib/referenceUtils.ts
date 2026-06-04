@@ -164,6 +164,63 @@ export function calculateReferenceSpeed(
 }
 
 /**
+ * Align another lap's per-sample value onto the current lap's distance axis:
+ * for each current sample, interpolate the other lap's value at the same
+ * cumulative distance. One entry per current sample — `null` beyond the other
+ * lap's length, or where the source value is missing. Generalizes
+ * `calculateReferenceSpeed` to any channel (used for multi-lap chart overlays).
+ */
+export function alignByDistance(
+  currentSamples: GpsSample[],
+  otherSamples: GpsSample[],
+  getValue: (s: GpsSample) => number | undefined,
+): (number | null)[] {
+  return alignValuesByDistance(currentSamples, otherSamples, otherSamples.map(getValue));
+}
+
+/**
+ * Like `alignByDistance`, but for a *derived* series that isn't stored on the
+ * sample: the values to align live in a parallel array indexed 1:1 to
+ * `otherSamples` (e.g. a computed brake-% series). For each current sample,
+ * interpolate the other lap's value at the same cumulative distance — `null`
+ * beyond the other lap's length or where the source value is missing.
+ */
+export function alignValuesByDistance(
+  currentSamples: GpsSample[],
+  otherSamples: GpsSample[],
+  values: (number | null | undefined)[],
+): (number | null)[] {
+  if (currentSamples.length === 0 || otherSamples.length === 0) return [];
+
+  const curD = calculateDistanceArray(currentSamples);
+  const refD = calculateDistanceArray(otherSamples);
+  const maxRef = refD[refD.length - 1];
+  const out: (number | null)[] = [];
+
+  for (let i = 0; i < currentSamples.length; i++) {
+    const target = curD[i];
+    if (target > maxRef) { out.push(null); continue; }
+
+    let lo = 0;
+    let hi = refD.length - 1;
+    while (lo < hi - 1) {
+      const mid = (lo + hi) >> 1;
+      if (refD[mid] <= target) lo = mid; else hi = mid;
+    }
+
+    const v1 = values[lo];
+    if (v1 === undefined || v1 === null) { out.push(null); continue; }
+    const v2 = values[hi];
+    const d1 = refD[lo];
+    const d2 = refD[hi];
+    if (d2 === d1 || v2 === undefined || v2 === null) { out.push(v1); continue; }
+    out.push(v1 + ((target - d1) / (d2 - d1)) * (v2 - v1));
+  }
+
+  return out;
+}
+
+/**
  * Precompute reference data for a lap.
  */
 export interface ReferenceData {

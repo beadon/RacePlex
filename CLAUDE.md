@@ -80,7 +80,7 @@ src/
 │   ├── ui/                # shadcn/ui primitives
 │   ├── admin/             # Admin tabs (Tracks, Courses, Submissions, BannedIps, Tools, Messages)
 │   ├── tabs/              # View tabs (GraphView, RaceLine, LapTimes, Labs, Coach; Profile is mounted in the drawer)
-│   ├── graphview/         # Pro mode: GraphPanel, GraphViewPanel, MiniMap, SingleSeriesChart, InfoBox
+│   ├── graphview/         # Pro mode: GraphPanel, GraphViewPanel, MiniMap, SingleSeriesChart, GGDiagram, InfoBox
 │   ├── drawer/            # File-manager drawer tabs (Files, Vehicles/Karts, Notes, Setups, Device*)
 │   ├── track-editor/      # Track editor sub-components (VisualEditor is lazy — see Bundle Splitting)
 │   ├── video-overlays/    # Video-export overlay system: registry + themes + per-widget *Overlay,
@@ -95,6 +95,7 @@ src/
 │   ├── useLapManagement.ts# Lap calc, selection, visible range
 │   ├── usePlayback.ts     # Shared playback cursor (chart + map)
 │   ├── useLapSnapshots.ts # ★ Lap-snapshot orchestration (capture/prompt/overlay)
+│   ├── useLapOverlays.ts  # Multi-lap map-overlay selection (lap/snapshot ids → OverlayLine[])
 │   ├── useReferenceLap / useVideoSync / useSettings / useSessionMetadata / useOnlineStatus
 │   ├── use*Manager.ts     # IndexedDB CRUD: File, Vehicle (←Kart compat), Engine, Template, Note, Setup
 │   └── useSubscription / useStripePrices   # billing, online — see docs/backend.md
@@ -107,6 +108,8 @@ src/
 │   ├── lapCalculation.ts  # Start/finish crossing detection → Lap[]
 │   ├── lapDelta.ts        # ★ Position-based lap delta (arc-length resample + segment-projected gap)
 │   ├── fileBrowserTree.ts # ★ Pure file-browser hierarchy: Track→Course→logs, engine/kart filter, breadcrumbs, smart collapse
+│   ├── lapOverlays.ts     # ★ Pure multi-lap overlay logic: id format (lap/snap/file), palette, resolve selections → OverlayLine[], unionBounds
+│   ├── lapAlignment.ts    # ★ Pure rigid registration (2D Kabsch) to drift-align cross-session overlays onto the current lap (map-only)
 │   ├── lapSnapshot.ts     # ★ Pure snapshot types/keying/buffer (course+engine identity)
 │   ├── lapSnapshotStorage.ts # ★ IndexedDB CRUD for lap snapshots (emits garageEvents)
 │   ├── setupRevision.ts  # ★ Pure content-addressed setup history: hash + freeze (immutable revisions)
@@ -126,6 +129,7 @@ src/
 │   ├── billingClient.ts / pendingCheckout.ts   # Supabase billing I/O + sign-up checkout stash
 │   ├── profanity.ts       # Basic client-side profanity filter for display names
 │   ├── weatherService.ts  # OpenWeatherMap (online-only)
+│   ├── buildInfo.ts       # Build version/hash/branch/commit-date stamp (landing footer "what changed" marker; main → version+hash, other branches → branch+hash+commit time + amber preview-DB warning via isPreviewBuild(); values injected by vite define)
 │   └── utils.ts           # Tailwind cn() helper
 ├── plugins/               # ★ Plugin framework (auto-discovered) — see Plugin Framework section
 │   ├── (framework)        # types, registry, index, panels, mounts, storage + PluginPanelHost/PluginMount
@@ -286,7 +290,7 @@ Detection order matters: binary formats first (MoTeC LD → UBX), then text form
 | `ParserStats` | `totalRows`, `acceptedRows`, `rejected: { nanFields, zeroCoords, outOfRange, speedCap, teleportation, incompleteRow }` |
 | `DovexMetadata` | `datetime?`, `driver?`, `course?`, `shortName?`, `bestLapMs?`, `optimalMs?`, `lapTimesMs?[]` |
 | `Lap` | `lapNumber`, `startTime/endTime`, `lapTimeMs`, speed stats, `startIndex/endIndex`, `sectors?` |
-| `Course` | `name`, `lengthFt?`, `startFinishA/B` (lat/lon), optional `sector2/sector3` lines |
+| `Course` | `name`, `lengthFt?`, `startFinishA/B` (lat/lon), optional `sector2/sector3` lines, optional `layout?` (`{lat,lon}[]` user-drawn outline) |
 | `Track` | `name`, `shortName?` (max 8 chars), `courses[]` |
 | `CourseDetectionResult` | `track`, `course`, `direction?`, `laps[]`, `isWaypointMode`, `waypointNotice?` |
 | `CourseDirection` | `'forward' \| 'reverse'` |
@@ -467,13 +471,15 @@ The `course_layouts` table stores polyline drawings of track layouts (1:1 with c
 
 **Access**: Admin-only RLS (same pattern as courses table). Layout lengths (in feet) ARE exported to track JSON files as `lengthFt`.
 
-**Draw tool**: In the VisualEditor, a "Draw" button allows clicking on the satellite map to build a polyline outline. This manual drawing tool is **admin-only** (`isAdminEditor={true}` in CoursesTab).
+**Draw tool**: In the VisualEditor, a "Draw" button allows clicking on the satellite map to build a polyline outline. It is shown whenever `showDrawTool` is set — **available to all users**, not just admin (the old `isAdminEditor` gate was removed). User-drawn (or lap-generated) outlines are persisted on `Course.layout` (a `{lat, lon}[]` polyline) through the normal track-storage CRUD, so they ride cloud-sync and travel with a community submission. Built-in courses still get their outline from `public/drawings.json` (see `loadCourseDrawings`); when editing, the user's own `course.layout` takes precedence over the built-in drawing.
 
-**Generate Drawing**: A "Generate" button (visible when laps are available and `showDrawTool` is true) lets users select a lap and auto-populate the drawing from that lap's GPS samples. Always available in user-side TrackEditor when session data is loaded. Laps and samples are threaded from `Index.tsx` → `TrackEditor` → `VisualEditor`.
+**Manage Tracks (home screen)**: `FileImport` renders a **Manage Tracks** button (below "Download from Datalogger") that opens `TrackEditor` via its `triggerButton` + `startInManage` props — the track manager is reachable with no datalog loaded. The create-flow dialogs (`AddTrackDialog`/`AddCourseDialog`) pass `isNewTrack`/`showDrawTool` so location search + manual drawing are available there.
+
+**Generate Drawing**: A "Generate" button (visible when laps are available and `showDrawTool` is true) lets users select a lap and auto-populate the drawing from that lap's GPS samples. Available in user-side TrackEditor when session data is loaded. Laps and samples are threaded from `Index.tsx` → `TrackEditor` → `VisualEditor` (and into the create-flow dialogs). The drawing state lives in `useTrackEditorForm` (`formLayout`) and is written into the course via `buildCourse()`.
 
 **"Generate Course Mapping" button**: Placeholder in admin CoursesTab — will eventually produce fingerprint data for automatic track detection on the DovesDataLogger hardware.
 
-**Submissions**: The `submissions` table has `has_layout` (bool) and `layout_data` (jsonb) columns to carry drawing data through the submission workflow.
+**Submissions**: The `submissions` table has `has_layout` (bool) and `layout_data` (jsonb) columns to carry drawing data through the submission workflow. The client now sends a course's `layout` as `layout_data` (`SubmitTrackDialog` → `submit-track` edge fn, which validates point shape + caps at 5000 points), the drawing is folded into `courseContentHash` (so adding/editing a drawing re-flags the course for upload), and the admin **Submissions** tab previews the polyline (`DrawingPreview`) with an **Apply to course layout** action that matches the DB course (by short-name/name + course name) and calls `db.saveLayout`. `DbSubmission` carries `has_layout`/`layout_data`.
 
 **Public drawings**: Admin exports drawings to `public/drawings.json` (keyed by `shortName/courseName` → `[{lat, lon}, ...]`). Loaded by `trackStorage.ts:loadCourseDrawings()` (cached). Rendered on the race line map as a dashed polyline outline when a course is selected. Helper: `getDrawingForCourse(shortName, courseName)`.
 
@@ -489,10 +495,17 @@ classifies each user course as **new_track** (wholly new track —
 **course_modification** (an edited built-in course). A user "edit" that is
 byte-identical to the built-in course is skipped. The track-level rollup reads
 **New** vs **Edited** (adding a course never overwrites the track). A geometry
-**content hash** (`courseContentHash`, rounded to ~1cm) drives both the
-identical-skip and dedupe: `submittedTracksStorage.ts` (localStorage key
-`racing-datalog-submitted-v1`) remembers each submitted course's hash, so
-unchanged courses aren't re-sent and a later edit re-flags the course.
+**+ drawing content hash** (`courseContentHash`, rounded to ~1cm — now also folds
+in the course's `layout` polyline) drives both the identical-skip and dedupe:
+`submittedTracksStorage.ts` (localStorage key `racing-datalog-submitted-v1`)
+remembers each submitted course's hash, so unchanged courses aren't re-sent and a
+later edit — geometry *or* drawing — re-flags the course. A course's `layout`
+rides the plan as `SubmissionCourse.layout` → `layout_data` in the payload.
+
+The **"Submit to DB" button is always rendered** (in `TrackEditor`'s manage
+view) and **disabled when nothing is pending** — `TrackEditor` runs
+`buildSubmissionPlan` itself to compute `pendingSubmissionCount` for the
+enable/label (and refreshes it via `onSubmitted`).
 
 The review dialog sends all selected courses in **one** `submit-track` call
 (`{ submissions: [...], turnstile_token }`); the edge function validates each,
@@ -613,11 +626,75 @@ Global BLE connection state is managed by `DeviceContext.tsx`, wrapping the app 
 
 `useSettings` hook (persists to localStorage) → `SettingsContext` for tree-wide access.
 
-Key settings: `useKph`, `gForceSmoothing`, `gForceSmoothingStrength`, `brakingZoneSettings` (thresholds, duration, smoothing, color, width), `enableLabs` (hidden when no labs features), `darkMode`, `deltaMethod` (`'position'` default | `'distance'` legacy), `deltaSampleMeters` (arc-length resample spacing for position delta, default 2).
+Key settings: `useKph`, `gForceSmoothing`, `gForceSmoothingStrength`, `brakingZoneSettings` (thresholds, duration, smoothing, color, width), `enableLabs` (hidden when no labs features), `darkMode`, `deltaMethod` (`'position'` default | `'distance'` legacy), `deltaSampleMeters` (arc-length resample spacing for position delta, default 2), `chartXAxis` (`'distance'` default | `'time'`) — the analysis-chart X-axis scale.
 
 `useReferenceLap.ts` routes pace through `computeLapPace` (`lapDelta.ts`), which
 switches on `deltaMethod`. The position method is the issue #29 port; `distance`
 falls back to the legacy `calculatePace` in `referenceUtils.ts`.
+
+`chartXAxis` is plumbed through `SettingsContext` and consumed by both analysis
+charts (`TelemetryChart`, `SingleSeriesChart`) via `lib/chartAxis.ts`
+(`buildChartAxis`): a pure, unit-tested helper that maps each sample to an
+x-fraction (elapsed-time fraction, or cumulative-distance fraction via
+`calculateDistanceArray`), supplies tick labels (distance unit follows `useKph`:
+MPH→ft/mi, KPH→m/km), and an `indexAt` inverse for scrubbing. Distance is the
+default so laps line up by track position; the reference/pace overlays already
+align by distance, so they sit correctly on either axis.
+
+The axis is **anchored at the start-finish line**: the charts draw the cropped
+visible window stretched to fill the canvas (zoom preserved), but pass the full
+lap (`allSamples`) + the window's `rangeStart` so `buildChartAxis` labels ticks
+in *absolute* distance/time from the lap origin (`0` = start-finish) rather than
+window-relative. The range-slider crop handles (`formatRangeLabel`, built in
+`Index.tsx`) follow the same scale — cumulative distance from the lap start in
+distance mode, elapsed time otherwise.
+
+The **G-G diagram** (friction circle) is a pro-mode graph
+(`graphview/GGDiagram.tsx`) added from the `GraphPanel` picker as the `__gg__`
+key. It scatters lateral vs longitudinal G (lat on X, accel-positive lon on Y)
+for the visible window, overlays the reference lap's cloud and the live scrub
+point, and draws concentric 0.5 g grip rings. The data prep is pure + unit-tested
+in `lib/ggDiagram.ts` (`pickGForcePair` honoring `gForceSource` → GPS `lat_g`/
+`lon_g` or native `lat_g_native`/`lon_g_native`; `computeGGPoints` with per-axis
+smoothing; `computeGGAxisMax` for the symmetric, clamped axis range). Raw IMU
+`accel_*` is intentionally excluded — it isn't guaranteed grip-frame-aligned.
+
+The **multi-lap overlay** draws extra laps/snapshots across **all four data
+views at once**: racing lines on both maps (`RaceLineView` + `MiniMap`) and
+distance-aligned traces on both chart types (`TelemetryChart` speed +
+`SingleSeriesChart` per-series), with per-lap values in the cursor tooltip.
+Selection: per-lap (`LapTable` "Map" column), per-snapshot
+(`LapSnapshotControls`), and laps from **other saved files** via the header
+**`OverlaysMenu`** (load+parse on demand, cached in `useLapOverlays`). The
+`OverlaysMenu` is a three-section dialog: **Current overlays** (each line
+promotable to the comparison reference via `onSetOverlayReference` — the active
+reference is highlighted by matching `referenceLapNumber`/`externalRefLabel` —
+or removable), **Current session laps** (toggle this session's laps as overlays
+without the lap list), and **Add from other logs** — the other sessions tagged
+with the *current course*, listed by date/time (`filesTaggedWithCourse` in
+`fileBrowserTree.ts`, never raw file names). It replaces the old "External Ref"
+bar (`ExternalRefBar`), which is now hidden-but-kept behind
+`SHOW_EXTERNAL_REF_BAR` in `LapTable`; references are still also set from the
+per-row **Ref** buttons. Held as
+stable ids (`lap:<n>` / `snap:<id>` / `file:<lap>\x1f<name>`) and resolved by the
+pure, unit-tested `lib/lapOverlays.ts` (`resolveOverlayLines` → `OverlayLine[]`
+with palette colors, external samples from a cache; `unionBounds` to fit map
+overlays that run outside the active lap). `SessionContext` carries
+`overlayLines` + `onToggleOverlay` + the external-file loader/adder + the align
+toggle. **Cross-session overlays (`snap:`/`file:`) can be drift-aligned** onto the
+current lap via `lib/lapAlignment.ts` (2D Kabsch rigid registration, map-only —
+charts compare by distance and are transform-invariant); same-session `lap:`
+overlays are never transformed. The **Align lines** toggle lives on the map
+legend (`useLapOverlays.alignOverlays`, default on). **The current lap always
+renders on top** —
+maps put overlays in a layer beneath the current heatmap; charts draw overlay
+traces before the current line. Chart overlays distance-align each lap onto the
+current lap via `alignByDistance` (`referenceUtils.ts`), over the full lap then
+sliced to the visible window (anchored at start-finish, like the reference);
+synthetic `__pace__`/`__braking_g__` series don't overlay. **Phase 1 is raw
+absolute GPS** (same-session laps share a receiver, so they register without
+correction); cross-session drift-alignment and external/cross-logger sources are
+deferred — see `docs/plans/multi-lap-overlay.md`.
 
 Channels are normalized to canonical ids at parse time (`channels.ts` →
 `normalizeChannels()`), so `extraFields` keys and `FieldMapping.name` are uniform
@@ -645,12 +722,15 @@ existing user data keeps resolving without a destructive migration.
 | `VITE_TURNSTILE_SITE_KEY` | Client | Cloudflare Turnstile site key (optional CAPTCHA) |
 | `TURNSTILE_SECRET_KEY` | Server (edge fn) | Turnstile secret — `???` |
 | `DOVE_PLUGIN_PACKAGES` | Build | Comma-separated external plugin npm packages to load. Overrides the default (`@perchwerks/eye-in-the-sky`) when set |
+| `VITE_APP_VERSION` / `VITE_GIT_HASH` / `VITE_BUILD_DATE` / `VITE_GIT_BRANCH` / `VITE_GIT_COMMIT_DATE` | Build (auto) | Footer version stamp — **not hand-set**. `vite.config.ts` bakes them in from `package.json` + git (`buildInfo.ts` reads them). The stamp mirrors the `_PREVIEW` switch: `main` shows `v<version> · <hash>`; any other branch shows `<branch> · <hash> · <commit time>`. Hash prefers CI SHAs (`WORKERS_CI_COMMIT_SHA`/`CF_PAGES_COMMIT_SHA`/`GITHUB_SHA`), branch prefers CI branch vars (`WORKERS_CI_BRANCH`/`CF_PAGES_BRANCH`/`GITHUB_REF_NAME`); both fall back to local `git`, then `"unknown"`. |
 
 PWA deployment detail: the active offline-capable worker is emitted as `/service-worker.js` and registered only outside preview/iframe contexts. `public/sw.js` is reserved as a legacy kill-switch worker to evict stale caches from older installs that previously registered `/sw.js`.
 
 Static hosting (Cloudflare Workers): the build is a pure static SPA (no server runtime). `wrangler.jsonc` (repo root) configures a static-assets-only Worker — no `main` script — with `assets.directory: "./dist"` and `not_found_handling: "single-page-application"` for client-side route fallback. `public/_headers` (copied into `./dist` by Vite, honored by Workers static assets) sets `no-cache` on the service workers + `index.html` and immutable long-cache on `/assets/*`. `.nvmrc` pins Node 20. Workers Builds runs `npm run build` then `wrangler deploy`. Supabase edge functions stay on Supabase — the Worker only serves the frontend. See the README "Deployment" section.
 
 `vite.config.ts` defines public backend fallbacks for `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, and `VITE_SUPABASE_PROJECT_ID` so production builds still boot if managed env injection is missing; `.env` stays the preferred source when present.
+
+Per-branch preview backend: `vite.config.ts`'s `pick()` checks `WORKERS_CI_BRANCH` (Cloudflare Workers Builds) / `CF_PAGES_BRANCH` (Pages) and, on any non-`main` branch, prefers a parallel `*_PREVIEW` value for each key (`VITE_<KEY>_PREVIEW` or `HTT_<KEY>_PREVIEW`) before the normal value/fallback. This lets beta/preview deployments bake in a Supabase **preview-branch** database (creds are build-time-baked, never runtime). `main` builds and local dev never read the `_PREVIEW` vars. See the README "Preview-branch backend" deployment section.
 
 ---
 
@@ -708,11 +788,7 @@ re-merges it into the main chunk.
 - Pro view: `GraphViewTab` and `LabsTab` (`Index.tsx`)
 - `FileManagerDrawer` (slide-out drawer, `Index.tsx`)
 - `DataloggerDownload` (BLE entry point; keeps `lib/ble/*` out of initial bundle — `FileImport.tsx`, `drawer/FilesTab.tsx`)
-- `VisualEditor` (Leaflet drawing tools; `TrackEditor.tsx`, `track-editor/AddCourseDialog.tsx`, `track-editor/AddTrackDialog.tsx`, `admin/CoursesTab.tsx`)
-
-**`EditorModeToggle` lives in its own file** (`track-editor/EditorModeToggle.tsx`)
-so consumers can import the tiny toggle statically while `VisualEditor` stays
-lazy. Import the toggle from `./EditorModeToggle`, never from `./VisualEditor`.
+- `VisualEditor` (Leaflet drawing tools; `TrackEditor.tsx`, `track-editor/AddCourseDialog.tsx`, `admin/CoursesTab.tsx`). The shared map editor for **all** track managers — start/finish + sector lines (drag-to-place, auto-saved on release) and the course-outline Draw/Generate tools (auto-saved on each edit; no Done/Close button). There is no manual coordinate-entry mode — visual is the only editor.
 
 **Vendor chunks** (`manualChunks` in `vite.config.ts`): `vendor-react`,
 `vendor-query`, `vendor-leaflet`, `vendor-supabase`, `vendor-radix`. These cache
@@ -737,7 +813,7 @@ independently across deploys so app-only changes don't re-download vendor code.
 - **Tracks**: `public/tracks.json` is the source of truth at runtime; admin DB builds this file. Export format includes `longName`, `shortName`, `defaultCourse`, and per-course `lengthFt`. Tracks table has `default_course_id` FK. Course `lengthFt` values are imported as `length_ft_override` in the database.
 - **Course Detection**: `courseDetection.ts` handles auto-detection of track/course/direction on file load, with waypoint mode fallback. Find nearest track within 5mi, match course by lap distance vs `lengthFt`.
 - **Course Drawings**: Admin can export/import course layout drawings separately from tracks. Import clears `length_ft_override` for imported courses (drawing becomes source of truth).
-- **CSS**: use Tailwind semantic tokens from `index.css`, never hardcode colors in components
+- **CSS**: use Tailwind semantic tokens from `index.css`, never hardcode colors in components (e.g. `--warning`/`warning` — amber, light+dark — used for the preview-build footer)
 - **Admin code** is fully optional and gated behind env vars — core app has zero admin dependencies
 - **Edge functions** live in `supabase/functions/`, auto-deployed, configured in `supabase/config.toml`
 - **Stale-state gotcha**: When calling a function immediately after `setState`, the new value isn't available in the current closure. Pass values explicitly (e.g., `calculateAndSetLaps(course, samples, fileName)`) instead of relying on state that was just set.

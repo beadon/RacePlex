@@ -5,6 +5,8 @@ import {
   calculatePace,
   calculateReferenceSpeed,
   computeReferenceData,
+  alignByDistance,
+  alignValuesByDistance,
 } from "./referenceUtils";
 import { EARTH_RADIUS_M } from "./parserUtils";
 import type { GpsSample } from "@/types/racing";
@@ -267,5 +269,81 @@ describe("computeReferenceData", () => {
   it("totalDistance is 0 for a single sample", () => {
     const ref = computeReferenceData([sample(0, 40, -74)]);
     expect(ref.totalDistance).toBe(0);
+  });
+});
+
+// ─── alignByDistance ────────────────────────────────────────────────────────
+
+describe("alignByDistance", () => {
+  // A lap heading north (lon fixed) with a per-sample channel value.
+  function lapWithValues(vals: number[], spacingDeg = 0.0001): GpsSample[] {
+    return vals.map((v, i) => ({
+      t: i * 100,
+      lat: 40 + i * spacingDeg,
+      lon: -74,
+      speedMps: 0,
+      speedMph: 0,
+      speedKph: 0,
+      extraFields: { v },
+    }));
+  }
+
+  it("interpolates the other lap's value at each current-sample distance", () => {
+    const current = lapWithValues([10, 20, 30]);
+    const other = lapWithValues([100, 200, 300]); // identical geometry
+    const out = alignByDistance(current, other, (s) => s.extraFields.v);
+    expect(out[0]).toBeCloseTo(100, 6);
+    expect(out[1]).toBeCloseTo(200, 6);
+    expect(out[2]).toBeCloseTo(300, 6);
+  });
+
+  it("returns null past the end of the other lap", () => {
+    const current = lapWithValues([1, 2, 3, 4]); // longer
+    const other = lapWithValues([10, 20]); // shorter — ends earlier
+    const out = alignByDistance(current, other, (s) => s.extraFields.v);
+    expect(out[out.length - 1]).toBeNull();
+  });
+
+  it("returns [] for empty input", () => {
+    expect(alignByDistance([], lapWithValues([1]), (s) => s.extraFields.v)).toEqual([]);
+  });
+});
+
+// ─── alignValuesByDistance ───────────────────────────────────────────────────
+
+describe("alignValuesByDistance", () => {
+  // A lap heading north (lon fixed); values live in a parallel array, not on
+  // the sample — mirrors a derived series such as computed brake %.
+  function lap(count: number, spacingDeg = 0.0001): GpsSample[] {
+    return Array.from({ length: count }, (_, i) => ({
+      t: i * 100,
+      lat: 40 + i * spacingDeg,
+      lon: -74,
+      speedMps: 0,
+      speedMph: 0,
+      speedKph: 0,
+      extraFields: {},
+    }));
+  }
+
+  it("interpolates the parallel value array at each current-sample distance", () => {
+    const out = alignValuesByDistance(lap(3), lap(3), [100, 200, 300]);
+    expect(out[0]).toBeCloseTo(100, 6);
+    expect(out[1]).toBeCloseTo(200, 6);
+    expect(out[2]).toBeCloseTo(300, 6);
+  });
+
+  it("returns null past the end of the other lap", () => {
+    const out = alignValuesByDistance(lap(4), lap(2), [10, 20]);
+    expect(out[out.length - 1]).toBeNull();
+  });
+
+  it("treats null/undefined source values as gaps", () => {
+    const out = alignValuesByDistance(lap(2), lap(2), [null, 50]);
+    expect(out[0]).toBeNull();
+  });
+
+  it("returns [] for empty input", () => {
+    expect(alignValuesByDistance([], lap(1), [1])).toEqual([]);
   });
 });

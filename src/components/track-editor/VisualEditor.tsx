@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Flag, Timer, Check, Search, Loader2, LocateFixed, Pencil, Undo2, Trash2, Route, Eye, EyeOff } from 'lucide-react';
+import { Flag, Timer, Search, Loader2, LocateFixed, Pencil, Undo2, Trash2, Route, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from '@/hooks/use-toast';
 import { SectorLine } from '@/types/racing';
 import type { Lap, GpsSample } from '@/types/racing';
+import { resamplePolyline, calculatePolylineLength, generatedDrawingSpacing } from '@/lib/trackUtils';
 import L from 'leaflet';
 
 export interface GpsPoint {
@@ -13,7 +14,6 @@ export interface GpsPoint {
 }
 
 export type VisualEditorTool = 'startFinish' | 'sector2' | 'sector3' | 'draw' | null;
-export type EditorMode = 'manual' | 'visual';
 
 interface VisualEditorProps {
   startFinishA: GpsPoint | null;
@@ -23,14 +23,11 @@ interface VisualEditorProps {
   onStartFinishChange?: (a: GpsPoint, b: GpsPoint) => void;
   onSector2Change?: (line: SectorLine) => void;
   onSector3Change?: (line: SectorLine) => void;
-  onDone?: () => void;
   isNewTrack?: boolean;
   /** Initial map center from loaded GPS data */
   initialCenter?: GpsPoint | null;
   /** Whether to show the Draw/Generate tools */
   showDrawTool?: boolean;
-  /** Whether the caller is an admin (shows manual Draw button) */
-  isAdminEditor?: boolean;
   /** Existing layout drawing to display as a static polyline */
   layoutPoints?: Array<{ lat: number; lon: number }>;
   /** Show a button to toggle visibility of known drawing */
@@ -46,9 +43,7 @@ interface VisualEditorProps {
 interface VisualEditorToolbarProps {
   activeTool: VisualEditorTool;
   onToolChange: (tool: VisualEditorTool) => void;
-  onDone: () => void;
   showDrawTool?: boolean;
-  isAdminEditor?: boolean;
   drawPointCount?: number;
   canToggleKnownDrawing?: boolean;
   showKnownDrawing?: boolean;
@@ -59,7 +54,7 @@ interface VisualEditorToolbarProps {
   onGenerateFromLap?: (lapNumber: number) => void;
 }
 
-function VisualEditorToolbar({ activeTool, onToolChange, onDone, showDrawTool, isAdminEditor, drawPointCount = 0, canToggleKnownDrawing = false, showKnownDrawing = true, onToggleKnownDrawing, onUndoDraw, onClearDraw, laps, onGenerateFromLap }: VisualEditorToolbarProps) {
+function VisualEditorToolbar({ activeTool, onToolChange, showDrawTool, drawPointCount = 0, canToggleKnownDrawing = false, showKnownDrawing = true, onToggleKnownDrawing, onUndoDraw, onClearDraw, laps, onGenerateFromLap }: VisualEditorToolbarProps) {
   const [showLapPicker, setShowLapPicker] = useState(false);
 
   const handleStartFinish = () => {
@@ -76,10 +71,6 @@ function VisualEditorToolbar({ activeTool, onToolChange, onDone, showDrawTool, i
 
   const handleDraw = () => {
     onToolChange(activeTool === 'draw' ? null : 'draw');
-  };
-
-  const handleDone = () => {
-    onDone();
   };
 
   const handleGenerateClick = () => {
@@ -131,7 +122,7 @@ function VisualEditorToolbar({ activeTool, onToolChange, onDone, showDrawTool, i
           <Timer className="w-3.5 h-3.5" />
           Sector 3
         </Button>
-        {showDrawTool && isAdminEditor && (
+        {showDrawTool && (
             <Button
               variant={activeTool === 'draw' ? 'default' : 'outline'}
               size="sm"
@@ -186,16 +177,6 @@ function VisualEditorToolbar({ activeTool, onToolChange, onDone, showDrawTool, i
             </Button>
           </>
         )}
-        <div className="flex-1" />
-        <Button
-          variant="secondary"
-          size="sm"
-          className="h-8 gap-1.5 text-xs"
-          onClick={handleDone}
-        >
-          <Check className="w-3.5 h-3.5" />
-          {activeTool === 'draw' ? 'Done' : 'Close'}
-        </Button>
       </div>
       {showLapPicker && laps && laps.length > 0 && (
         <div className="p-3 bg-card border border-border rounded-lg space-y-2">
@@ -224,9 +205,9 @@ function VisualEditorToolbar({ activeTool, onToolChange, onDone, showDrawTool, i
 
 export function VisualEditor({
   startFinishA, startFinishB, sector2, sector3,
-  onStartFinishChange, onSector2Change, onSector3Change, onDone,
+  onStartFinishChange, onSector2Change, onSector3Change,
   isNewTrack = false, initialCenter: initialCenterProp = null,
-  showDrawTool = false, isAdminEditor = false, layoutPoints: layoutPointsProp, showKnownDrawingToggle = false, onLayoutChange,
+  showDrawTool = false, layoutPoints: layoutPointsProp, showKnownDrawingToggle = false, onLayoutChange,
   laps, samples,
 }: VisualEditorProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -238,8 +219,11 @@ export function VisualEditor({
   const [pendingSector2, setPendingSector2] = useState<SectorLine | null>(null);
   const [pendingSector3, setPendingSector3] = useState<SectorLine | null>(null);
 
-  // Drawing state
+  // Drawing state. The ref mirrors drawPoints so the draw handlers can read the
+  // latest points synchronously (across rapid clicks) and auto-save each change
+  // to the parent — there's no "Done" button anymore.
   const [drawPoints, setDrawPoints] = useState<Array<{ lat: number; lon: number }>>(layoutPointsProp ?? []);
+  const drawPointsRef = useRef<Array<{ lat: number; lon: number }>>(layoutPointsProp ?? []);
   const [showKnownDrawing, setShowKnownDrawing] = useState(true);
   const [mapReady, setMapReady] = useState(false);
   const drawPolylineRef = useRef<L.Polyline | null>(null);
@@ -248,6 +232,7 @@ export function VisualEditor({
   // Sync drawPoints when layoutPointsProp changes (e.g. async load from DB)
   useEffect(() => {
     const incoming = layoutPointsProp ?? [];
+    drawPointsRef.current = incoming;
     setDrawPoints(incoming);
     if (incoming.length > 0) setShowKnownDrawing(true);
     // Also update the polyline immediately if map exists
@@ -563,57 +548,67 @@ export function VisualEditor({
     clearDrawMode();
 
     const handler = (e: L.LeafletMouseEvent) => {
-      setDrawPoints(prev => {
-        const next = [...prev, { lat: e.latlng.lat, lon: e.latlng.lng }];
-        updateDrawPolyline(next);
-        return next;
-      });
+      const next = [...drawPointsRef.current, { lat: e.latlng.lat, lon: e.latlng.lng }];
+      drawPointsRef.current = next;
+      setDrawPoints(next);
+      updateDrawPolyline(next);
+      onLayoutChange?.(next); // auto-save — no "Done" step
     };
     drawClickHandlerRef.current = handler;
     map.on('click', handler);
-  }, [clearDrawMode, updateDrawPolyline]);
+  }, [clearDrawMode, updateDrawPolyline, onLayoutChange]);
 
   const handleUndoDraw = useCallback(() => {
-    setDrawPoints(prev => {
-      const next = prev.slice(0, -1);
-      updateDrawPolyline(next);
-      if (next.length === 0 && drawPolylineRef.current) {
-        drawPolylineRef.current.remove();
-        drawPolylineRef.current = null;
-      }
-      return next;
-    });
-  }, [updateDrawPolyline]);
+    const next = drawPointsRef.current.slice(0, -1);
+    drawPointsRef.current = next;
+    setDrawPoints(next);
+    updateDrawPolyline(next);
+    if (next.length === 0 && drawPolylineRef.current) {
+      drawPolylineRef.current.remove();
+      drawPolylineRef.current = null;
+    }
+    onLayoutChange?.(next); // auto-save
+  }, [updateDrawPolyline, onLayoutChange]);
 
   const handleClearDraw = useCallback(() => {
+    drawPointsRef.current = [];
     setDrawPoints([]);
     if (drawPolylineRef.current) {
       drawPolylineRef.current.remove();
       drawPolylineRef.current = null;
     }
-  }, []);
+    onLayoutChange?.([]); // auto-save
+  }, [onLayoutChange]);
 
   const handleGenerateFromLap = useCallback((lapNumber: number) => {
     if (!samples || !laps) return;
     const lap = laps.find(l => l.lapNumber === lapNumber);
     if (!lap) return;
     const lapSamples = samples.slice(lap.startIndex, lap.endIndex + 1);
-    const points = lapSamples
+    const rawPoints = lapSamples
       .filter(s => s.lat !== 0 && s.lon !== 0)
       .map(s => ({ lat: s.lat, lon: s.lon }));
-    if (points.length < 2) {
+    if (rawPoints.length < 2) {
       toast({ title: 'Not enough GPS data', description: 'This lap has insufficient GPS points for a drawing', variant: 'destructive' });
       return;
     }
+    // The raw lap is the full logger rate (10–25 Hz) — far denser than an
+    // outline needs, and unevenly so (more points in slow corners). Arc-length
+    // resample to an even spacing scaled to track length for a clean, compact
+    // polyline (5 m for karting up to 10 m for long road courses).
+    const spacing = generatedDrawingSpacing(calculatePolylineLength(rawPoints));
+    const points = resamplePolyline(rawPoints, spacing);
+    drawPointsRef.current = points;
     setDrawPoints(points);
     updateDrawPolyline(points);
+    onLayoutChange?.(points); // auto-save
     // Fit map to the generated drawing
     if (mapRef.current && points.length > 1) {
       const bounds = L.latLngBounds(points.map(p => [p.lat, p.lon] as [number, number]));
       mapRef.current.fitBounds(bounds, { padding: [40, 40], animate: true });
     }
-    toast({ title: 'Drawing generated', description: `Generated from Lap ${lapNumber} (${points.length} points). Click Done to save.` });
-  }, [samples, laps, updateDrawPolyline]);
+    toast({ title: 'Drawing generated', description: `Generated from Lap ${lapNumber} (${points.length} points).` });
+  }, [samples, laps, updateDrawPolyline, onLayoutChange]);
 
   const handleToggleKnownDrawing = useCallback(() => {
     setShowKnownDrawing(prev => !prev);
@@ -700,39 +695,6 @@ export function VisualEditor({
       // No tool selected, clear editing layers and redraw all static
       clearEditingLayers();
       drawStaticLines(map, null);
-    }
-  };
-
-  const handleDone = () => {
-    // Apply pending changes via callbacks
-    if (activeTool === 'startFinish' && pendingStartFinish && onStartFinishChange) {
-      onStartFinishChange(pendingStartFinish.a, pendingStartFinish.b);
-      setPendingStartFinish(null);
-    } else if (activeTool === 'sector2' && pendingSector2 && onSector2Change) {
-      onSector2Change(pendingSector2);
-      setPendingSector2(null);
-    } else if (activeTool === 'sector3' && pendingSector3 && onSector3Change) {
-      onSector3Change(pendingSector3);
-      setPendingSector3(null);
-    } else if (activeTool === 'draw') {
-      clearDrawMode();
-      if (onLayoutChange) {
-        onLayoutChange(drawPoints);
-      }
-    }
-
-    // Clear editing state
-    clearEditingLayers();
-    setActiveTool(null);
-
-    // Redraw static lines
-    if (mapRef.current) {
-      drawStaticLines(mapRef.current, null);
-    }
-
-    // Call parent onDone if provided
-    if (onDone) {
-      onDone();
     }
   };
 
@@ -867,9 +829,7 @@ export function VisualEditor({
       <VisualEditorToolbar
         activeTool={activeTool}
         onToolChange={handleToolChange}
-        onDone={handleDone}
         showDrawTool={showDrawTool}
-        isAdminEditor={isAdminEditor}
         drawPointCount={drawPoints.length}
         canToggleKnownDrawing={showKnownDrawingToggle && drawPoints.length > 1}
         showKnownDrawing={showKnownDrawing}
@@ -879,6 +839,11 @@ export function VisualEditor({
         laps={laps}
         onGenerateFromLap={handleGenerateFromLap}
       />
+      {showDrawTool && (
+        <p className="text-xs text-muted-foreground">
+          Drawing an outline helps on-device course detection.
+        </p>
+      )}
       <div
         ref={mapContainerRef}
         className="w-full h-64 sm:h-80 md:h-96 rounded-lg border border-border overflow-hidden"

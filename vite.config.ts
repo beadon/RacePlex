@@ -2,8 +2,62 @@ import { defineConfig, loadEnv, type Plugin } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import fs from "fs";
+import { execSync } from "child_process";
 import { componentTagger } from "lovable-tagger";
 import { VitePWA } from "vite-plugin-pwa";
+
+// Build-time version metadata for the footer "what changed" stamp. The app
+// version comes from package.json; the commit hash + build date are baked in at
+// build so a deployed bundle can show exactly which revision is live. The CI
+// commit-SHA env vars are preferred (Cloudflare Workers Builds / Pages, generic
+// CI) so the hash is correct even on a shallow checkout; we fall back to a local
+// `git` call for dev, and to "unknown" when neither is available.
+function readAppVersion(): string {
+  try {
+    const pkg = JSON.parse(fs.readFileSync(path.resolve(__dirname, "package.json"), "utf8"));
+    return typeof pkg.version === "string" ? pkg.version : "0.0.0";
+  } catch {
+    return "0.0.0";
+  }
+}
+
+function gitShortHash(): string {
+  const fromEnv =
+    process.env.WORKERS_CI_COMMIT_SHA ||
+    process.env.CF_PAGES_COMMIT_SHA ||
+    process.env.GIT_COMMIT_SHA ||
+    process.env.GITHUB_SHA;
+  if (fromEnv) return fromEnv.slice(0, 7);
+  try {
+    return execSync("git rev-parse --short=7 HEAD", { cwd: __dirname }).toString().trim();
+  } catch {
+    return "unknown";
+  }
+}
+
+// Branch the build came from. Drives the footer stamp's mode: `main` shows the
+// version + hash; any other branch shows branch + hash + commit time (mirrors
+// the _PREVIEW backend switch). CI branch env vars are preferred so it's right
+// on detached/shallow CI checkouts, falling back to local `git`, then "unknown".
+function gitBranch(): string {
+  const fromEnv =
+    process.env.WORKERS_CI_BRANCH || process.env.CF_PAGES_BRANCH || process.env.GITHUB_REF_NAME;
+  if (fromEnv) return fromEnv;
+  try {
+    return execSync("git rev-parse --abbrev-ref HEAD", { cwd: __dirname }).toString().trim();
+  } catch {
+    return "unknown";
+  }
+}
+
+// ISO timestamp of the build's commit (committer date), for the preview stamp.
+function gitCommitDate(): string {
+  try {
+    return execSync("git log -1 --format=%cI", { cwd: __dirname }).toString().trim();
+  } catch {
+    return "";
+  }
+}
 
 // Build-time loader for external plugin npm packages (the AI coach). Candidate
 // package names default to the public coach and can be overridden via the
@@ -66,8 +120,35 @@ export default defineConfig(({ mode }) => {
   // process.env. Lovable injects build secrets as real env vars, so we must
   // check process.env explicitly for the HTT_* (and VITE_*) fallbacks to work
   // when there's no committed .env file.
-  const pick = (viteKey: string, httKey: string, fallback: string) =>
-    env[viteKey] || process.env[viteKey] || env[httKey] || process.env[httKey] || fallback;
+  //
+  // PREVIEW BACKEND: Cloudflare Workers Builds sets WORKERS_CI_BRANCH on every
+  // build (Pages sets CF_PAGES_BRANCH). On any non-production branch we prefer
+  // parallel `*_PREVIEW` build variables (VITE_*_PREVIEW / HTT_*_PREVIEW), so a
+  // beta/preview deployment bakes in the Supabase **preview-branch** database
+  // instead of production. Production (`main`) builds and local dev never see
+  // the _PREVIEW values, so they're untouched. The creds are build-time-baked,
+  // not runtime — picking them here is the only place to switch backends.
+  const ciBranch = process.env.WORKERS_CI_BRANCH || process.env.CF_PAGES_BRANCH;
+  const PROD_BRANCH = "main";
+  const isPreviewBuild = !!ciBranch && ciBranch !== PROD_BRANCH;
+
+  const pick = (viteKey: string, httKey: string, fallback: string) => {
+    if (isPreviewBuild) {
+      const previewVal =
+        env[`${viteKey}_PREVIEW`] ||
+        process.env[`${viteKey}_PREVIEW`] ||
+        env[`${httKey}_PREVIEW`] ||
+        process.env[`${httKey}_PREVIEW`];
+      if (previewVal) return previewVal;
+    }
+    return env[viteKey] || process.env[viteKey] || env[httKey] || process.env[httKey] || fallback;
+  };
+
+  const appVersion = readAppVersion();
+  const gitHash = gitShortHash();
+  const buildDate = new Date().toISOString();
+  const branch = gitBranch();
+  const commitDate = gitCommitDate();
 
   const DEFAULT_PLUGIN_PACKAGES = "@perchwerks/eye-in-the-sky";
   const pluginPackages = (env.DOVE_PLUGIN_PACKAGES || DEFAULT_PLUGIN_PACKAGES)
@@ -96,6 +177,11 @@ export default defineConfig(({ mode }) => {
       "import.meta.env.VITE_ENABLE_CLOUD": JSON.stringify(
         pick("VITE_ENABLE_CLOUD", "HTT_ENABLE_CLOUD", PUBLIC_BACKEND_FALLBACKS.VITE_ENABLE_CLOUD),
       ),
+      "import.meta.env.VITE_APP_VERSION": JSON.stringify(appVersion),
+      "import.meta.env.VITE_GIT_HASH": JSON.stringify(gitHash),
+      "import.meta.env.VITE_BUILD_DATE": JSON.stringify(buildDate),
+      "import.meta.env.VITE_GIT_BRANCH": JSON.stringify(branch),
+      "import.meta.env.VITE_GIT_COMMIT_DATE": JSON.stringify(commitDate),
     },
     plugins: [
       react(),

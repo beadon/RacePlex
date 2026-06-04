@@ -3,6 +3,9 @@ import { GpsSample, FieldMapping } from '@/types/racing';
 import { G_FORCE_FIELDS, G_FORCE_FIELDS_GPS, G_FORCE_FIELDS_HW, applySmoothingToValues, computeSmoothingWindowSize, detectSpeedGlitchIndices, interpolateGlitchSpeed } from '@/lib/chartUtils';
 import { useSettingsContext } from '@/contexts/SettingsContext';
 import { getChartColors } from '@/lib/chartColors';
+import { buildChartAxis } from '@/lib/chartAxis';
+import { alignByDistance } from '@/lib/referenceUtils';
+import type { OverlayLine } from '@/lib/lapOverlays';
 
 interface TelemetryChartProps {
   samples: GpsSample[];
@@ -13,6 +16,12 @@ interface TelemetryChartProps {
   paceData?: (number | null)[];
   referenceSpeedData?: (number | null)[];
   hasReference?: boolean;
+  /** Full lap samples + the visible window's start index, for absolute
+   *  (start-finish-anchored) X-axis labels while the window stays zoomed. */
+  allSamples?: GpsSample[];
+  rangeStart?: number;
+  /** Extra laps/snapshots to overlay as distance-aligned speed lines. */
+  overlayLines?: OverlayLine[];
 }
 
 const COLORS = [
@@ -38,9 +47,16 @@ export function TelemetryChart({
   paceData = [],
   referenceSpeedData = [],
   hasReference = false,
+  allSamples,
+  rangeStart,
+  overlayLines = [],
 }: TelemetryChartProps) {
-  const { useKph, gForceSmoothing, gForceSmoothingStrength, darkMode, gForceSource } = useSettingsContext();
+  const { useKph, gForceSmoothing, gForceSmoothingStrength, darkMode, gForceSource, chartXAxis } = useSettingsContext();
   const chartColors = useMemo(() => getChartColors(darkMode), [darkMode]);
+  const axis = useMemo(
+    () => buildChartAxis(samples, chartXAxis, { useKph, fullSamples: allSamples, rangeStart }),
+    [samples, chartXAxis, useKph, allSamples, rangeStart],
+  );
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
@@ -66,6 +82,22 @@ export function TelemetryChart({
 
   const speedUnit = useKph ? 'KPH' : 'MPH';
   const getSpeed = useCallback((sample: GpsSample) => useKph ? sample.speedKph : sample.speedMph, [useKph]);
+
+  // Distance-align each overlay lap's speed onto the current lap, sliced to the
+  // visible window (computed over the full lap so it stays anchored to the
+  // start-finish line, like the reference). Recomputed only when inputs change.
+  const overlaySpeed = useMemo(() => {
+    const full = allSamples ?? samples;
+    if (overlayLines.length === 0 || full.length === 0) return [];
+    const start = rangeStart ?? 0;
+    const end = start + samples.length;
+    return overlayLines.map((line) => ({
+      id: line.id,
+      color: line.color,
+      label: line.label,
+      values: alignByDistance(full, line.samples, (s) => (useKph ? s.speedKph : s.speedMph)).slice(start, end),
+    }));
+  }, [overlayLines, allSamples, samples, rangeStart, useKph]);
 
   // Handle resize
   useEffect(() => {
@@ -154,7 +186,7 @@ export function TelemetryChart({
           continue;
         }
 
-        const x = padding.left + (i / (samples.length - 1)) * chartWidth;
+        const x = padding.left + axis.fracAt(i) * chartWidth;
         const y = padding.top + (1 - (refSpeed - minSpeed) / (maxSpeed - minSpeed)) * chartHeight;
 
         if (!isDrawing) {
@@ -166,6 +198,23 @@ export function TelemetryChart({
       }
       ctx.stroke();
       ctx.setLineDash([]);
+    }
+
+    // Draw overlay lap speed lines (other laps / snapshots), beneath the current
+    // lap so the current lap always stays on top.
+    for (const overlay of overlaySpeed) {
+      ctx.beginPath();
+      ctx.strokeStyle = overlay.color;
+      ctx.lineWidth = 1.5;
+      let isDrawing = false;
+      for (let i = 0; i < samples.length; i++) {
+        const v = overlay.values[i];
+        if (v === null || v === undefined) { isDrawing = false; continue; }
+        const x = padding.left + axis.fracAt(i) * chartWidth;
+        const y = padding.top + (1 - (v - minSpeed) / (maxSpeed - minSpeed)) * chartHeight;
+        if (!isDrawing) { ctx.moveTo(x, y); isDrawing = true; } else { ctx.lineTo(x, y); }
+      }
+      ctx.stroke();
     }
 
     // Draw speed line - smart glitch filtering
@@ -180,7 +229,7 @@ export function TelemetryChart({
     let lastValidIndex = 0;
 
     for (let i = 0; i < samples.length; i++) {
-      const x = padding.left + (i / (samples.length - 1)) * chartWidth;
+      const x = padding.left + axis.fracAt(i) * chartWidth;
       let speed = allSpeeds[i];
 
       if (interpolateIndices.has(i) && i > 0 && i < samples.length - 1) {
@@ -234,7 +283,7 @@ export function TelemetryChart({
           continue;
         }
         
-        const x = padding.left + (i / (samples.length - 1)) * chartWidth;
+        const x = padding.left + axis.fracAt(i) * chartWidth;
         const y = padding.top + (1 - (val - minVal) / range) * chartHeight;
         
         if (!isDrawing) {
@@ -281,7 +330,7 @@ export function TelemetryChart({
             continue;
           }
           
-          const x = padding.left + (i / (samples.length - 1)) * chartWidth;
+          const x = padding.left + axis.fracAt(i) * chartWidth;
           // Pace: positive = slower (below zero line), negative = faster (above zero line)
           // Normalize to use full chart height
           const normalizedPace = pace / paceExtent; // -1 to 1
@@ -307,7 +356,7 @@ export function TelemetryChart({
           const pace = paceData[i];
           if (pace === null) continue;
           
-          const x = padding.left + (i / (samples.length - 1)) * chartWidth;
+          const x = padding.left + axis.fracAt(i) * chartWidth;
           const normalizedPace = pace / paceExtent;
           const y = padding.top + ((1 - (-normalizedPace)) / 2) * chartHeight;
           
@@ -346,23 +395,16 @@ export function TelemetryChart({
     ctx.fillText(speedUnit, 0, 0);
     ctx.restore();
 
-    // Draw X axis labels (time)
+    // Draw X axis labels (time or distance, per chartXAxis setting)
     ctx.textAlign = 'center';
-    const startTime = samples[0].t / 1000;
-    const endTime = samples[samples.length - 1].t / 1000;
-    const duration = endTime - startTime;
-    
     for (let i = 0; i <= timeGridCount; i++) {
-      const time = (duration / timeGridCount) * i;
       const x = padding.left + (chartWidth / timeGridCount) * i;
-      const minutes = Math.floor(time / 60);
-      const seconds = (time % 60).toFixed(0).padStart(2, '0');
-      ctx.fillText(`${minutes}:${seconds}`, x, dimensions.height - 8);
+      ctx.fillText(axis.label(i / timeGridCount), x, dimensions.height - 8);
     }
 
     // Draw scrub cursor
     if (currentIndex >= 0 && currentIndex < samples.length) {
-      const x = padding.left + (currentIndex / (samples.length - 1)) * chartWidth;
+      const x = padding.left + axis.fracAt(currentIndex) * chartWidth;
       
       ctx.beginPath();
       ctx.moveTo(x, padding.top);
@@ -377,28 +419,39 @@ export function TelemetryChart({
       const currentPace = hasReference && paceData[currentIndex];
       
       // Calculate box height
-      const fieldsWithValues = enabledFields.filter(f => 
+      const fieldsWithValues = enabledFields.filter(f =>
         samples[currentIndex].extraFields[f.name] !== undefined
       );
-      let boxHeight = 20 + fieldsWithValues.length * 16;
+      const overlayRows = overlaySpeed.filter(o => o.values[currentIndex] != null);
+      let boxHeight = 20 + fieldsWithValues.length * 16 + overlayRows.length * 16;
       if (hasReference && showReferenceSpeed && currentRefSpeed !== null) boxHeight += 16;
       if (hasReference && showPace && currentPace !== null) boxHeight += 16;
-      
-      const boxX = Math.min(x + 10, dimensions.width - 130);
+
+      const boxW = overlayRows.length > 0 ? 168 : 120;
+      const boxX = Math.min(x + 10, dimensions.width - boxW - 10);
       const boxY = padding.top + 10;
-      
+
       ctx.fillStyle = chartColors.tooltipBg;
-      ctx.fillRect(boxX, boxY, 120, boxHeight);
+      ctx.fillRect(boxX, boxY, boxW, boxHeight);
       ctx.strokeStyle = chartColors.tooltipBorder;
       ctx.lineWidth = 1;
-      ctx.strokeRect(boxX, boxY, 120, boxHeight);
+      ctx.strokeRect(boxX, boxY, boxW, boxHeight);
 
       ctx.fillStyle = COLORS[0];
       ctx.textAlign = 'left';
       ctx.fillText(`Speed: ${currentSpeed.toFixed(1)} ${speedUnit.toLowerCase()}`, boxX + 8, boxY + 14);
 
       let fieldOffset = 1;
-      
+
+      // Overlay laps (current lap shown first, above) — each in its line color.
+      for (const overlay of overlayRows) {
+        const v = overlay.values[currentIndex] as number;
+        const label = overlay.label.length > 16 ? `${overlay.label.slice(0, 15)}…` : overlay.label;
+        ctx.fillStyle = overlay.color;
+        ctx.fillText(`${label}: ${v.toFixed(1)}`, boxX + 8, boxY + 14 + fieldOffset * 16);
+        fieldOffset++;
+      }
+
       // Reference speed
       if (hasReference && showReferenceSpeed && currentRefSpeed !== null && currentRefSpeed !== undefined) {
         ctx.fillStyle = REFERENCE_COLOR;
@@ -432,7 +485,7 @@ export function TelemetryChart({
       });
     }
 
-  }, [samples, currentIndex, dimensions, enabledFields, useKph, speedUnit, paceData, referenceSpeedData, hasReference, showReferenceSpeed, showPace, smoothedGForceData, chartColors, fieldMappings, getSpeed]);
+  }, [samples, currentIndex, dimensions, enabledFields, useKph, speedUnit, paceData, referenceSpeedData, hasReference, showReferenceSpeed, showPace, smoothedGForceData, chartColors, fieldMappings, getSpeed, axis, overlaySpeed]);
 
   // Scrub handling
   const handleScrub = useCallback((clientX: number) => {
@@ -444,9 +497,8 @@ export function TelemetryChart({
     const chartWidth = rect.width - padding.left - padding.right;
     const x = clientX - rect.left - padding.left;
     const ratio = Math.max(0, Math.min(1, x / chartWidth));
-    const index = Math.round(ratio * (samples.length - 1));
-    onScrub(index);
-  }, [samples, onScrub]);
+    onScrub(axis.indexAt(ratio));
+  }, [samples, onScrub, axis]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     setIsDragging(true);

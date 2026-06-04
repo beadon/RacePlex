@@ -124,6 +124,17 @@ The app includes an optional admin system for managing a community track databas
 
 > **Note:** `TURNSTILE_SECRET_KEY` is a server-side secret stored in Lovable Cloud, not a `VITE_` client variable. If not set, Turnstile verification is skipped.
 
+> **Build version stamp:** `VITE_APP_VERSION`, `VITE_GIT_HASH`, `VITE_BUILD_DATE`,
+> `VITE_GIT_BRANCH`, and `VITE_GIT_COMMIT_DATE` are **not** configured by hand —
+> `vite.config.ts` bakes them in automatically (from `package.json` and git) for
+> the home-page footer version/commit stamp. The stamp mirrors the `_PREVIEW`
+> backend switch: a `main` build shows **`v<version> · <hash>`**, while any other
+> branch shows **`<branch> · <hash> · <commit time>`**. The commit hash prefers
+> CI-provided SHAs (`WORKERS_CI_COMMIT_SHA` / `CF_PAGES_COMMIT_SHA` /
+> `GITHUB_SHA`) and the branch prefers CI branch vars (`WORKERS_CI_BRANCH` /
+> `CF_PAGES_BRANCH` / `GITHUB_REF_NAME`) so both are correct even on shallow
+> checkouts, falling back to a local `git` call and then `"unknown"`.
+
 > **Stripe / paid tiers:** `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` are
 > edge-function secrets (not `VITE_` client vars). Prices are resolved live by
 > **lookup_key** — there are no Price ids in code or env. Create the
@@ -356,6 +367,30 @@ changing them):
 client variable and does not belong in Cloudflare. The Supabase edge functions
 (`supabase/functions/`) continue to run on Supabase; the Worker only serves the
 static frontend.
+
+#### Preview-branch backend (Supabase Branching → preview deployments)
+
+Pushes to a **non-production branch** produce a preview version/URL of the same
+Worker. To point those preview builds at a Supabase **preview-branch database**
+(so beta work doesn't touch production data), set parallel `*_PREVIEW` build
+variables. Workers Builds exposes `WORKERS_CI_BRANCH` (Pages: `CF_PAGES_BRANCH`)
+on every build; `vite.config.ts` prefers the `_PREVIEW` value of each key
+whenever that branch isn't `main`, and ignores them on `main` and in local dev.
+
+1. Enable **Branching** in Supabase, then copy the preview branch's URL, anon
+   key, and project ref from the **Branches** panel.
+2. In the Worker → **Settings → Build → Variables and Secrets**, add (alongside
+   the production values):
+
+   | Variable | Value |
+   |----------|-------|
+   | `HTT_SUPABASE_URL_PREVIEW` | preview branch URL |
+   | `HTT_SUPABASE_PUBLISHABLE_KEY_PREVIEW` | preview branch anon key |
+   | `HTT_SUPABASE_PROJECT_ID_PREVIEW` | preview branch project ref |
+
+   Any key works the same way (e.g. `HTT_ENABLE_CLOUD_PREVIEW`). `VITE_*_PREVIEW`
+   is also accepted. Add the Cloudflare preview URL to the preview branch's
+   **Auth → Redirect URLs** so cloud sign-in works there.
 
 ---
 

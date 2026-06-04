@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import { GpsSample, Course, FieldMapping, Lap } from '@/types/racing';
+import type { OverlayLine } from '@/lib/lapOverlays';
 import { Vehicle } from '@/lib/vehicleStorage';
 import { VehicleSetup } from '@/lib/setupStorage';
 import { SetupTemplate } from '@/lib/templateStorage';
@@ -44,6 +45,7 @@ export interface GraphViewPanelProps {
   sessionSetupId: string | null;
   onSaveSessionSetup: (kartId: string | null, setupId: string | null) => Promise<void>;
   onOpenSetupEditor?: (setupId: string) => void;
+  onOpenGarage?: (garageTab?: 'files' | 'vehicles' | 'setups' | 'notes') => void;
   // Range slider
   visibleRange: [number, number];
   onRangeChange: (range: [number, number]) => void;
@@ -62,6 +64,11 @@ export interface GraphViewPanelProps {
   laps?: Lap[];
   selectedLapNumber?: number | null;
   paceData?: (number | null)[];
+  // Multi-lap overlay (extra racing lines drawn on the MiniMap)
+  overlayLines?: OverlayLine[];
+  onRemoveOverlay?: (id: string) => void;
+  alignOverlays?: boolean;
+  onToggleAlignOverlays?: () => void;
 }
 
 export function GraphViewPanel(props: GraphViewPanelProps) {
@@ -110,6 +117,7 @@ export function GraphViewPanel(props: GraphViewPanelProps) {
                 sessionSetupId={props.sessionSetupId}
                 onSaveSessionSetup={props.onSaveSessionSetup}
                 onOpenSetupEditor={props.onOpenSetupEditor}
+                onOpenGarage={props.onOpenGarage}
                 videoState={props.videoState}
                 videoActions={props.videoActions}
                 onVideoLoadedMetadata={props.onVideoLoadedMetadata}
@@ -146,6 +154,11 @@ export function GraphViewPanel(props: GraphViewPanelProps) {
                 course={props.course}
                 bounds={props.bounds}
                 isAllLaps={props.isAllLaps}
+                overlayLines={props.overlayLines}
+                rangeStart={props.visibleRange[0]}
+                onRemoveOverlay={props.onRemoveOverlay}
+                alignOverlays={props.alignOverlays}
+                onToggleAlignOverlays={props.onToggleAlignOverlays}
               />
             </ResizablePanel>
           </ResizablePanelGroup>
@@ -174,6 +187,7 @@ export function GraphViewPanel(props: GraphViewPanelProps) {
           minRange={props.minRange}
           formatRangeLabel={props.formatRangeLabel}
           sessionFileName={props.sessionFileName}
+          overlayLines={props.overlayLines}
         />
       </ResizablePanel>
     </ResizablePanelGroup>
