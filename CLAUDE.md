@@ -134,7 +134,7 @@ src/
 │   ├── billing.ts         # ★ Pure subscription logic (tiers, coming-soon, annual-discount math), no Supabase import — see docs/backend.md
 │   ├── billingClient.ts / pendingCheckout.ts   # Supabase billing I/O + sign-up checkout stash
 │   ├── profanity.ts       # Basic client-side profanity filter for display names
-│   ├── weatherService.ts  # OpenWeatherMap (online-only)
+│   ├── weatherService.ts  # Historical weather (online-only): US → NWS station + IEM ASOS METAR; else → Open-Meteo reanalysis fallback (keyless, global). fetchSessionWeather orchestrates.
 │   ├── buildInfo.ts       # Build version/hash/branch/commit-date stamp (landing footer "what changed" marker; main → version+hash, other branches → branch+hash+commit time + amber preview-DB warning via isPreviewBuild(); values injected by vite define)
 │   └── utils.ts           # Tailwind cn() helper
 ├── plugins/               # ★ Plugin framework (auto-discovered) — see Plugin Framework section

@@ -14,6 +14,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Worldwide weather.** Session + local weather now work outside the US. The
+  precise US path is unchanged (nearest NWS/ASOS station → historical METAR), but
+  when there's no US station (e.g. a session in Europe) it falls back to
+  [Open-Meteo](https://open-meteo.com)'s free, keyless, global historical
+  reanalysis by lat/lon — so temperature, humidity, pressure, density altitude,
+  and wind resolve anywhere. The source is shown in the widget ("Open-Meteo") and
+  cached per session like the station lookup.
 - **Pick the satellite imagery date (dodge clouds).** The default Esri satellite
   basemap is a single best-available mosaic, so whatever clouds or seasonal cover
   were in that capture are baked in. The race-line map's satellite view now has a
