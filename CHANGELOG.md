@@ -40,10 +40,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   instead of needing a file reload, and the new track shows up in the track
   selection dropdown without a page refresh. Editing the active session's course
   (e.g. nudging its start/finish line) likewise re-processes immediately.
-- **Outline generation now reports failures.** Generating a track outline that
-  collapses to too few points (a stationary/short trace) or throws now shows a
-  clear toast instead of silently doing nothing, and logs details to the debug
-  console (`?dbg=true`).
+- **Generate outline now actually works on real telemetry.** The polyline
+  resampler accumulated distance incorrectly across segments, so a dense GPS
+  trace — where each sample is ~1 m apart, well under the 5 m outline spacing —
+  collapsed to a single point and generated nothing (no line, nothing saved, no
+  thumbnail). It now accumulates arc length across short segments, so generating
+  an outline from a lap or the whole session produces a proper polyline.
+- **Outline generation now reports failures.** A genuinely too-short/stationary
+  trace (or an unexpected error) now shows a clear toast instead of silently
+  doing nothing, and logs details to the debug console (`?dbg=true`).
 
 ## [2.2.0] - 2026-06-04
 
