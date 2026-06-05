@@ -9,6 +9,7 @@ import { resamplePolyline, calculatePolylineLength, generatedDrawingSpacing } fr
 import { useWaybackImagery } from '@/hooks/useWaybackImagery';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { DEFAULT_SATELLITE_TILE_URL } from '@/lib/satelliteImagery';
+import { isDebugEnabled } from '@/lib/debugConsole';
 import L from 'leaflet';
 
 export interface GpsPoint {
@@ -630,17 +631,21 @@ export function VisualEditor({
   // resample to an even spacing scaled to track length for a clean, compact
   // polyline (5 m for karting up to 10 m for long road courses).
   const applyGeneratedDrawing = useCallback((rawPoints: Array<{ lat: number; lon: number }>, label: string) => {
+    const dbg = isDebugEnabled();
     if (rawPoints.length < 2) {
+      if (dbg) console.warn('[generate] aborted: rawPoints < 2', { rawPoints: rawPoints.length });
       toast({ title: 'Not enough GPS data', description: 'Insufficient GPS points for a drawing', variant: 'destructive' });
       return;
     }
     try {
       const spacing = generatedDrawingSpacing(calculatePolylineLength(rawPoints));
       const points = resamplePolyline(rawPoints, spacing);
+      if (dbg) console.info('[generate] resampled', { rawPoints: rawPoints.length, spacing, points: points.length, hasMap: !!mapRef.current, hasOnLayoutChange: !!onLayoutChange });
       // A degenerate resample (e.g. a stationary trace) collapses to <2 points,
       // which would neither render nor save — surface it instead of silently
       // committing an empty outline.
       if (points.length < 2) {
+        if (dbg) console.warn('[generate] aborted: resampled points < 2', { spacing, points: points.length });
         toast({ title: 'Could not generate outline', description: 'The GPS trace was too short or stationary.', variant: 'destructive' });
         return;
       }
@@ -648,6 +653,7 @@ export function VisualEditor({
       setDrawPoints(points);
       updateDrawPolyline(points);
       onLayoutChange?.(points); // auto-save
+      if (dbg) console.info('[generate] committed', { drawn: !!drawPolylineRef.current });
       // Fit map to the generated drawing
       if (mapRef.current && points.length > 1) {
         const bounds = L.latLngBounds(points.map(p => [p.lat, p.lon] as [number, number]));
@@ -676,6 +682,7 @@ export function VisualEditor({
     const rawPoints = lapSamples
       .filter(s => s.lat !== 0 && s.lon !== 0)
       .map(s => ({ lat: s.lat, lon: s.lon }));
+    if (isDebugEnabled()) console.info('[generate] from lap', { lapNumber, startIndex: lap.startIndex, endIndex: lap.endIndex, totalSamples: samples.length, lapSamples: lapSamples.length, rawPoints: rawPoints.length });
     applyGeneratedDrawing(rawPoints, `Generated from Lap ${lapNumber}`);
   }, [samples, laps, applyGeneratedDrawing]);
 
@@ -683,10 +690,14 @@ export function VisualEditor({
   // waypoint timing that never closed a lap) there's nothing to pick from — so
   // generate the outline straight from the whole session's GPS trace instead.
   const handleGenerateFromSession = useCallback(() => {
-    if (!samples) return;
+    if (!samples) {
+      console.warn('Generate from session: no samples');
+      return;
+    }
     const rawPoints = samples
       .filter(s => s.lat !== 0 && s.lon !== 0)
       .map(s => ({ lat: s.lat, lon: s.lon }));
+    if (isDebugEnabled()) console.info('[generate] from session', { totalSamples: samples.length, rawPoints: rawPoints.length });
     applyGeneratedDrawing(rawPoints, 'Generated from the full session');
   }, [samples, applyGeneratedDrawing]);
 
