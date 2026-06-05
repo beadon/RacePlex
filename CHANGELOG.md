@@ -22,7 +22,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   after loading a file from a brand-new venue, there may be no detected laps to
   generate the outline from. The "Generate" tool now offers a **Whole session**
   option that builds the outline straight from the full GPS trace, so you don't
-  have to come back later once a course exists.
+  have to come back later once a course exists. This is also wired into the
+  **post-import "Create Track" prompt** (the dialog that appears when no known
+  track matches / waypoint timing) — it now carries the session's laps and GPS
+  through, so the Generate tool and the drawn outline both work while you're
+  first setting the track up.
 
 ### Fixed
 - **New tracks now apply immediately.** Creating a track/course while a session
