@@ -136,6 +136,7 @@ src/
 │   ├── profanity.ts       # Basic client-side profanity filter for display names
 │   ├── weatherService.ts  # Historical weather (online-only): US → NWS station + IEM ASOS METAR; else → Open-Meteo reanalysis fallback (keyless, global). fetchSessionWeather orchestrates.
 │   ├── buildInfo.ts       # Build version/hash/branch/commit-date stamp (landing footer "what changed" marker; main → version+hash, other branches → branch+hash+commit time + amber preview-DB warning via isPreviewBuild(); values injected by vite define)
+│   ├── debugConsole.ts    # ★ On-screen debug console (`?dbg=true`): pure flag-parse + log ring-buffer + console/global-error capture (mobile/PWA has no dev tools) — rendered by components/DebugConsole.tsx
 │   └── utils.ts           # Tailwind cn() helper
 ├── plugins/               # ★ Plugin framework (auto-discovered) — see Plugin Framework section
 │   ├── (framework)        # types, registry, index, panels, mounts, storage + PluginPanelHost/PluginMount

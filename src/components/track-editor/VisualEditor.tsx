@@ -634,24 +634,44 @@ export function VisualEditor({
       toast({ title: 'Not enough GPS data', description: 'Insufficient GPS points for a drawing', variant: 'destructive' });
       return;
     }
-    const spacing = generatedDrawingSpacing(calculatePolylineLength(rawPoints));
-    const points = resamplePolyline(rawPoints, spacing);
-    drawPointsRef.current = points;
-    setDrawPoints(points);
-    updateDrawPolyline(points);
-    onLayoutChange?.(points); // auto-save
-    // Fit map to the generated drawing
-    if (mapRef.current && points.length > 1) {
-      const bounds = L.latLngBounds(points.map(p => [p.lat, p.lon] as [number, number]));
-      mapRef.current.fitBounds(bounds, { padding: [40, 40], animate: true });
+    try {
+      const spacing = generatedDrawingSpacing(calculatePolylineLength(rawPoints));
+      const points = resamplePolyline(rawPoints, spacing);
+      // A degenerate resample (e.g. a stationary trace) collapses to <2 points,
+      // which would neither render nor save — surface it instead of silently
+      // committing an empty outline.
+      if (points.length < 2) {
+        toast({ title: 'Could not generate outline', description: 'The GPS trace was too short or stationary.', variant: 'destructive' });
+        return;
+      }
+      drawPointsRef.current = points;
+      setDrawPoints(points);
+      updateDrawPolyline(points);
+      onLayoutChange?.(points); // auto-save
+      // Fit map to the generated drawing
+      if (mapRef.current && points.length > 1) {
+        const bounds = L.latLngBounds(points.map(p => [p.lat, p.lon] as [number, number]));
+        mapRef.current.fitBounds(bounds, { padding: [40, 40], animate: true });
+      }
+      toast({ title: 'Drawing generated', description: `${label} (${points.length} points).` });
+    } catch (err) {
+      // Surface failures in the on-screen debug console (?dbg=true) — on mobile
+      // there's no dev-tools console to catch an exception here.
+      console.error('Drawing generation failed', err);
+      toast({ title: 'Could not generate outline', description: 'See debug log (?dbg=true) for details.', variant: 'destructive' });
     }
-    toast({ title: 'Drawing generated', description: `${label} (${points.length} points).` });
   }, [updateDrawPolyline, onLayoutChange]);
 
   const handleGenerateFromLap = useCallback((lapNumber: number) => {
-    if (!samples || !laps) return;
+    if (!samples || !laps) {
+      console.warn('Generate from lap: no samples/laps', { hasSamples: !!samples, hasLaps: !!laps });
+      return;
+    }
     const lap = laps.find(l => l.lapNumber === lapNumber);
-    if (!lap) return;
+    if (!lap) {
+      console.warn('Generate from lap: lap not found', lapNumber);
+      return;
+    }
     const lapSamples = samples.slice(lap.startIndex, lap.endIndex + 1);
     const rawPoints = lapSamples
       .filter(s => s.lat !== 0 && s.lon !== 0)

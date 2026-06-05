@@ -27,6 +27,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   track matches / waypoint timing) — it now carries the session's laps and GPS
   through, so the Generate tool and the drawn outline both work while you're
   first setting the track up.
+- **On-screen debug console for mobile.** Load the app with `?dbg=true` to show a
+  bottom overlay that mirrors `console.*` output plus uncaught errors and promise
+  rejections, with copy/clear/collapse controls. Phones and installed PWAs have
+  no dev-tools console, so this makes otherwise-invisible runtime errors readable
+  on-device. The flag persists (set `?dbg=false` to turn it off) and the overlay
+  renders nothing unless enabled.
 
 ### Fixed
 - **New tracks now apply immediately.** Creating a track/course while a session
@@ -34,6 +40,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   instead of needing a file reload, and the new track shows up in the track
   selection dropdown without a page refresh. Editing the active session's course
   (e.g. nudging its start/finish line) likewise re-processes immediately.
+- **Outline generation now reports failures.** Generating a track outline that
+  collapses to too few points (a stationary/short trace) or throws now shows a
+  clear toast instead of silently doing nothing, and logs details to the debug
+  console (`?dbg=true`).
 
 ## [2.2.0] - 2026-06-04
 
