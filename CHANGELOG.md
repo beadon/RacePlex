@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.2.1] - 2026-06-05
+
 ### Added
 - **Pick the satellite imagery date in the track editor.** The visual track
   editor's satellite map now has the same Esri Wayback date picker as the
