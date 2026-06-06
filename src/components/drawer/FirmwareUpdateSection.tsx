@@ -170,7 +170,12 @@ export function FirmwareUpdateSection({ connection }: { connection: BleConnectio
                   {fw.flashError ?? "Something went wrong during the update."}
                 </DialogDescription>
               </DialogHeader>
-              <DialogFooter>
+              <DialogFooter className="gap-2 sm:gap-0">
+                {fw.canForgetDevice && (
+                  <Button variant="secondary" onClick={fw.forgetDevice}>
+                    Forget device &amp; reconnect
+                  </Button>
+                )}
                 <Button variant="outline" onClick={fw.dismiss}>
                   Close
                 </Button>
