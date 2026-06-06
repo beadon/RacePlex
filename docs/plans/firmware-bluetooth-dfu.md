@@ -23,9 +23,31 @@ manifest publishes two variants:
 | `BirdsEye-sense` | `sense` | XIAO nRF52840 **Sense** | has the on-board IMU |
 | `BirdsEye-nonsense` | `nonsense` | XIAO nRF52840 | no IMU |
 
-> ⚠️ CLAUDE.md currently calls the logger an "ESP32 GPS logger". The published
-> firmware is **nRF52840** (Adafruit nRF52 Arduino core). Update that line in
-> CLAUDE.md / README when this lands.
+> The logger runs the **Adafruit nRF52 Arduino core** (`Adafruit_nRF52_Arduino` /
+> `Adafruit_nRF52_Bootloader`). The CLAUDE.md "ESP32" line was wrong and is fixed
+> in this PR.
+
+### The firmware already exposes everything via *standard* BLE services
+
+Reading the published firmware (`BirdsEye/bluetooth.ino`, `BLE_SETUP()`) confirms
+it advertises **standard** Bluetooth services for version + DFU — there is **no
+new/custom characteristic** to add, and **no firmware change is needed** for this
+feature:
+
+```cpp
+BLEDfu bledfu;   // buttonless DFU trigger (standard Adafruit service)
+BLEDis bledis;   // Device Information Service (0x180A)
+...
+bledfu.begin();
+bledis.setManufacturer("DovesDataLogger");
+bledis.setModel("BirdsEye-" FIRMWARE_VARIANT);  // -> "BirdsEye-sense" / "BirdsEye-nonsense"
+bledis.setFirmwareRev(FIRMWARE_VERSION);        // -> e.g. "2.1.0"
+bledis.begin();
+```
+
+So both the installed version **and** the variant come straight off the standard
+**Device Information Service**, and DFU mode is entered via the standard
+**Adafruit buttonless DFU** service — the app just consumes them.
 
 ### The OTA manifest (`https://theangryraven.github.io/DovesDataLogger/manifest.json`)
 
@@ -108,45 +130,47 @@ vendored binary blobs, pure JS).
 
 ## The four capabilities, mapped to a design
 
-### 1. Check the installed version
+### 1. Check the installed version — **standard Device Information Service**
 
-The device exposes **no firmware version over BLE today**. Two ways to add it, in
-preference order:
+Read the **DIS** (`0x180A`), no custom characteristic:
 
-- **(preferred) Reuse the settings protocol.** Have the firmware report
-  `fw_version` (and `variant`: `sense`/`nonsense`) as settings keys. The app
-  already reads these for free via `getDeviceSetting(conn, "fw_version")` /
-  `requestSettingsList` (`src/lib/ble/settings.ts`) — **no new BLE code**, just a
-  firmware addition and a `deviceSettingsSchema.ts` entry (it gracefully shows
-  unknown keys already).
-- (fallback) A dedicated `FWVER` command on `fileRequest` (`0x2A3E`) →
-  `FW:<version>,<variant>` on `fileStatus` (`0x2A40`), mirroring the `BATT`
-  pattern in `battery.ts`. Only needed if settings can't carry it.
+| Field | Characteristic | Example | Use |
+|-------|----------------|---------|-----|
+| Firmware Revision | `0x2A26` | `"2.1.0"` | semver-compare vs manifest `version` |
+| Model Number | `0x2A24` | `"BirdsEye-sense"` | **maps 1:1 to a manifest `builds` key** → picks the variant's `dfuZip` |
+| Manufacturer | `0x2A29` | `"DovesDataLogger"` | sanity / display |
 
-Then compare the device version against the manifest's `version` with semver
-ordering to decide "up to date" vs "update available". The variant the device
-reports picks which `builds[*].dfuZip` to download.
+The DIS is a separate primary service from the app's `0x1820`, so read it off the
+same `BluetoothRemoteGATTServer` (`server.getPrimaryService(0x180A)` →
+`getCharacteristic(0x2A26)` → decode UTF-8). Compare with semver ordering to
+decide "up to date" vs "update available". **Important:** request `0x180A` in the
+`optionalServices` of the existing `connectToDevice()` call so Web Bluetooth
+grants access to it on the same connection (no second picker just to read the
+version).
 
-### 2. Trigger DFU (reboot into bootloader)
+### 2. Trigger DFU (reboot into bootloader) — **standard Adafruit buttonless DFU**
 
-To flash, the device must be in its **bootloader**, which advertises the legacy
-DFU service. Get there via a **buttonless** trigger:
+The firmware's `BLEDfu` advertises the standard Adafruit buttonless DFU service
+(confirmed against `Adafruit_nRF52_Arduino`):
 
-- **(preferred) Custom command on the existing `0x1820` service.** Add a `DFU`
-  command on `fileRequest` (`0x2A3E`); firmware sets the OTA magic and resets
-  (`NRF_POWER->GPREGRET = 0x…; NVIC_SystemReset();` / Adafruit `enterOTADfu()`).
-  The app already owns this connection, so this is the least-surprising path.
-  After writing `DFU`, the app **disconnects**, waits for the device to re-appear
-  advertising the DFU service, then reconnects for the transfer.
-- (standard alt) Adafruit's **BLEDfu buttonless service** if the firmware enables
-  it. Same end state (reboot to bootloader); exact service/characteristic UUIDs
-  **must be confirmed against the firmware** before coding.
+| Role | UUID |
+|------|------|
+| DFU service | `00001530-1212-EFDE-1523-785FEABCD123` |
+| DFU control point | `00001531-1212-EFDE-1523-785FEABCD123` (write + notify/indicate) |
+| DFU packet | `00001532-1212-EFDE-1523-785FEABCD123` |
+| DFU revision | `00001534-…` (reads `0x0001` = "in app mode") |
 
-> The device re-advertises under the bootloader with a possibly different name and
-> the DFU service UUID, so the reconnect uses a fresh `requestDevice({ filters:
-> [{ services: [DFU_SERVICE] }] })`. Web Bluetooth requires a user gesture per
-> `requestDevice`, so the UI must surface a "select the device in DFU mode" step
-> (or use `getDevices()` where permission persists).
+Flow: connect → get the DFU service → enable notifications on the control point →
+**write the start opcode (`0x01`) to the control point**. The firmware sets
+`GPREGRET = 0xB1` (DFU_OTA_MAGIC) and resets; the board reboots into the
+**bootloader**, which re-advertises the *same* legacy DFU service for the actual
+transfer.
+
+> The bootloader re-advertises under a different name + the DFU service, so the
+> reconnect uses a fresh `requestDevice({ filters: [{ services: [DFU_SERVICE] }] })`.
+> Web Bluetooth requires a **user gesture** per `requestDevice`, so the UI must
+> surface a "select the device (now in DFU mode)" step — or lean on persisted
+> `navigator.bluetooth.getDevices()` permission to skip the second picker.
 
 ### 3. Download the firmware locally
 
@@ -159,13 +183,14 @@ let the user pick a local `.zip` for fully-offline / sideload flashing.
 
 ### 4. Flash (legacy DFU transfer)
 
-Legacy DFU service (UUIDs **to confirm against the bootloader**, typically):
+In the bootloader, the **same** legacy DFU service is used for the transfer
+(confirmed against `Adafruit_nRF52_Bootloader`, SDK11-era legacy DFU):
 
-| Role | UUID (legacy) |
-|------|---------------|
-| DFU Service | `00001530-1212-EFDE-1523-785FEEF13D00` |
-| Control Point (CP) — write + notify | `00001531-…` |
-| Packet — write-without-response | `00001532-…` |
+| Role | UUID |
+|------|------|
+| DFU Service | `00001530-1212-EFDE-1523-785FEABCD123` |
+| Control Point (CP) — write + notify | `00001531-1212-EFDE-1523-785FEABCD123` |
+| Packet — write-without-response | `00001532-1212-EFDE-1523-785FEABCD123` |
 
 Procedure (op codes on CP, image bytes on Packet):
 
@@ -195,7 +220,7 @@ src/lib/ble/dfu/
 ├── dfuPackage.ts      # PURE: unzip (jszip) + parse/validate inner manifest → {initPacket, image, meta}
 ├── dfuProtocol.ts     # legacy DFU state machine over a BleConnection-like CP/Packet pair
 ├── firmwareManifest.ts# fetch + parse top-level manifest; semver compare; pick build by variant (PURE compare)
-├── version.ts         # read installed version (settings key or FWVER command)
+├── version.ts         # read DIS (0x180A): firmware rev 0x2A26 + model 0x2A24 -> {version, variant}
 ├── index.ts           # public barrel (checkFirmware, downloadFirmware, enterDfuMode, flashFirmware)
 └── __test__/          # vitest for the PURE bits (package parse, manifest pick, semver, init-packet build)
 ```
@@ -203,10 +228,10 @@ src/lib/ble/dfu/
 - `firmwareManifest.ts` constant for the manifest URL (with an env override
   `VITE_FIRMWARE_MANIFEST_URL` if we want preview/staging manifests — document in
   README + CLAUDE.md env table if added).
-- Reuses `BleConnection` shape; the DFU-mode connection needs its own
-  service/char fetch (separate from the `0x1820` connection) — add a
-  `connectToDfu()` alongside `connectToDevice()` rather than overloading the
-  latter.
+- Add `0x180A` to `optionalServices` in `connectToDevice()` so the DIS version
+  read works on the existing connection (no extra picker). The DFU-mode connection
+  is a *separate* device session (post-reboot) — add a `connectToDfu()` alongside
+  `connectToDevice()` rather than overloading the latter.
 - Keep `dfuPackage.ts` / `firmwareManifest.ts` **pure** so they're unit-testable
   without BLE (Golden Rule #6). The protocol state machine is exercised with a
   mocked characteristic pair (same pattern as `fileTransfer.test.ts`).
@@ -242,24 +267,27 @@ src/lib/ble/dfu/
 
 ---
 
-## Cross-repo dependency (firmware side)
+## Firmware side — already done
 
-This app change pairs with small **DovesDataLogger firmware** additions
-(separate repo, separate PR):
-1. report `fw_version` + `variant` (settings key — preferred — or `FWVER` cmd);
-2. a buttonless **`DFU`** command on `0x2A3E` that reboots into the OTA
-   bootloader.
+**No firmware change is required.** The shipped firmware (`BirdsEye/bluetooth.ino`,
+`BLE_SETUP()`) already advertises the standard `BLEDis` (version + variant) and
+`BLEDfu` (buttonless DFU) services. The app is a pure consumer of standard BLE.
 
-The app should **degrade gracefully** when talking to firmware that lacks these
-(no version key → "unknown, can't check"; no DFU command → fall back to the
-standard buttonless service or a manual "hold button to enter DFU" instruction).
+The app should still **degrade gracefully** for older units that predate these
+services: no DIS → "version unknown, can't auto-check" (offer manual/sideload
+flash); no buttonless DFU service → instruct the manual bootloader entry
+(double-tap reset).
+
+> Naming note: the firmware comment calls `BLEDfu` "Secure DFU", but the Adafruit
+> `BLEDfu` service + bootloader are the **legacy** SDK11 DFU (consistent with the
+> `dfu_version 0.5` package). Treat it as legacy; the comment is cosmetic.
 
 ---
 
 ## Phasing
 
 - **Phase 1** — `dfuPackage` + `firmwareManifest` (pure, tested) + `dfuProtocol`
-  state machine against a mocked CP/Packet; version read via settings; a minimal
+  state machine against a mocked CP/Packet; version read via DIS; a minimal
   Firmware tab that checks version and flashes. Online manifest fetch.
 - **Phase 2** — polish: progress/ETA reuse of `format.ts`, battery gate, sideload
   `.zip`, "update available" badge, resume-from-bootloader, MTU negotiation/PRN
@@ -271,9 +299,9 @@ standard buttonless service or a manual "hold button to enter DFU" instruction).
 
 ## Docs to update when code lands
 
-- **CLAUDE.md**: fix "ESP32" → "nRF52840"; add `src/lib/ble/dfu/` to the
-  architecture map + a "Firmware DFU" section; new `0x2A3E` `DFU`/`FWVER` commands
-  in the BLE protocol table; any new env var.
+- **CLAUDE.md**: "ESP32" → "nRF52840" (done in this PR); add `src/lib/ble/dfu/` to
+  the architecture map + a "Firmware DFU" section; note the standard DIS (`0x180A`)
+  + buttonless DFU (`0x1530…`) services in the BLE section; any new env var.
 - **README.md**: a "Firmware update" user section; env var table if
   `VITE_FIRMWARE_MANIFEST_URL` is added; credits (none new — `jszip` already
   credited).
@@ -284,12 +312,13 @@ standard buttonless service or a manual "hold button to enter DFU" instruction).
 
 ## Open questions for the maintainer
 
-1. **Version source**: settings key `fw_version` (preferred, free in the app) or a
-   dedicated `FWVER` command? Need the matching firmware change either way.
-2. **DFU trigger**: add a custom `DFU` command on `0x1820` (preferred), or rely on
-   Adafruit's BLEDfu buttonless service? If the latter, what are its exact UUIDs?
-3. **Reconnect UX**: the bootloader needs a second `requestDevice` (user gesture).
-   Acceptable, or do we want to lean on persisted `getDevices()` permission?
-4. **Manifest URL**: hardcode the GitHub Pages URL, or make it env-configurable
-   for preview firmware channels?
-5. **Long-term**: any appetite for moving to Secure DFU (Phase 3)?
+_(Version source + DFU trigger are now settled — both are standard services
+already in the firmware.)_
+
+1. **Reconnect UX**: the bootloader needs a second `requestDevice` (user gesture).
+   Acceptable, or do we want to lean on persisted `getDevices()` permission to
+   auto-reconnect after the reboot?
+2. **Manifest URL**: hardcode the GitHub Pages URL, or make it env-configurable
+   (`VITE_FIRMWARE_MANIFEST_URL`) for preview firmware channels?
+3. **Long-term**: any appetite for moving the firmware to true Secure DFU + the
+   `web-bluetooth-dfu` library (Phase 3), or stay on legacy?

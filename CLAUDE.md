@@ -4,7 +4,7 @@
 
 **Dove's DataViewer / HackTheTrack** — Open-source, offline-first motorsport telemetry viewer.
 - Live: [hackthetrack.net](https://hackthetrack.net) | Published: [dovesdataviewer.lovable.app](https://dovesdataviewer.lovable.app)
-- Companion hardware: [DovesDataLogger](https://github.com/TheAngryRaven/DovesDataLogger) (ESP32 GPS logger with BLE)
+- Companion hardware: [DovesDataLogger](https://github.com/TheAngryRaven/DovesDataLogger) (nRF52840 GPS logger with BLE — Seeed XIAO nRF52840, `sense`/`nonsense` IMU variants)
 - PWA with full offline support via service worker + IndexedDB
 
 ---
@@ -582,7 +582,7 @@ side (the generated Supabase types are untouched — `getSubmissions` casts).
 
 ## BLE Integration (`src/lib/ble/`)
 
-Connects to **DovesLapTimer** ESP32 device via Web Bluetooth.
+Connects to **DovesLapTimer** (nRF52840) device via Web Bluetooth.
 
 | UUID | Characteristic | Purpose |
 |------|---------------|---------|
