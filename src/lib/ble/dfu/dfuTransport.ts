@@ -72,10 +72,9 @@ export async function connectToDfu(
   const service = await server.getPrimaryService(DFU_SERVICE_UUID);
 
   updateStatus("Preparing transfer...");
-  const [controlPoint, packet] = await Promise.all([
-    service.getCharacteristic(DFU_CONTROL_POINT_UUID),
-    service.getCharacteristic(DFU_PACKET_UUID),
-  ]);
+  // Sequential — Web Bluetooth serializes GATT operations.
+  const controlPoint = await service.getCharacteristic(DFU_CONTROL_POINT_UUID);
+  const packet = await service.getCharacteristic(DFU_PACKET_UUID);
 
   return { device, server, transport: { controlPoint, packet } };
 }
@@ -123,10 +122,9 @@ export async function connectToDfuDevice(
     try {
       const server = await device.gatt!.connect();
       const service = await server.getPrimaryService(DFU_SERVICE_UUID);
-      const [controlPoint, packet] = await Promise.all([
-        service.getCharacteristic(DFU_CONTROL_POINT_UUID),
-        service.getCharacteristic(DFU_PACKET_UUID),
-      ]);
+      // Sequential — Web Bluetooth serializes GATT operations.
+      const controlPoint = await service.getCharacteristic(DFU_CONTROL_POINT_UUID);
+      const packet = await service.getCharacteristic(DFU_PACKET_UUID);
       updateStatus("Connected to bootloader");
       return { device, server, transport: { controlPoint, packet } };
     } catch (error) {
