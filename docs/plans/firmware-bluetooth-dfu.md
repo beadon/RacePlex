@@ -104,6 +104,30 @@ Inner `manifest.json`:
 This is the single most important finding: it rules out the obvious off-the-shelf
 web library (see next section).
 
+### Bootloader / build toolchain (verified against the Seeed package)
+
+For reference (and so a future maintainer can reproduce a build), the board is a
+**Seeed XIAO nRF52840 / Sense** built with the **"Seeed nRF52 Boards"** Arduino
+package — Seeed's fork of `Adafruit_nRF52_Arduino` (Bluefruit) — **not** the
+"Seeed nRF52 **mbed-enabled** Boards" package (Mbed OS has no Bluefruit/`BLEDfu`,
+so the firmware wouldn't build there). The matching bootloader is the
+**Adafruit-style nRF52 UF2 bootloader, version `0.6.2`, SoftDevice `S140 7.3.0`**:
+
+- `Seeed_XIAO_nRF52840_bootloader-0.6.2_s140_7.3.0` (plain)
+- `Seeed_XIAO_nRF52840_Sense_bootloader-0.6.2_s140_7.3.0` (Sense)
+
+This cross-checks the OTA package exactly: the package's `device_type: 82` =
+`adafruit-nrfutil … --dev-type 0x0052`, and `softdevice_req: [291]` = `0x0123` =
+**S140 7.3.0** (`sd_fwid=0x0123`). The Arduino upload recipe is
+`adafruit-nrfutil dfu` (**legacy**, not Secure) — independent confirmation of the
+library decision below.
+
+> **Flasher implication:** the bootloader enforces a SoftDevice-requirement
+> (`sd-req`) check on incoming images. Firmware + bootloader are both pinned to
+> S140 7.3.0, so images are accepted — but the flasher must surface a clear error
+> if the device ever rejects on `sd-req` mismatch (a board on an older
+> SoftDevice/bootloader).
+
 ---
 
 ## Library evaluation ("there should be some JS library…")
