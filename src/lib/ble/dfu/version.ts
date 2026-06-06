@@ -35,14 +35,50 @@ export function parseVariantFromModel(model: string | null): string | null {
   return model.slice(idx + 1).trim().toLowerCase() || null;
 }
 
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * Whether an error looks like a transient GATT contention error (Web Bluetooth
+ * serializes GATT access). The version read can briefly collide with the Settings
+ * tab's concurrent SLIST fetch — retrying clears it. A genuine NotFoundError
+ * (missing characteristic) is NOT transient, so it fails fast.
+ */
+function isBusyError(error: unknown): boolean {
+  const name = (error as { name?: string } | null)?.name ?? "";
+  const msg = (error instanceof Error ? error.message : String(error)).toLowerCase();
+  // Chrome surfaces concurrent GATT ops as a NetworkError, message
+  // "GATT operation already in progress." / "GATT operation failed for unknown reason."
+  return (
+    name === "NetworkError" ||
+    msg.includes("in progress") ||
+    msg.includes("network") ||
+    msg.includes("unknown reason")
+  );
+}
+
+/** Retry `fn` while it fails with a transient busy error (~2s total window). */
+async function withBusyRetry<T>(fn: () => Promise<T>, attempts = 10, delayMs = 200): Promise<T> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error;
+      if (!isBusyError(error) || attempt === attempts - 1) throw error;
+      await sleep(delayMs);
+    }
+  }
+  throw lastError;
+}
+
 /** Read one DIS string characteristic, returning `null` if absent/unreadable. */
 async function readStringChar(
   service: BluetoothRemoteGATTService,
   uuid: number,
 ): Promise<string | null> {
   try {
-    const char = await service.getCharacteristic(uuid);
-    const value = await char.readValue();
+    const char = await withBusyRetry(() => service.getCharacteristic(uuid));
+    const value = await withBusyRetry(() => char.readValue());
     return new TextDecoder().decode(value).replace(/\0+$/, "").trim() || null;
   } catch {
     return null;
@@ -60,18 +96,18 @@ export async function readDeviceFirmwareInfo(
 ): Promise<DeviceFirmwareInfo> {
   let service: BluetoothRemoteGATTService;
   try {
-    service = await server.getPrimaryService(DIS_SERVICE_UUID);
+    service = await withBusyRetry(() => server.getPrimaryService(DIS_SERVICE_UUID));
   } catch {
     throw new Error(
       "Device Information Service not available — cannot read firmware version",
     );
   }
 
-  const [version, model, manufacturer] = await Promise.all([
-    readStringChar(service, DIS_FIRMWARE_REV_UUID),
-    readStringChar(service, DIS_MODEL_UUID),
-    readStringChar(service, DIS_MANUFACTURER_UUID),
-  ]);
+  // Web Bluetooth serializes GATT operations — read sequentially, never via
+  // Promise.all (concurrent reads throw "GATT operation already in progress").
+  const version = await readStringChar(service, DIS_FIRMWARE_REV_UUID);
+  const model = await readStringChar(service, DIS_MODEL_UUID);
+  const manufacturer = await readStringChar(service, DIS_MANUFACTURER_UUID);
 
   return { version, model, variant: parseVariantFromModel(model), manufacturer };
 }
