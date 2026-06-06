@@ -211,9 +211,8 @@ export function useFirmwareUpdate(connection: BleConnection | null) {
         message =
           `${errorMessage(e)}\n\n` +
           "Your browser is blocking the firmware-update service — usually a stale " +
-          "Bluetooth permission from a previous pairing. Fix: disconnect, then remove " +
-          "this device under your browser's Bluetooth permissions " +
-          "(chrome://settings/content/bluetoothDevices), reconnect, and try again.\n\n" +
+          "Bluetooth permission from a previous pairing. Tap “Forget device & reconnect” " +
+          "below, then reconnect and try again.\n\n" +
           `Services currently accessible: ${accessible}`;
       }
       setPhase("error");
@@ -237,6 +236,34 @@ export function useFirmwareUpdate(connection: BleConnection | null) {
     }
   }, [needsDisconnect, disconnectDevice]);
 
+  /**
+   * Revoke this device's Web Bluetooth permission and disconnect, so the next
+   * connect re-pairs with a fresh grant (the fix for a stale permission that's
+   * missing the DFU service). Works without the browser's settings page —
+   * `BluetoothDevice.forget()` is supported on Chrome desktop + Android.
+   */
+  const forgetDevice = useCallback(async () => {
+    const device = connection?.device as
+      | (BluetoothDevice & { forget?: () => Promise<void> })
+      | undefined;
+    try {
+      await device?.forget?.();
+      fwLog("device permission forgotten");
+    } catch (e) {
+      fwLog("forget() failed", errorMessage(e));
+    }
+    setPhase(null);
+    setFlashError(null);
+    setPercent(0);
+    setNeedsDisconnect(false);
+    disconnectDevice();
+    toast.message("Bluetooth permission cleared — reconnect to try the update again");
+  }, [connection, disconnectDevice]);
+
+  /** Whether `BluetoothDevice.forget()` is available (to show the recovery button). */
+  const canForgetDevice =
+    typeof (connection?.device as { forget?: unknown } | undefined)?.forget === "function";
+
   return {
     info,
     loadingVersion,
@@ -250,9 +277,11 @@ export function useFirmwareUpdate(connection: BleConnection | null) {
     phase,
     percent,
     flashError,
+    canForgetDevice,
     checkForUpdates,
     cancel,
     startUpdate,
     dismiss,
+    forgetDevice,
   };
 }
