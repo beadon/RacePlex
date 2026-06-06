@@ -4,7 +4,7 @@
 
 **Dove's DataViewer / HackTheTrack** — Open-source, offline-first motorsport telemetry viewer.
 - Live: [hackthetrack.net](https://hackthetrack.net) | Published: [dovesdataviewer.lovable.app](https://dovesdataviewer.lovable.app)
-- Companion hardware: [DovesDataLogger](https://github.com/TheAngryRaven/DovesDataLogger) (ESP32 GPS logger with BLE)
+- Companion hardware: [DovesDataLogger](https://github.com/TheAngryRaven/DovesDataLogger) (nRF52840 GPS logger with BLE — Seeed XIAO nRF52840, `sense`/`nonsense` IMU variants)
 - PWA with full offline support via service worker + IndexedDB
 
 ---
@@ -130,6 +130,8 @@ src/
 │   ├── satelliteImagery.ts # ★ Pure Esri Wayback parsing: waybackconfig.json → date-sorted release list + Leaflet tile URLs (online-only satellite imagery-date picker; useWaybackImagery hook lazy-loads it)
 │   ├── ble/               # Web Bluetooth DovesLapTimer protocol, split per-concern (see BLE Integration);
 │   │                      #   + bleDatalogger.ts (legacy barrel), deviceTrackSync.ts, deviceSettingsSchema.ts
+│   │   └── dfu/           # ★ Firmware update over BLE (legacy Nordic DFU): firmwareManifest (fetch+pure compare/pick),
+│   │                      #   dfuPackage (jszip unpack), version (DIS read), dfuProtocol (transfer state machine), dfuTransport (buttonless trigger+reconnect)
 │   ├── db/                # Admin DB layer: ITrackDatabase + supabaseAdapter + getDatabase() factory
 │   ├── billing.ts         # ★ Pure subscription logic (tiers, coming-soon, annual-discount math), no Supabase import — see docs/backend.md
 │   ├── billingClient.ts / pendingCheckout.ts   # Supabase billing I/O + sign-up checkout stash
@@ -582,7 +584,7 @@ side (the generated Supabase types are untouched — `getSubmissions` casts).
 
 ## BLE Integration (`src/lib/ble/`)
 
-Connects to **DovesLapTimer** ESP32 device via Web Bluetooth.
+Connects to **DovesLapTimer** (nRF52840) device via Web Bluetooth.
 
 | UUID | Characteristic | Purpose |
 |------|---------------|---------|
@@ -611,6 +613,51 @@ LIST → select file → GET:filename → receive SIZE → stream data chunks �
 - `BATT` → device responds `BATT:<percent>,<voltage>` on fileStatus (e.g., `BATT:85,3.98`). 5s timeout.
 
 Settings schema is defined in `src/lib/deviceSettingsSchema.ts` — maps keys to labels, types, and validation rules. Unknown keys from the device are displayed as raw string fields (forward-compatible).
+
+### Firmware update over BLE — DFU (`src/lib/ble/dfu/`)
+
+The logger (Seeed XIAO nRF52840, Adafruit nRF52 core) is flashed in-app over Web
+Bluetooth using the **legacy** Nordic DFU protocol (not Secure DFU). The app is a
+pure consumer of **standard** services — no custom characteristic, no firmware
+change. Full design + hardware verification in
+[`docs/plans/firmware-bluetooth-dfu.md`](docs/plans/firmware-bluetooth-dfu.md).
+
+- **Check version** — read the standard **Device Information Service** (`0x180A`):
+  Firmware Revision (`0x2A26`) → version, Model Number (`0x2A24`,
+  `"BirdsEye-<variant>"`) → variant (which selects the manifest build).
+  `version.ts`; `0x180A` is added to `connectToDevice()`'s `optionalServices`.
+- **Manifest** — `firmwareManifest.ts`: fetch the online OTA index
+  (`theangryraven.github.io/.../manifest.json`, override
+  `VITE_FIRMWARE_MANIFEST_URL`) + pure `compareVersions`/`isUpdateAvailable`/
+  `pickBuildForVariant`. Online-only (a documented exception); a local `.zip`
+  sideload stays offline.
+- **Package** — `dfuPackage.ts`: unzip a `dfuZip` with `jszip` → `{ image (.bin),
+  initPacket (.dat), meta }`.
+- **Trigger + reconnect** — `dfuTransport.ts`: `triggerDfuMode()` writes
+  `0x01` to the Adafruit buttonless DFU control point (service
+  `00001530-…-785FEABCD123`) → board reboots into bootloader; `connectToDfu()`
+  reconnects to the bootloader's DFU service (needs a fresh `requestDevice`
+  gesture).
+- **Flash** — `dfuProtocol.ts`: `flashFirmware(transport, pkg, opts)` runs the
+  legacy DFU transfer (Start → init packet → PRN-flow-controlled image stream →
+  validate → activate&reset) with `onProgress` + `AbortSignal`. Pure/testable
+  against a mocked control-point/packet pair.
+- **Reconnect** — `dfuTransport.ts`: `connectToDfuDevice(device)` reuses the
+  already-granted `BluetoothDevice` to reconnect after the reboot (retries while
+  the bootloader comes up) — **no second `requestDevice` picker**.
+
+UI lives at the **top of the Device → Settings tab**
+(`drawer/FirmwareUpdateSection.tsx`): installed version + a **Check for updates**
+button → confirm dialog (battery warnings) → progress → auto-disconnect.
+Orchestrated by `hooks/useFirmwareUpdate.ts`; the actual flash is marked on
+`DeviceContext` (`isFlashing`/`setFlashing`) so the expected BLE drop when the
+device reboots into its bootloader doesn't tear down the UI mid-update.
+
+On **beta/preview builds** (`isPreviewBuild()`, i.e. any non-`main` branch — same
+switch as the footer/preview-DB), `evaluateFirmwareUpdate(…, { force: true })`
+**bypasses the version check** so a matching build is always offered (testers can
+re-flash the same/older version); the confirm dialog shows an amber "on beta
+branches updates always push through for testing" note.
 
 ---
 
@@ -785,6 +832,7 @@ existing user data keeps resolving without a destructive migration.
 | `VITE_ENABLE_GOOGLE_AUTH` | Client | `"true"` to show the "Continue with Google" buttons (Login/Register/Profile). Requires `VITE_ENABLE_CLOUD`. Default `"false"`: Google sign-in still routes through Lovable's OAuth broker (`src/integrations/lovable/`), so it's gated off until native Supabase Google OAuth is wired up. |
 | `VITE_TURNSTILE_SITE_KEY` | Client | Cloudflare Turnstile site key (optional CAPTCHA) |
 | `TURNSTILE_SECRET_KEY` | Server (edge fn) | Turnstile secret — `???` |
+| `VITE_FIRMWARE_MANIFEST_URL` | Client | Override the logger firmware OTA manifest URL (default `https://theangryraven.github.io/DovesDataLogger/manifest.json`). For preview/staging firmware channels. |
 | `DOVE_PLUGIN_PACKAGES` | Build | Comma-separated external plugin npm packages to load. Overrides the default (`@perchwerks/eye-in-the-sky`) when set |
 | `VITE_APP_VERSION` / `VITE_GIT_HASH` / `VITE_BUILD_DATE` / `VITE_GIT_BRANCH` / `VITE_GIT_COMMIT_DATE` | Build (auto) | Footer version stamp — **not hand-set**. `vite.config.ts` bakes them in from `package.json` + git (`buildInfo.ts` reads them). The stamp mirrors the `_PREVIEW` switch: `main` shows `v<version> · <hash>`; any other branch shows `<branch> · <hash> · <commit time>`. Hash prefers CI SHAs (`WORKERS_CI_COMMIT_SHA`/`CF_PAGES_COMMIT_SHA`/`GITHUB_SHA`), branch prefers CI branch vars (`WORKERS_CI_BRANCH`/`CF_PAGES_BRANCH`/`GITHUB_REF_NAME`); both fall back to local `git`, then `"unknown"`. |
 
