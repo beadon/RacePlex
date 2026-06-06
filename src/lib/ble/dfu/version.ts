@@ -38,18 +38,26 @@ export function parseVariantFromModel(model: string | null): string | null {
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /**
- * Whether an error looks like a transient "GATT operation already in progress"
- * (Web Bluetooth serializes GATT access). The version read can briefly collide
- * with the Settings tab's concurrent SLIST fetch — retrying clears it. A genuine
- * NotFoundError (missing characteristic) is NOT a busy error, so it fails fast.
+ * Whether an error looks like a transient GATT contention error (Web Bluetooth
+ * serializes GATT access). The version read can briefly collide with the Settings
+ * tab's concurrent SLIST fetch — retrying clears it. A genuine NotFoundError
+ * (missing characteristic) is NOT transient, so it fails fast.
  */
 function isBusyError(error: unknown): boolean {
+  const name = (error as { name?: string } | null)?.name ?? "";
   const msg = (error instanceof Error ? error.message : String(error)).toLowerCase();
-  return msg.includes("in progress") || msg.includes("network");
+  // Chrome surfaces concurrent GATT ops as a NetworkError, message
+  // "GATT operation already in progress." / "GATT operation failed for unknown reason."
+  return (
+    name === "NetworkError" ||
+    msg.includes("in progress") ||
+    msg.includes("network") ||
+    msg.includes("unknown reason")
+  );
 }
 
-/** Retry `fn` a few times, but only while it fails with a transient busy error. */
-async function withBusyRetry<T>(fn: () => Promise<T>, attempts = 5, delayMs = 120): Promise<T> {
+/** Retry `fn` while it fails with a transient busy error (~2s total window). */
+async function withBusyRetry<T>(fn: () => Promise<T>, attempts = 10, delayMs = 200): Promise<T> {
   let lastError: unknown;
   for (let attempt = 0; attempt < attempts; attempt++) {
     try {
