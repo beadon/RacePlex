@@ -65,9 +65,9 @@ const CLOUD_SYNC_FEATURE: Feature = {
 };
 
 const OFFLINE_CARD: FreeTier = {
-  name: "Free",
+  name: "No Account",
   blurb: "Offline",
-  price: "$0",
+  price: "Free",
   features: OFFLINE_FEATURES,
 };
 
@@ -76,11 +76,11 @@ const OFFLINE_CARD: FreeTier = {
 // it just inherits from it.
 function onlineCard(variant: Variant): FreeTier {
   return {
-    name: "Free",
+    name: "Free Account",
     blurb: "Online account",
-    price: "$0",
+    price: "Free",
     slug: "free",
-    inherits: variant === "register" ? "Everything included with offline mode" : "Everything in Free, plus",
+    inherits: variant === "register" ? "Everything included with offline mode" : "Everything in No Account, plus",
     features: [CLOUD_SYNC_FEATURE, "Fastest laps & synced setups — always free", "50 MB cloud storage*"],
   };
 }
@@ -90,11 +90,11 @@ function onlineCard(variant: Variant): FreeTier {
 // + Pro are coming-soon (see billing.ts COMING_SOON_TIERS) and hidden entirely.
 const PAID_TIERS: PaidTier[] = [
   {
-    name: "Plus",
+    name: "Plus Account",
     blurb: "For bigger garages",
     slug: "plus",
     highlight: true,
-    inherits: "Everything in Free online, plus",
+    inherits: "Everything in Free Account, plus",
     features: [
       "10 GB cloud storage*",
       "Video uploads & sharing (coming soon)",
@@ -102,17 +102,17 @@ const PAID_TIERS: PaidTier[] = [
     ],
   },
   {
-    name: "Premium",
+    name: "Premium Account",
     blurb: "Max storage",
     slug: "premium",
-    inherits: "Everything in Plus, plus",
+    inherits: "Everything in Plus Account, plus",
     features: ["100 GB cloud storage*"],
   },
   {
-    name: "Pro",
+    name: "Pro Account",
     blurb: "With AI coaching",
     slug: "pro",
-    inherits: "Everything in Premium, plus",
+    inherits: "Everything in Premium Account, plus",
     features: ["500 GB cloud storage*", "AI coaching (coming soon)"],
   },
 ];
@@ -225,12 +225,12 @@ type Variant = "home" | "register";
 
 /**
  * Plans / pricing grid.
- * - `home` (landing page): three cards — Free offline, Free online, Plus — with a
- *   monthly/annual toggle; signed-in users get live "Upgrade" / "Current plan"
- *   actions on Plus.
- * - `register` (sign-up): two cards — Free online (which folds in the offline
- *   summary) and Plus — and no interval toggle (the billing interval is chosen in
- *   the checkout below the cards).
+ * - `home` (landing page): three cards — No Account (offline), Free Account
+ *   (online), Plus Account — with a monthly/annual toggle; signed-in users get
+ *   live "Upgrade" / "Current plan" actions on Plus Account.
+ * - `register` (sign-up): two cards — Free Account (which folds in the offline
+ *   summary) and Plus Account — and no interval toggle (the billing interval is
+ *   chosen in the checkout below the cards).
  * Premium + Pro are coming-soon and hidden entirely. When Stripe isn't configured
  * the paid cards drop out (free-only failback).
  */

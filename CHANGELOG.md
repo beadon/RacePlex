@@ -13,6 +13,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Clearer plans & pricing cards.** The plan cards now read **No Account**
+  (offline), **Free Account** (online), and **Plus Account** — instead of two
+  cards both titled "Free" showing "$0", which read as duplicates and tripped up
+  screen-reader/accessibility users. The two no-cost cards now say **Free** in
+  place of a "$0" price; only the paid plan shows an actual price.
+
 ### Added
 - **Firmware updates over Bluetooth.** The Device → Settings tab now shows your
   logger's installed firmware version with a **Check for updates** button. When a
