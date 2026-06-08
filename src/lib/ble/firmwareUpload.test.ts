@@ -102,6 +102,24 @@ describe("uploadFirmwareImage", () => {
     conn.characteristics.fileStatus.simulate("FWERR:WRITE_FAIL\n");
     await expect(p).rejects.toThrow(/WRITE_FAIL/);
   });
+
+  it("keeps a long upload alive (watchdog resets per chunk, no total-time cap)", async () => {
+    const conn = createMockConnection();
+    const img = image(1000); // 5 chunks at 200B
+    const p = uploadFirmwareImage(conn, img, "abcd1234", undefined, {
+      chunkSize: 200,
+      chunkDelayMs: 120,
+      timeoutMs: 400,
+    });
+    await flushMicrotasks();
+    conn.characteristics.fileStatus.simulate("FWREADY\n");
+    // ~600ms of upload (5×120ms) exceeds timeoutMs (400), but each inter-chunk
+    // gap is < 400ms — the per-chunk watchdog must keep it alive (the old single
+    // FWPUT timeout would have fired mid-upload).
+    await new Promise((r) => setTimeout(r, 720));
+    conn.characteristics.fileStatus.simulate("FWOK:abcd1234\n");
+    await expect(p).resolves.toBeUndefined();
+  });
 });
 
 describe("applyFirmware", () => {

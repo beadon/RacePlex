@@ -141,6 +141,24 @@ export async function uploadFirmwareImage(
     let timeout: ReturnType<typeof setTimeout> | null = null;
     let phase: "waiting_ready" | "uploading" | "waiting_ok" = "waiting_ready";
 
+    const cleanup = () => {
+      if (timeout) clearTimeout(timeout);
+      connection.characteristics.fileStatus.removeEventListener(
+        "characteristicvaluechanged",
+        handle,
+      );
+    };
+    // Watchdog: (re)start a single timeout. The upload resets it on every chunk,
+    // so a large image never trips it — only an actual stall (no progress for
+    // `timeoutMs`) does.
+    const arm = (message: string) => {
+      if (timeout) clearTimeout(timeout);
+      timeout = setTimeout(() => {
+        cleanup();
+        reject(new Error(message));
+      }, timeoutMs);
+    };
+
     const handle = (event: Event) => {
       const raw = decode((event.target as BluetoothRemoteGATTCharacteristic).value);
       bleLog("FWPUT status:", raw, "phase:", phase);
@@ -174,23 +192,13 @@ export async function uploadFirmwareImage(
         const chunk = image.subarray(i, Math.min(i + chunkSize, image.length));
         await connection.characteristics.fileRequest.writeValue(chunk);
         onProgress?.({ sent: Math.min(i + chunkSize, image.length), total: image.length });
+        // Progress resets the watchdog — only a real stall trips it.
+        arm("Timed out during firmware upload — the device stopped responding");
         if (chunkDelayMs > 0) await new Promise((r) => setTimeout(r, chunkDelayMs));
       }
       await connection.characteristics.fileRequest.writeValue(encoder.encode("FWDONE"));
       phase = "waiting_ok";
-      if (timeout) clearTimeout(timeout);
-      timeout = setTimeout(() => {
-        cleanup();
-        reject(new Error("Timed out waiting for on-device CRC verification"));
-      }, timeoutMs);
-    };
-
-    const cleanup = () => {
-      if (timeout) clearTimeout(timeout);
-      connection.characteristics.fileStatus.removeEventListener(
-        "characteristicvaluechanged",
-        handle,
-      );
+      arm("Timed out waiting for on-device CRC verification");
     };
 
     try {
@@ -202,10 +210,7 @@ export async function uploadFirmwareImage(
       await connection.characteristics.fileRequest.writeValue(
         encoder.encode(`FWPUT:${image.length}`),
       );
-      timeout = setTimeout(() => {
-        cleanup();
-        reject(new Error("Timed out waiting for the device to accept the firmware upload"));
-      }, timeoutMs);
+      arm("Timed out waiting for the device to accept the firmware upload");
     } catch (error) {
       cleanup();
       reject(error);
