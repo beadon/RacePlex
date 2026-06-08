@@ -42,11 +42,11 @@ export function SingleSeriesChart({
   allSamples, rangeStart, overlayLines = [],
   height, onHeightChange,
 }: SingleSeriesChartProps) {
-  const { useKph, gForceSmoothing, gForceSmoothingStrength, darkMode, chartXAxis, brakingZoneSettings } = useSettingsContext();
+  const { useKph, useMetricDistance, gForceSmoothing, gForceSmoothingStrength, darkMode, chartXAxis, brakingZoneSettings } = useSettingsContext();
   const chartColors = useMemo(() => getChartColors(darkMode), [darkMode]);
   const axis = useMemo(
-    () => buildChartAxis(samples, chartXAxis, { useKph, fullSamples: allSamples, rangeStart }),
-    [samples, chartXAxis, useKph, allSamples, rangeStart],
+    () => buildChartAxis(samples, chartXAxis, { useMetricDistance, fullSamples: allSamples, rangeStart }),
+    [samples, chartXAxis, useMetricDistance, allSamples, rangeStart],
   );
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
