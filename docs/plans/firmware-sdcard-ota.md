@@ -63,12 +63,15 @@ which is **not** blocklisted. So we split the job:
 
 ### Transfer + verify handshake (paranoia baked in)
 
-CRC is exchanged and confirmed **both directions before and after** the upload, so
-neither the image **nor the agreed-upon checksum itself** can be silently
-corrupted in transit. CRC = **CRC-32 (IEEE 802.3)** on both ends.
+CRC is exchanged and confirmed at **every** hop — the publisher's checksum, the
+download, the control channel, and the on-device file — so neither the image **nor
+the agreed-upon checksum itself** can be silently corrupted anywhere. CRC =
+**CRC-32 (IEEE 802.3)** end to end. The manifest publishes each build's
+`appCrc32` + `appSize`, which is the **first** link (download integrity).
 
 ```
-1. [web]   compute crc32(image)
+0. [web]   download appBin; crc32(image) must == manifest appCrc32 (+ appSize)  ← download integrity
+1. [web]   that same crc32 is the value used for the rest of the chain
 2. [web] → FWBEGIN:<size>,<crc32>                 announce intent + expected CRC
 3. [web] ← FWCRC:<crc32>                           logger echoes the CRC it received
           [web] aborts unless the echo == its own  (control channel itself verified)
@@ -76,7 +79,7 @@ corrupted in transit. CRC = **CRC-32 (IEEE 802.3)** on both ends.
 5. [logger] compute crc32 of the stored SD file
 6. [web] ← FWOK:<crc32>  (or FWERR:CRC)            on-device file verified vs expected
 7. [web] → FWAPPLY                                 install: stage → flash → reset
-8.         …reset → reconnect → read DIS rev → confirm new version
+8.         …reset → auto-disconnect (software side)
 ```
 
 Every step is gated on the previous one succeeding; any mismatch aborts **before**
@@ -246,10 +249,24 @@ factory.
 
 ## Packaging / manifest
 
-No manifest change needed: keep publishing the existing per-variant `dfuZip`; the
-client extracts the app `.bin` from it (`dfuPackage.parseDfuPackage`). Optionally
-publish a raw `.bin` + `crc32` later to skip the unzip. Variant is matched via the
-DIS model (`BirdsEye-<variant>`) exactly as today.
+Each build now publishes a **raw `appBin` URL + `appCrc32` + `appSize`** alongside
+the legacy `dfuZip`, e.g.:
+
+```jsonc
+"BirdsEye-sense": {
+  "variant": "sense",
+  "dfuZip":  ".../BirdsEye-sense.zip",
+  "appBin":  ".../BirdsEye-sense.bin",
+  "appCrc32": "7e27fc48",
+  "appSize":  287900
+}
+```
+
+The client downloads `appBin` directly (no unzip), and `assertImageMatchesBuild`
+verifies the bytes against `appCrc32`/`appSize` before anything else — the first
+link of the CRC chain. The `dfuZip` path (`dfuPackage.parseDfuPackage`) remains as
+a **fallback** for older manifests without `appBin`. Variant is matched via the DIS
+model (`BirdsEye-<variant>`) exactly as today.
 
 ---
 

@@ -6,6 +6,7 @@ import { isPreviewBuild } from "@/lib/buildInfo";
 import { isDebugEnabled } from "@/lib/debugConsole";
 import { crc32Hex, beginFirmwareUpdate, uploadFirmwareImage, applyFirmware } from "@/lib/ble";
 import {
+  assertImageMatchesBuild,
   evaluateFirmwareUpdate,
   fetchFirmwareManifest,
   fetchFirmwarePackage,
@@ -138,21 +139,30 @@ export function useFirmwareUpdate(connection: BleConnection | null) {
     let installing = false;
 
     try {
-      // 0. Download + unpack the image, compute its CRC.
+      // 0. Download the image (prefer the raw .bin), compute its CRC, and verify
+      //    against the manifest's published size/CRC — the first link of the
+      //    full-circle CRC chain (catches a corrupt download before the device
+      //    is involved). Falls back to unzipping the dfuZip for older manifests.
       setPhase("downloading");
-      fwLog("downloading", build.name, build.dfuZip);
-      const zip = await fetchFirmwarePackage(build.dfuZip);
-      const pkg = await parseDfuPackage(zip);
-      const crc = crc32Hex(pkg.image);
-      fwLog("package ready", { bytes: pkg.image.byteLength, crc });
+      let image: Uint8Array;
+      if (build.appBin) {
+        fwLog("downloading raw .bin", build.name, build.appBin);
+        image = new Uint8Array(await fetchFirmwarePackage(build.appBin));
+      } else {
+        fwLog("downloading dfuZip", build.name, build.dfuZip);
+        image = (await parseDfuPackage(await fetchFirmwarePackage(build.dfuZip))).image;
+      }
+      const crc = crc32Hex(image);
+      assertImageMatchesBuild(build, image, crc);
+      fwLog("image ready + verified vs manifest", { bytes: image.byteLength, crc });
 
       // 1–3. CRC handshake — verify the control channel before sending anything.
-      await beginFirmwareUpdate(connection, pkg.image.length, crc);
+      await beginFirmwareUpdate(connection, image.length, crc);
       fwLog("crc handshake ok");
 
       // 4–6. Upload to SD, then the device re-verifies the stored file's CRC.
       setPhase("uploading");
-      await uploadFirmwareImage(connection, pkg.image, crc, (p) => {
+      await uploadFirmwareImage(connection, image, crc, (p) => {
         setPercent(p.total > 0 ? Math.round((p.sent / p.total) * 100) : 0);
         if (p.sent >= p.total) setPhase("verifying");
       });

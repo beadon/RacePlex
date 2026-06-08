@@ -26,6 +26,7 @@ export {
   compareVersions,
   isUpdateAvailable,
   evaluateFirmwareUpdate,
+  assertImageMatchesBuild,
   fetchFirmwareManifest,
   fetchFirmwarePackage,
 } from "./firmwareManifest";

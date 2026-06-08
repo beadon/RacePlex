@@ -636,9 +636,14 @@ contract in
 - **Manifest** — `dfu/firmwareManifest.ts`: fetch the online OTA index
   (`theangryraven.github.io/.../manifest.json`, override
   `VITE_FIRMWARE_MANIFEST_URL`) + pure `compareVersions`/`isUpdateAvailable`/
-  `pickBuildForVariant`/`evaluateFirmwareUpdate`. Online-only.
-- **Package** — `dfu/dfuPackage.ts`: unzip a `dfuZip` with `jszip` → `{ image
-  (.bin), … }`; the SD-staged flow uploads `image`.
+  `pickBuildForVariant`/`evaluateFirmwareUpdate`. Each build carries `appBin`
+  (raw `.bin` URL) + `appCrc32` + `appSize`; `assertImageMatchesBuild` verifies a
+  download against them (the **first link of the full-circle CRC chain**, pure).
+  Online-only.
+- **Package** — `dfu/dfuPackage.ts`: `jszip` unzip of a `dfuZip` → `{ image
+  (.bin), … }`. Only the **fallback** path now (older manifests without `appBin`);
+  the normal flow downloads the raw `appBin` directly. The SD-staged flow uploads
+  the `image`.
 - **CRC** — `ble/firmwareCrc.ts`: `crc32`/`crc32Hex` (CRC-32/IEEE, known-vector
   tested so it matches the firmware byte-for-byte).
 - **Transfer protocol** — `ble/firmwareUpload.ts` over `0x2A3E`/`0x2A40`, the

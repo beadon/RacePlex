@@ -18,8 +18,14 @@ export interface FirmwareBuild {
   name: string;
   /** Variant id, e.g. "sense" / "nonsense". */
   variant: string;
-  /** URL to the firmware `.zip` package. */
+  /** URL to the firmware `.zip` package (legacy / fallback source for the image). */
   dfuZip: string;
+  /** Direct URL to the raw application `.bin` (preferred — no unzip needed). */
+  appBin?: string;
+  /** Publisher's CRC-32/IEEE of the `.bin`, 8-char hex — verified after download. */
+  appCrc32?: string;
+  /** Expected `.bin` size in bytes — verified after download. */
+  appSize?: number;
 }
 
 /** The top-level OTA manifest (`manifest.json`). */
