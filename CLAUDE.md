@@ -738,7 +738,7 @@ Key settings: `useKph`, `gForceSmoothing`, `gForceSmoothingStrength`, `brakingZo
 
 **Units are three independent imperial/metric toggles** (all default imperial), one per measurement family, each a Switch in `SettingsModal`:
 - `useKph` (speed) — MPH ⇄ KPH. Picks `speedMph`/`speedKph` on every sample + speed axis labels.
-- `useMetricDistance` (distance) — ft/mi ⇄ m/km. Drives the chart distance axis (`buildChartAxis` `opts.useMetricDistance`), the range-crop labels, and `TrackEditor` course lengths.
+- `useMetricDistance` (distance) — ft/mi ⇄ m/km. Drives the chart distance axis (`buildChartAxis` `opts.useMetricDistance`), the range-crop labels, `TrackEditor` course lengths, and the meters-based **distance-family telemetry channels** (`distance`, `altitude` — `isDistanceUnitChannel`; converted to a single continuous m/ft unit in the graph charts + video overlays. GPS accuracy `h_acc`/`v_acc` stays in meters).
 - `useMetricWeather` (weather) — °F/mph/inHg/ft ⇄ °C/(km/h)/hPa/m. Drives `WeatherPanel` + `LocalWeatherDialog` (temp, dew point, wind, pressure, density/pressure altitude).
 
 All conversions + display formatters live in **`lib/units.ts`** (pure, unit-tested in `units.test.ts`): canonical internal values (distance→meters, temp→Celsius, wind→knots, pressure→inHg, altitude→feet) convert only at display time. `chartAxis.formatAxisDistance` is a re-export of `units.formatDistance`. Weather/track-length surfaces read the flag via `useOptionalSettingsContext()` so they also render outside the provider (landing page).

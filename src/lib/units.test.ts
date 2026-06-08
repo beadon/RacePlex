@@ -11,8 +11,12 @@ import {
   windSpeedValue,
   formatPressure,
   formatAltitudeFt,
+  isDistanceUnitChannel,
+  distanceChannelValue,
+  distanceChannelUnit,
   METERS_PER_FOOT,
   FEET_PER_MILE,
+  FEET_PER_METER,
 } from './units';
 
 describe('speed', () => {
@@ -100,5 +104,27 @@ describe('altitude', () => {
 
   it('formats large values with thousands separators', () => {
     expect(formatAltitudeFt(12345, false)).toBe('12,345 ft');
+  });
+});
+
+describe('distance-family channels', () => {
+  it('recognizes distance + altitude, not accuracy or other channels', () => {
+    expect(isDistanceUnitChannel('distance')).toBe(true);
+    expect(isDistanceUnitChannel('altitude')).toBe(true);
+    expect(isDistanceUnitChannel('h_acc')).toBe(false);
+    expect(isDistanceUnitChannel('v_acc')).toBe(false);
+    expect(isDistanceUnitChannel('speed')).toBe(false);
+    expect(isDistanceUnitChannel('lat_g')).toBe(false);
+  });
+
+  it('keeps meters in metric, converts to feet in imperial', () => {
+    expect(distanceChannelValue(100, true)).toBe(100);
+    expect(distanceChannelValue(100, false)).toBeCloseTo(100 * FEET_PER_METER, 6);
+    expect(distanceChannelValue(1000, false)).toBeCloseTo(3280.84, 1);
+  });
+
+  it('labels the channel unit per family', () => {
+    expect(distanceChannelUnit(true)).toBe('m');
+    expect(distanceChannelUnit(false)).toBe('ft');
   });
 });

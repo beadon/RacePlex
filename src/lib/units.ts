@@ -100,3 +100,32 @@ export function formatAltitudeFt(feet: number, metric: boolean): string {
   const value = metric ? Math.round(feet * METERS_PER_FOOT) : Math.round(feet);
   return `${value.toLocaleString()} ${metric ? 'm' : 'ft'}`;
 }
+
+// ─── Distance-family telemetry channels (useMetricDistance) ───────────────────
+//
+// Some logged channels are stored canonically in **meters** but represent a
+// length the user reads in their chosen distance unit (e.g. cumulative distance,
+// GPS altitude). These follow the distance toggle. GPS accuracy (`h_acc`/`v_acc`)
+// is deliberately excluded — it's a technical metric conventionally in meters.
+
+const DISTANCE_UNIT_CHANNELS = new Set(['distance', 'altitude']);
+
+/** Whether a canonical channel id is a meters-based distance-family channel. */
+export function isDistanceUnitChannel(channelId: string): boolean {
+  return DISTANCE_UNIT_CHANNELS.has(channelId);
+}
+
+/**
+ * Convert a meters-based distance-channel value to the distance display unit.
+ * Uses a single continuous unit per system (m or ft) — not the m↔km / ft↔mi
+ * auto-switch of {@link formatDistance} — since channel values feed continuous
+ * chart axes + numeric readouts that can't switch unit mid-scale.
+ */
+export function distanceChannelValue(meters: number, metric: boolean): number {
+  return metric ? meters : meters * FEET_PER_METER;
+}
+
+/** Display unit (`m` / `ft`) for distance-family telemetry channels. */
+export function distanceChannelUnit(metric: boolean): string {
+  return metric ? 'm' : 'ft';
+}
