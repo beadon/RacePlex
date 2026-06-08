@@ -633,10 +633,12 @@ contract in
   Firmware Revision (`0x2A26`) → version, Model Number (`0x2A24`,
   `"BirdsEye-<variant>"`) → variant (which selects the manifest build).
   `dfu/version.ts`; `0x180A` is in `connectToDevice()`'s `optionalServices`.
-- **Manifest** — `dfu/firmwareManifest.ts`: fetch the online OTA index
-  (`theangryraven.github.io/.../manifest.json`, override
-  `VITE_FIRMWARE_MANIFEST_URL`) + pure `compareVersions`/`isUpdateAvailable`/
-  `pickBuildForVariant`/`evaluateFirmwareUpdate`. Each build carries `appBin`
+- **Manifest** — `dfu/firmwareManifest.ts`: fetch the online OTA index via
+  `getManifestUrl()` — `VITE_FIRMWARE_MANIFEST_URL` override > the **beta channel**
+  (`.../DovesDataLogger/beta/manifest.json`) on non-`main`/preview builds
+  (`isPreviewBuild()`) > production (`.../DovesDataLogger/manifest.json`) — + pure
+  `compareVersions`/`isUpdateAvailable`/`pickBuildForVariant`/
+  `evaluateFirmwareUpdate`. Each build carries `appBin`
   (raw `.bin` URL) + `appCrc32` + `appSize`; `assertImageMatchesBuild` verifies a
   download against them (the **first link of the full-circle CRC chain**, pure).
   Online-only.
@@ -841,7 +843,7 @@ existing user data keeps resolving without a destructive migration.
 | `VITE_ENABLE_GOOGLE_AUTH` | Client | `"true"` to show the "Continue with Google" buttons (Login/Register/Profile). Requires `VITE_ENABLE_CLOUD`. Default `"false"`: Google sign-in still routes through Lovable's OAuth broker (`src/integrations/lovable/`), so it's gated off until native Supabase Google OAuth is wired up. |
 | `VITE_TURNSTILE_SITE_KEY` | Client | Cloudflare Turnstile site key (optional CAPTCHA) |
 | `TURNSTILE_SECRET_KEY` | Server (edge fn) | Turnstile secret — `???` |
-| `VITE_FIRMWARE_MANIFEST_URL` | Client | Override the logger firmware OTA manifest URL (default `https://theangryraven.github.io/DovesDataLogger/manifest.json`). For preview/staging firmware channels. |
+| `VITE_FIRMWARE_MANIFEST_URL` | Client | Override the logger firmware OTA manifest URL. When unset, `main` builds use the production manifest (`…/DovesDataLogger/manifest.json`) and non-`main`/preview builds use the **beta channel** (`…/DovesDataLogger/beta/manifest.json`) — same `isPreviewBuild()` switch as the footer/preview-DB. Set this to force a specific channel on any branch. |
 | `DOVE_PLUGIN_PACKAGES` | Build | Comma-separated external plugin npm packages to load. Overrides the default (`@perchwerks/eye-in-the-sky`) when set |
 | `VITE_APP_VERSION` / `VITE_GIT_HASH` / `VITE_BUILD_DATE` / `VITE_GIT_BRANCH` / `VITE_GIT_COMMIT_DATE` | Build (auto) | Footer version stamp — **not hand-set**. `vite.config.ts` bakes them in from `package.json` + git (`buildInfo.ts` reads them). The stamp mirrors the `_PREVIEW` switch: `main` shows `v<version> · <hash>`; any other branch shows `<branch> · <hash> · <commit time>`. Hash prefers CI SHAs (`WORKERS_CI_COMMIT_SHA`/`CF_PAGES_COMMIT_SHA`/`GITHUB_SHA`), branch prefers CI branch vars (`WORKERS_CI_BRANCH`/`CF_PAGES_BRANCH`/`GITHUB_REF_NAME`); both fall back to local `git`, then `"unknown"`. |
 

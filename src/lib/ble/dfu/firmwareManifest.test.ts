@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import {
   parseFirmwareManifest,
   pickBuildForVariant,
@@ -6,10 +6,31 @@ import {
   isUpdateAvailable,
   evaluateFirmwareUpdate,
   assertImageMatchesBuild,
+  getManifestUrl,
+  DEFAULT_MANIFEST_URL,
+  BETA_MANIFEST_URL,
   fetchFirmwareManifest,
   fetchFirmwarePackage,
 } from "./firmwareManifest";
 import type { FirmwareBuild } from "./dfuTypes";
+
+describe("getManifestUrl", () => {
+  afterEach(() => vi.unstubAllEnvs());
+
+  it("uses the production manifest on non-preview (main) builds", () => {
+    expect(getManifestUrl(false)).toBe(DEFAULT_MANIFEST_URL);
+  });
+
+  it("uses the beta-channel manifest on preview / non-main builds", () => {
+    expect(getManifestUrl(true)).toBe(BETA_MANIFEST_URL);
+  });
+
+  it("lets an explicit env override win over the beta channel", () => {
+    vi.stubEnv("VITE_FIRMWARE_MANIFEST_URL", "https://custom/manifest.json");
+    expect(getManifestUrl(true)).toBe("https://custom/manifest.json");
+    expect(getManifestUrl(false)).toBe("https://custom/manifest.json");
+  });
+});
 
 // A trimmed copy of the real published manifest shape (with the appBin fields).
 const SAMPLE = {

@@ -8,16 +8,29 @@
  * the offline bundle. A user-provided local `.zip` path stays fully offline.
  */
 
+import { isPreviewBuild } from "@/lib/buildInfo";
 import type { FirmwareBuild, FirmwareManifest } from "./dfuTypes";
 
-/** Default OTA manifest URL (override with `VITE_FIRMWARE_MANIFEST_URL`). */
+/** Production OTA manifest URL. */
 export const DEFAULT_MANIFEST_URL =
   "https://theangryraven.github.io/DovesDataLogger/manifest.json";
 
-/** Resolve the manifest URL, honoring the build-time env override. */
-export function getManifestUrl(): string {
+/** Beta-channel OTA manifest — used on non-`main` (preview) builds. */
+export const BETA_MANIFEST_URL =
+  "https://theangryraven.github.io/DovesDataLogger/beta/manifest.json";
+
+/**
+ * Resolve the firmware manifest URL. Precedence:
+ *   1. explicit `VITE_FIRMWARE_MANIFEST_URL` override (any branch)
+ *   2. the **beta channel** on non-`main`/preview builds (same `isPreviewBuild()`
+ *      switch as the footer / preview-DB / forced firmware update)
+ *   3. production.
+ * `preview` is injectable for tests; it defaults to `isPreviewBuild()`.
+ */
+export function getManifestUrl(preview: boolean = isPreviewBuild()): string {
   const override = import.meta.env?.VITE_FIRMWARE_MANIFEST_URL;
-  return (typeof override === "string" && override) || DEFAULT_MANIFEST_URL;
+  if (typeof override === "string" && override) return override;
+  return preview ? BETA_MANIFEST_URL : DEFAULT_MANIFEST_URL;
 }
 
 // ---------------------------------------------------------------------------
