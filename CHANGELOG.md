@@ -24,6 +24,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   covers.
 
 ### Added
+- **Independent imperial/metric unit toggles.** Settings now has three separate
+  unit switches instead of just one speed toggle: **Speed** (MPH ⇄ KPH),
+  **Distance** (ft/mi ⇄ m/km — track lengths, lap/chart distance axis, the
+  range-crop labels, and meters-based telemetry channels like Distance &
+  Altitude in the graphs and video overlays), and **Weather**
+  (°F/mph/inHg/ft ⇄ °C/(km/h)/hPa/m —
+  temperature, dew point, wind, pressure, and density/pressure altitude). Each is
+  app-wide and remembered per device; all default to imperial.
 - **Firmware updates over Bluetooth.** The Device → Settings tab now shows your
   logger's installed firmware version with a **Check for updates** button. When a
   newer build is available for your device, a confirmation dialog (battery /
