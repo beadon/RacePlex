@@ -178,10 +178,9 @@ export function useFirmwareUpdate(connection: BleConnection | null) {
 
       setPhase("done");
       setPercent(100);
-      toast.success("Firmware updated — device is rebooting");
-      // Auto-disconnect the software side once finished.
-      setFlashing(false);
-      disconnectDevice();
+      toast.success("Firmware flashed — your device is rebooting");
+      // Keep DeviceContext's flashing flag TRUE so the reboot's BLE drop doesn't
+      // tear down the "complete" dialog. The user acknowledges via finish().
     } catch (e) {
       fwLog("update failed", { installing, error: errorMessage(e) });
       setPhase("error");
@@ -192,7 +191,7 @@ export function useFirmwareUpdate(connection: BleConnection | null) {
     } finally {
       setFlashingLocal(false);
     }
-  }, [connection, pendingBuild, setFlashing, disconnectDevice]);
+  }, [connection, pendingBuild, setFlashing]);
 
   /** Dismiss the error state; drops the connection if the device had rebooted. */
   const dismiss = useCallback(() => {
@@ -204,6 +203,18 @@ export function useFirmwareUpdate(connection: BleConnection | null) {
       disconnectDevice();
     }
   }, [needsDisconnect, disconnectDevice]);
+
+  /**
+   * Acknowledge a completed flash: clears the flashing flag (re-enabling normal
+   * disconnect handling) and drops the now-rebooted device so the UI returns to
+   * the connect screen. The user reconnects to the freshly-flashed firmware.
+   */
+  const finish = useCallback(() => {
+    setPhase(null);
+    setPercent(0);
+    setFlashing(false);
+    disconnectDevice();
+  }, [setFlashing, disconnectDevice]);
 
   return {
     info,
@@ -222,5 +233,6 @@ export function useFirmwareUpdate(connection: BleConnection | null) {
     cancel,
     startUpdate,
     dismiss,
+    finish,
   };
 }
