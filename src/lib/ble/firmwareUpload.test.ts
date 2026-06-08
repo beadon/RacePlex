@@ -8,36 +8,36 @@ const written = (c: { written: Uint8Array[] }) =>
 describe("beginFirmwareUpdate — CRC handshake", () => {
   afterEach(() => vi.useRealTimers());
 
-  it("sends FWBEGIN:<size>,<crc> and resolves when the echo matches", async () => {
+  it("sends FWBEGIN:<size>,<crc>,<variant> and resolves when the echo matches", async () => {
     const conn = createMockConnection();
-    const p = beginFirmwareUpdate(conn, 1234, "cbf43926");
+    const p = beginFirmwareUpdate(conn, 1234, "cbf43926", "sense");
     await flushMicrotasks();
 
-    expect(lastWritten(conn.characteristics.fileRequest)).toBe("FWBEGIN:1234,cbf43926");
+    expect(lastWritten(conn.characteristics.fileRequest)).toBe("FWBEGIN:1234,cbf43926,sense");
     conn.characteristics.fileStatus.simulate("FWCRC:cbf43926\n");
     await expect(p).resolves.toBeUndefined();
   });
 
   it("aborts when the echoed CRC does not match (control channel corrupted)", async () => {
     const conn = createMockConnection();
-    const p = beginFirmwareUpdate(conn, 10, "cbf43926");
+    const p = beginFirmwareUpdate(conn, 10, "cbf43926", "sense");
     await flushMicrotasks();
     conn.characteristics.fileStatus.simulate("FWCRC:deadbeef\n");
     await expect(p).rejects.toThrow(/control channel corrupted/);
   });
 
-  it("rejects on FWERR", async () => {
+  it("rejects on FWERR (e.g. a variant mismatch at handshake)", async () => {
     const conn = createMockConnection();
-    const p = beginFirmwareUpdate(conn, 10, "cbf43926");
+    const p = beginFirmwareUpdate(conn, 10, "cbf43926", "nonsense");
     await flushMicrotasks();
-    conn.characteristics.fileStatus.simulate("FWERR:BUSY\n");
-    await expect(p).rejects.toThrow(/BUSY/);
+    conn.characteristics.fileStatus.simulate("FWERR:VARIANT\n");
+    await expect(p).rejects.toThrow(/VARIANT/);
   });
 
   it("times out waiting for the echo", async () => {
     vi.useFakeTimers();
     const conn = createMockConnection();
-    const p = beginFirmwareUpdate(conn, 10, "cbf43926", { timeoutMs: 1000 });
+    const p = beginFirmwareUpdate(conn, 10, "cbf43926", "sense", { timeoutMs: 1000 });
     await flushMicrotasks();
     vi.advanceTimersByTime(1000);
     await expect(p).rejects.toThrow(/Timed out/);

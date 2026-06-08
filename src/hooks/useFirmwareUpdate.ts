@@ -156,9 +156,10 @@ export function useFirmwareUpdate(connection: BleConnection | null) {
       assertImageMatchesBuild(build, image, crc);
       fwLog("image ready + verified vs manifest", { bytes: image.byteLength, crc });
 
-      // 1–3. CRC handshake — verify the control channel before sending anything.
-      await beginFirmwareUpdate(connection, image.length, crc);
-      fwLog("crc handshake ok");
+      // 1–3. CRC handshake — verify the control channel, and declare the target
+      //       variant so the device rejects a wrong-variant image up front.
+      await beginFirmwareUpdate(connection, image.length, crc, build.variant);
+      fwLog("crc handshake ok", { variant: build.variant });
 
       // 4–6. Upload to SD, then the device re-verifies the stored file's CRC.
       setPhase("uploading");

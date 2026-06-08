@@ -72,9 +72,10 @@ the agreed-upon checksum itself** can be silently corrupted anywhere. CRC =
 ```
 0. [web]   download appBin; crc32(image) must == manifest appCrc32 (+ appSize)  ← download integrity
 1. [web]   that same crc32 is the value used for the rest of the chain
-2. [web] → FWBEGIN:<size>,<crc32>                 announce intent + expected CRC
+2. [web] → FWBEGIN:<size>,<crc32>,<variant>        announce intent + CRC + target variant
 3. [web] ← FWCRC:<crc32>                           logger echoes the CRC it received
           [web] aborts unless the echo == its own  (control channel itself verified)
+          [logger] FWERR:VARIANT here if <variant> != its own build (fail fast)
 4. [web] → upload image (chunked file write) → SD  (only after the echo matches)
 5. [logger] compute crc32 of the stored SD file
 6. [web] ← FWOK:<crc32>  (or FWERR:CRC)            on-device file verified vs expected
@@ -177,9 +178,10 @@ transport/trigger changes (the blocklisted bits go).
 **New / changed:**
 - **CRC**: `ble/firmwareCrc.ts` → `crc32(bytes)` (CRC-32/IEEE 802.3), pure +
   unit-tested against known vectors so it provably matches the firmware's CRC.
-- **CRC handshake**: `FWBEGIN:<size>,<crc32>` then await `FWCRC:<crc32>` on
-  `0x2A40`; **abort unless the echo equals the locally-computed CRC** (verifies the
-  control channel before any upload).
+- **CRC handshake**: `FWBEGIN:<size>,<crc32>,<variant>` then await `FWCRC:<crc32>`
+  on `0x2A40`; **abort unless the echo equals the locally-computed CRC** (verifies
+  the control channel before any upload). The declared `<variant>` (from the
+  device's DIS) lets the logger reject a wrong-variant image at the handshake.
 - **Upload-to-SD**: stream `pkg.image` to the device as a file over `0x1820`,
   modeled on `ble/trackSync.ts:uploadTrackFile` (chunked `TPUT`-style write). New
   helper, e.g. `ble/firmwareUpload.ts` → `uploadFirmwareImage(conn, bytes, onProgress)`.
@@ -213,10 +215,14 @@ status). Version reporting via **DIS** is already done.
 
 Commands on `0x2A3E`, responses on `0x2A40`. CRC = **CRC-32/IEEE 802.3**.
 
-- **`FWBEGIN:<size>,<crc32>`** — announce the incoming image + its expected CRC.
-  The logger stores them and **echoes back `FWCRC:<crc32>`** so the web app can
-  confirm the control channel carried the checksum intact *before* uploading. (May
-  also pre-erase/open `/fw/pending.bin` here.)
+- **`FWBEGIN:<size>,<crc32>,<variant>`** — announce the incoming image, its
+  expected CRC, and the **target variant** (the web derives this from the device's
+  own DIS model, so it's authoritative). The logger **echoes back `FWCRC:<crc32>`**
+  so the web can confirm the control channel carried the checksum intact *before*
+  uploading. The logger must **compare `<variant>` to its own `FIRMWARE_VARIANT`
+  here and reply `FWERR:VARIANT` on mismatch** — fail fast, before the upload.
+  (Don't try to infer the variant from the image bytes; trust this declared
+  value.) May also pre-erase/open `/fw/pending.bin` here.
 - **`FWPUT:<size>`** — file write to `/fw/pending.bin` via the existing file-write
   protocol. Logger replies **`FWREADY`**, the web app streams chunks on `0x2A3E`,
   then sends **`FWDONE`**. Sent only after the web app accepts the `FWCRC` echo.
@@ -228,10 +234,10 @@ Commands on `0x2A3E`, responses on `0x2A40`. CRC = **CRC-32/IEEE 802.3**.
   - set `GPREGRET=0xB1` recovery flag → run the RAM flasher → emit **`FWAPPLIED`**
     → reset. (Web side resolves on `FWAPPLIED`, then waits for the reboot.)
   - On reboot the new app advertises again; the web client confirms via DIS.
-- **Safety**: refuse if battery below threshold (reuse `BATT`); a variant/magic
-  check + the CRC gate above; **never erase the app region until the staged copy is
-  CRC-verified in flash**; every step abortable, with the running firmware
-  untouched until the final flasher runs.
+- **Safety**: the variant gate at `FWBEGIN` (above) + refuse if battery below
+  threshold (reuse `BATT`) + the CRC gate; **never erase the app region until the
+  staged copy is CRC-verified in flash**; every step abortable, with the running
+  firmware untouched until the final flasher runs.
 - **(Apply strategy A vs B decided in Phase 0.)**
 
 ---

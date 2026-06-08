@@ -10,7 +10,7 @@ import { bleLog } from "./internal";
  * (`0x2A40`). CRC is CRC-32/IEEE as an 8-char lowercase hex string.
  *
  * Paranoid handshake (see `docs/plans/firmware-sdcard-ota.md`):
- *   1. `beginFirmwareUpdate` — `FWBEGIN:<size>,<crc>` → device echoes
+ *   1. `beginFirmwareUpdate` — `FWBEGIN:<size>,<crc>,<variant>` → device echoes
  *      `FWCRC:<crc>`; we abort unless the echo matches (verifies the control
  *      channel before any upload).
  *   2. `uploadFirmwareImage` — `FWPUT:<size>` → `FWREADY` → stream chunks →
@@ -51,14 +51,17 @@ export interface ApplyOptions {
 }
 
 /**
- * Step 1 — announce the image + expected CRC and require the device to echo the
- * CRC back unchanged. Rejects on echo mismatch (control channel corrupted),
- * `FWERR:*`, or timeout.
+ * Step 1 — announce the image (size + expected CRC + target variant) and require
+ * the device to echo the CRC back unchanged. The device also rejects here
+ * (`FWERR:VARIANT`) if `variant` doesn't match its own build, so a wrong-variant
+ * image fails *before* the upload. Rejects on echo mismatch (control channel
+ * corrupted), `FWERR:*`, or timeout.
  */
 export async function beginFirmwareUpdate(
   connection: BleConnection,
   size: number,
   crcHex: string,
+  variant: string,
   options: BeginOptions = {},
 ): Promise<void> {
   const timeoutMs = options.timeoutMs ?? 10000;
@@ -107,7 +110,7 @@ export async function beginFirmwareUpdate(
         handle,
       );
       await connection.characteristics.fileRequest.writeValue(
-        encoder.encode(`FWBEGIN:${size},${expected}`),
+        encoder.encode(`FWBEGIN:${size},${expected},${variant}`),
       );
       timeout = setTimeout(() => {
         cleanup();

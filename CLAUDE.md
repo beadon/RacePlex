@@ -647,10 +647,12 @@ contract in
 - **CRC** — `ble/firmwareCrc.ts`: `crc32`/`crc32Hex` (CRC-32/IEEE, known-vector
   tested so it matches the firmware byte-for-byte).
 - **Transfer protocol** — `ble/firmwareUpload.ts` over `0x2A3E`/`0x2A40`, the
-  paranoid handshake: `beginFirmwareUpdate` (`FWBEGIN`→`FWCRC` echo, abort on
-  mismatch) → `uploadFirmwareImage` (`FWPUT`→`FWREADY`→chunks→`FWDONE`→on-device
-  verify `FWOK`/`FWERR`) → `applyFirmware` (`FWAPPLY`→`FWSTAGE`→`FWAPPLIED`).
-  Mock-BLE tested.
+  paranoid handshake: `beginFirmwareUpdate` (`FWBEGIN:<size>,<crc>,<variant>`→
+  `FWCRC` echo, abort on mismatch; device rejects a wrong variant here with
+  `FWERR:VARIANT`) → `uploadFirmwareImage` (`FWPUT`→`FWREADY`→chunks→`FWDONE`→
+  on-device verify `FWOK`/`FWERR`) → `applyFirmware` (`FWAPPLY`→`FWSTAGE`→
+  `FWAPPLIED`). Upload uses a per-chunk watchdog (no total-time cap). Mock-BLE
+  tested.
 
 UI lives at the **top of the Device → Settings tab**
 (`drawer/FirmwareUpdateSection.tsx`): installed version + a **Check for updates**
