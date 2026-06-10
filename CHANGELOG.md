@@ -13,6 +13,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.3.0] - 2026-06-08
+
+### Added
+- **Firmware updates over Bluetooth.** Update your DovesDataLogger's firmware
+  straight from the **Device → Settings** tab — no desktop tools, no cables, no
+  taking the device apart. It shows the installed firmware version with a **Check
+  for updates** button; when a newer build is available, a confirmation dialog
+  (battery / don't-power-off warnings) runs it: download the image, verify it
+  against the published checksum, upload it to the logger's SD card, and the device
+  re-checks the checksum, installs it, and reboots into the new firmware. The image
+  is **CRC-32 verified at every hop** — publisher → download → device control
+  channel → on-device file — so a corrupt or wrong-variant transfer can never be
+  flashed. You get a **"Flash complete"** prompt to reconnect when it's done.
+  Fetching firmware needs a connection; everything else runs in-browser. Beta
+  builds pull from a separate beta firmware channel and always offer the update for
+  testing.
+
 ### Changed
 - **Clearer plans & pricing cards.** The plan cards now lead with bold,
   larger-text titles — **Just the App** (offline) and **Cloud Access** (the
