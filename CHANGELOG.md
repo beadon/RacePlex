@@ -13,6 +13,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.3.0] - 2026-06-08
+
+### Added
+- **Firmware updates over Bluetooth.** Update your DovesDataLogger's firmware
+  straight from the **Device → Settings** tab — no desktop tools, no cables, no
+  taking the device apart. It shows the installed firmware version with a **Check
+  for updates** button; when a newer build is available, a confirmation dialog
+  (battery / don't-power-off warnings) runs it: download the image, verify it
+  against the published checksum, upload it to the logger's SD card, and the device
+  re-checks the checksum, installs it, and reboots into the new firmware. The image
+  is **CRC-32 verified at every hop** — publisher → download → device control
+  channel → on-device file — so a corrupt or wrong-variant transfer can never be
+  flashed. You get a **"Flash complete"** prompt to reconnect when it's done.
+  Fetching firmware needs a connection; everything else runs in-browser. Beta
+  builds pull from a separate beta firmware channel and always offer the update for
+  testing.
+
+### Changed
+- **Clearer plans & pricing cards.** The plan cards now lead with bold,
+  larger-text titles — **Just the App** (offline) and **Cloud Access** (the
+  online plans) — with the descriptive subtitles dropped. Instead of two cards
+  both titled "Free" showing "$0" (which read as duplicates and tripped up
+  screen-reader/accessibility users), the two no-cost cards now show the word
+  **Free** in place of a price, and only the paid plan shows an actual price.
+  Storage lines read "cloud storage for datalogs" to make clear what the quota
+  covers.
+
+### Added
+- **Independent imperial/metric unit toggles.** Settings now has three separate
+  unit switches instead of just one speed toggle: **Speed** (MPH ⇄ KPH),
+  **Distance** (ft/mi ⇄ m/km — track lengths, lap/chart distance axis, the
+  range-crop labels, and meters-based telemetry channels like Distance &
+  Altitude in the graphs and video overlays), and **Weather**
+  (°F/mph/inHg/ft ⇄ °C/(km/h)/hPa/m —
+  temperature, dew point, wind, pressure, and density/pressure altitude). Each is
+  app-wide and remembered per device; all default to imperial.
+- **Firmware updates over Bluetooth.** The Device → Settings tab now shows your
+  logger's installed firmware version with a **Check for updates** button. When a
+  newer build is available for your device, a confirmation dialog (battery /
+  don't-power-off warnings) updates it over BLE — download, upload to the logger
+  (checksum-verified both ways), then the device installs it and reboots, with the
+  app auto-disconnecting when done. No desktop tools needed. Fetching the firmware
+  needs a connection; everything else runs in-browser. On beta/preview builds the
+  version check is bypassed so the update always pushes through for testing (the
+  confirmation dialog says so).
+
 ## [2.2.2] - 2026-06-05
 
 ### Added
