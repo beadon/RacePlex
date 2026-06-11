@@ -14,7 +14,6 @@ import {
   pricingCta,
   tiersWithPrices,
 } from "@/lib/billing";
-import { createCheckout, createPortal } from "@/lib/billingClient";
 
 const enableCloud = import.meta.env.VITE_ENABLE_CLOUD === "true";
 
@@ -244,6 +243,9 @@ export function PricingCards({ className, variant = "home" }: { className?: stri
   const onUpgrade = async (slug: PaidSlug) => {
     setBusy(slug);
     try {
+      // Dynamic import: billingClient pulls the Supabase client, which must
+      // stay off the eager graph (these cards ride the landing page).
+      const { createCheckout } = await import("@/lib/billingClient");
       const url = await createCheckout(slug, cardInterval, window.location.href);
       window.location.href = url;
     } catch (e) {
@@ -258,6 +260,7 @@ export function PricingCards({ className, variant = "home" }: { className?: stri
   const onManage = async (slug: PaidSlug) => {
     setBusy(slug);
     try {
+      const { createPortal } = await import("@/lib/billingClient");
       const url = await createPortal(window.location.href);
       window.location.href = url;
     } catch (e) {

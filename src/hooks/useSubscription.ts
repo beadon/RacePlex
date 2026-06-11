@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { effectiveTier, type SubscriptionTierRow, type UserSubscriptionRow } from "@/lib/billing";
-import { fetchMySubscription, fetchTiers } from "@/lib/billingClient";
 
 const enableCloud = import.meta.env.VITE_ENABLE_CLOUD === "true";
 
@@ -40,6 +39,8 @@ export function useSubscription(): SubscriptionState {
     }
     setLoading(true);
     try {
+      // Dynamic import keeps the Supabase client off the eager graph.
+      const { fetchTiers, fetchMySubscription } = await import("@/lib/billingClient");
       const [t, s] = await Promise.all([fetchTiers(), fetchMySubscription(user.id)]);
       setTiers(t);
       setSubscription(s);

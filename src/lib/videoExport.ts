@@ -9,13 +9,37 @@
  * Audio is extracted from the source video via Web Audio API, encoded with
  * AudioEncoder (AAC), and muxed alongside the video track.
  *
+ * Memory: both encoders run with bounded queues (backpressure), and exports
+ * whose estimated size exceeds the streaming threshold mux into chunked
+ * streamed parts (fragmented MP4) instead of one contiguous ArrayBuffer —
+ * see lib/videoExportTarget.ts.
+ *
  * Falls back to MediaRecorder (WebM) if WebCodecs is unavailable.
  */
 
-import { Muxer, ArrayBufferTarget } from "mp4-muxer";
+import { Muxer, ArrayBufferTarget, StreamTarget } from "mp4-muxer";
 import type { ExportOptions } from "@/components/video-overlays/VideoExportDialog";
 import type { OverlayInstance, OverlayRenderContext } from "@/components/video-overlays/types";
 import { renderOverlaysToCanvas } from "@/lib/overlayCanvasRenderer";
+import { shouldStreamExport, writeStreamChunk, type StreamedPart } from "@/lib/videoExportTarget";
+
+/** A muxer over either export target (in-memory buffer or chunked stream). */
+type ExportMuxer = Muxer<ArrayBufferTarget | StreamTarget>;
+
+// Encoder backpressure: cap the number of frames in flight inside the
+// encoders. Without this the frame loop queues raw frames as fast as it can
+// seek — unbounded memory on slow encoders.
+const MAX_ENCODE_QUEUE = 4;
+const MAX_AUDIO_ENCODE_QUEUE = 32;
+
+async function waitForEncoderQueue(
+  encoder: { encodeQueueSize: number },
+  max: number,
+): Promise<void> {
+  while (encoder.encodeQueueSize > max) {
+    await new Promise<void>((resolve) => setTimeout(resolve, 5));
+  }
+}
 
 export interface ExportController {
   cancel: () => void;
@@ -123,37 +147,38 @@ async function extractAudioBuffer(
  */
 async function encodeAudioToMuxer(
   audioBuffer: AudioBuffer,
-  muxer: Muxer<ArrayBufferTarget>,
+  muxer: ExportMuxer,
 ): Promise<boolean> {
   if (typeof AudioEncoder === "undefined") {
     console.log("AudioEncoder not available, skipping audio");
     return false;
   }
 
-  return new Promise<boolean>((resolve) => {
-    let hadError = false;
+  let hadError = false;
 
-    const encoder = new AudioEncoder({
-      output: (chunk, meta) => {
-        muxer.addAudioChunk(chunk, meta ?? undefined);
-      },
-      error: (e) => {
-        console.warn("AudioEncoder error:", e);
-        hadError = true;
-      },
-    });
+  const encoder = new AudioEncoder({
+    output: (chunk, meta) => {
+      muxer.addAudioChunk(chunk, meta ?? undefined);
+    },
+    error: (e) => {
+      console.warn("AudioEncoder error:", e);
+      hadError = true;
+    },
+  });
 
-    const sampleRate = audioBuffer.sampleRate;
-    const channels = audioBuffer.numberOfChannels;
+  const sampleRate = audioBuffer.sampleRate;
+  const channels = audioBuffer.numberOfChannels;
 
-    encoder.configure({
-      codec: "mp4a.40.2", // AAC-LC
-      sampleRate,
-      numberOfChannels: channels,
-      bitrate: 128_000,
-    });
+  encoder.configure({
+    codec: "mp4a.40.2", // AAC-LC
+    sampleRate,
+    numberOfChannels: channels,
+    bitrate: 128_000,
+  });
 
-    // Feed audio in chunks of ~1024 samples (standard AAC frame size)
+  try {
+    // Feed audio in chunks of ~1024 samples (standard AAC frame size), with
+    // backpressure — the old loop queued the whole track in one tight pass.
     const frameSize = 1024;
     const totalSamples = audioBuffer.length;
 
@@ -173,16 +198,19 @@ async function encodeAudioToMuxer(
 
       encoder.encode(audioData);
       audioData.close();
+
+      if (encoder.encodeQueueSize > MAX_AUDIO_ENCODE_QUEUE) {
+        await waitForEncoderQueue(encoder, MAX_AUDIO_ENCODE_QUEUE);
+      }
     }
 
-    encoder.flush().then(() => {
-      encoder.close();
-      resolve(!hadError);
-    }).catch(() => {
-      try { encoder.close(); } catch { /* encoder already closed during error handling */ }
-      resolve(false);
-    });
-  });
+    await encoder.flush();
+    encoder.close();
+    return !hadError;
+  } catch {
+    try { encoder.close(); } catch { /* encoder already closed during error handling */ }
+    return false;
+  }
 }
 
 /**
@@ -255,15 +283,31 @@ async function runWebCodecsExport(
     const audioBuffer = await audioPromise;
     if (isCancelled()) return;
 
+    // Pick a bitrate
+    const bitrate = options.quality === "standard" ? 5_000_000 : 15_000_000;
+
+    // Target: short exports keep the single in-memory buffer (classic MP4,
+    // max compatibility). Long ones stream ~16 MiB chunks into a part list
+    // and produce fragmented MP4 — a 20-min 15 Mbps export would otherwise
+    // need one contiguous ~2.2 GB ArrayBuffer (guaranteed mobile OOM).
+    const useStreaming = shouldStreamExport(duration, bitrate);
+    const streamedParts: StreamedPart[] = [];
+    const target = useStreaming
+      ? new StreamTarget({
+          chunked: true,
+          onData: (data, position) => writeStreamChunk(streamedParts, data, position),
+        })
+      : new ArrayBufferTarget();
+
     // mp4-muxer setup — include audio track if we have audio
-    const muxerConfig = {
-      target: new ArrayBufferTarget(),
+    const muxer: ExportMuxer = new Muxer({
+      target,
       video: {
         codec: "avc" as const,
         width: targetW,
         height: targetH,
       },
-      fastStart: "in-memory" as const,
+      fastStart: useStreaming ? ("fragmented" as const) : ("in-memory" as const),
       ...(audioBuffer ? {
         audio: {
           codec: "aac" as const,
@@ -271,9 +315,7 @@ async function runWebCodecsExport(
           sampleRate: audioBuffer.sampleRate,
         },
       } : {}),
-    };
-
-    const muxer = new Muxer<ArrayBufferTarget>(muxerConfig);
+    });
 
     // VideoEncoder setup
     let encoderError: string | null = null;
@@ -285,9 +327,6 @@ async function runWebCodecsExport(
         encoderError = e.message;
       },
     });
-
-    // Pick a bitrate
-    const bitrate = options.quality === "standard" ? 5_000_000 : 15_000_000;
 
     encoder.configure({
       codec: "avc1.42001f", // Baseline profile, level 3.1 — wide compat
@@ -329,12 +368,17 @@ async function runWebCodecsExport(
         }
       }
 
-      // Create VideoFrame and encode
+      // Create VideoFrame and encode, with backpressure: never let more than
+      // a few frames queue inside the encoder (unbounded queueing buffers raw
+      // frames in memory whenever encoding is slower than seeking).
       const timestamp = Math.round(i * frameInterval * 1_000_000); // microseconds
       const frame = new VideoFrame(canvas, { timestamp });
       const keyFrame = i % keyFrameInterval === 0;
       encoder.encode(frame, { keyFrame });
       frame.close();
+      if (encoder.encodeQueueSize > MAX_ENCODE_QUEUE) {
+        await waitForEncoderQueue(encoder, MAX_ENCODE_QUEUE);
+      }
 
       callbacks.onProgress((i + 1) / totalFrames);
     }
@@ -356,8 +400,12 @@ async function runWebCodecsExport(
 
     muxer.finalize();
 
-    const buf = (muxer.target as ArrayBufferTarget).buffer;
-    const blob = new Blob([buf], { type: "video/mp4" });
+    // Many small parts → Blob lets the browser keep the result off-heap;
+    // the in-memory path keeps its single buffer (short exports only).
+    const blob = useStreaming
+      ? new Blob(streamedParts.map((p) => p.data), { type: "video/mp4" })
+      : new Blob([(target as ArrayBufferTarget).buffer], { type: "video/mp4" });
+    streamedParts.length = 0;
 
     video.muted = wasMuted;
     if (wasPlaying) video.play();

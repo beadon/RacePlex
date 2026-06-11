@@ -14,6 +14,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **Playback now runs at real time.** The playback loop no longer tears itself
+  down and re-anchors its clock on every cursor tick, so high-rate (60 Hz)
+  data plays at full speed instead of capping at half the display rate. The
+  playback Hz readout is also no longer recomputed (a full sort of the visible
+  window) on every render.
+- **MiniMap follow-cam stopped fighting itself.** The Pro-mode map re-centers
+  only when the position arrow leaves the middle of the view, without
+  animation — instead of issuing an animated pan every tick that perpetually
+  interrupted itself.
+- **Video export no longer holds the whole MP4 in memory.** Long exports
+  (estimated > 350 MB — e.g. 20 min at high quality ≈ 2.2 GB) stream the
+  output in ~16 MB chunks (fragmented MP4) instead of one giant buffer, which
+  was a guaranteed out-of-memory crash on mobile. Both the video and audio
+  encoders now run with bounded queues (backpressure), so encoding can't
+  buffer unbounded raw frames when the encoder falls behind.
+- **~40% smaller landing page.** The initial payload dropped from ~1.13 MB raw
+  / ~334 kB gzip to ~684 kB / ~207 kB: the map stack (Leaflet + the Simple
+  view) now loads when a session opens rather than up front, and the Supabase
+  client is completely off the eager path — offline-first builds (cloud/admin
+  flags off) never download it at all, and flag-on builds load it off the
+  critical path.
+
+### Changed
 - **Map heatmap rendering rebuilt for large sessions.** The race-line speed
   heatmap (Simple view and the Pro MiniMap) now renders as ~20 canvas-drawn
   color-bucket polylines instead of one SVG DOM element per GPS segment, which

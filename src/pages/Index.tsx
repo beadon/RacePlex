@@ -2,12 +2,16 @@ import { useCallback, useEffect, useMemo, useState, lazy, Suspense } from "react
 import { Gauge, Map, ListOrdered, BarChart3, FolderOpen, Play, Pause, Eye, EyeOff, FlaskConical, AlertCircle } from "lucide-react";
 import { LandingPage } from "@/components/LandingPage";
 import { TrackEditor } from "@/components/TrackEditor"; // still used in compact header
-import { RaceLineTab } from "@/components/tabs/RaceLineTab";
 import { LapTimesTab } from "@/components/tabs/LapTimesTab";
 // Heavy tabs lazy-loaded so the initial bundle doesn't carry their deps.
-// GraphView pulls in the multi-series canvas chart + InfoBox + MiniMap; Labs is
-// behind a settings flag and almost never opened. Both load on first user click
-// of their respective tab.
+// RaceLine pulls in Leaflet (vendor-leaflet, ~150 kB) + the telemetry chart —
+// lazy keeps the whole mapping stack off the landing page; it loads the moment
+// a session is opened (the default tab). GraphView pulls in the multi-series
+// canvas chart + InfoBox + MiniMap; Labs is behind a settings flag and almost
+// never opened. All load on first render of their respective tab.
+const RaceLineTab = lazy(() =>
+  import("@/components/tabs/RaceLineTab").then((m) => ({ default: m.RaceLineTab })),
+);
 const GraphViewTab = lazy(() =>
   import("@/components/tabs/GraphViewTab").then((m) => ({ default: m.GraphViewTab })),
 );
@@ -613,9 +617,9 @@ export default function Index() {
 
 
         <div className="flex-1 min-h-0 overflow-hidden">
-          {topPanelView === "raceline" && <RaceLineTab showOverlays={showOverlays} />}
           {topPanelView === "laptable" && <LapTimesTab />}
           <Suspense fallback={null}>
+            {topPanelView === "raceline" && <RaceLineTab showOverlays={showOverlays} />}
             {topPanelView === "graphview" && <GraphViewTab />}
             {topPanelView === "labs" && showLabs && <LabsTab />}
             {topPanelView === "coach" && showCoach && <CoachTab />}

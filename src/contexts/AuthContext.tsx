@@ -1,5 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { createContext, useContext, useState, useEffect, useMemo, type ReactNode } from 'react';
 import type { User, Session } from '@supabase/supabase-js';
 
 interface AuthContextValue {
@@ -16,136 +15,68 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+// The Supabase auth bootstrap only exists when an account-facing feature is
+// on. Flag-off builds never load the backend chunk, keeping vendor-supabase
+// entirely off the offline-first initial path (it was the single biggest dead
+// weight on the landing page). The dynamic import starts at module evaluation
+// on flag-on builds, so it's in flight before the provider even mounts.
+const enableAuthBackend =
+  import.meta.env.VITE_ENABLE_ADMIN === 'true' || import.meta.env.VITE_ENABLE_CLOUD === 'true';
+
+const backendPromise = enableAuthBackend ? import('./authBackend') : null;
+
+const disabledError = () =>
+  Promise.resolve({ error: new Error('Accounts are not enabled in this build') });
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [loading, setLoading] = useState(true);
+  // Flag-off builds are immediately "settled signed-out"; flag-on builds stay
+  // loading until the backend chunk reports the initial session.
+  const [loading, setLoading] = useState(enableAuthBackend);
 
   useEffect(() => {
+    if (!backendPromise) return;
     let cancelled = false;
-    let initialResolved = false;
-
-    // Resolve the admin role. MUST run outside the onAuthStateChange callback:
-    // supabase-js holds the GoTrue Web Lock (navigator.locks) for the duration
-    // of that callback, and any awaited Supabase call inside it needs the same
-    // lock — which deadlocks token refresh and spuriously signs the user out on
-    // reload. So updateAuth sets session/user synchronously and defers this.
-    const resolveRole = async (s: Session | null) => {
-      if (!s?.user) {
-        if (!cancelled) setIsAdmin(false);
-        return;
-      }
-      try {
-        const { data } = await supabase.rpc('has_role', {
-          _user_id: s.user.id,
-          _role: 'admin',
-        });
-        if (!cancelled) setIsAdmin(!!data);
-      } catch {
-        if (!cancelled) setIsAdmin(false);
-      }
-    };
-
-    const updateAuth = (s: Session | null) => {
+    let unsubscribe: (() => void) | undefined;
+    backendPromise.then((backend) => {
       if (cancelled) return;
-      setSession(s);
-      setUser(s?.user ?? null);
-      if (!s?.user) setIsAdmin(false);
-      initialResolved = true;
-      setLoading(false);
-      // Deferred so we never await a Supabase call while the auth lock is held.
-      setTimeout(() => { void resolveRole(s); }, 0);
-    };
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        if (cancelled) return;
-        updateAuth(session);
-      }
-    );
-
-    // Fallback: getSession as backup for initial load
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!initialResolved) updateAuth(session);
-    }).catch(() => {
-      if (!cancelled && !initialResolved) {
-        initialResolved = true;
-        setLoading(false);
-      }
+      unsubscribe = backend.subscribeAuthState({ setUser, setSession, setIsAdmin, setLoading });
     });
-
-    // Safety timeout: never stay loading forever
-    const timeout = setTimeout(() => {
-      if (!initialResolved && !cancelled) {
-        console.warn('Auth loading timed out');
-        initialResolved = true;
-        setLoading(false);
-      }
-    }, 5000);
-
     return () => {
       cancelled = true;
-      clearTimeout(timeout);
-      subscription.unsubscribe();
+      unsubscribe?.();
     };
   }, []);
 
-  const login = useCallback(async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    return { error };
-  }, []);
-
-  const logout = useCallback(async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    setSession(null);
-    setIsAdmin(false);
-  }, []);
-
-  const resetPassword = useCallback(async (email: string) => {
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: window.location.origin + '/reset-password',
-    });
-    return { error };
-  }, []);
-
-  const signUp = useCallback(async (email: string, password: string, displayName?: string, captchaToken?: string) => {
-    const trimmed = displayName?.trim();
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: window.location.origin + '/auth/callback',
-        // Picked up by the handle_new_user trigger; blank → a random name is
-        // generated server-side. A taken name is auto-suffixed there too.
-        data: trimmed ? { display_name: trimmed } : {},
-        // Verified server-side when Turnstile is enabled in the Supabase Auth
-        // settings; ignored otherwise (graceful fallback when no key is set).
-        ...(captchaToken ? { captchaToken } : {}),
-      },
-    });
-    return { error };
-  }, []);
-
-  const signInWithGoogle = useCallback(async () => {
-    try {
-      // Lazy import keeps the Lovable auth SDK out of the main chunk; this
-      // module is only imported in cloud-flagged builds, but the dynamic
-      // import doubles as belt-and-suspenders.
-      const { lovable } = await import('@/integrations/lovable/index');
-      const result = await lovable.auth.signInWithOAuth('google', {
-        redirect_uri: window.location.origin + '/auth/callback',
-      });
-      if (result.error) return { error: result.error as Error };
-      return { error: null };
-    } catch (e) {
-      return { error: e instanceof Error ? e : new Error(String(e)) };
-    }
-  }, []);
+  const value = useMemo<AuthContextValue>(() => ({
+    user,
+    session,
+    isAdmin,
+    loading,
+    // Actions await the backend chunk, so a click racing the initial load
+    // still lands on the real implementation.
+    login: backendPromise
+      ? async (email, password) => (await backendPromise).login(email, password)
+      : disabledError,
+    signUp: backendPromise
+      ? async (email, password, displayName, captchaToken) =>
+          (await backendPromise).signUp(email, password, displayName, captchaToken)
+      : disabledError,
+    signInWithGoogle: backendPromise
+      ? async () => (await backendPromise).signInWithGoogle()
+      : disabledError,
+    logout: backendPromise
+      ? async () => (await backendPromise).logout()
+      : async () => {},
+    resetPassword: backendPromise
+      ? async (email) => (await backendPromise).resetPassword(email)
+      : disabledError,
+  }), [user, session, isAdmin, loading]);
 
   return (
-    <AuthContext.Provider value={{ user, session, isAdmin, loading, login, signUp, signInWithGoogle, logout, resetPassword }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
