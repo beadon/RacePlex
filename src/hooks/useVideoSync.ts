@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { GpsSample } from "@/types/racing";
 import { saveVideoSync, loadVideoSync, VideoSyncRecord } from "@/lib/videoStorage";
 import { loadSessionVideo, hasSessionVideo, deleteSessionVideo, getSessionVideoMeta, type StoredVideoMeta } from "@/lib/videoFileStorage";
@@ -410,17 +410,28 @@ export function useVideoSync({ samples, allSamples, currentIndex, onScrub, sessi
     }
   }, [sessionFileName, syncOffsetMs, videoFileName, fileHandle, isLocked]);
 
-  const state: VideoSyncState = {
+  // Both objects are memoized so their identity only changes when their
+  // contents do — they feed the memoized SessionContext value in Index.tsx,
+  // and fresh references on every render would churn the whole context at
+  // playback rate.
+  const state: VideoSyncState = useMemo(() => ({
     videoUrl, videoFileName, isLocked, isPlaying, syncOffsetMs, fps,
     videoDuration, videoCurrentTime, isOutOfRange, overlaySettings,
     hasStoredVideo: storedVideoAvailable,
     storedVideoMeta,
-  };
+  }), [
+    videoUrl, videoFileName, isLocked, isPlaying, syncOffsetMs, fps,
+    videoDuration, videoCurrentTime, isOutOfRange, overlaySettings,
+    storedVideoAvailable, storedVideoMeta,
+  ]);
 
-  const actions: VideoSyncActions = {
+  const actions: VideoSyncActions = useMemo(() => ({
     loadVideo, toggleLock, togglePlay, stepFrame, setSyncPoint,
     seekVideo, updateOverlaySettings, deleteStoredVideo: handleDeleteStoredVideo, refreshStoredMeta, videoRef,
-  };
+  }), [
+    loadVideo, toggleLock, togglePlay, stepFrame, setSyncPoint,
+    seekVideo, updateOverlaySettings, handleDeleteStoredVideo, refreshStoredMeta,
+  ]);
 
   return { state, actions, handleLoadedMetadata };
 }

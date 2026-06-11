@@ -8,6 +8,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useSettingsContext } from "@/contexts/SettingsContext";
+import { usePlaybackContext } from "@/contexts/PlaybackContext";
 import { GpsSample, FieldMapping, Lap, Course } from "@/types/racing";
 import type { VideoSyncState, VideoSyncActions } from "@/hooks/useVideoSync";
 import type { OverlayPosition, OverlayInstance, OverlayRenderContext, OverlaySettings, DataSourceDef } from "@/components/video-overlays/types";
@@ -33,11 +34,9 @@ interface VideoPlayerProps {
   state: VideoSyncState;
   actions: VideoSyncActions;
   onLoadedMetadata: () => void;
-  currentSample: GpsSample | null;
   // New props for overlay system
   samples?: GpsSample[];
   allSamples?: GpsSample[];
-  currentIndex?: number;
   fieldMappings?: FieldMapping[];
   laps?: Lap[];
   selectedLapNumber?: number | null;
@@ -226,13 +225,16 @@ function OverlayRenderer({ instance, ctx, fontSize }: { instance: OverlayInstanc
 }
 
 export const VideoPlayer = memo(function VideoPlayer({
-  state, actions, onLoadedMetadata, currentSample,
-  samples = [], allSamples = [], currentIndex = 0,
+  state, actions, onLoadedMetadata,
+  samples = [], allSamples = [],
   fieldMappings = [], laps = [], selectedLapNumber = null,
   course = null, referenceSamples = [], paceData = [],
   sessionFileName = null,
 }: VideoPlayerProps) {
   const { useKph, useMetricDistance, brakingZoneSettings } = useSettingsContext();
+  // Cursor comes from its own context (not props) so only this component —
+  // not the whole InfoBox/GraphViewPanel chain — re-renders per playback tick.
+  const { currentIndex, currentSample } = usePlaybackContext();
   const progressRef = useRef<HTMLDivElement>(null);
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const toolbarRef = useRef<HTMLDivElement>(null);

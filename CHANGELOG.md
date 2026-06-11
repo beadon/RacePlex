@@ -13,6 +13,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Map heatmap rendering rebuilt for large sessions.** The race-line speed
+  heatmap (Simple view and the Pro MiniMap) now renders as ~20 canvas-drawn
+  color-bucket polylines instead of one SVG DOM element per GPS segment, which
+  could attempt tens of thousands of DOM nodes and freeze the tab when a long
+  range was selected. Dragging the range slider also no longer re-fits the map
+  view on every movement.
+- **Playback is dramatically cheaper.** The playback cursor was split out of
+  the shared session state into its own context, so a tick only re-renders the
+  components that track it (charts, maps, video overlays) instead of every
+  view. The analysis charts now draw on two stacked canvases — a static layer
+  (grid, lines, overlays) and a cursor layer — so moving the cursor costs a
+  clear + a line + a tooltip instead of a full chart redraw, and dense series
+  are decimated to per-pixel min/max pairs before stroking. The map position
+  arrow is now moved/rotated in place instead of being recreated every tick.
+- The pace chart's area fill is now tinted by sign per region (green where
+  ahead of the reference, red where behind) instead of switching the entire
+  fill color based on the value at the cursor.
+
 ### Fixed
 - **VBO (Racelogic VBOX) time parsing.** The `time` column is now decoded as
   the spec's packed UTC `HHMMSS.SS` by digit position. Previously, any session
