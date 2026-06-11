@@ -19,7 +19,6 @@ export const RaceLineTab = memo(function RaceLineTab({ showOverlays }: RaceLineT
           samples={s.visibleSamples}
           allSamples={s.filteredSamples}
           referenceSamples={s.referenceSamples}
-          currentIndex={s.currentIndex}
           course={s.course}
           bounds={s.bounds!}
           paceDiff={s.paceDiff}
@@ -53,7 +52,6 @@ export const RaceLineTab = memo(function RaceLineTab({ showOverlays }: RaceLineT
             <TelemetryChart
               samples={s.visibleSamples}
               fieldMappings={s.fieldMappings}
-              currentIndex={s.currentIndex}
               onScrub={s.onScrub}
               onFieldToggle={s.onFieldToggle}
               paceData={s.paceData}

@@ -23,7 +23,6 @@ interface GraphPanelProps {
   filteredSamples: GpsSample[];
   referenceSamples: GpsSample[];
   fieldMappings: FieldMapping[];
-  currentIndex: number;
   onScrub: (index: number) => void;
   visibleRange: [number, number];
   onRangeChange: (range: [number, number]) => void;
@@ -34,7 +33,7 @@ interface GraphPanelProps {
 }
 
 export function GraphPanel({
-  samples, filteredSamples, referenceSamples, fieldMappings, currentIndex, onScrub,
+  samples, filteredSamples, referenceSamples, fieldMappings, onScrub,
   visibleRange, onRangeChange, minRange, formatRangeLabel, sessionFileName, overlayLines = [],
 }: GraphPanelProps) {
   const { useKph, useMetricDistance, brakingZoneSettings } = useSettingsContext();
@@ -249,7 +248,6 @@ export function GraphPanel({
                   samples={samples}
                   referenceSamples={referenceSamples}
                   overlayLines={overlayLines}
-                  currentIndex={currentIndex}
                   label={getLabel(key)}
                   onDelete={() => removeGraph(key)}
                   height={graphHeights[key]}
@@ -260,7 +258,6 @@ export function GraphPanel({
                   key={key}
                   samples={samples}
                   seriesKey={key}
-                  currentIndex={currentIndex}
                   onScrub={onScrub}
                   color={getColor(key)}
                   label={getLabel(key)}

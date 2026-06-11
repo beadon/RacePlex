@@ -1,7 +1,9 @@
 import { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { GpsSample, FieldMapping } from '@/types/racing';
-import { G_FORCE_FIELDS, G_FORCE_FIELDS_GPS, G_FORCE_FIELDS_HW, applySmoothingToValues, computeSmoothingWindowSize, detectSpeedGlitchIndices, interpolateGlitchSpeed, numericExtent } from '@/lib/chartUtils';
+import { G_FORCE_FIELDS, G_FORCE_FIELDS_GPS, G_FORCE_FIELDS_HW, applySmoothingToValues, buildSeriesPoints, computeSmoothingWindowSize, detectSpeedGlitchIndices, interpolateGlitchSpeed, numericExtent } from '@/lib/chartUtils';
+import { prepare2dCanvas, strokeSeriesPath } from '@/lib/canvas2d';
 import { useSettingsContext } from '@/contexts/SettingsContext';
+import { usePlaybackContext } from '@/contexts/PlaybackContext';
 import { getChartColors } from '@/lib/chartColors';
 import { buildChartAxis } from '@/lib/chartAxis';
 import { isDistanceUnitChannel, distanceChannelValue, distanceChannelUnit } from '@/lib/units';
@@ -11,7 +13,6 @@ import type { OverlayLine } from '@/lib/lapOverlays';
 interface TelemetryChartProps {
   samples: GpsSample[];
   fieldMappings: FieldMapping[];
-  currentIndex: number;
   onScrub: (index: number) => void;
   onFieldToggle: (fieldName: string) => void;
   paceData?: (number | null)[];
@@ -42,7 +43,6 @@ const PACE_COLOR = 'hsl(35, 90%, 55%)'; // Orange-gold for pace
 export function TelemetryChart({
   samples,
   fieldMappings,
-  currentIndex,
   onScrub,
   onFieldToggle,
   paceData = [],
@@ -53,12 +53,14 @@ export function TelemetryChart({
   overlayLines = [],
 }: TelemetryChartProps) {
   const { useKph, useMetricDistance, gForceSmoothing, gForceSmoothingStrength, darkMode, gForceSource, chartXAxis } = useSettingsContext();
+  const { currentIndex } = usePlaybackContext();
   const chartColors = useMemo(() => getChartColors(darkMode), [darkMode]);
   const axis = useMemo(
     () => buildChartAxis(samples, chartXAxis, { useMetricDistance, fullSamples: allSamples, rangeStart }),
     [samples, chartXAxis, useMetricDistance, allSamples, rangeStart],
   );
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const cursorCanvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   const [isDragging, setIsDragging] = useState(false);
@@ -121,23 +123,21 @@ export function TelemetryChart({
   const hiddenGForceFields = gForceSource === 'hw' ? G_FORCE_FIELDS_GPS : G_FORCE_FIELDS_HW;
   const enabledFields = fieldMappings.filter(f => f.enabled && !hiddenGForceFields.includes(f.name));
 
-  // Draw chart
+  // Draw the static layer: grid, axes, and every data line. The playback
+  // cursor lives on a second canvas (effect below), so a cursor tick doesn't
+  // re-stroke 100k-point paths — this effect must NOT depend on currentIndex.
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas || dimensions.width === 0 || dimensions.height === 0) return;
     if (samples.length === 0) return;
 
-    const ctx = canvas.getContext('2d');
+    const ctx = prepare2dCanvas(canvas, dimensions.width, dimensions.height, window.devicePixelRatio || 1);
     if (!ctx) return;
-
-    const dpr = window.devicePixelRatio || 1;
-    canvas.width = dimensions.width * dpr;
-    canvas.height = dimensions.height * dpr;
-    ctx.scale(dpr, dpr);
 
     const padding = { left: 60, right: 20, top: 20, bottom: 30 };
     const chartWidth = dimensions.width - padding.left - padding.right;
     const chartHeight = dimensions.height - padding.top - padding.bottom;
+    const toX = (frac: number) => padding.left + frac * chartWidth;
 
     // Clear
     ctx.fillStyle = chartColors.background;
@@ -172,82 +172,43 @@ export function TelemetryChart({
     const maxSpeed = Math.ceil((numericExtent(speeds)?.max ?? 0) / 10) * 10;
     const minSpeed = 0;
 
+    const toSpeedY = (v: number) => padding.top + (1 - (v - minSpeed) / (maxSpeed - minSpeed)) * chartHeight;
+
     // Draw reference speed line first (underneath, grey, dashed)
     if (hasReference && showReferenceSpeed && referenceSpeedData.length > 0) {
-      ctx.beginPath();
       ctx.strokeStyle = REFERENCE_COLOR;
       ctx.lineWidth = 2;
       ctx.setLineDash([5, 3]);
-
-      let isDrawing = false;
-      for (let i = 0; i < samples.length; i++) {
-        const refSpeed = referenceSpeedData[i];
-        if (refSpeed === null || refSpeed === undefined) {
-          isDrawing = false;
-          continue;
-        }
-
-        const x = padding.left + axis.fracAt(i) * chartWidth;
-        const y = padding.top + (1 - (refSpeed - minSpeed) / (maxSpeed - minSpeed)) * chartHeight;
-
-        if (!isDrawing) {
-          ctx.moveTo(x, y);
-          isDrawing = true;
-        } else {
-          ctx.lineTo(x, y);
-        }
-      }
-      ctx.stroke();
+      strokeSeriesPath(ctx, buildSeriesPoints(referenceSpeedData, axis.fracAt, chartWidth), toX, toSpeedY);
       ctx.setLineDash([]);
     }
 
     // Draw overlay lap speed lines (other laps / snapshots), beneath the current
     // lap so the current lap always stays on top.
     for (const overlay of overlaySpeed) {
-      ctx.beginPath();
       ctx.strokeStyle = overlay.color;
       ctx.lineWidth = 1.5;
-      let isDrawing = false;
-      for (let i = 0; i < samples.length; i++) {
-        const v = overlay.values[i];
-        if (v === null || v === undefined) { isDrawing = false; continue; }
-        const x = padding.left + axis.fracAt(i) * chartWidth;
-        const y = padding.top + (1 - (v - minSpeed) / (maxSpeed - minSpeed)) * chartHeight;
-        if (!isDrawing) { ctx.moveTo(x, y); isDrawing = true; } else { ctx.lineTo(x, y); }
-      }
-      ctx.stroke();
+      strokeSeriesPath(ctx, buildSeriesPoints(overlay.values, axis.fracAt, chartWidth), toX, toSpeedY);
     }
 
-    // Draw speed line - smart glitch filtering
+    // Draw speed line — glitch-interpolated, then decimated to the pixel grid
     const interpolateIndices = detectSpeedGlitchIndices(speeds);
-
-    ctx.beginPath();
-    ctx.strokeStyle = COLORS[0];
-    ctx.lineWidth = 2;
-
+    const drawSpeeds = new Array<number>(samples.length);
     let lastValidSpeed: number | null = null;
     let lastValidIndex = 0;
-
     for (let i = 0; i < samples.length; i++) {
-      const x = padding.left + axis.fracAt(i) * chartWidth;
       let speed = speeds[i];
-
       if (interpolateIndices.has(i) && i > 0 && i < samples.length - 1) {
         speed = interpolateGlitchSpeed(i, speeds, interpolateIndices, lastValidSpeed, lastValidIndex);
       } else {
         lastValidSpeed = speed;
         lastValidIndex = i;
       }
-
-      const y = padding.top + (1 - (speed - minSpeed) / (maxSpeed - minSpeed)) * chartHeight;
-
-      if (i === 0) {
-        ctx.moveTo(x, y);
-      } else {
-        ctx.lineTo(x, y);
-      }
+      drawSpeeds[i] = speed;
     }
-    ctx.stroke();
+    ctx.strokeStyle = COLORS[0];
+    ctx.lineWidth = 2;
+    strokeSeriesPath(ctx, buildSeriesPoints(drawSpeeds, axis.fracAt, chartWidth), toX, toSpeedY);
 
     // Draw extra fields
     enabledFields.forEach((field, fieldIndex) => {
@@ -267,32 +228,15 @@ export function TelemetryChart({
       // Keep colors stable regardless of enabled/disabled state
       const mappingIndex = fieldMappings.findIndex(f => f.name === field.name);
       const colorIndex = ((mappingIndex === -1 ? fieldIndex : mappingIndex) + 1) % COLORS.length;
-      
-      ctx.beginPath();
+
       ctx.strokeStyle = COLORS[colorIndex];
       ctx.lineWidth = 1.5;
-
-      let isDrawing = false;
-      
-      for (let i = 0; i < samples.length; i++) {
-        const val = values[i];
-        
-        if (val === undefined) {
-          isDrawing = false;
-          continue;
-        }
-        
-        const x = padding.left + axis.fracAt(i) * chartWidth;
-        const y = padding.top + (1 - (val - minVal) / range) * chartHeight;
-        
-        if (!isDrawing) {
-          ctx.moveTo(x, y);
-          isDrawing = true;
-        } else {
-          ctx.lineTo(x, y);
-        }
-      }
-      ctx.stroke();
+      strokeSeriesPath(
+        ctx,
+        buildSeriesPoints(values, axis.fracAt, chartWidth),
+        toX,
+        (v) => padding.top + (1 - (v - minVal) / range) * chartHeight,
+      );
     });
 
     // Draw pace chart (secondary axis area at bottom of chart)
@@ -316,62 +260,52 @@ export function TelemetryChart({
         ctx.stroke();
         ctx.setLineDash([]);
         
+        // Pace: positive = slower (below zero line), negative = faster (above)
+        const toPaceY = (pace: number) => padding.top + ((1 - (-(pace / paceExtent))) / 2) * chartHeight;
+
         // Draw pace line
-        ctx.beginPath();
         ctx.strokeStyle = PACE_COLOR;
         ctx.lineWidth = 2;
-        
-        let isDrawing = false;
-        for (let i = 0; i < samples.length; i++) {
-          const pace = paceData[i];
-          if (pace === null) {
-            isDrawing = false;
-            continue;
+        strokeSeriesPath(ctx, buildSeriesPoints(paceData, axis.fracAt, chartWidth), toX, toPaceY);
+
+        // Fill the area between the pace curve and the zero line, tinted by
+        // sign per region (red where behind, green where ahead). Region-based
+        // so it stays on the static layer — the old whole-area tint keyed on
+        // the pace at the cursor, which would force this fill every tick.
+        const tracePaceFill = () => {
+          ctx.beginPath();
+          let firstX = padding.left;
+          for (let i = 0; i < samples.length; i++) {
+            const pace = paceData[i];
+            if (pace === null) continue;
+            const x = toX(axis.fracAt(i));
+            const y = toPaceY(pace);
+            if (i === 0 || paceData[i - 1] === null) {
+              ctx.moveTo(x, zeroY);
+              ctx.lineTo(x, y);
+              firstX = x;
+            } else {
+              ctx.lineTo(x, y);
+            }
           }
-          
-          const x = padding.left + axis.fracAt(i) * chartWidth;
-          // Pace: positive = slower (below zero line), negative = faster (above zero line)
-          // Normalize to use full chart height
-          const normalizedPace = pace / paceExtent; // -1 to 1
-          const y = padding.top + ((1 - (-normalizedPace)) / 2) * chartHeight;
-          
-          if (!isDrawing) {
-            ctx.moveTo(x, y);
-            isDrawing = true;
-          } else {
-            ctx.lineTo(x, y);
-          }
-        }
-        ctx.stroke();
-        
-        // Fill area under/over zero
-        ctx.beginPath();
-        ctx.fillStyle = paceData[currentIndex] !== null && paceData[currentIndex]! > 0 
-          ? 'hsla(0, 60%, 50%, 0.1)' // Red tint when behind
-          : 'hsla(120, 60%, 50%, 0.1)'; // Green tint when ahead
-        
-        let firstX = padding.left;
-        for (let i = 0; i < samples.length; i++) {
-          const pace = paceData[i];
-          if (pace === null) continue;
-          
-          const x = padding.left + axis.fracAt(i) * chartWidth;
-          const normalizedPace = pace / paceExtent;
-          const y = padding.top + ((1 - (-normalizedPace)) / 2) * chartHeight;
-          
-          if (i === 0 || paceData[i - 1] === null) {
-            ctx.moveTo(x, zeroY);
-            ctx.lineTo(x, y);
-            firstX = x;
-          } else {
-            ctx.lineTo(x, y);
-          }
-        }
-        // Close to zero line
-        ctx.lineTo(padding.left + chartWidth, zeroY);
-        ctx.lineTo(firstX, zeroY);
-        ctx.closePath();
-        ctx.fill();
+          // Close to zero line
+          ctx.lineTo(padding.left + chartWidth, zeroY);
+          ctx.lineTo(firstX, zeroY);
+          ctx.closePath();
+        };
+        const fillPaceRegion = (clipTop: number, clipHeight: number, style: string) => {
+          if (clipHeight <= 0) return;
+          ctx.save();
+          ctx.beginPath();
+          ctx.rect(padding.left, clipTop, chartWidth, clipHeight);
+          ctx.clip();
+          tracePaceFill();
+          ctx.fillStyle = style;
+          ctx.fill();
+          ctx.restore();
+        };
+        fillPaceRegion(padding.top, zeroY - padding.top, 'hsla(120, 60%, 50%, 0.1)'); // ahead
+        fillPaceRegion(zeroY, padding.top + chartHeight - zeroY, 'hsla(0, 60%, 50%, 0.1)'); // behind
       }
     }
 
@@ -400,8 +334,25 @@ export function TelemetryChart({
       const x = padding.left + (chartWidth / timeGridCount) * i;
       ctx.fillText(axis.label(i / timeGridCount), x, dimensions.height - 8);
     }
+  }, [samples, dimensions, enabledFields, useKph, speedUnit, paceData, referenceSpeedData, hasReference, showReferenceSpeed, showPace, smoothedGForceData, chartColors, fieldMappings, getSpeed, axis, overlaySpeed]);
 
-    // Draw scrub cursor
+  // Draw the playback cursor + value tooltip on a separate overlay canvas.
+  // This is the only work a playback tick costs: clearRect + a line + a small
+  // text box, instead of re-stroking the whole chart.
+  useEffect(() => {
+    const canvas = cursorCanvasRef.current;
+    if (!canvas || dimensions.width === 0 || dimensions.height === 0) return;
+
+    const ctx = prepare2dCanvas(canvas, dimensions.width, dimensions.height, window.devicePixelRatio || 1);
+    if (!ctx) return;
+    ctx.clearRect(0, 0, dimensions.width, dimensions.height);
+
+    const padding = { left: 60, right: 20, top: 20, bottom: 30 };
+    const chartWidth = dimensions.width - padding.left - padding.right;
+    const chartHeight = dimensions.height - padding.top - padding.bottom;
+
+    ctx.font = '11px JetBrains Mono, monospace';
+
     if (currentIndex >= 0 && currentIndex < samples.length) {
       const x = padding.left + axis.fracAt(currentIndex) * chartWidth;
       
@@ -487,8 +438,7 @@ export function TelemetryChart({
         }
       });
     }
-
-  }, [samples, currentIndex, dimensions, enabledFields, useKph, useMetricDistance, speedUnit, paceData, referenceSpeedData, hasReference, showReferenceSpeed, showPace, smoothedGForceData, chartColors, fieldMappings, getSpeed, axis, overlaySpeed]);
+  }, [currentIndex, samples, dimensions, enabledFields, useMetricDistance, speedUnit, paceData, referenceSpeedData, hasReference, showReferenceSpeed, showPace, smoothedGForceData, chartColors, fieldMappings, getSpeed, axis, overlaySpeed]);
 
   // Scrub handling
   const handleScrub = useCallback((clientX: number) => {
@@ -581,10 +531,10 @@ export function TelemetryChart({
         ))}
       </div>
 
-      {/* Chart */}
-      <div 
+      {/* Chart: static layer + cursor overlay stacked */}
+      <div
         ref={containerRef}
-        className="flex-1 min-h-0 w-full overflow-hidden cursor-crosshair"
+        className="relative flex-1 min-h-0 w-full overflow-hidden cursor-crosshair"
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
@@ -595,7 +545,11 @@ export function TelemetryChart({
       >
         <canvas
           ref={canvasRef}
-          className="block w-full h-full"
+          className="absolute inset-0 block w-full h-full"
+        />
+        <canvas
+          ref={cursorCanvasRef}
+          className="absolute inset-0 block w-full h-full pointer-events-none"
         />
       </div>
     </div>

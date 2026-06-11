@@ -56,6 +56,7 @@ import { useDataLoader } from "@/hooks/useDataLoader";
 import { SettingsProvider } from "@/contexts/SettingsContext";
 import { DeviceProvider } from "@/contexts/DeviceContext";
 import { SessionProvider, type SessionContextValue } from "@/contexts/SessionContext";
+import { PlaybackProvider, type PlaybackContextValue } from "@/contexts/PlaybackContext";
 import { snapshotLapSamples } from "@/lib/lapSnapshot";
 import type { PluginSnapshot } from "@/plugins/panels";
 
@@ -342,17 +343,25 @@ export default function Index() {
     };
   }, [snapshots.activeSnapshotId, snapshots.snapshots]);
 
+  // ── PlaybackContext: just the cursor, updated at playback rate ──────────
+  // Kept out of the big session context so a tick only re-renders the
+  // components that actually track the cursor (charts, maps, video player).
+  const playbackContextValue = useMemo<PlaybackContextValue>(
+    () => ({ currentIndex, currentSample }),
+    [currentIndex, currentSample],
+  );
+
   // ── SessionContext: everything the three main view tabs need ────────────
   // Tabs read this via `useSessionContext()` instead of receiving 25+ props.
+  // Must stay referentially stable during playback — the cursor lives in
+  // PlaybackContext, and every dep here must not churn per tick.
   const sessionContextValue = useMemo<SessionContextValue>(() => ({
     data,
     visibleSamples,
     filteredSamples,
     allSamples: data?.samples ?? [],
     referenceSamples,
-    currentSample,
     fieldMappings,
-    currentIndex,
     visibleRange,
     minRange,
     course: selectedCourse,
@@ -418,8 +427,8 @@ export default function Index() {
     onOpenGarage: fileManager.open,
     formatRangeLabel,
   }), [
-    data, visibleSamples, filteredSamples, referenceSamples, currentSample, fieldMappings,
-    currentIndex, visibleRange, minRange,
+    data, visibleSamples, filteredSamples, referenceSamples, fieldMappings,
+    visibleRange, minRange,
     selectedCourse, filteredBounds,
     laps, selectedLapNumber, selectedLapTimeMs, referenceLapNumber, isAllLaps,
     hasReference, paceDiff, paceDiffLabel, slicedPaceData, slicedReferenceSpeedData,
@@ -524,6 +533,7 @@ export default function Index() {
     <DeviceProvider>
     <SettingsProvider value={settingsContextValue}>
     <SessionProvider value={sessionContextValue}>
+    <PlaybackProvider value={playbackContextValue}>
     <div className="h-screen bg-background flex flex-col overflow-hidden">
       <header className="border-b border-border px-4 py-2 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-3">
@@ -633,6 +643,7 @@ export default function Index() {
         onDismiss={snapshots.dismissPrompt}
       />
     </div>
+    </PlaybackProvider>
     </SessionProvider>
     </SettingsProvider>
     </DeviceProvider>

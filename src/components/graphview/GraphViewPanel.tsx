@@ -18,7 +18,6 @@ export interface GraphViewPanelProps {
   visibleSamples: GpsSample[];
   filteredSamples: GpsSample[];
   referenceSamples: GpsSample[];
-  currentIndex: number;
   onScrub: (index: number) => void;
   fieldMappings: FieldMapping[];
   // Stats
@@ -55,7 +54,6 @@ export interface GraphViewPanelProps {
   videoState?: VideoSyncState;
   videoActions?: VideoSyncActions;
   onVideoLoadedMetadata?: () => void;
-  currentSample?: GpsSample | null;
   // Session
   sessionFileName: string | null;
   isAllLaps?: boolean;
@@ -123,11 +121,9 @@ export function GraphViewPanel(props: GraphViewPanelProps) {
                 videoState={props.videoState}
                 videoActions={props.videoActions}
                 onVideoLoadedMetadata={props.onVideoLoadedMetadata}
-                currentSample={props.currentSample}
                 // New overlay props
                 visibleSamples={props.visibleSamples}
                 allSamples={props.allSamples}
-                currentIndex={props.currentIndex}
                 fieldMappings={props.fieldMappings}
                 laps={props.laps}
                 selectedLapNumber={props.selectedLapNumber}
@@ -152,7 +148,6 @@ export function GraphViewPanel(props: GraphViewPanelProps) {
                 samples={props.visibleSamples}
                 allSamples={props.filteredSamples}
                 referenceSamples={props.referenceSamples}
-                currentIndex={props.currentIndex}
                 course={props.course}
                 bounds={props.bounds}
                 isAllLaps={props.isAllLaps}
@@ -184,7 +179,6 @@ export function GraphViewPanel(props: GraphViewPanelProps) {
           filteredSamples={props.filteredSamples}
           referenceSamples={props.referenceSamples}
           fieldMappings={props.fieldMappings}
-          currentIndex={props.currentIndex}
           onScrub={props.onScrub}
           visibleRange={props.visibleRange}
           onRangeChange={props.onRangeChange}

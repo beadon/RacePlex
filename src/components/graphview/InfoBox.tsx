@@ -39,11 +39,9 @@ interface InfoBoxProps {
   videoState?: VideoSyncState;
   videoActions?: VideoSyncActions;
   onVideoLoadedMetadata?: () => void;
-  currentSample?: GpsSample | null;
   // New props for video overlay system
   visibleSamples?: GpsSample[];
   allSamples?: GpsSample[];
-  currentIndex?: number;
   fieldMappings?: FieldMapping[];
   laps?: Lap[];
   selectedLapNumber?: number | null;
@@ -59,8 +57,8 @@ export function InfoBox({
   deltaTopSpeed, deltaMinSpeed, referenceLapNumber, lapToFastestDelta,
   sessionGpsPoint, sessionStartDate, cachedWeatherStation, onWeatherStationResolved,
   vehicles, setups, templates, sessionKartId, sessionSetupId, onSaveSessionSetup, onOpenSetupEditor, onOpenGarage,
-  videoState, videoActions, onVideoLoadedMetadata, currentSample,
-  visibleSamples, allSamples, currentIndex, fieldMappings, laps, selectedLapNumber,
+  videoState, videoActions, onVideoLoadedMetadata,
+  visibleSamples, allSamples, fieldMappings, laps, selectedLapNumber,
   referenceSamples, paceData, sessionFileName,
 }: InfoBoxProps) {
   const { useKph } = useSettingsContext();
@@ -120,10 +118,8 @@ export function InfoBox({
               state={videoState}
               actions={videoActions}
               onLoadedMetadata={onVideoLoadedMetadata}
-              currentSample={currentSample ?? null}
               samples={visibleSamples}
               allSamples={allSamples}
-              currentIndex={currentIndex}
               fieldMappings={fieldMappings}
               laps={laps}
               selectedLapNumber={selectedLapNumber}

@@ -126,7 +126,13 @@ src/
 │   ├── *Storage.ts        # IDB stores: file, kart(compat), vehicle, engine, template, note, setup,
 │   │                      #   video, videoFile, graphPrefs; trackStorage = localStorage (user tracks)
 │   ├── (racing math)      # brakingZones, speedEvents, speedBounds, gforceCalculation, referenceUtils, trackUtils
-│   ├── (charts/video)     # chartUtils, chartColors, videoExport, overlayCanvasRenderer
+│   ├── (charts/video)     # chartUtils (+ buildSeriesPoints per-pixel min/max decimation),
+│   │                      #   canvas2d (prepare2dCanvas conditional buffer resize + strokeSeriesPath),
+│   │                      #   chartColors, chartAxis, videoExport, overlayCanvasRenderer
+│   ├── speedHeatmap.ts    # ★ Pure bucketed heatmap geometry: speed→color + segments grouped into ~20
+│   │                      #   per-color multi-polylines (maps render these via Leaflet's canvas renderer —
+│   │                      #   never one layer per GPS segment)
+│   ├── mapMarker.ts       # Pure heading math for the maps' position arrow (marker is moved/rotated per tick, not recreated)
 │   ├── satelliteImagery.ts # ★ Pure Esri Wayback parsing: waybackconfig.json → date-sorted release list + Leaflet tile URLs (online-only satellite imagery-date picker; useWaybackImagery hook lazy-loads it)
 │   ├── ble/               # Web Bluetooth DovesLapTimer protocol, split per-concern (see BLE Integration);
 │   │                      #   + bleDatalogger.ts (legacy barrel), deviceTrackSync.ts, deviceSettingsSchema.ts
@@ -148,7 +154,13 @@ src/
 │   ├── cloud-sync/         # ★ First-party plugin: Supabase file + garage sync — see docs/backend.md
 │   └── coaching/           # Gitignored slot for the AI coach (npm pkg in production)
 ├── types/racing.ts        # ★ Core types: GpsSample, ParsedData, Lap, Course, Track, …
-├── contexts/              # SettingsContext, DeviceContext (BLE), AuthContext (admin)
+├── contexts/              # SettingsContext, SessionContext, PlaybackContext, DeviceContext (BLE), AuthContext (admin)
+│                          # ★ PlaybackContext carries ONLY the playback cursor (currentIndex/currentSample).
+│                          #   It updates at playback rate, so it's split from SessionContext to keep the
+│                          #   memo'd tabs quiet during playback. Never put the cursor — or anything that
+│                          #   churns per tick — into SessionContext; its value must stay referentially
+│                          #   stable while playing (useVideoSync memoizes state/actions for this reason).
+│                          #   Charts draw on two stacked canvases: a static layer + a cursor overlay.
 └── integrations/supabase/ # Auto-generated — DO NOT EDIT
 ```
 

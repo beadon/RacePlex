@@ -36,6 +36,83 @@ export function numericExtent(
   return found ? { min, max } : null;
 }
 
+/** One drawable point of a chart series. `gap` breaks the line before it. */
+export interface SeriesPoint {
+  /** X position as a 0–1 fraction of the chart width. */
+  frac: number;
+  value: number;
+  gap: boolean;
+}
+
+/**
+ * Build the drawable points for a chart series. Dense series (more than ~2
+ * samples per pixel column) are decimated to per-column min/max pairs, so the
+ * stroked path costs O(chartWidth) instead of one lineTo per sample — a
+ * full-session range at 20–60 Hz otherwise pushes 100k+ path segments into
+ * every redraw. Sparse series pass through 1:1. Null/undefined/NaN entries
+ * become gaps (the line breaks), matching the charts' existing behavior.
+ * Assumes `fracAt` is monotone (time and cumulative-distance axes both are).
+ */
+export function buildSeriesPoints(
+  values: ArrayLike<number | null | undefined>,
+  fracAt: (i: number) => number,
+  widthPx: number,
+): SeriesPoint[] {
+  const n = values.length;
+  const w = Math.max(1, Math.floor(widthPx));
+  const points: SeriesPoint[] = [];
+
+  if (n <= w * 2) {
+    let gap = false;
+    for (let i = 0; i < n; i++) {
+      const v = values[i];
+      if (v === null || v === undefined || Number.isNaN(v)) {
+        gap = true;
+        continue;
+      }
+      points.push({ frac: fracAt(i), value: v, gap });
+      gap = false;
+    }
+    return points;
+  }
+
+  // Min/max decimation: one vertical [min, max] pair per pixel column.
+  let col = -1;
+  let mn = 0;
+  let mx = 0;
+  let colGap = false;
+  let pendingGap = false;
+
+  const flush = () => {
+    if (col < 0) return;
+    const frac = (col + 0.5) / w;
+    points.push({ frac, value: mn, gap: colGap });
+    if (mx !== mn) points.push({ frac, value: mx, gap: false });
+  };
+
+  for (let i = 0; i < n; i++) {
+    const v = values[i];
+    if (v === null || v === undefined || Number.isNaN(v)) {
+      pendingGap = true;
+      continue;
+    }
+    const c = Math.min(w - 1, Math.max(0, Math.floor(fracAt(i) * w)));
+    if (c !== col) {
+      flush();
+      col = c;
+      mn = v;
+      mx = v;
+      colGap = pendingGap;
+    } else {
+      if (v < mn) mn = v;
+      if (v > mx) mx = v;
+    }
+    pendingGap = false;
+  }
+  flush();
+  return points;
+}
+
 /**
  * Map a smoothing strength (0-100) to a window size for moving average.
  * Returns odd numbers for symmetric smoothing. Range: 1-15.

@@ -6,7 +6,9 @@ import { pickGForcePair, computeGGPoints, computeGGAxisMax } from '@/lib/ggDiagr
 import { alignValuesByDistance } from '@/lib/referenceUtils';
 import type { OverlayLine } from '@/lib/lapOverlays';
 import { useSettingsContext } from '@/contexts/SettingsContext';
+import { usePlaybackContext } from '@/contexts/PlaybackContext';
 import { getChartColors } from '@/lib/chartColors';
+import { prepare2dCanvas } from '@/lib/canvas2d';
 import { GraphResizeHandle } from './GraphResizeHandle';
 
 /** Default height (px) for the G-G diagram card. */
@@ -17,7 +19,6 @@ interface GGDiagramProps {
   referenceSamples?: GpsSample[];
   /** Selected multi-lap overlays — an alternative comparison cloud (toggle). */
   overlayLines?: OverlayLine[];
-  currentIndex: number;
   label: string;
   onDelete: () => void;
   /** Committed card height (px); defaults to GG_DEFAULT_HEIGHT. */
@@ -32,10 +33,12 @@ type BoxAxis = 'lat' | 'lon';
 const SESSION_COLOR = 'hsl(180, 70%, 55%)'; // cyan cloud (matches speed series)
 const CURRENT_COLOR = 'hsl(0, 75%, 55%)';   // red current point
 
-export function GGDiagram({ samples, referenceSamples, overlayLines = [], currentIndex, label, onDelete, height, onHeightChange }: GGDiagramProps) {
+export function GGDiagram({ samples, referenceSamples, overlayLines = [], label, onDelete, height, onHeightChange }: GGDiagramProps) {
   const { gForceSmoothing, gForceSmoothingStrength, gForceSource, darkMode } = useSettingsContext();
+  const { currentIndex } = usePlaybackContext();
   const chartColors = useMemo(() => getChartColors(darkMode), [darkMode]);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const cursorCanvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
 
@@ -144,29 +147,31 @@ export function GGDiagram({ samples, referenceSamples, overlayLines = [], curren
     return () => ro.disconnect();
   }, []);
 
-  // Draw
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas || dimensions.width === 0 || dimensions.height === 0) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const dpr = window.devicePixelRatio || 1;
-    canvas.width = dimensions.width * dpr;
-    canvas.height = dimensions.height * dpr;
-    ctx.scale(dpr, dpr);
-
-    ctx.fillStyle = chartColors.background;
-    ctx.fillRect(0, 0, dimensions.width, dimensions.height);
-
-    // Square plot region, centred, leaving a margin for ring labels.
+  // Plot geometry shared by the static and cursor layers: square region,
+  // centred, leaving a margin for ring labels.
+  const geometry = useMemo(() => {
     const margin = 18;
     const size = Math.max(0, Math.min(dimensions.width, dimensions.height) - margin * 2);
     const cx = dimensions.width / 2;
     const cy = dimensions.height / 2;
     const R = size / 2;
+    return { margin, cx, cy, R, scale: R > 0 ? R / axisMax : 0 };
+  }, [dimensions, axisMax]);
+
+  // Draw the static layer (rings, axes, clouds). The current-point dot lives
+  // on a second canvas, so a playback tick doesn't redraw the clouds —
+  // this effect must NOT depend on currentIndex.
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || dimensions.width === 0 || dimensions.height === 0) return;
+    const ctx = prepare2dCanvas(canvas, dimensions.width, dimensions.height, window.devicePixelRatio || 1);
+    if (!ctx) return;
+
+    ctx.fillStyle = chartColors.background;
+    ctx.fillRect(0, 0, dimensions.width, dimensions.height);
+
+    const { margin, cx, cy, R, scale } = geometry; // scale = px per g
     if (R <= 0) return;
-    const scale = R / axisMax; // px per g
 
     // Map a (lat, lon) g point to screen — positive lon_g (accel) points up.
     const sx = (gx: number) => cx + gx * scale;
@@ -232,22 +237,33 @@ export function GGDiagram({ samples, referenceSamples, overlayLines = [], curren
     }
     drawCloud(sessionPoints, SESSION_COLOR, 0.45);
 
-    // Current point (its numeric readout lives in the HTML info box below).
-    const cur = sessionPoints[currentIndex];
-    if (cur) {
-      ctx.beginPath();
-      ctx.fillStyle = CURRENT_COLOR;
-      ctx.arc(sx(cur.x), sy(cur.y), 4, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
     // Source badge, bottom-left.
     ctx.fillStyle = chartColors.axisText;
     ctx.font = '9px JetBrains Mono, monospace';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'bottom';
     ctx.fillText(pair.source, 4, dimensions.height - 4);
-  }, [dimensions, sessionPoints, refPoints, overlayClouds, activeMode, axisMax, currentIndex, pair, chartColors]);
+  }, [dimensions, geometry, sessionPoints, refPoints, overlayClouds, activeMode, axisMax, pair, chartColors]);
+
+  // Current point on the cursor overlay canvas (its numeric readout lives in
+  // the HTML info box below) — a tick costs a clearRect + one dot.
+  useEffect(() => {
+    const canvas = cursorCanvasRef.current;
+    if (!canvas || dimensions.width === 0 || dimensions.height === 0) return;
+    const ctx = prepare2dCanvas(canvas, dimensions.width, dimensions.height, window.devicePixelRatio || 1);
+    if (!ctx) return;
+    ctx.clearRect(0, 0, dimensions.width, dimensions.height);
+
+    const { cx, cy, R, scale } = geometry;
+    if (R <= 0) return;
+    const cur = sessionPoints[currentIndex];
+    if (cur) {
+      ctx.beginPath();
+      ctx.fillStyle = CURRENT_COLOR;
+      ctx.arc(cx + cur.x * scale, cy - cur.y * scale, 4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }, [currentIndex, dimensions, geometry, sessionPoints]);
 
   return (
     <div className="relative border-b border-border flex flex-col" style={{ height: `${cardHeight}px` }}>
@@ -262,8 +278,9 @@ export function GGDiagram({ samples, referenceSamples, overlayLines = [], curren
       >
         <X className="w-3.5 h-3.5" />
       </button>
-      <div ref={containerRef} className="flex-1 w-full min-h-0 overflow-hidden">
-        <canvas ref={canvasRef} className="block w-full h-full" />
+      <div ref={containerRef} className="relative flex-1 w-full min-h-0 overflow-hidden">
+        <canvas ref={canvasRef} className="absolute inset-0 block w-full h-full" />
+        <canvas ref={cursorCanvasRef} className="absolute inset-0 block w-full h-full pointer-events-none" />
       </div>
 
       {/* Bottom-right: comparison/axis toggles above a per-cloud value readout. */}

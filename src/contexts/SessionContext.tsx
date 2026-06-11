@@ -18,9 +18,12 @@ import type { PluginSnapshot } from '@/plugins/panels';
  * (RaceLineTab, LapTimesTab, GraphViewTab).
  *
  * Tabs read this via `useSessionContext()` instead of receiving 25+ props
- * from Index.tsx. The underlying view components (RaceLineView, LapTable,
- * GraphViewPanel) still receive everything as props for now — pushing the
- * context boundary deeper can come in a follow-up if needed.
+ * from Index.tsx.
+ *
+ * The playback cursor (currentIndex / currentSample) deliberately does NOT
+ * live here — it changes at playback rate and would re-render every consumer
+ * per tick (context updates bypass memo()). Cursor-tracking components read
+ * `usePlaybackContext()` (PlaybackContext.tsx) instead.
  */
 export interface SessionContextValue {
   // ── Sample data ───────────────────────────────────────────────────────────
@@ -29,11 +32,9 @@ export interface SessionContextValue {
   filteredSamples: GpsSample[];
   allSamples: GpsSample[];
   referenceSamples: GpsSample[];
-  currentSample: GpsSample | null;
   fieldMappings: FieldMapping[];
 
-  // ── Position / range ──────────────────────────────────────────────────────
-  currentIndex: number;
+  // ── Range ─────────────────────────────────────────────────────────────────
   visibleRange: [number, number];
   minRange: number;
 
