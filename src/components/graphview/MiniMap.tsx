@@ -3,35 +3,25 @@ import L from 'leaflet';
 import { GpsSample, Course } from '@/types/racing';
 import { findSpeedEvents, SpeedEvent } from '@/lib/speedEvents';
 import { computeHeatmapSpeedBoundsMph } from '@/lib/speedBounds';
+import { buildHeatmapSegments } from '@/lib/speedHeatmap';
 import { detectBrakingZones, BrakingZoneConfig } from '@/lib/brakingZones';
 import { unionBounds, cropOverlayLinesToWindow, type OverlayLine } from '@/lib/lapOverlays';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
+import { updatePositionMarker } from '@/components/map/positionArrowMarker';
 import { useSettingsContext } from '@/contexts/SettingsContext';
+import { usePlaybackContext } from '@/contexts/PlaybackContext';
 import { Moon, Satellite, Square, WifiOff, Zap, Octagon, Map as MapIcon, X, Crosshair, List, ChevronDown, ChevronUp } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 
 type MapStyle = 'dark' | 'satellite' | 'none';
+
+const NO_OVERLAY_LINES: OverlayLine[] = [];
 
 const mapStyleConfig = {
   dark: { url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', attribution: '&copy; CARTO' },
   satellite: { url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', attribution: '&copy; Esri' },
   none: null,
 };
-
-function getSpeedColor(speedMph: number, minSpeed: number, maxSpeed: number): string {
-  const range = maxSpeed - minSpeed;
-  const ratio = range > 0 ? Math.min(Math.max((speedMph - minSpeed) / range, 0), 1) : 0.5;
-  if (ratio < 0.33) { const t = ratio / 0.33; return `rgb(${Math.round(76 + t * 154)},${Math.round(175 + t * 5)},${Math.round(80 - t * 80)})`; }
-  else if (ratio < 0.66) { const t = (ratio - 0.33) / 0.33; return `rgb(${Math.round(230 + t * 10)},${Math.round(180 - t * 80)},${Math.round(t * 50)})`; }
-  else { const t = (ratio - 0.66) / 0.34; return `rgb(${Math.round(240 - t * 40)},${Math.round(100 - t * 60)},${Math.round(50 - t * 10)})`; }
-}
-
-function createArrowIcon(heading: number): L.DivIcon {
-  return L.divIcon({
-    html: `<svg width="20" height="20" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg" style="transform:rotate(${heading}deg);transform-origin:center;"><polygon points="10,2 18,18 10,14 2,18" fill="hsl(180,70%,55%)" stroke="hsl(220,20%,10%)" stroke-width="1.5"/></svg>`,
-    className: 'arrow-marker', iconSize: [20, 20], iconAnchor: [10, 10],
-  });
-}
 
 function createSpeedEventIcon(event: SpeedEvent, useKph: boolean): L.DivIcon {
   const displaySpeed = useKph ? (event.speed * 1.60934).toFixed(1) : event.speed.toFixed(1);
@@ -46,7 +36,6 @@ interface MiniMapProps {
   samples: GpsSample[];
   allSamples: GpsSample[];
   referenceSamples?: GpsSample[];
-  currentIndex: number;
   course: Course | null;
   bounds: { minLat: number; maxLat: number; minLon: number; maxLon: number };
   isAllLaps?: boolean;
@@ -64,14 +53,19 @@ interface MiniMapProps {
   onToggleOverlayLegend?: () => void;
 }
 
-export function MiniMap({ samples, allSamples, referenceSamples = [], currentIndex, course, bounds, isAllLaps, overlayLines = [], rangeStart = 0, onRemoveOverlay, alignOverlays, onToggleAlignOverlays, showOverlayLegend = true, onToggleOverlayLegend }: MiniMapProps) {
+export function MiniMap({ samples, allSamples, referenceSamples = [], course, bounds, isAllLaps, overlayLines = [], rangeStart = 0, onRemoveOverlay, alignOverlays, onToggleAlignOverlays, showOverlayLegend = true, onToggleOverlayLegend }: MiniMapProps) {
   const { useKph, brakingZoneSettings } = useSettingsContext();
+  const { currentIndex } = usePlaybackContext();
 
   // Crop overlay racing lines to the same playback window as the active lap, so
   // cropping the range shrinks them on the map exactly like the heatmap line
   // (`samples` is the cropped window; `allSamples` is the full current lap).
+  // Stable empty reference when no overlays — the fitBounds effect keys on this,
+  // and a fresh [] per range tick would re-fit the map on every slider movement.
   const drawnOverlayLines = useMemo(
-    () => cropOverlayLinesToWindow(overlayLines, allSamples, rangeStart, rangeStart + samples.length - 1),
+    () => (overlayLines.length === 0
+      ? NO_OVERLAY_LINES
+      : cropOverlayLinesToWindow(overlayLines, allSamples, rangeStart, rangeStart + samples.length - 1)),
     [overlayLines, allSamples, rangeStart, samples.length],
   );
   const containerRef = useRef<HTMLDivElement>(null);
@@ -133,10 +127,11 @@ export function MiniMap({ samples, allSamples, referenceSamples = [], currentInd
     return () => ro.disconnect();
   }, []);
 
-  // Init map
+  // Init map (canvas renderer: vector layers share one <canvas> instead of one
+  // SVG DOM node per layer)
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
-    const map = L.map(containerRef.current, { zoomControl: false, attributionControl: false }).setView([0, 0], 16);
+    const map = L.map(containerRef.current, { zoomControl: false, attributionControl: false, preferCanvas: true }).setView([0, 0], 16);
     const config = mapStyleConfig.dark;
     if (config) tileLayerRef.current = L.tileLayer(config.url, { attribution: config.attribution, maxZoom: 21 }).addTo(map);
     L.control.zoom({ position: 'bottomleft' }).addTo(map);
@@ -146,7 +141,7 @@ export function MiniMap({ samples, allSamples, referenceSamples = [], currentInd
     polylineLayerRef.current = L.layerGroup().addTo(map);
     speedEventsLayerRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;
-    return () => { map.remove(); mapRef.current = null; };
+    return () => { map.remove(); mapRef.current = null; markerRef.current = null; };
   }, []);
 
   // Tile layer
@@ -157,26 +152,35 @@ export function MiniMap({ samples, allSamples, referenceSamples = [], currentInd
     if (config) { tileLayerRef.current = L.tileLayer(config.url, { attribution: config.attribution, maxZoom: 21 }).addTo(map); tileLayerRef.current.bringToBack(); }
   }, [mapStyle]);
 
-  // Draw reference line + race line
+  // Fit the view — its own effect so a range-slider drag (which rebuilds the
+  // heatmap) doesn't re-fit the map on every movement. Fits to the active lap
+  // plus any overlays (a cross-session snapshot can run slightly outside).
+  const hasSamples = samples.length > 0;
   useEffect(() => {
-    const map = mapRef.current; const pl = polylineLayerRef.current; const rl = referenceLayerRef.current; if (!map || !pl || !rl) return;
-    pl.clearLayers();
-    rl.clearLayers();
-    if (samples.length === 0) return;
-    // Fit to the active lap plus any overlays (a cross-session snapshot can run
-    // slightly outside the current lap's bounds).
+    const map = mapRef.current;
+    if (!map || !hasSamples) return;
     const fit = unionBounds(bounds, drawnOverlayLines);
     map.fitBounds(L.latLngBounds([[fit.minLat, fit.minLon], [fit.maxLat, fit.maxLon]]), { padding: [10, 10] });
-    // Draw reference line underneath as grey
-    if (referenceSamples.length > 0) {
-      const refCoords = referenceSamples.map(s => [s.lat, s.lon] as [number, number]);
-      rl.addLayer(L.polyline(refCoords, { color: 'hsl(220, 10%, 50%)', weight: 4, opacity: 0.6 }));
+  }, [bounds, drawnOverlayLines, hasSamples]);
+
+  // Draw reference line underneath as grey
+  useEffect(() => {
+    const rl = referenceLayerRef.current; if (!rl) return;
+    rl.clearLayers();
+    if (referenceSamples.length === 0) return;
+    const refCoords = referenceSamples.map(s => [s.lat, s.lon] as [number, number]);
+    rl.addLayer(L.polyline(refCoords, { color: 'hsl(220, 10%, 50%)', weight: 4, opacity: 0.6, interactive: false }));
+  }, [referenceSamples]);
+
+  // Speed-colored race line: one multi-part polyline per color bucket (~20
+  // canvas layers) instead of one layer per GPS segment.
+  useEffect(() => {
+    const pl = polylineLayerRef.current; if (!pl) return;
+    pl.clearLayers();
+    for (const bucket of buildHeatmapSegments(samples, minSpeed, maxSpeed)) {
+      pl.addLayer(L.polyline(bucket.parts, { color: bucket.color, weight: 3, opacity: 0.9, interactive: false }));
     }
-    for (let i = 0; i < samples.length - 1; i++) {
-      const color = getSpeedColor(samples[i].speedMph, minSpeed, maxSpeed);
-      pl.addLayer(L.polyline([[samples[i].lat, samples[i].lon], [samples[i + 1].lat, samples[i + 1].lon]], { color, weight: 3, opacity: 0.9 }));
-    }
-  }, [samples, referenceSamples, bounds, minSpeed, maxSpeed, drawnOverlayLines]);
+  }, [samples, minSpeed, maxSpeed]);
 
   // Overlay racing lines (other laps / snapshots) — solid distinct colors, drawn
   // beneath the active heatmap. Rebuilt only when the overlay set changes.
@@ -213,20 +217,20 @@ export function MiniMap({ samples, allSamples, referenceSamples = [], currentInd
     });
   }, [brakingZones, showBrakingZones, brakingZoneSettings?.color, brakingZoneSettings?.width]);
 
-  // Arrow marker
+  // Arrow marker (created once, moved/rotated per tick) + follow-pan.
+  // Re-center only when the marker leaves the middle half of the view, and
+  // without animation — an animated panTo issued per 16 ms tick perpetually
+  // interrupts itself and burns the frame budget on aborted pan animations.
   useEffect(() => {
     const map = mapRef.current; if (!map) return;
-    if (markerRef.current) { map.removeLayer(markerRef.current); markerRef.current = null; }
-    if (currentIndex < 0 || currentIndex >= samples.length) return;
+    markerRef.current = updatePositionMarker(map, markerRef.current, samples, currentIndex);
     const sample = samples[currentIndex];
-    let heading = sample.heading ?? 0;
-    if (heading === 0 && currentIndex > 0) {
-      const prev = samples[currentIndex - 1];
-      const dLat = sample.lat - prev.lat, dLon = sample.lon - prev.lon;
-      if (Math.abs(dLat) > 0.00001 || Math.abs(dLon) > 0.00001) heading = (Math.atan2(dLon, dLat) * 180 / Math.PI + 360) % 360;
+    if (!sample) return;
+    const p = map.latLngToContainerPoint([sample.lat, sample.lon]);
+    const size = map.getSize();
+    if (p.x < size.x * 0.25 || p.x > size.x * 0.75 || p.y < size.y * 0.25 || p.y > size.y * 0.75) {
+      map.panTo([sample.lat, sample.lon], { animate: false });
     }
-    markerRef.current = L.marker([sample.lat, sample.lon], { icon: createArrowIcon(heading) }).addTo(map);
-    map.panTo([sample.lat, sample.lon], { animate: true, duration: 0.15 });
   }, [currentIndex, samples]);
 
   const cycleMapStyle = () => setMapStyle(p => p === 'dark' ? 'satellite' : p === 'satellite' ? 'none' : 'dark');

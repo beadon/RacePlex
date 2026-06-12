@@ -12,7 +12,104 @@ import {
   applySmoothingToValues,
   detectSpeedGlitchIndices,
   interpolateGlitchSpeed,
+  numericExtent,
+  buildSeriesPoints,
 } from "./chartUtils";
+
+// ─── buildSeriesPoints (per-pixel min/max decimation) ───────────────────────
+
+describe("buildSeriesPoints", () => {
+  const linearFrac = (n: number) => (i: number) => (n <= 1 ? 0 : i / (n - 1));
+
+  it("passes a sparse series through 1:1", () => {
+    const values = [1, 2, 3, 4];
+    const pts = buildSeriesPoints(values, linearFrac(4), 500);
+    expect(pts).toHaveLength(4);
+    expect(pts.map((p) => p.value)).toEqual([1, 2, 3, 4]);
+    expect(pts.every((p) => !p.gap)).toBe(true);
+  });
+
+  it("marks gaps after null/undefined values in 1:1 mode", () => {
+    const values = [1, null, 3, undefined, 5];
+    const pts = buildSeriesPoints(values, linearFrac(5), 500);
+    expect(pts.map((p) => p.value)).toEqual([1, 3, 5]);
+    expect(pts.map((p) => p.gap)).toEqual([false, true, true]);
+  });
+
+  it("decimates a dense series to at most 2 points per pixel column", () => {
+    const n = 50_000;
+    const width = 800;
+    const values = Array.from({ length: n }, (_, i) => Math.sin(i / 50) * 100);
+    const pts = buildSeriesPoints(values, linearFrac(n), width);
+    expect(pts.length).toBeLessThanOrEqual(width * 2);
+    expect(pts.length).toBeGreaterThan(width / 2);
+  });
+
+  it("preserves the global min and max through decimation", () => {
+    const n = 20_000;
+    const values = Array.from({ length: n }, (_, i) => Math.sin(i / 7) * 50 + 50);
+    values[12_345] = 999; // a one-sample spike must survive
+    values[6_789] = -999;
+    const pts = buildSeriesPoints(values, linearFrac(n), 400);
+    const drawn = pts.map((p) => p.value);
+    expect(Math.max(...drawn)).toBe(999);
+    expect(Math.min(...drawn)).toBe(-999);
+  });
+
+  it("keeps column x positions in ascending order", () => {
+    const n = 10_000;
+    const values = Array.from({ length: n }, (_, i) => i % 17);
+    const pts = buildSeriesPoints(values, linearFrac(n), 300);
+    for (let i = 1; i < pts.length; i++) {
+      expect(pts[i].frac).toBeGreaterThanOrEqual(pts[i - 1].frac);
+    }
+  });
+
+  it("propagates a gap into decimated output", () => {
+    const n = 10_000;
+    const values: (number | null)[] = Array.from({ length: n }, (_, i) => i % 13);
+    // Kill a whole stretch (several pixel columns worth).
+    for (let i = 4_000; i < 5_000; i++) values[i] = null;
+    const pts = buildSeriesPoints(values, linearFrac(n), 300);
+    expect(pts.some((p) => p.gap)).toBe(true);
+  });
+
+  it("handles an all-null series", () => {
+    expect(buildSeriesPoints([null, null], linearFrac(2), 100)).toEqual([]);
+  });
+});
+
+// ─── numericExtent ──────────────────────────────────────────────────────────
+
+describe("numericExtent", () => {
+  it("finds min and max of a plain numeric array", () => {
+    expect(numericExtent([3, -1, 7, 0])).toEqual({ min: -1, max: 7 });
+  });
+
+  it("skips null, undefined, and NaN entries", () => {
+    expect(numericExtent([null, 5, undefined, NaN, 2])).toEqual({ min: 2, max: 5 });
+  });
+
+  it("returns null when nothing numeric remains", () => {
+    expect(numericExtent([])).toBeNull();
+    expect(numericExtent([null, undefined, NaN])).toBeNull();
+  });
+
+  it("handles a single-element array", () => {
+    expect(numericExtent([42])).toEqual({ min: 42, max: 42 });
+  });
+
+  it("does not stack-overflow on very large arrays (regression for Math.max(...arr))", () => {
+    // Math.max(...arr) throws RangeError above ~65k elements on mobile Safari
+    // (~125k in V8) — a 2-hour 20 Hz session viewed as All Laps exceeds that.
+    const big = new Array<number>(200_000);
+    for (let i = 0; i < big.length; i++) big[i] = Math.sin(i) * 100;
+    const extent = numericExtent(big);
+    expect(extent).not.toBeNull();
+    expect(extent!.min).toBeGreaterThanOrEqual(-100);
+    expect(extent!.max).toBeLessThanOrEqual(100);
+  });
+});
 
 // ─── computeSmoothingWindowSize ─────────────────────────────────────────────
 

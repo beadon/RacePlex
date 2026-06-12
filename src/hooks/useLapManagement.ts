@@ -137,16 +137,14 @@ export function useLapManagement(data: ParsedData | null, currentFileName: strin
     [visibleRange]
   );
 
-  const handleRangeChange = useCallback(
-    (newRange: [number, number]) => {
-      setVisibleRange(newRange);
-      const visibleLength = newRange[1] - newRange[0];
-      if (currentIndex > visibleLength) {
-        setCurrentIndex(visibleLength);
-      }
-    },
-    [currentIndex]
-  );
+  // Stable identity (functional update): this callback rides the memoized
+  // SessionContext value, and depending on currentIndex would change it —
+  // and with it the whole context — on every playback tick.
+  const handleRangeChange = useCallback((newRange: [number, number]) => {
+    setVisibleRange(newRange);
+    const visibleLength = newRange[1] - newRange[0];
+    setCurrentIndex((prev) => (prev > visibleLength ? visibleLength : prev));
+  }, []);
 
   // Format range label helper
   const formatRangeLabel = useCallback(

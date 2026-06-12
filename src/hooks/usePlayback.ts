@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { GpsSample } from '@/types/racing';
 
 interface UsePlaybackOptions {
@@ -19,6 +19,12 @@ interface UsePlaybackReturn {
 /**
  * Hook to manage playback of telemetry data at realistic speed.
  * Animates through samples based on their actual timestamps.
+ *
+ * The rAF loop reads its inputs through refs and is (re)subscribed only when
+ * playback starts/stops — never per index change. The old loop depended on
+ * `currentIndex`, so every tick cancelled and recreated the rAF and reset the
+ * timing anchors: playback advanced at most one frame per two rAF frames and
+ * constantly re-anchored its clock, so 60 Hz data could not play at real time.
  */
 export function usePlayback({
   samples,
@@ -27,17 +33,24 @@ export function usePlayback({
   visibleRange,
 }: UsePlaybackOptions): UsePlaybackReturn {
   const [isPlaying, setIsPlaying] = useState(false);
-  const animationRef = useRef<number | null>(null);
-  const lastFrameTimeRef = useRef<number>(0);
-  const startPlaybackIndexRef = useRef<number>(0);
-  const playbackStartTimeRef = useRef<number>(0);
-  const baseDataTimeRef = useRef<number>(0);
 
-  // Calculate average frame rate from sample timestamps
-  const averageFrameRate = useCallback((): number | null => {
+  // Latest inputs, readable from inside the loop without re-subscribing it.
+  const samplesRef = useRef(samples);
+  samplesRef.current = samples;
+  const onIndexChangeRef = useRef(onIndexChange);
+  onIndexChangeRef.current = onIndexChange;
+  const visibleRangeRef = useRef(visibleRange);
+  visibleRangeRef.current = visibleRange;
+  const currentIndexRef = useRef(currentIndex);
+  currentIndexRef.current = currentIndex;
+
+  // Calculate average frame rate from sample timestamps. Memoized on the
+  // sample window — the old useCallback(...)() IIFE memoized the *function*
+  // and re-diffed + re-sorted the whole window on every render (every
+  // playback tick) for a constant value.
+  const averageFrameRate = useMemo((): number | null => {
     if (samples.length < 2) return null;
 
-    // Calculate time differences between consecutive samples
     const timeDiffs: number[] = [];
     for (let i = 1; i < samples.length; i++) {
       const diff = samples[i].t - samples[i - 1].t;
@@ -45,126 +58,100 @@ export function usePlayback({
         timeDiffs.push(diff);
       }
     }
-
     if (timeDiffs.length === 0) return null;
 
-    // Calculate median to be robust against outliers
+    // Median to be robust against outliers
     timeDiffs.sort((a, b) => a - b);
     const medianInterval = timeDiffs[Math.floor(timeDiffs.length / 2)];
-
-    // Convert to Hz (frames per second)
     return 1000 / medianInterval;
-  }, [samples])();
-
-  // Stop playback when component unmounts or samples change significantly
-  useEffect(() => {
-    return () => {
-      if (animationRef.current !== null) {
-        cancelAnimationFrame(animationRef.current);
-        animationRef.current = null;
-      }
-    };
-  }, []);
+  }, [samples]);
 
   // Stop playback when visible range changes
   const rangeStart = visibleRange[0];
   const rangeEnd = visibleRange[1];
   useEffect(() => {
-    if (isPlaying) {
-      setIsPlaying(false);
-      if (animationRef.current !== null) {
-        cancelAnimationFrame(animationRef.current);
-        animationRef.current = null;
-      }
-    }
-    // Intentional: react only to range edits. Including `isPlaying` would
-    // fire the effect when playback starts and immediately stop it.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    setIsPlaying(false);
   }, [rangeStart, rangeEnd]);
 
-  const animate = useCallback((timestamp: number) => {
-    if (!isPlaying) return;
-
-    // Initialize on first frame
-    if (lastFrameTimeRef.current === 0) {
-      lastFrameTimeRef.current = timestamp;
-      playbackStartTimeRef.current = timestamp;
-      startPlaybackIndexRef.current = currentIndex;
-      baseDataTimeRef.current = samples[currentIndex]?.t ?? 0;
-      animationRef.current = requestAnimationFrame(animate);
-      return;
-    }
-
-    // Calculate how much real time has passed since playback started
-    const elapsedRealTime = timestamp - playbackStartTimeRef.current;
-
-    // Find the sample that matches this elapsed time
-    const targetDataTime = baseDataTimeRef.current + elapsedRealTime;
-
-    // Find the index of the sample closest to this time
-    let targetIndex = startPlaybackIndexRef.current;
-    const maxIndex = visibleRange[1] - visibleRange[0];
-
-    for (let i = startPlaybackIndexRef.current; i <= maxIndex; i++) {
-      if (samples[i].t >= targetDataTime) {
-        targetIndex = i;
-        break;
-      }
-      targetIndex = i;
-    }
-
-    // Check if we've reached the end
-    if (targetIndex >= maxIndex) {
-      onIndexChange(maxIndex);
-      setIsPlaying(false);
-      animationRef.current = null;
-      lastFrameTimeRef.current = 0;
-      return;
-    }
-
-    // Update index if it changed
-    if (targetIndex !== currentIndex) {
-      onIndexChange(targetIndex);
-    }
-
-    lastFrameTimeRef.current = timestamp;
-    animationRef.current = requestAnimationFrame(animate);
-  }, [isPlaying, currentIndex, samples, onIndexChange, visibleRange]);
-
-  // Start animation loop when playing
+  // The playback loop. Subscribed once per play; all per-tick state lives in
+  // locals/refs. An external scrub mid-playback (currentIndex changing to a
+  // value the loop didn't emit) re-anchors the clock at the new position.
   useEffect(() => {
-    if (isPlaying && samples.length > 0) {
-      lastFrameTimeRef.current = 0; // Reset to trigger initialization
-      animationRef.current = requestAnimationFrame(animate);
+    if (!isPlaying) return;
+    if (samplesRef.current.length === 0) {
+      setIsPlaying(false);
+      return;
     }
 
-    return () => {
-      if (animationRef.current !== null) {
-        cancelAnimationFrame(animationRef.current);
-        animationRef.current = null;
+    let raf: number;
+    let startTimestamp = 0;
+    let baseDataTime = 0;
+    let emittedIndex = currentIndexRef.current;
+
+    const step = (timestamp: number) => {
+      const samples = samplesRef.current;
+      const maxIndex = Math.min(
+        samples.length - 1,
+        visibleRangeRef.current[1] - visibleRangeRef.current[0],
+      );
+      if (maxIndex < 0) {
+        setIsPlaying(false);
+        return;
       }
+
+      // First frame, or the user scrubbed while playing → anchor the clock
+      // at the current position.
+      if (startTimestamp === 0 || currentIndexRef.current !== emittedIndex) {
+        emittedIndex = Math.min(currentIndexRef.current, maxIndex);
+        startTimestamp = timestamp;
+        baseDataTime = samples[emittedIndex]?.t ?? 0;
+        raf = requestAnimationFrame(step);
+        return;
+      }
+
+      // Advance to the sample matching the elapsed real time.
+      const targetDataTime = baseDataTime + (timestamp - startTimestamp);
+      let idx = emittedIndex;
+      while (idx < maxIndex && samples[idx + 1] && samples[idx + 1].t <= targetDataTime) {
+        idx++;
+      }
+
+      if (idx >= maxIndex) {
+        emittedIndex = maxIndex;
+        currentIndexRef.current = maxIndex;
+        onIndexChangeRef.current(maxIndex);
+        setIsPlaying(false);
+        return;
+      }
+
+      if (idx !== emittedIndex) {
+        emittedIndex = idx;
+        currentIndexRef.current = idx;
+        onIndexChangeRef.current(idx);
+      }
+
+      raf = requestAnimationFrame(step);
     };
-  }, [isPlaying, animate, samples.length]);
+
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [isPlaying]);
 
   const play = useCallback(() => {
-    if (samples.length === 0) return;
+    if (samplesRef.current.length === 0) return;
 
     // If at the end, restart from beginning
-    const maxIndex = visibleRange[1] - visibleRange[0];
-    if (currentIndex >= maxIndex) {
-      onIndexChange(0);
+    const maxIndex = visibleRangeRef.current[1] - visibleRangeRef.current[0];
+    if (currentIndexRef.current >= maxIndex) {
+      currentIndexRef.current = 0;
+      onIndexChangeRef.current(0);
     }
 
     setIsPlaying(true);
-  }, [samples.length, currentIndex, visibleRange, onIndexChange]);
+  }, []);
 
   const pause = useCallback(() => {
     setIsPlaying(false);
-    if (animationRef.current !== null) {
-      cancelAnimationFrame(animationRef.current);
-      animationRef.current = null;
-    }
-    lastFrameTimeRef.current = 0;
   }, []);
 
   const toggle = useCallback(() => {

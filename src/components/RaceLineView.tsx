@@ -3,13 +3,16 @@ import L from 'leaflet';
 import { GpsSample, Course, courseHasSectors, ParserStats } from '@/types/racing';
 import { findSpeedEvents, SpeedEvent } from '@/lib/speedEvents';
 import { computeHeatmapSpeedBoundsMph } from '@/lib/speedBounds';
+import { buildHeatmapSegments } from '@/lib/speedHeatmap';
 import { formatLapTime } from '@/lib/lapCalculation';
 import { detectBrakingZones, BrakingZoneConfig } from '@/lib/brakingZones';
 import { unionBounds, cropOverlayLinesToWindow, type OverlayLine } from '@/lib/lapOverlays';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { useWaybackImagery } from '@/hooks/useWaybackImagery';
 import { DEFAULT_SATELLITE_TILE_URL } from '@/lib/satelliteImagery';
+import { updatePositionMarker } from '@/components/map/positionArrowMarker';
 import { useSettingsContext } from '@/contexts/SettingsContext';
+import { usePlaybackContext } from '@/contexts/PlaybackContext';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Moon, Satellite, Square, WifiOff, CloudSun, FileText, X, Crosshair, List, ChevronDown, ChevronUp, CalendarClock } from 'lucide-react';
@@ -19,6 +22,8 @@ import { WeatherStation, WeatherData } from '@/lib/weatherService';
 import 'leaflet/dist/leaflet.css';
 
 type MapStyle = 'dark' | 'satellite' | 'none';
+
+const NO_OVERLAY_LINES: OverlayLine[] = [];
 
 const mapStyleConfig = {
   dark: {
@@ -36,7 +41,6 @@ interface RaceLineViewProps {
   samples: GpsSample[];
   allSamples?: GpsSample[]; // Full session samples for computing stats (not affected by range slider)
   referenceSamples?: GpsSample[];
-  currentIndex: number;
   course: Course | null;
   bounds: {
     minLat: number;
@@ -74,55 +78,6 @@ interface RaceLineViewProps {
   onToggleOverlayLegend?: () => void;
 }
 
-// Get speed color (green -> yellow -> orange -> red)
-function getSpeedColor(speedMph: number, minSpeed: number, maxSpeed: number): string {
-  const range = maxSpeed - minSpeed;
-  const ratio = range > 0 ? Math.min(Math.max((speedMph - minSpeed) / range, 0), 1) : 0.5;
-  
-  if (ratio < 0.33) {
-    const t = ratio / 0.33;
-    const r = Math.round(76 + t * (230 - 76));
-    const g = Math.round(175 + t * (180 - 175));
-    const b = Math.round(80 - t * 80);
-    return `rgb(${r},${g},${b})`;
-  } else if (ratio < 0.66) {
-    const t = (ratio - 0.33) / 0.33;
-    const r = Math.round(230 + t * (240 - 230));
-    const g = Math.round(180 - t * 80);
-    const b = Math.round(0 + t * 50);
-    return `rgb(${r},${g},${b})`;
-  } else {
-    const t = (ratio - 0.66) / 0.34;
-    const r = Math.round(240 - t * 40);
-    const g = Math.round(100 - t * 60);
-    const b = Math.round(50 - t * 10);
-    return `rgb(${r},${g},${b})`;
-  }
-}
-
-// Create SVG triangle/arrow marker pointing up (0 degrees)
-function createArrowIcon(heading: number): L.DivIcon {
-  // SVG arrow pointing up, we rotate it via CSS
-  const svg = `
-    <svg width="20" height="20" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg" 
-         style="transform: rotate(${heading}deg); transform-origin: center;">
-      <polygon 
-        points="10,2 18,18 10,14 2,18" 
-        fill="hsl(180, 70%, 55%)" 
-        stroke="hsl(220, 20%, 10%)" 
-        stroke-width="1.5"
-      />
-    </svg>
-  `;
-  
-  return L.divIcon({
-    html: svg,
-    className: 'arrow-marker',
-    iconSize: [20, 20],
-    iconAnchor: [10, 10], // Center of the icon
-  });
-}
-
 // Create speed event marker (peak or valley)
 function createSpeedEventIcon(event: SpeedEvent, useKph: boolean): L.DivIcon {
   const displaySpeed = useKph ? (event.speed * 1.60934).toFixed(1) : event.speed.toFixed(1);
@@ -153,16 +108,21 @@ function createSpeedEventIcon(event: SpeedEvent, useKph: boolean): L.DivIcon {
   });
 }
 
-export function RaceLineView({ samples, allSamples, referenceSamples = [], currentIndex, course, bounds, paceDiff = null, paceDiffLabel = 'best', deltaTopSpeed = null, deltaMinSpeed = null, referenceLapNumber = null, lapToFastestDelta = null, showOverlays = true, lapTimeMs = null, refAvgTopSpeed = null, refAvgMinSpeed = null, sessionGpsPoint, sessionStartDate, cachedWeatherStation, onWeatherStationResolved, isAllLaps, parserStats, overlayLines = [], rangeStart = 0, onRemoveOverlay, alignOverlays, onToggleAlignOverlays, showOverlayLegend = true, onToggleOverlayLegend }: RaceLineViewProps) {
+export function RaceLineView({ samples, allSamples, referenceSamples = [], course, bounds, paceDiff = null, paceDiffLabel = 'best', deltaTopSpeed = null, deltaMinSpeed = null, referenceLapNumber = null, lapToFastestDelta = null, showOverlays = true, lapTimeMs = null, refAvgTopSpeed = null, refAvgMinSpeed = null, sessionGpsPoint, sessionStartDate, cachedWeatherStation, onWeatherStationResolved, isAllLaps, parserStats, overlayLines = [], rangeStart = 0, onRemoveOverlay, alignOverlays, onToggleAlignOverlays, showOverlayLegend = true, onToggleOverlayLegend }: RaceLineViewProps) {
   const { useKph, brakingZoneSettings } = useSettingsContext();
+  const { currentIndex } = usePlaybackContext();
   // Use allSamples for statistics if provided, otherwise fall back to samples
   const samplesForStats = allSamples ?? samples;
 
   // Crop overlay racing lines to the same playback window as the active lap, so
   // cropping the range shrinks them on the map exactly like the heatmap line
   // (`samples` is already the cropped window; `samplesForStats` is the full lap).
+  // Stable empty reference when no overlays — the fitBounds effect keys on this,
+  // and a fresh [] per range tick would re-fit the map on every slider movement.
   const drawnOverlayLines = useMemo(
-    () => cropOverlayLinesToWindow(overlayLines, samplesForStats, rangeStart, rangeStart + samples.length - 1),
+    () => (overlayLines.length === 0
+      ? NO_OVERLAY_LINES
+      : cropOverlayLinesToWindow(overlayLines, samplesForStats, rangeStart, rangeStart + samples.length - 1)),
     [overlayLines, samplesForStats, rangeStart, samples.length],
   );
   const containerRef = useRef<HTMLDivElement>(null);
@@ -311,6 +271,9 @@ export function RaceLineView({ samples, allSamples, referenceSamples = [], curre
     const map = L.map(containerRef.current, {
       zoomControl: false,
       attributionControl: true,
+      // Canvas renderer: vector layers (heatmap, overlays, braking zones)
+      // share one <canvas> instead of one SVG DOM node per layer.
+      preferCanvas: true,
     }).setView([0, 0], 16);
 
     // Add initial tile layer (dark)
@@ -351,6 +314,7 @@ export function RaceLineView({ samples, allSamples, referenceSamples = [], curre
       brakingZonesLayerRef.current = null;
       speedEventsLayerRef.current = null;
       tileLayerRef.current = null;
+      markerRef.current = null;
     };
   }, []);
 
@@ -378,48 +342,53 @@ export function RaceLineView({ samples, allSamples, referenceSamples = [], curre
     }
   }, [mapStyle, satelliteTileUrl]);
 
-  // Update bounds and race line when samples change
+  // Fit the view — its own effect so a range-slider drag (which rebuilds the
+  // heatmap) doesn't re-fit the map on every movement.
+  const hasSamples = samples.length > 0;
   useEffect(() => {
     const map = mapRef.current;
-    const polylineLayer = polylineLayerRef.current;
-    const referenceLayer = referenceLayerRef.current;
-    if (!map || !polylineLayer || !referenceLayer) return;
+    if (!map || !hasSamples) return;
 
-    // Clear existing polylines
-    polylineLayer.clearLayers();
-    referenceLayer.clearLayers();
-
-    if (samples.length === 0) return;
-
-    // Fit bounds — include overlay extents so off-lap overlays aren't clipped
+    // Include overlay extents so off-lap overlays aren't clipped
     const fit = unionBounds(bounds, drawnOverlayLines);
     const latLngBounds = L.latLngBounds([
       [fit.minLat, fit.minLon],
       [fit.maxLat, fit.maxLon]
     ]);
     map.fitBounds(latLngBounds, { padding: [20, 20] });
+  }, [bounds, drawnOverlayLines, hasSamples]);
 
-    // Draw reference line first (underneath) as grey
-    if (referenceSamples.length > 0) {
-      const refCoords = referenceSamples.map(s => [s.lat, s.lon] as [number, number]);
-      const refPolyline = L.polyline(refCoords, { 
-        color: 'hsl(220, 10%, 50%)', 
-        weight: 4, 
-        opacity: 0.6 
-      });
-      referenceLayer.addLayer(refPolyline);
-    }
+  // Draw the reference line (underneath) as grey
+  useEffect(() => {
+    const referenceLayer = referenceLayerRef.current;
+    if (!referenceLayer) return;
+    referenceLayer.clearLayers();
+    if (referenceSamples.length === 0) return;
+    const refCoords = referenceSamples.map(s => [s.lat, s.lon] as [number, number]);
+    referenceLayer.addLayer(L.polyline(refCoords, {
+      color: 'hsl(220, 10%, 50%)',
+      weight: 4,
+      opacity: 0.6,
+      interactive: false,
+    }));
+  }, [referenceSamples]);
 
-    // Draw race line segments with speed coloring
-    for (let i = 0; i < samples.length - 1; i++) {
-      const color = getSpeedColor(samples[i].speedMph, minSpeed, maxSpeed);
-      const polyline = L.polyline(
-        [[samples[i].lat, samples[i].lon], [samples[i + 1].lat, samples[i + 1].lon]],
-        { color, weight: 4, opacity: 0.9 }
-      );
-      polylineLayer.addLayer(polyline);
+  // Draw the speed-colored race line: one multi-part polyline per color bucket
+  // (~20 canvas layers) instead of one layer per GPS segment, which emitted an
+  // SVG <path> per sample pair and froze the tab on full-session ranges.
+  useEffect(() => {
+    const polylineLayer = polylineLayerRef.current;
+    if (!polylineLayer) return;
+    polylineLayer.clearLayers();
+    for (const bucket of buildHeatmapSegments(samples, minSpeed, maxSpeed)) {
+      polylineLayer.addLayer(L.polyline(bucket.parts, {
+        color: bucket.color,
+        weight: 4,
+        opacity: 0.9,
+        interactive: false,
+      }));
     }
-  }, [samples, referenceSamples, bounds, minSpeed, maxSpeed, drawnOverlayLines]);
+  }, [samples, minSpeed, maxSpeed]);
 
   // Draw multi-lap overlay lines (other laps / snapshots) — solid colors,
   // beneath the current lap. Rebuilt only when the overlay set changes.
@@ -521,38 +490,11 @@ export function RaceLineView({ samples, allSamples, referenceSamples = [], curre
   }, [course]);
 
 
-  // Update current position marker
+  // Update current position marker (created once, moved/rotated per tick)
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
-
-    // Remove existing marker
-    if (markerRef.current) {
-      map.removeLayer(markerRef.current);
-      markerRef.current = null;
-    }
-
-    if (currentIndex < 0 || currentIndex >= samples.length) return;
-
-    const sample = samples[currentIndex];
-    
-    // Get heading - use the sample's heading, or calculate from previous sample
-    let heading = sample.heading ?? 0;
-    
-    // If no heading data, try to calculate from movement direction
-    if (heading === 0 && currentIndex > 0) {
-      const prevSample = samples[currentIndex - 1];
-      const dLat = sample.lat - prevSample.lat;
-      const dLon = sample.lon - prevSample.lon;
-      if (Math.abs(dLat) > 0.00001 || Math.abs(dLon) > 0.00001) {
-        heading = (Math.atan2(dLon, dLat) * 180 / Math.PI + 360) % 360;
-      }
-    }
-    
-    // Create arrow marker with heading
-    markerRef.current = L.marker([sample.lat, sample.lon], {
-      icon: createArrowIcon(heading),
-    }).addTo(map);
+    markerRef.current = updatePositionMarker(map, markerRef.current, samples, currentIndex);
   }, [currentIndex, samples]);
 
   if (samples.length === 0) {

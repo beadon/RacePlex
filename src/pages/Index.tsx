@@ -2,12 +2,16 @@ import { useCallback, useEffect, useMemo, useState, lazy, Suspense } from "react
 import { Gauge, Map, ListOrdered, BarChart3, FolderOpen, Play, Pause, Eye, EyeOff, FlaskConical, AlertCircle } from "lucide-react";
 import { LandingPage } from "@/components/LandingPage";
 import { TrackEditor } from "@/components/TrackEditor"; // still used in compact header
-import { RaceLineTab } from "@/components/tabs/RaceLineTab";
 import { LapTimesTab } from "@/components/tabs/LapTimesTab";
 // Heavy tabs lazy-loaded so the initial bundle doesn't carry their deps.
-// GraphView pulls in the multi-series canvas chart + InfoBox + MiniMap; Labs is
-// behind a settings flag and almost never opened. Both load on first user click
-// of their respective tab.
+// RaceLine pulls in Leaflet (vendor-leaflet, ~150 kB) + the telemetry chart —
+// lazy keeps the whole mapping stack off the landing page; it loads the moment
+// a session is opened (the default tab). GraphView pulls in the multi-series
+// canvas chart + InfoBox + MiniMap; Labs is behind a settings flag and almost
+// never opened. All load on first render of their respective tab.
+const RaceLineTab = lazy(() =>
+  import("@/components/tabs/RaceLineTab").then((m) => ({ default: m.RaceLineTab })),
+);
 const GraphViewTab = lazy(() =>
   import("@/components/tabs/GraphViewTab").then((m) => ({ default: m.GraphViewTab })),
 );
@@ -56,6 +60,7 @@ import { useDataLoader } from "@/hooks/useDataLoader";
 import { SettingsProvider } from "@/contexts/SettingsContext";
 import { DeviceProvider } from "@/contexts/DeviceContext";
 import { SessionProvider, type SessionContextValue } from "@/contexts/SessionContext";
+import { PlaybackProvider, type PlaybackContextValue } from "@/contexts/PlaybackContext";
 import { snapshotLapSamples } from "@/lib/lapSnapshot";
 import type { PluginSnapshot } from "@/plugins/panels";
 
@@ -342,17 +347,25 @@ export default function Index() {
     };
   }, [snapshots.activeSnapshotId, snapshots.snapshots]);
 
+  // ── PlaybackContext: just the cursor, updated at playback rate ──────────
+  // Kept out of the big session context so a tick only re-renders the
+  // components that actually track the cursor (charts, maps, video player).
+  const playbackContextValue = useMemo<PlaybackContextValue>(
+    () => ({ currentIndex, currentSample }),
+    [currentIndex, currentSample],
+  );
+
   // ── SessionContext: everything the three main view tabs need ────────────
   // Tabs read this via `useSessionContext()` instead of receiving 25+ props.
+  // Must stay referentially stable during playback — the cursor lives in
+  // PlaybackContext, and every dep here must not churn per tick.
   const sessionContextValue = useMemo<SessionContextValue>(() => ({
     data,
     visibleSamples,
     filteredSamples,
     allSamples: data?.samples ?? [],
     referenceSamples,
-    currentSample,
     fieldMappings,
-    currentIndex,
     visibleRange,
     minRange,
     course: selectedCourse,
@@ -418,8 +431,8 @@ export default function Index() {
     onOpenGarage: fileManager.open,
     formatRangeLabel,
   }), [
-    data, visibleSamples, filteredSamples, referenceSamples, currentSample, fieldMappings,
-    currentIndex, visibleRange, minRange,
+    data, visibleSamples, filteredSamples, referenceSamples, fieldMappings,
+    visibleRange, minRange,
     selectedCourse, filteredBounds,
     laps, selectedLapNumber, selectedLapTimeMs, referenceLapNumber, isAllLaps,
     hasReference, paceDiff, paceDiffLabel, slicedPaceData, slicedReferenceSpeedData,
@@ -524,6 +537,7 @@ export default function Index() {
     <DeviceProvider>
     <SettingsProvider value={settingsContextValue}>
     <SessionProvider value={sessionContextValue}>
+    <PlaybackProvider value={playbackContextValue}>
     <div className="h-screen bg-background flex flex-col overflow-hidden">
       <header className="border-b border-border px-4 py-2 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-3">
@@ -603,9 +617,9 @@ export default function Index() {
 
 
         <div className="flex-1 min-h-0 overflow-hidden">
-          {topPanelView === "raceline" && <RaceLineTab showOverlays={showOverlays} />}
           {topPanelView === "laptable" && <LapTimesTab />}
           <Suspense fallback={null}>
+            {topPanelView === "raceline" && <RaceLineTab showOverlays={showOverlays} />}
             {topPanelView === "graphview" && <GraphViewTab />}
             {topPanelView === "labs" && showLabs && <LabsTab />}
             {topPanelView === "coach" && showCoach && <CoachTab />}
@@ -633,6 +647,7 @@ export default function Index() {
         onDismiss={snapshots.dismissPrompt}
       />
     </div>
+    </PlaybackProvider>
     </SessionProvider>
     </SettingsProvider>
     </DeviceProvider>

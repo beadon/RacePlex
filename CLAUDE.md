@@ -126,7 +126,13 @@ src/
 │   ├── *Storage.ts        # IDB stores: file, kart(compat), vehicle, engine, template, note, setup,
 │   │                      #   video, videoFile, graphPrefs; trackStorage = localStorage (user tracks)
 │   ├── (racing math)      # brakingZones, speedEvents, speedBounds, gforceCalculation, referenceUtils, trackUtils
-│   ├── (charts/video)     # chartUtils, chartColors, videoExport, overlayCanvasRenderer
+│   ├── (charts/video)     # chartUtils (+ buildSeriesPoints per-pixel min/max decimation),
+│   │                      #   canvas2d (prepare2dCanvas conditional buffer resize + strokeSeriesPath),
+│   │                      #   chartColors, chartAxis, videoExport, overlayCanvasRenderer
+│   ├── speedHeatmap.ts    # ★ Pure bucketed heatmap geometry: speed→color + segments grouped into ~20
+│   │                      #   per-color multi-polylines (maps render these via Leaflet's canvas renderer —
+│   │                      #   never one layer per GPS segment)
+│   ├── mapMarker.ts       # Pure heading math for the maps' position arrow (marker is moved/rotated per tick, not recreated)
 │   ├── satelliteImagery.ts # ★ Pure Esri Wayback parsing: waybackconfig.json → date-sorted release list + Leaflet tile URLs (online-only satellite imagery-date picker; useWaybackImagery hook lazy-loads it)
 │   ├── ble/               # Web Bluetooth DovesLapTimer protocol, split per-concern (see BLE Integration);
 │   │                      #   + bleDatalogger.ts (legacy barrel), deviceTrackSync.ts, deviceSettingsSchema.ts
@@ -148,7 +154,13 @@ src/
 │   ├── cloud-sync/         # ★ First-party plugin: Supabase file + garage sync — see docs/backend.md
 │   └── coaching/           # Gitignored slot for the AI coach (npm pkg in production)
 ├── types/racing.ts        # ★ Core types: GpsSample, ParsedData, Lap, Course, Track, …
-├── contexts/              # SettingsContext, DeviceContext (BLE), AuthContext (admin)
+├── contexts/              # SettingsContext, SessionContext, PlaybackContext, DeviceContext (BLE), AuthContext (admin)
+│                          # ★ PlaybackContext carries ONLY the playback cursor (currentIndex/currentSample).
+│                          #   It updates at playback rate, so it's split from SessionContext to keep the
+│                          #   memo'd tabs quiet during playback. Never put the cursor — or anything that
+│                          #   churns per tick — into SessionContext; its value must stay referentially
+│                          #   stable while playing (useVideoSync memoizes state/actions for this reason).
+│                          #   Charts draw on two stacked canvases: a static layer + a cursor overlay.
 └── integrations/supabase/ # Auto-generated — DO NOT EDIT
 ```
 
@@ -916,7 +928,9 @@ re-merges it into the main chunk.
 
 **Lazy-loaded (off the initial path) — loaded on first use:**
 - Routes: `Login`, `Admin`, `Register`, `Privacy` (`App.tsx`, wrapped in `<Suspense>`)
-- Pro view: `GraphViewTab` and `LabsTab` (`Index.tsx`)
+- View tabs: `RaceLineTab` (the Simple tab — keeps `vendor-leaflet` + the
+  telemetry chart off the landing page; loads the moment a session opens),
+  `GraphViewTab`, and `LabsTab` (`Index.tsx`)
 - `FileManagerDrawer` (slide-out drawer, `Index.tsx`)
 - `DataloggerDownload` (BLE entry point; keeps `lib/ble/*` out of initial bundle — `FileImport.tsx`, `drawer/FilesTab.tsx`)
 - `VisualEditor` (Leaflet drawing tools; `TrackEditor.tsx`, `track-editor/AddCourseDialog.tsx`, `admin/CoursesTab.tsx`). The shared map editor for **all** track managers — start/finish + sector lines (drag-to-place, auto-saved on release) and the course-outline Draw/Generate tools (auto-saved on each edit; no Done/Close button). There is no manual coordinate-entry mode — visual is the only editor.
@@ -925,13 +939,21 @@ re-merges it into the main chunk.
 `vendor-query`, `vendor-leaflet`, `vendor-supabase`, `vendor-radix`. These cache
 independently across deploys so app-only changes don't re-download vendor code.
 
+**`vendor-supabase` is fully off the eager graph.** The Supabase client's only
+static importers are lazy/flag-gated modules: `contexts/authBackend.ts` (the
+auth bootstrap, dynamically imported by `AuthContext` **only when
+`VITE_ENABLE_ADMIN` or `VITE_ENABLE_CLOUD` is on** — flag-off builds never
+fetch it at all), the lazy auth/admin pages, and cloud-sync's lazy panels.
+Everything that rides the eager graph (`SubmitTrackDialog`, `PricingCards`,
+`useStripePrices`/`useSubscription`) reaches `billingClient`/the client via
+dynamic import at the call site. Don't add a static
+`@/integrations/supabase/client` (or `lib/billingClient`) import to anything
+eagerly reachable from `Index.tsx`/`LandingPage` — it re-merges 172 kB of
+Supabase into the offline-first landing payload.
+
 > Lazy components must be rendered inside a `<Suspense>` boundary. Use
 > `lazy(() => import('…').then((m) => ({ default: m.Named })))` for the
 > named-export components in this codebase.
->
-> **Known follow-up:** `vendor-supabase` is still on the initial path because
-> `AuthProvider` (`App.tsx`) and `SubmitTrackDialog` import the client eagerly.
-> Deferring it would require gating the auth bootstrap on `VITE_ENABLE_ADMIN`.
 
 ---
 

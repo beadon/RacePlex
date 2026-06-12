@@ -2,7 +2,6 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { toast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
 import { Send, ShieldCheck, ArrowRight, ArrowLeft, Loader2, CheckCircle2, AlertTriangle, Check } from 'lucide-react';
 import { loadTracks, loadDefaultTracks } from '@/lib/trackStorage';
 import { buildSubmissionPlan, type SubmissionPlan, type SubmissionCourse } from '@/lib/trackSubmission';
@@ -143,6 +142,10 @@ export function SubmitTrackDialog({ trigger, onSubmitted }: SubmitTrackDialogPro
         layout_data: c.layout,
       }));
 
+      // Dynamic import: submitting is online-only and rare, so the Supabase
+      // client stays out of the initial bundle (this dialog rides the eager
+      // TrackEditor on the landing page).
+      const { supabase } = await import('@/integrations/supabase/client');
       const { data, error } = await supabase.functions.invoke('submit-track', {
         body: { submissions, turnstile_token: turnstileToken },
       });

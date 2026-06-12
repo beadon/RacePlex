@@ -1,8 +1,10 @@
 import { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { X } from 'lucide-react';
 import { GpsSample } from '@/types/racing';
-import { G_FORCE_FIELDS, applySmoothingToValues, computeSmoothingWindowSize, detectSpeedGlitchIndices, interpolateGlitchSpeed } from '@/lib/chartUtils';
+import { G_FORCE_FIELDS, applySmoothingToValues, buildSeriesPoints, computeSmoothingWindowSize, detectSpeedGlitchIndices, interpolateGlitchSpeed, numericExtent } from '@/lib/chartUtils';
+import { prepare2dCanvas, strokeSeriesPath } from '@/lib/canvas2d';
 import { useSettingsContext } from '@/contexts/SettingsContext';
+import { usePlaybackContext } from '@/contexts/PlaybackContext';
 import { getChartColors } from '@/lib/chartColors';
 import { buildChartAxis } from '@/lib/chartAxis';
 import { isDistanceUnitChannel, distanceChannelValue, distanceChannelUnit } from '@/lib/units';
@@ -17,7 +19,6 @@ export const SINGLE_SERIES_DEFAULT_HEIGHT = 180;
 interface SingleSeriesChartProps {
   samples: GpsSample[];
   seriesKey: string; // "speed", "__pace__", "__braking_g__", or field name from extraFields
-  currentIndex: number;
   onScrub: (index: number) => void;
   color: string;
   label: string;
@@ -37,19 +38,21 @@ interface SingleSeriesChartProps {
 }
 
 export function SingleSeriesChart({
-  samples, seriesKey, currentIndex, onScrub,
+  samples, seriesKey, onScrub,
   color, label, onDelete,
   referenceValues = null, brakingGValues,
   allSamples, rangeStart, overlayLines = [],
   height, onHeightChange,
 }: SingleSeriesChartProps) {
   const { useKph, useMetricDistance, gForceSmoothing, gForceSmoothingStrength, darkMode, chartXAxis, brakingZoneSettings } = useSettingsContext();
+  const { currentIndex } = usePlaybackContext();
   const chartColors = useMemo(() => getChartColors(darkMode), [darkMode]);
   const axis = useMemo(
     () => buildChartAxis(samples, chartXAxis, { useMetricDistance, fullSamples: allSamples, rangeStart }),
     [samples, chartXAxis, useMetricDistance, allSamples, rangeStart],
   );
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const cursorCanvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   const [isDragging, setIsDragging] = useState(false);
@@ -162,21 +165,19 @@ export function SingleSeriesChart({
     return () => ro.disconnect();
   }, []);
 
-  // Draw chart
+  // Draw the static layer: grid, axes, and every data line. The playback
+  // cursor lives on a second canvas (effect below), so a cursor tick doesn't
+  // re-stroke the full-resolution paths — must NOT depend on currentIndex.
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas || dimensions.width === 0 || dimensions.height === 0 || samples.length === 0) return;
-    const ctx = canvas.getContext('2d');
+    const ctx = prepare2dCanvas(canvas, dimensions.width, dimensions.height, window.devicePixelRatio || 1);
     if (!ctx) return;
-
-    const dpr = window.devicePixelRatio || 1;
-    canvas.width = dimensions.width * dpr;
-    canvas.height = dimensions.height * dpr;
-    ctx.scale(dpr, dpr);
 
     const padding = { left: 55, right: 15, top: 30, bottom: 25 };
     const chartWidth = dimensions.width - padding.left - padding.right;
     const chartHeight = dimensions.height - padding.top - padding.bottom;
+    const toX = (frac: number) => padding.left + frac * chartWidth;
 
     // Clear
     ctx.fillStyle = chartColors.background;
@@ -197,26 +198,25 @@ export function SingleSeriesChart({
     }
 
     // Compute min/max (include reference values in range)
-    const numericValues = values.filter((v): v is number => v !== undefined);
-    if (numericValues.length === 0) return;
-    let minVal = Math.min(...numericValues);
-    let maxVal = Math.max(...numericValues);
+    const mainExtent = numericExtent(values);
+    if (!mainExtent) return;
+    let { min: minVal, max: maxVal } = mainExtent;
 
     // Expand range to fit reference values
     if (refValues && !isPace) {
-      const refNums = refValues.filter((v): v is number => v !== null);
-      if (refNums.length > 0) {
-        minVal = Math.min(minVal, ...refNums);
-        maxVal = Math.max(maxVal, ...refNums);
+      const refExtent = numericExtent(refValues);
+      if (refExtent) {
+        minVal = Math.min(minVal, refExtent.min);
+        maxVal = Math.max(maxVal, refExtent.max);
       }
     }
 
     // Expand range to fit overlay lap values too
     for (const overlay of overlaySeries) {
-      const nums = overlay.values.filter((v): v is number => v !== null);
-      if (nums.length > 0) {
-        minVal = Math.min(minVal, ...nums);
-        maxVal = Math.max(maxVal, ...nums);
+      const overlayExtent = numericExtent(overlay.values);
+      if (overlayExtent) {
+        minVal = Math.min(minVal, overlayExtent.min);
+        maxVal = Math.max(maxVal, overlayExtent.max);
       }
     }
 
@@ -229,39 +229,22 @@ export function SingleSeriesChart({
     }
     const range = maxVal - minVal || 1;
 
+    const toY = (v: number) => padding.top + (1 - (v - minVal) / range) * chartHeight;
+
     // Draw reference line (behind main line)
     if (refValues && !isPace) {
-      ctx.beginPath();
       ctx.strokeStyle = chartColors.refLine;
       ctx.lineWidth = 1.5;
       ctx.setLineDash([4, 3]);
-      let refDrawing = false;
-      for (let i = 0; i < samples.length; i++) {
-        const rv = refValues[i];
-        if (rv === null || rv === undefined) { refDrawing = false; continue; }
-        const x = padding.left + axis.fracAt(i) * chartWidth;
-        const y = padding.top + (1 - (rv - minVal) / range) * chartHeight;
-        if (!refDrawing) { ctx.moveTo(x, y); refDrawing = true; }
-        else { ctx.lineTo(x, y); }
-      }
-      ctx.stroke();
+      strokeSeriesPath(ctx, buildSeriesPoints(refValues, axis.fracAt, chartWidth), toX, toY);
       ctx.setLineDash([]);
     }
 
     // Draw overlay lap lines (behind the main line — current lap stays on top)
     for (const overlay of overlaySeries) {
-      ctx.beginPath();
       ctx.strokeStyle = overlay.color;
       ctx.lineWidth = 1.5;
-      let drawing = false;
-      for (let i = 0; i < samples.length; i++) {
-        const v = overlay.values[i];
-        if (v === null || v === undefined) { drawing = false; continue; }
-        const x = padding.left + axis.fracAt(i) * chartWidth;
-        const y = padding.top + (1 - (v - minVal) / range) * chartHeight;
-        if (!drawing) { ctx.moveTo(x, y); drawing = true; } else { ctx.lineTo(x, y); }
-      }
-      ctx.stroke();
+      strokeSeriesPath(ctx, buildSeriesPoints(overlay.values, axis.fracAt, chartWidth), toX, toY);
     }
 
     // Draw zero line for pace and braking G
@@ -277,35 +260,28 @@ export function SingleSeriesChart({
       ctx.setLineDash([]);
     }
 
-    // Draw main line
-    ctx.beginPath();
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 2;
-
+    // Draw main line — speed glitches interpolated, then decimated to the
+    // pixel grid (the old loop also rebuilt the speeds array per glitch index).
+    const drawValues: (number | undefined)[] = new Array(samples.length);
+    const speeds = isSpeed && interpolateIndices.size > 0
+      ? samples.map(s => useKph ? s.speedKph : s.speedMph)
+      : null;
     let lastValidSpeed: number | null = null;
     let lastValidIndex = 0;
-    let isDrawing = false;
-
     for (let i = 0; i < samples.length; i++) {
       let val = values[i];
-      if (val === undefined) { isDrawing = false; continue; }
-
-      // Speed glitch interpolation
-      if (isSpeed && interpolateIndices.has(i) && i > 0 && i < samples.length - 1) {
-        const speeds = samples.map(s => useKph ? s.speedKph : s.speedMph);
+      if (val === undefined) { drawValues[i] = undefined; continue; }
+      if (speeds && interpolateIndices.has(i) && i > 0 && i < samples.length - 1) {
         val = interpolateGlitchSpeed(i, speeds, interpolateIndices, lastValidSpeed, lastValidIndex);
       } else if (isSpeed) {
         lastValidSpeed = val;
         lastValidIndex = i;
       }
-
-      const x = padding.left + axis.fracAt(i) * chartWidth;
-      const y = padding.top + (1 - (val - minVal) / range) * chartHeight;
-
-      if (!isDrawing) { ctx.moveTo(x, y); isDrawing = true; }
-      else { ctx.lineTo(x, y); }
+      drawValues[i] = val;
     }
-    ctx.stroke();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    strokeSeriesPath(ctx, buildSeriesPoints(drawValues, axis.fracAt, chartWidth), toX, toY);
 
     // Y axis labels
     ctx.fillStyle = chartColors.axisText;
@@ -324,6 +300,20 @@ export function SingleSeriesChart({
       const x = padding.left + (chartWidth / timeGridCount) * i;
       ctx.fillText(axis.label(i / timeGridCount), x, dimensions.height - 6);
     }
+  }, [samples, values, dimensions, color, isSpeed, isPace, isBrakingG, useKph, interpolateIndices, refValues, chartColors, axis, overlaySeries]);
+
+  // Playback cursor + value tooltip on a separate overlay canvas — the only
+  // per-tick cost is clearRect + a line + a small text box.
+  useEffect(() => {
+    const canvas = cursorCanvasRef.current;
+    if (!canvas || dimensions.width === 0 || dimensions.height === 0) return;
+    const ctx = prepare2dCanvas(canvas, dimensions.width, dimensions.height, window.devicePixelRatio || 1);
+    if (!ctx) return;
+    ctx.clearRect(0, 0, dimensions.width, dimensions.height);
+
+    const padding = { left: 55, right: 15, top: 30, bottom: 25 };
+    const chartWidth = dimensions.width - padding.left - padding.right;
+    const chartHeight = dimensions.height - padding.top - padding.bottom;
 
     // Scrub cursor
     if (currentIndex >= 0 && currentIndex < samples.length) {
@@ -395,7 +385,7 @@ export function SingleSeriesChart({
         });
       }
     }
-  }, [samples, values, currentIndex, dimensions, color, isSpeed, isPace, isBrakingG, isDist, useKph, useMetricDistance, interpolateIndices, refValues, chartColors, axis, overlaySeries]);
+  }, [currentIndex, samples.length, values, dimensions, color, isPace, isBrakingG, isSpeed, isDist, useKph, useMetricDistance, refValues, chartColors, axis, overlaySeries]);
 
   // Scrub handling
   const handleScrub = useCallback((clientX: number) => {
@@ -431,7 +421,7 @@ export function SingleSeriesChart({
       </button>
       <div
         ref={containerRef}
-        className="flex-1 w-full min-h-0 overflow-hidden cursor-crosshair"
+        className="relative flex-1 w-full min-h-0 overflow-hidden cursor-crosshair"
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
@@ -440,7 +430,8 @@ export function SingleSeriesChart({
         onTouchMove={handleTouchMove}
         onTouchEnd={handleMouseUp}
       >
-        <canvas ref={canvasRef} className="block w-full h-full" />
+        <canvas ref={canvasRef} className="absolute inset-0 block w-full h-full" />
+        <canvas ref={cursorCanvasRef} className="absolute inset-0 block w-full h-full pointer-events-none" />
       </div>
       <GraphResizeHandle
         height={cardHeight}

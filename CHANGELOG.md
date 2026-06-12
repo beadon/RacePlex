@@ -13,6 +13,95 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **UBX session start time was shifted by the browser's time zone.** The
+  parser now builds the session date from the receiver's UTC fields with
+  `Date.UTC` (matching the NMEA parser), so file-browser names and the weather
+  lookup hour are no longer off by the local UTC offset.
+- **Course auto-detection now enforces the documented 25% length tolerance.**
+  A course whose known length differs from the driven lap distance by more
+  than 25% is rejected (waypoint-mode fallback) instead of being tagged onto
+  the session with the wrong sector lines. Courses without a stored length
+  remain eligible.
+- **Alfano time units are decided once per file.** The old per-row heuristic
+  flipped a millisecond-based time column to seconds for the first 100 s, then
+  collapsed — time ran backwards and a fake day was added. The unit is now
+  detected from the whole column (value range + median row step).
+- **Native g-force channels are never silently clobbered or dropped.** AiM CSV
+  and MoTeC logger-reported lateral/longitudinal g now land on the dedicated
+  native channels and coexist with the GPS-derived primary pair (like Alfano,
+  VBO, and iRacing already did). When a file supplies only one g axis, that
+  axis is preserved as a native channel instead of being overwritten by the
+  GPS derivation — and the missing axis is now derived instead of absent
+  (previously a MoTeC file with only lateral g got no longitudinal g at all).
+  Same fix applied to AiM XRK imports.
+
+### Changed
+- **Playback now runs at real time.** The playback loop no longer tears itself
+  down and re-anchors its clock on every cursor tick, so high-rate (60 Hz)
+  data plays at full speed instead of capping at half the display rate. The
+  playback Hz readout is also no longer recomputed (a full sort of the visible
+  window) on every render.
+- **MiniMap follow-cam stopped fighting itself.** The Pro-mode map re-centers
+  only when the position arrow leaves the middle of the view, without
+  animation — instead of issuing an animated pan every tick that perpetually
+  interrupted itself.
+- **Video export no longer holds the whole MP4 in memory.** Long exports
+  (estimated > 350 MB — e.g. 20 min at high quality ≈ 2.2 GB) stream the
+  output in ~16 MB chunks (fragmented MP4) instead of one giant buffer, which
+  was a guaranteed out-of-memory crash on mobile. Both the video and audio
+  encoders now run with bounded queues (backpressure), so encoding can't
+  buffer unbounded raw frames when the encoder falls behind.
+- **~40% smaller landing page.** The initial payload dropped from ~1.13 MB raw
+  / ~334 kB gzip to ~684 kB / ~207 kB: the map stack (Leaflet + the Simple
+  view) now loads when a session opens rather than up front, and the Supabase
+  client is completely off the eager path — offline-first builds (cloud/admin
+  flags off) never download it at all, and flag-on builds load it off the
+  critical path.
+
+### Changed
+- **Map heatmap rendering rebuilt for large sessions.** The race-line speed
+  heatmap (Simple view and the Pro MiniMap) now renders as ~20 canvas-drawn
+  color-bucket polylines instead of one SVG DOM element per GPS segment, which
+  could attempt tens of thousands of DOM nodes and freeze the tab when a long
+  range was selected. Dragging the range slider also no longer re-fits the map
+  view on every movement.
+- **Playback is dramatically cheaper.** The playback cursor was split out of
+  the shared session state into its own context, so a tick only re-renders the
+  components that track it (charts, maps, video overlays) instead of every
+  view. The analysis charts now draw on two stacked canvases — a static layer
+  (grid, lines, overlays) and a cursor layer — so moving the cursor costs a
+  clear + a line + a tooltip instead of a full chart redraw, and dense series
+  are decimated to per-pixel min/max pairs before stroking. The map position
+  arrow is now moved/rotated in place instead of being recreated every tick.
+- The pace chart's area fill is now tinted by sign per region (green where
+  ahead of the reference, red where behind) instead of switching the entire
+  fill color based on the value at the cursor.
+
+### Fixed
+- **VBO (Racelogic VBOX) time parsing.** The `time` column is now decoded as
+  the spec's packed UTC `HHMMSS.SS` by digit position. Previously, any session
+  before 10:00 UTC was misread as plain seconds-since-midnight (injecting ~40
+  phantom seconds at every minute boundary and corrupting lap times), and
+  2-decimal times at/after `100000.00` were mis-aligned, making time run
+  backwards at 10-minute boundaries.
+- **VBO (Racelogic VBOX) coordinates.** Standard Racelogic exports store
+  lat/long as *total decimal minutes* with longitude positive **west**; the
+  parser now detects this per file and converts correctly, instead of
+  misreading the values as `DDDMM.MMMMM` (which placed the race line ~2,300 km
+  away and mirrored hemispheres). RaceBox-style signed decimal-degree exports
+  still parse as before.
+- **AiM CSV speed units.** The km/h vs m/s vs mph decision now comes from the
+  file's explicit unit label (the RaceStudio units row, or a bracketed unit in
+  the header) with a whole-file statistic as fallback. Previously it was
+  decided from the first GPS-valid row alone, so a session that started slowly
+  (rolling out of the pits) had every speed multiplied by 3.6.
+- **Charts no longer crash on very long sessions.** Min/max computations in
+  the speed/telemetry charts and the heatmap bounds used argument spreading,
+  which threw `RangeError: Maximum call stack size exceeded` above ~65k
+  samples (e.g. viewing All Laps on a 2-hour 20 Hz session) and blanked the
+  chart. They now use plain loops.
+
 ## [2.3.1] - 2026-06-10
 
 ### Changed
