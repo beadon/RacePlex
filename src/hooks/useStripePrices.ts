@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import type { StripeConfig } from "@/lib/billing";
-import { fetchStripeConfig } from "@/lib/billingClient";
 
 const enableCloud = import.meta.env.VITE_ENABLE_CLOUD === "true";
 
@@ -31,7 +30,10 @@ export function useStripePrices(): StripePricesState {
     }
     let cancelled = false;
     setLoading(true);
-    fetchStripeConfig()
+    // Dynamic import: billingClient pulls the Supabase client, which must
+    // stay off the eager graph (PricingCards rides the landing page).
+    import("@/lib/billingClient")
+      .then(({ fetchStripeConfig }) => fetchStripeConfig())
       .then((c) => {
         if (!cancelled) setConfig(c);
       })

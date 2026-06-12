@@ -217,12 +217,20 @@ export function MiniMap({ samples, allSamples, referenceSamples = [], course, bo
     });
   }, [brakingZones, showBrakingZones, brakingZoneSettings?.color, brakingZoneSettings?.width]);
 
-  // Arrow marker (created once, moved/rotated per tick) + follow-pan
+  // Arrow marker (created once, moved/rotated per tick) + follow-pan.
+  // Re-center only when the marker leaves the middle half of the view, and
+  // without animation — an animated panTo issued per 16 ms tick perpetually
+  // interrupts itself and burns the frame budget on aborted pan animations.
   useEffect(() => {
     const map = mapRef.current; if (!map) return;
     markerRef.current = updatePositionMarker(map, markerRef.current, samples, currentIndex);
     const sample = samples[currentIndex];
-    if (sample) map.panTo([sample.lat, sample.lon], { animate: true, duration: 0.15 });
+    if (!sample) return;
+    const p = map.latLngToContainerPoint([sample.lat, sample.lon]);
+    const size = map.getSize();
+    if (p.x < size.x * 0.25 || p.x > size.x * 0.75 || p.y < size.y * 0.25 || p.y > size.y * 0.75) {
+      map.panTo([sample.lat, sample.lon], { animate: false });
+    }
   }, [currentIndex, samples]);
 
   const cycleMapStyle = () => setMapStyle(p => p === 'dark' ? 'satellite' : p === 'satellite' ? 'none' : 'dark');

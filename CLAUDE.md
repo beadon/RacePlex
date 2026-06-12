@@ -928,7 +928,9 @@ re-merges it into the main chunk.
 
 **Lazy-loaded (off the initial path) — loaded on first use:**
 - Routes: `Login`, `Admin`, `Register`, `Privacy` (`App.tsx`, wrapped in `<Suspense>`)
-- Pro view: `GraphViewTab` and `LabsTab` (`Index.tsx`)
+- View tabs: `RaceLineTab` (the Simple tab — keeps `vendor-leaflet` + the
+  telemetry chart off the landing page; loads the moment a session opens),
+  `GraphViewTab`, and `LabsTab` (`Index.tsx`)
 - `FileManagerDrawer` (slide-out drawer, `Index.tsx`)
 - `DataloggerDownload` (BLE entry point; keeps `lib/ble/*` out of initial bundle — `FileImport.tsx`, `drawer/FilesTab.tsx`)
 - `VisualEditor` (Leaflet drawing tools; `TrackEditor.tsx`, `track-editor/AddCourseDialog.tsx`, `admin/CoursesTab.tsx`). The shared map editor for **all** track managers — start/finish + sector lines (drag-to-place, auto-saved on release) and the course-outline Draw/Generate tools (auto-saved on each edit; no Done/Close button). There is no manual coordinate-entry mode — visual is the only editor.
@@ -937,13 +939,21 @@ re-merges it into the main chunk.
 `vendor-query`, `vendor-leaflet`, `vendor-supabase`, `vendor-radix`. These cache
 independently across deploys so app-only changes don't re-download vendor code.
 
+**`vendor-supabase` is fully off the eager graph.** The Supabase client's only
+static importers are lazy/flag-gated modules: `contexts/authBackend.ts` (the
+auth bootstrap, dynamically imported by `AuthContext` **only when
+`VITE_ENABLE_ADMIN` or `VITE_ENABLE_CLOUD` is on** — flag-off builds never
+fetch it at all), the lazy auth/admin pages, and cloud-sync's lazy panels.
+Everything that rides the eager graph (`SubmitTrackDialog`, `PricingCards`,
+`useStripePrices`/`useSubscription`) reaches `billingClient`/the client via
+dynamic import at the call site. Don't add a static
+`@/integrations/supabase/client` (or `lib/billingClient`) import to anything
+eagerly reachable from `Index.tsx`/`LandingPage` — it re-merges 172 kB of
+Supabase into the offline-first landing payload.
+
 > Lazy components must be rendered inside a `<Suspense>` boundary. Use
 > `lazy(() => import('…').then((m) => ({ default: m.Named })))` for the
 > named-export components in this codebase.
->
-> **Known follow-up:** `vendor-supabase` is still on the initial path because
-> `AuthProvider` (`App.tsx`) and `SubmitTrackDialog` import the client eagerly.
-> Deferring it would require gating the auth bootstrap on `VITE_ENABLE_ADMIN`.
 
 ---
 
