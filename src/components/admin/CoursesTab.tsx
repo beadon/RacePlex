@@ -12,7 +12,7 @@ import type { SectorLine, CourseSector } from '@/types/racing';
 import type { GpsPoint } from '@/components/track-editor/VisualEditor';
 import type { SelectedLine } from '@/hooks/useTrackEditorForm';
 import {
-  normalizeCourseSectors, legacyMirror, isAtSectorLimit,
+  normalizeCourseSectors, legacyMirror, isAtSectorLimit, centeredSectorLine,
 } from '@/lib/courseSectors';
 import { sectorsFromJson, sectorsToJson, type SectorJson } from '@/lib/trackStorage';
 const CourseSectorEditor = lazy(() =>
@@ -288,15 +288,21 @@ export function CoursesTab() {
   const handleSectorLineChange = useCallback((index: number, line: SectorLine) => {
     setForm(prev => ({ ...prev, sectors: prev.sectors.map((s, i) => (i === index ? { ...s, line } : s)) }));
   }, []);
-  const handleAddSector = useCallback((insertIndex?: number) => {
+  const handleAddSector = useCallback((insertIndex?: number, center?: GpsPoint) => {
     setForm(prev => {
       const course = { name: prev.name, startFinishA: { lat: 0, lon: 0 }, startFinishB: { lat: 0, lon: 0 }, sectors: prev.sectors };
       if (isAtSectorLimit(course)) return prev;
-      const a = visualStartA, b = visualStartB;
-      const midLat = a && b ? (a.lat + b.lat) / 2 : 28.4123;
-      const midLon = a && b ? (a.lon + b.lon) / 2 : -81.3797;
-      const offset = 0.0003 * (prev.sectors.length + 1);
-      const line: SectorLine = { a: { lat: midLat + offset, lon: midLon - 0.00015 }, b: { lat: midLat + offset, lon: midLon + 0.00015 } };
+      let line: SectorLine;
+      if (center) {
+        // Drop the new line in the middle of the current map view.
+        line = centeredSectorLine(center);
+      } else {
+        const a = visualStartA, b = visualStartB;
+        const midLat = a && b ? (a.lat + b.lat) / 2 : 28.4123;
+        const midLon = a && b ? (a.lon + b.lon) / 2 : -81.3797;
+        const offset = 0.0003 * (prev.sectors.length + 1);
+        line = { a: { lat: midLat + offset, lon: midLon - 0.00015 }, b: { lat: midLat + offset, lon: midLon + 0.00015 } };
+      }
       const at = insertIndex === undefined ? prev.sectors.length : Math.max(0, Math.min(insertIndex, prev.sectors.length));
       const sectors = [...prev.sectors.slice(0, at), { line, major: false }, ...prev.sectors.slice(at)];
       setSelectedLine(at);

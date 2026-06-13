@@ -18,6 +18,27 @@ export const MAX_MAJOR_SECTORS = 3;
 /** Max entries allowed in `course.sectors` (the array excludes start/finish). */
 export const MAX_COURSE_SECTORS = MAX_SECTOR_LINES - 1;
 
+/** Default half-length (in degrees longitude) of a freshly-dropped sector line
+ *  — ~15m at mid-latitudes, so the whole line is ~30m. The user drags the
+ *  endpoints onto the track from there. */
+export const DEFAULT_SECTOR_HALF_LENGTH_DEG = 0.00015;
+
+/**
+ * A short horizontal (east-west) timing line centered on `center`. Used when
+ * adding a new sector so it drops in the middle of the current map view rather
+ * than near start/finish; the view is left untouched and the user nudges the
+ * endpoints into place.
+ */
+export function centeredSectorLine(
+  center: { lat: number; lon: number },
+  halfLengthDeg: number = DEFAULT_SECTOR_HALF_LENGTH_DEG,
+): SectorLine {
+  return {
+    a: { lat: center.lat, lon: center.lon - halfLengthDeg },
+    b: { lat: center.lat, lon: center.lon + halfLengthDeg },
+  };
+}
+
 /**
  * Migrate any course into the canonical `sectors` array and keep the legacy
  * `sector2`/`sector3` mirror in agreement. Idempotent. Call at every boundary a

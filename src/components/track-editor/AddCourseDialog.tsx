@@ -29,7 +29,7 @@ interface AddCourseDialogProps {
   onSelectLine: (id: SelectedLine) => void;
   onStartFinishChange: (a: GpsPoint, b: GpsPoint) => void;
   onSectorLineChange: (index: number, line: SectorLine) => void;
-  onAddSector: (insertIndex?: number) => void;
+  onAddSector: (insertIndex?: number, center?: GpsPoint) => void;
   onRemoveSector: (index: number) => void;
   onToggleMajor: (index: number) => void;
   onReorder: (from: number, to: number) => void;

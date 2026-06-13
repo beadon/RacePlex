@@ -63,6 +63,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   center while the cursor was still well within the visible map. It now re-centers
   only once the arrow's edge actually reaches the viewport border, so the map
   stays put while the cursor crosses most of it.
+- **New sectors drop in the middle of the current map view.** Adding a sector
+  in the course editor previously dropped the line near start/finish (often
+  off-screen if you'd panned away). It now lands in the center of whatever
+  you're looking at, without moving the map.
+- **Sector lines are much easier to see in the course editor.** Unselected
+  timing lines were thin and faint; they're now drawn noticeably thicker (and
+  the selected line thicker still), so all the lines stand out against the
+  satellite imagery.
 
 ## [2.4.0] - 2026-6-12
 

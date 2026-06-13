@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef, type MutableRefObject } from 'react';
 import { Search, Loader2, LocateFixed, Pencil, Undo2, Trash2, Route, Eye, EyeOff, CalendarClock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -51,6 +51,9 @@ interface VisualEditorProps {
   laps?: Lap[];
   /** GPS samples for generating drawing from lap data */
   samples?: GpsSample[];
+  /** Kept in sync with the map's current view center, so an added sector can be
+   *  dropped in the middle of what the user is looking at (without panning). */
+  viewCenterRef?: MutableRefObject<GpsPoint | null>;
 }
 
 interface VisualEditorToolbarProps {
@@ -204,7 +207,7 @@ export function VisualEditor({
   onStartFinishChange, onSectorLineChange,
   isNewTrack = false, initialCenter: initialCenterProp = null,
   showDrawTool = false, layoutPoints: layoutPointsProp, showKnownDrawingToggle = false, onLayoutChange,
-  laps, samples,
+  laps, samples, viewCenterRef,
 }: VisualEditorProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
@@ -367,7 +370,7 @@ export function VisualEditor({
       if (!coords) continue;
       const polyline = L.polyline(
         [[coords.a.lat, coords.a.lon], [coords.b.lat, coords.b.lon]],
-        { color: colorFor(id), weight: 2, opacity: 0.5 }
+        { color: colorFor(id), weight: 6, opacity: 0.8 }
       ).addTo(map);
       // Click a static line to select it for editing.
       polyline.on('click', () => onSelectLineRef.current?.(id));
@@ -382,7 +385,7 @@ export function VisualEditor({
 
     const polyline = L.polyline(
       [[coords.a.lat, coords.a.lon], [coords.b.lat, coords.b.lon]],
-      { color, weight: 4, opacity: 1 }
+      { color, weight: 9, opacity: 1 }
     ).addTo(map);
     activeLineRef.current = polyline;
 
@@ -605,6 +608,17 @@ export function VisualEditor({
     mapRef.current = map;
     setMapReady(true);
     drawStaticLines(map, null);
+
+    // Track the live view center so an added sector drops where the user is
+    // looking. Seed it now and keep it current as the map is panned/zoomed.
+    if (viewCenterRef) {
+      const syncCenter = () => {
+        const c = map.getCenter();
+        viewCenterRef.current = { lat: c.lat, lon: c.lng };
+      };
+      syncCenter();
+      map.on('moveend', syncCenter);
+    }
 
     return () => {
       clearEditingLayers();

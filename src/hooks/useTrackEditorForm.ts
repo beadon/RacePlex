@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { Course, CourseSector, SectorLine } from '@/types/racing';
 import { deriveShortName, MAX_SHORT_NAME_LENGTH } from '@/lib/trackUtils';
-import { normalizeCourseSectors, isAtSectorLimit } from '@/lib/courseSectors';
+import { normalizeCourseSectors, isAtSectorLimit, centeredSectorLine } from '@/lib/courseSectors';
 import type { GpsPoint } from '@/components/track-editor/VisualEditor';
 
 /** Selection in the visual editor: 'sf' = start/finish, a number = sectors[index]. */
@@ -83,10 +83,12 @@ export function useTrackEditorForm() {
   // ── Sector-list operations ─────────────────────────────────────────────────
 
   /**
-   * Add a new sub-sector at `insertIndex` (appended when omitted). Geometry
-   * defaults to a ~30m line near start/finish; the user drags it into place.
+   * Add a new sub-sector at `insertIndex` (appended when omitted). When `center`
+   * (the live map view center) is given the line drops there — in the middle of
+   * what the user is looking at; otherwise it falls back to a line near
+   * start/finish. Either way the user then drags it into place.
    */
-  const addSector = useCallback((insertIndex?: number) => {
+  const addSector = useCallback((insertIndex?: number, center?: GpsPoint) => {
     setFormSectors((prev) => {
       const course: Course = {
         name: formCourseName,
@@ -95,7 +97,9 @@ export function useTrackEditorForm() {
         sectors: prev,
       };
       if (isAtSectorLimit(course)) return prev;
-      const line = defaultSectorLine(formLatA, formLonA, formLatB, formLonB, prev.length);
+      const line = center
+        ? centeredSectorLine(center)
+        : defaultSectorLine(formLatA, formLonA, formLatB, formLonB, prev.length);
       const at = insertIndex === undefined ? prev.length : Math.max(0, Math.min(insertIndex, prev.length));
       const next = [...prev.slice(0, at), { line, major: false }, ...prev.slice(at)];
       setSelectedLine(at);

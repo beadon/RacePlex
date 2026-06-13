@@ -2,8 +2,8 @@ import { describe, it, expect } from 'vitest';
 import { Course, SectorLine } from '@/types/racing';
 import {
   normalizeCourseSectors, majorSectorLines, legacyMirror, sectorLabels,
-  validateCourseSectors, isAtSectorLimit, rollupMajorSectors,
-  MAX_SECTOR_LINES, MAX_MAJOR_SECTORS,
+  validateCourseSectors, isAtSectorLimit, rollupMajorSectors, centeredSectorLine,
+  MAX_SECTOR_LINES, MAX_MAJOR_SECTORS, DEFAULT_SECTOR_HALF_LENGTH_DEG,
 } from './courseSectors';
 
 const line = (n: number): SectorLine => ({ a: { lat: n, lon: n }, b: { lat: n + 0.001, lon: n + 0.001 } });
@@ -117,6 +117,24 @@ describe('isAtSectorLimit', () => {
     const sectors = Array.from({ length: MAX_SECTOR_LINES - 1 }, (_, i) => ({ line: line(i), major: false }));
     expect(isAtSectorLimit(baseCourse({ sectors }))).toBe(true);
     expect(isAtSectorLimit(baseCourse({ sectors: sectors.slice(0, -1) }))).toBe(false);
+  });
+});
+
+describe('centeredSectorLine', () => {
+  it('builds a horizontal line centered on the point with the default span', () => {
+    const l = centeredSectorLine({ lat: 28.41, lon: -81.38 });
+    // Same latitude on both ends (horizontal), symmetric about the center lon.
+    expect(l.a.lat).toBe(28.41);
+    expect(l.b.lat).toBe(28.41);
+    expect(l.a.lon).toBeCloseTo(-81.38 - DEFAULT_SECTOR_HALF_LENGTH_DEG, 12);
+    expect(l.b.lon).toBeCloseTo(-81.38 + DEFAULT_SECTOR_HALF_LENGTH_DEG, 12);
+    expect((l.a.lon + l.b.lon) / 2).toBeCloseTo(-81.38, 12);
+  });
+
+  it('honors a custom half-length', () => {
+    const l = centeredSectorLine({ lat: 1, lon: 2 }, 0.001);
+    expect(l.a.lon).toBeCloseTo(1.999, 12);
+    expect(l.b.lon).toBeCloseTo(2.001, 12);
   });
 });
 

@@ -1,4 +1,4 @@
-import { lazy, Suspense, useMemo } from 'react';
+import { lazy, Suspense, useMemo, useRef } from 'react';
 import { Course, CourseSector, SectorLine, Lap, GpsSample } from '@/types/racing';
 import { SectorListEditor } from './SectorListEditor';
 import type { GpsPoint, LineId } from './VisualEditor';
@@ -14,7 +14,9 @@ interface CourseSectorEditorProps {
   onSelectLine: (id: SelectedLine) => void;
   onStartFinishChange: (a: GpsPoint, b: GpsPoint) => void;
   onSectorLineChange: (index: number, line: SectorLine) => void;
-  onAddSector: (insertIndex?: number) => void;
+  /** Add a sector; `center` (when provided) is the live map view center so the
+   *  new line drops in the middle of what the user is looking at. */
+  onAddSector: (insertIndex?: number, center?: GpsPoint) => void;
   onRemoveSector: (index: number) => void;
   onToggleMajor: (index: number) => void;
   onReorder: (from: number, to: number) => void;
@@ -40,6 +42,10 @@ export function CourseSectorEditor({
   isNewTrack, initialCenter, showDrawTool, showKnownDrawingToggle,
   layoutPoints, onLayoutChange, laps, samples,
 }: CourseSectorEditorProps) {
+  // The map's current view center, kept fresh by VisualEditor — read on add so a
+  // new sector drops in the middle of the current view.
+  const viewCenterRef = useRef<GpsPoint | null>(null);
+
   // Minimal course for the list's labels + validation (coords unused there).
   const course = useMemo<Course>(() => ({
     name: '',
@@ -67,6 +73,7 @@ export function CourseSectorEditor({
           onLayoutChange={onLayoutChange}
           laps={laps}
           samples={samples}
+          viewCenterRef={viewCenterRef}
         />
       </Suspense>
       <SectorListEditor
@@ -74,7 +81,7 @@ export function CourseSectorEditor({
         sectors={sectors}
         selectedLine={selectedLine}
         onSelectLine={onSelectLine}
-        onAddSector={onAddSector}
+        onAddSector={(insertIndex) => onAddSector(insertIndex, viewCenterRef.current ?? undefined)}
         onRemoveSector={onRemoveSector}
         onToggleMajor={onToggleMajor}
         onReorder={onReorder}
