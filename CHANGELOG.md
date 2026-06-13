@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > from git history and grouped by theme rather than exhaustive per-commit
 > detail.
 
-## [Unreleased]
+## [2.5.1] - 2026-06-13
 
 ### Changed
 - **Landing page UX overhaul** — the home screen is simpler and friendlier. The
