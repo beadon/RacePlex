@@ -1,4 +1,4 @@
-import { memo, useMemo, useState } from 'react';
+import { Fragment, memo, useMemo, useState } from 'react';
 import { Lap, courseHasSectors, Course, GpsSample } from '@/types/racing';
 import { formatLapTime, formatSectorTime, calculateOptimalLap } from '@/lib/lapCalculation';
 import { normalizeCourseSectors, sectorLabels } from '@/lib/courseSectors';
@@ -52,6 +52,9 @@ export const LapTable = memo(function LapTable({ laps, course, samples, onLapSel
 
   const showSectors = courseHasSectors(course);
   const [view, setView] = useState<'simple' | 'full'>('simple');
+  // In Full view, an optional colored "S# Sum" column before each major group
+  // showing that major sector's total time (the S1/S2/S3 rollup). Default on.
+  const [showSectorSums, setShowSectorSums] = useState(true);
 
   // Full view = one column per fine-grained sector. Only offered when the course
   // has sub-sectors beyond the three majors.
@@ -78,10 +81,38 @@ export const LapTable = memo(function LapTable({ laps, course, samples, onLapSel
         if (t !== undefined && t < best[k]) { best[k] = t; fastestIdx[k] = idx; }
       });
     });
-    return { labels, lineCount, groupOf, fastestIdx };
+
+    // Major groups: the segment indices that compose each major sector (S1/S2/S3),
+    // and which segment begins a group (where the "S# Sum" column is inserted).
+    const groupCount = lineCount === 0 ? 0 : groupOf[lineCount - 1] + 1;
+    const segIndicesByGroup: number[][] = Array.from({ length: groupCount }, () => []);
+    for (let k = 0; k < lineCount; k++) segIndicesByGroup[groupOf[k]].push(k);
+    const isGroupStart: boolean[] = groupOf.map((gi, k) => k === 0 || gi !== groupOf[k - 1]);
+    // Sum a lap's segments for major group `gi`; undefined if any segment is missing.
+    const sumForGroup = (lap: Lap, gi: number): number | undefined => {
+      let sum = 0;
+      for (const k of segIndicesByGroup[gi]) {
+        const t = lap.sectorTimes?.[k];
+        if (t === undefined) return undefined;
+        sum += t;
+      }
+      return sum;
+    };
+    // Fastest (min) major-sum per group across laps, for highlighting.
+    const fastestSumIdx: (number | null)[] = new Array(groupCount).fill(null);
+    const bestSum: number[] = new Array(groupCount).fill(Infinity);
+    laps.forEach((lap, idx) => {
+      for (let gi = 0; gi < groupCount; gi++) {
+        const s = sumForGroup(lap, gi);
+        if (s !== undefined && s < bestSum[gi]) { bestSum[gi] = s; fastestSumIdx[gi] = idx; }
+      }
+    });
+
+    return { labels, lineCount, groupOf, fastestIdx, groupCount, isGroupStart, fastestSumIdx, sumForGroup };
   }, [course, laps]);
 
   const showFull = view === 'full' && full !== null;
+  const showSums = showFull && showSectorSums;
 
   // Memoize expensive lap statistics computation
   const lapStats = useMemo(() => {
@@ -201,9 +232,19 @@ export const LapTable = memo(function LapTable({ laps, course, samples, onLapSel
           ) : undefined}
         />
       )}
-      {/* Simple/Full toggle — only when the course has sub-sectors. */}
+      {/* Simple/Full toggle — only when the course has sub-sectors. The
+          "Sector sums" toggle appears alongside it only in Full view. */}
       {full && (
-        <div className="flex items-center justify-end gap-1 px-2 py-1.5">
+        <div className="flex items-center justify-end gap-2 px-2 py-1.5">
+          {showFull && (
+            <button
+              className={`rounded-md border border-border px-2 py-0.5 text-xs transition-colors ${showSectorSums ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+              onClick={() => setShowSectorSums((v) => !v)}
+              title="Show a running S1/S2/S3 total before each major sector"
+            >
+              Sector sums
+            </button>
+          )}
           <div className="inline-flex rounded-md border border-border p-0.5 text-xs">
             <button
               className={`rounded px-2 py-0.5 transition-colors ${!showFull ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
@@ -228,12 +269,18 @@ export const LapTable = memo(function LapTable({ laps, course, samples, onLapSel
             <th className="px-4 py-3 font-medium">Time</th>
             {showFull ? (
               full.labels.map((label, k) => (
-                <th
-                  key={k}
-                  className={`px-3 py-3 font-medium text-center whitespace-nowrap ${full.groupOf[k] % 2 === 1 ? 'bg-muted/40' : ''}`}
-                >
-                  {label}
-                </th>
+                <Fragment key={k}>
+                  {showSums && full.isGroupStart[k] && (
+                    <th className="px-3 py-3 font-semibold text-center whitespace-nowrap bg-primary/20 text-primary">
+                      {`S${full.groupOf[k] + 1} Sum`}
+                    </th>
+                  )}
+                  <th
+                    className={`px-3 py-3 font-medium text-center whitespace-nowrap ${full.groupOf[k] % 2 === 1 ? 'bg-muted/40' : ''}`}
+                  >
+                    {label}
+                  </th>
+                </Fragment>
               ))
             ) : showSectors && (
               <>
@@ -297,13 +344,24 @@ export const LapTable = memo(function LapTable({ laps, course, samples, onLapSel
                     const t = lap.sectorTimes?.[k];
                     const isFastestSeg = full.fastestIdx[k] === idx;
                     const zebra = full.groupOf[k] % 2 === 1 ? 'bg-muted/30' : '';
+                    const g = full.groupOf[k];
+                    const sum = showSums && full.isGroupStart[k] ? full.sumForGroup(lap, g) : undefined;
+                    const isFastestSum = full.fastestSumIdx[g] === idx;
                     return (
-                      <td
-                        key={k}
-                        className={`px-3 py-3 font-mono text-xs text-center whitespace-nowrap ${isFastestSeg ? 'text-purple-400 font-semibold bg-purple-500/10' : zebra}`}
-                      >
-                        {t !== undefined ? formatSectorTime(t) : '—'}
-                      </td>
+                      <Fragment key={k}>
+                        {showSums && full.isGroupStart[k] && (
+                          <td
+                            className={`px-3 py-3 font-mono text-xs text-center whitespace-nowrap font-semibold ${isFastestSum ? 'text-purple-400 bg-purple-500/15' : 'text-primary bg-primary/10'}`}
+                          >
+                            {sum !== undefined ? formatSectorTime(sum) : '—'}
+                          </td>
+                        )}
+                        <td
+                          className={`px-3 py-3 font-mono text-xs text-center whitespace-nowrap ${isFastestSeg ? 'text-purple-400 font-semibold bg-purple-500/10' : zebra}`}
+                        >
+                          {t !== undefined ? formatSectorTime(t) : '—'}
+                        </td>
+                      </Fragment>
                     );
                   })
                 ) : showSectors && (

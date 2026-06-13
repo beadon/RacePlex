@@ -42,6 +42,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   now computed from the best time in *every* sector, not just the three majors.
   The lap-times list has a **Simple/Full** toggle — Full shows one column per
   fine-grained sector (zebra-striped by major group, horizontally scrollable).
+  In Full view a colored **"S# Sum"** column precedes each major sector's
+  columns, showing that major's running total (the S1/S2/S3 rollup) per lap with
+  the fastest sum highlighted; a **Sector sums** toggle (default on) shows or
+  hides them.
 - **Crop to a sector.** The data-crop bar on the Simple and Pro views now pairs
   the range slider with a sector dropdown — pick a sector to snap the view to
   that section of the selected lap.
