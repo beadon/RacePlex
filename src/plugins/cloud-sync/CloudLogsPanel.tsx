@@ -14,6 +14,7 @@ import {
   type BrowserSession, type NavState,
 } from "@/lib/fileBrowserTree";
 import { SessionBrowser } from "@/components/SessionBrowser";
+import { FileTypeBadge } from "@/components/FileTypeBadge";
 import { cleanupOrphanBlobs, deleteCloudFile, downloadCloudFile, listCloudFiles, type CloudFile } from "./syncEngine";
 import { cloudOnlyNames, markPushed, unselectFile } from "./fileSync";
 import { formatBytes } from "./storageTypes";
@@ -146,7 +147,10 @@ export default function CloudLogsPanel(_props: PluginPanelProps) {
         {/* Cloud-only rows are greyed out (not on this device until downloaded). */}
         <div className={`flex items-center gap-2 px-3 py-2${onDevice ? "" : " opacity-60"}`}>
           <div className="min-w-0 flex-1">
-            <p className={`truncate text-sm ${onDevice ? "text-foreground" : "text-muted-foreground"}`} title={s.fileName}>{s.displayName}</p>
+            <div className="flex items-center gap-1.5">
+              <p className={`truncate text-sm ${onDevice ? "text-foreground" : "text-muted-foreground"}`} title={s.fileName}>{s.displayName}</p>
+              <FileTypeBadge fileName={s.fileName} />
+            </div>
             <p className="text-[11px] text-muted-foreground">
               {formatDate(cf?.uploadedAt)}
               {cf?.size != null && ` · ${formatBytes(cf.size)}`}

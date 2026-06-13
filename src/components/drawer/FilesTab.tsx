@@ -11,6 +11,7 @@ import {
   type BrowserSession, type NavState,
 } from "@/lib/fileBrowserTree";
 import { SessionBrowser } from "@/components/SessionBrowser";
+import { FileTypeBadge } from "@/components/FileTypeBadge";
 import { useFileSources, type FileSource, type RemoteFile } from "@/plugins/fileSources";
 // Lazy — keeps the BLE module in its own chunk, loaded only on device use.
 const DataloggerDownload = lazy(() =>
@@ -257,6 +258,7 @@ export function FilesTab({
           >
             <div className="flex items-center gap-1.5">
               <span className="text-sm font-medium truncate text-muted-foreground">{s.displayName}</span>
+              <FileTypeBadge fileName={s.fileName} />
               {busy
                 ? <Loader2 className="w-3.5 h-3.5 text-primary shrink-0 animate-spin" />
                 : <Cloud className="w-3.5 h-3.5 text-muted-foreground shrink-0" />}
@@ -285,6 +287,7 @@ export function FilesTab({
         >
           <div className="flex items-center gap-1.5">
             <span className="text-sm font-medium truncate text-foreground" title={s.fileName}>{s.displayName}</span>
+            <FileTypeBadge fileName={s.fileName} />
             {videoFiles.has(s.fileName) && (
               <span title={(() => {
                 const m = videoFiles.get(s.fileName)!;
