@@ -32,11 +32,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and seat/driver geometry, and a corner-scale calibration flow anchors the
   baseline to your kart and fits the leg coupling from a measured seat slide.
   Fully offline; settings persist in the tools plugin's own IndexedDB store.
+- **"Unlimited" course sectors.** A course is no longer limited to three fixed
+  sectors. The course editor now shows an ordered, drag-to-reorder sector list
+  below the map: add sectors, mark exactly three (start/finish + two) as **Major
+  sectors**, and group sub-sectors under each major. Up to 25 timing lines per
+  course. Start/finish, major, and sub-sector lines are drawn on the race-line
+  map in three distinct colors.
+- **Per-sector optimal lap + Full lap-table view.** The optimal (ideal) lap is
+  now computed from the best time in *every* sector, not just the three majors.
+  The lap-times list has a **Simple/Full** toggle — Full shows one column per
+  fine-grained sector (zebra-striped by major group, horizontally scrollable).
+  In Full view a colored **"S# Sum"** column precedes each major sector's
+  columns, showing that major's running total (the S1/S2/S3 rollup) per lap with
+  the fastest sum highlighted; a **Sector sums** toggle (default on) shows or
+  hides them.
+- **Crop to a sector.** The data-crop bar on the Simple and Pro views now pairs
+  the range slider with a sector dropdown — pick a sector to snap the view to
+  that section of the selected lap.
 
 ### Changed
 - **The main tab bar is icons-only on phones.** Every view tab (Simple, Pro,
   Lap Times, Labs, Coach, Tools) and the Simple-view Overlay toggle now show
   just their icon at phone widths; labels return at tablet width and up.
+- The logger track export is unchanged on the wire: only the three major sectors
+  (start/finish + two) are uploaded to the DovesDataLogger, so sub-sectors are an
+  app-only refinement. Track JSON, community submissions, and the admin database
+  carry the full ordered list alongside the legacy two-sector mirror.
+- Removed the per-lap "Map" overlay toggle column from the lap-times list
+  (overlays are still controlled from the header Overlays menu).
+
+### Fixed
+- **Pro-mode mini-map no longer re-centers too early.** The camera held the
+  position arrow inside the middle half of the view, so it snapped back to
+  center while the cursor was still well within the visible map. It now re-centers
+  only once the arrow's edge actually reaches the viewport border, so the map
+  stays put while the cursor crosses most of it.
+- **New sectors drop in the middle of the current map view.** Adding a sector
+  in the course editor previously dropped the line near start/finish (often
+  off-screen if you'd panned away). It now lands in the center of whatever
+  you're looking at, without moving the map.
+- **Sector lines are much easier to see in the course editor.** Unselected
+  timing lines were thin and faint; they're now drawn noticeably thicker (and
+  the selected line thicker still), so all the lines stand out against the
+  satellite imagery.
 
 ## [2.4.0] - 2026-6-12
 

@@ -59,6 +59,7 @@ will read it tomorrow.
 | Charts | Custom Canvas 2D (not a library — see `TelemetryChart.tsx`, `SingleSeriesChart.tsx`) |
 | Video Export | WebCodecs + [mp4-muxer](https://github.com/Vanilagy/mp4-muxer) (H.264 video + AAC audio → MP4 output) |
 | State | React hooks + React Query (for admin only) |
+| Drag/Reorder | [dnd kit](https://dndkit.com) (`@dnd-kit/core`+`sortable`+`utilities`) — sector-list reorder; lazy-loaded with the track editor |
 | Local Storage | IndexedDB (`dbUtils.ts`) for files/metadata/karts/notes/setups/video-sync/graph-prefs; localStorage for tracks & settings |
 | Backend | None for core features. Optional admin via Supabase (Lovable Cloud) |
 | BLE | Web Bluetooth API for DovesDataLogger device communication |
@@ -82,7 +83,7 @@ src/
 │   ├── tabs/              # View tabs (GraphView, RaceLine, LapTimes, Labs, Coach, Tools; Profile is mounted in the drawer)
 │   ├── graphview/         # Pro mode: GraphPanel, GraphViewPanel, MiniMap, SingleSeriesChart, GGDiagram, InfoBox
 │   ├── drawer/            # File-manager drawer tabs (Files, Vehicles/Karts, Notes, Setups, Device*)
-│   ├── track-editor/      # Track editor sub-components (VisualEditor is lazy — see Bundle Splitting)
+│   ├── track-editor/      # Track editor sub-components: VisualEditor (lazy Leaflet line placement), SectorListEditor (dnd-kit reorderable sector list — the control surface), CourseSectorEditor (bundles the two), AddCourseDialog/AddTrackDialog
 │   ├── video-overlays/    # Video-export overlay system: registry + themes + per-widget *Overlay,
 │   │                      #   sectorUtils, dataSourceResolver, OverlaySettingsPanel, VideoExportDialog
 │   ├── RaceLineView.tsx   # Leaflet map: race line, speed heatmap, braking zones
@@ -109,7 +110,8 @@ src/
 │   ├── channels.ts        # ★ Canonical channel registry (ids/labels/units/aliases) + normalizeChannels()
 │   ├── fieldResolver.ts   # Settings-facing adapter over channels.ts
 │   ├── courseDetection.ts # ★ Auto track/course/direction detection + waypoint mode
-│   ├── lapCalculation.ts  # Start/finish crossing detection → Lap[]
+│   ├── courseSectors.ts   # ★ Pure sector model: caps (25 lines / 3 majors), normalizeCourseSectors (legacy→array migration at every load boundary), sectorLabels (1/1.1/2…), validateCourseSectors, majorSectorLines + legacyMirror (the logger projection), rollupMajorSectors (fine-grained → S1/S2/S3)
+│   ├── lapCalculation.ts  # Start/finish + per-sector crossing detection → Lap[] (sectorTimes[] + sectorBoundaries[] + major rollup); calculateOptimalLap sums best of EVERY segment
 │   ├── lapDelta.ts        # ★ Position-based lap delta (arc-length resample + segment-projected gap)
 │   ├── fileBrowserTree.ts # ★ Pure file-browser hierarchy: Track→Course→logs, engine/kart filter, breadcrumbs, smart collapse
 │   ├── lapOverlays.ts     # ★ Pure multi-lap overlay logic: id format (lap/snap/file), palette, resolve selections → OverlayLine[], unionBounds
@@ -384,8 +386,9 @@ and **native** lateral/longitudinal g (`LatAccel`/`LongAccel` → `lat_g_native`
 | `ParsedData` | `samples[]`, `fieldMappings[]`, `bounds`, `duration`, `startDate?`, `dovexMetadata?`, `parserStats?` |
 | `ParserStats` | `totalRows`, `acceptedRows`, `rejected: { nanFields, zeroCoords, outOfRange, speedCap, teleportation, incompleteRow }` |
 | `DovexMetadata` | `datetime?`, `driver?`, `course?`, `shortName?`, `bestLapMs?`, `optimalMs?`, `lapTimesMs?[]` |
-| `Lap` | `lapNumber`, `startTime/endTime`, `lapTimeMs`, speed stats, `startIndex/endIndex`, `sectors?` |
-| `Course` | `name`, `lengthFt?`, `startFinishA/B` (lat/lon), optional `sector2/sector3` lines, optional `layout?` (`{lat,lon}[]` user-drawn outline) |
+| `Lap` | `lapNumber`, `startTime/endTime`, `lapTimeMs`, speed stats, `startIndex/endIndex`, `sectors?` (S1/S2/S3 **major rollup**), `sectorTimes?` (fine-grained per-segment), `sectorBoundaries?` (per-line sample indices) |
+| `Course` | `name`, `lengthFt?`, `startFinishA/B` (lat/lon), `sectors?: CourseSector[]` (ordered timing lines after S/F), deprecated `sector2/sector3` (legacy mirror of the 2 majors, kept in sync by `normalizeCourseSectors`), optional `layout?` (`{lat,lon}[]` user-drawn outline) |
+| `CourseSector` | `{ line: SectorLine, major: boolean }` — one timing line after start/finish (the implicit, always-major sector 1) |
 | `Track` | `name`, `shortName?` (max 8 chars), `courses[]` |
 | `CourseDetectionResult` | `track`, `course`, `direction?`, `laps[]`, `isWaypointMode`, `waypointNotice?` |
 | `CourseDirection` | `'forward' \| 'reverse'` |
@@ -550,6 +553,50 @@ Documents, logs, and lap snapshots all draw from **one pooled per-tier byte
 budget** (`subscription_tiers.total_bytes`: free 50 MB / plus 10 GB / premium
 100 GB / pro 500 GB), shown as a single segmented bar on the Profile tab — see
 `docs/backend.md`.
+
+---
+
+## Course Sectors ("Unlimited" sectors — `lib/courseSectors.ts`)
+
+A course's timing lines are **start/finish (the implicit, always-major sector 1)
++ an ordered `Course.sectors` list** (`{line, major}[]`). Exactly three are
+"major" (start/finish + two flagged). Hidden caps: **25 timing lines**, **3
+majors** — both named constants (`MAX_SECTOR_LINES`, `MAX_MAJOR_SECTORS`), raise
+later. `courseSectors.ts` is the single source of truth; the rest of the app
+never reasons about sector geometry directly.
+
+- **One list, two visual groups.** The editor (`SectorListEditor`, dnd-kit
+  reorderable) shows the ordered list below the map; a per-row **Major** switch
+  flags the majors, sub-sectors indent under their owning major, drag order drives
+  numbering (`sectorLabels`: `1, 1.1, 2, 2.1, 3`). Save is blocked unless there
+  are 0 sectors or exactly 3 majors (`validateCourseSectors`). Three line colors
+  on every map: S/F green, major purple, sub sky-blue.
+- **The logger only ever sees the 3 majors.** `majorSectorLines`/`legacyMirror`
+  project the course down to start/finish + `sector2`/`sector3` — **byte-identical**
+  to the pre-overhaul device JSON, submission payload, and content hash.
+  `normalizeCourseSectors` migrates legacy `sector2/3` → the array (and keeps the
+  mirror in sync) at **every load boundary** (track load, device download, admin
+  read). Sub-sectors are app-only.
+- **Lap timing.** `calculateLaps` detects a crossing for every line → `Lap.sectorTimes[]`
+  (one per segment) + `Lap.sectorBoundaries[]` (sample index per line) + `Lap.sectors`
+  (the S1/S2/S3 **major rollup** via `rollupMajorSectors` — so video overlays,
+  snapshots, and the coach plugin keep working unchanged: the **coach receives the
+  major rollup only, for now**). `calculateOptimalLap` now sums the best time of
+  **every** segment (the true ideal lap), excluded-segment → `null`.
+- **Lap table** has a **Simple/Full** toggle (`LapTable.tsx`): Simple = S1/S2/S3,
+  Full = one column per fine-grained sector, zebra-striped by major group,
+  horizontally scrollable (shown only when sub-sectors exist). The per-lap "Map"
+  overlay column was removed.
+- **Crop-to-sector** (`SectorCropSelect`): the data-crop bar pairs the range
+  slider (~80%) with a sector dropdown (~20%) that snaps `visibleRange` to a
+  sector via `Lap.sectorBoundaries` (per-lap; disabled for all-laps view).
+- **Persistence.** Track JSON + community submissions + the admin `courses`/
+  `submissions` tables carry a canonical `sectors` / `sectors_data` array
+  alongside the legacy mirror columns (migration
+  `20260613000000_course_sectors_data.sql`; the generated Supabase types lag — the
+  adapter builds the insert payload as a variable to dodge the excess-property
+  check until regen). `submit-track` edge fn validates the optional `sectors`
+  array (≤24, exactly-2-majors-or-none).
 
 ---
 
@@ -953,7 +1000,7 @@ re-merges it into the main chunk.
   `GraphViewTab`, and `LabsTab` (`Index.tsx`)
 - `FileManagerDrawer` (slide-out drawer, `Index.tsx`)
 - `DataloggerDownload` (BLE entry point; keeps `lib/ble/*` out of initial bundle — `FileImport.tsx`, `drawer/FilesTab.tsx`)
-- `VisualEditor` (Leaflet drawing tools; `TrackEditor.tsx`, `track-editor/AddCourseDialog.tsx`, `admin/CoursesTab.tsx`). The shared map editor for **all** track managers — start/finish + sector lines (drag-to-place, auto-saved on release) and the course-outline Draw/Generate tools (auto-saved on each edit; no Done/Close button). There is no manual coordinate-entry mode — visual is the only editor.
+- `CourseSectorEditor` (lazy; wraps `VisualEditor` + `SectorListEditor`, used by `TrackEditor.tsx`, `track-editor/AddCourseDialog.tsx`, `admin/CoursesTab.tsx`). The shared map+list editor for **all** track managers — start/finish + every sector line (select a row → drag its endpoints on the map, auto-saved on release) and the course-outline Draw/Generate tools (auto-saved on each edit; no Done/Close button). The sector list (dnd-kit) is the control surface; there is no manual coordinate-entry mode. `@dnd-kit/*` rides this lazy boundary, off the initial bundle.
 
 **Vendor chunks** (`manualChunks` in `vite.config.ts`): `vendor-react`,
 `vendor-query`, `vendor-leaflet`, `vendor-supabase`, `vendor-radix`. These cache
