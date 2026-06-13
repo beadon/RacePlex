@@ -11,9 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > from git history and grouped by theme rather than exhaustive per-commit
 > detail.
 
-## [Unreleased]
-
-> Wearing in as the `2.5.0` beta.
+## [2.5.0] - 2026-06-13
 
 ### Added
 - **Tools tab** — a new main-view tab to the right of Coach, contributed by a
