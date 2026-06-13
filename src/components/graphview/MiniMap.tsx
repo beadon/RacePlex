@@ -7,7 +7,7 @@ import { buildHeatmapSegments } from '@/lib/speedHeatmap';
 import { detectBrakingZones, BrakingZoneConfig } from '@/lib/brakingZones';
 import { unionBounds, cropOverlayLinesToWindow, type OverlayLine } from '@/lib/lapOverlays';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
-import { updatePositionMarker } from '@/components/map/positionArrowMarker';
+import { updatePositionMarker, ARROW_MARKER_SIZE } from '@/components/map/positionArrowMarker';
 import { useSettingsContext } from '@/contexts/SettingsContext';
 import { usePlaybackContext } from '@/contexts/PlaybackContext';
 import { Moon, Satellite, Square, WifiOff, Zap, Octagon, Map as MapIcon, X, Crosshair, List, ChevronDown, ChevronUp } from 'lucide-react';
@@ -218,8 +218,12 @@ export function MiniMap({ samples, allSamples, referenceSamples = [], course, bo
   }, [brakingZones, showBrakingZones, brakingZoneSettings?.color, brakingZoneSettings?.width]);
 
   // Arrow marker (created once, moved/rotated per tick) + follow-pan.
-  // Re-center only when the marker leaves the middle half of the view, and
-  // without animation — an animated panTo issued per 16 ms tick perpetually
+  // Re-center only once the arrow's edge actually touches the viewport border
+  // (margin = the marker's half-extent), not when it leaves some inner box — so
+  // the camera holds steady while the cursor crosses most of the map and snaps
+  // only at the true edge. Re-centering puts the arrow back at dead-center, so
+  // it has the full half-width to travel before the next snap (no oscillation).
+  // panTo is un-animated — an animated panTo issued per 16 ms tick perpetually
   // interrupts itself and burns the frame budget on aborted pan animations.
   useEffect(() => {
     const map = mapRef.current; if (!map) return;
@@ -228,7 +232,8 @@ export function MiniMap({ samples, allSamples, referenceSamples = [], course, bo
     if (!sample) return;
     const p = map.latLngToContainerPoint([sample.lat, sample.lon]);
     const size = map.getSize();
-    if (p.x < size.x * 0.25 || p.x > size.x * 0.75 || p.y < size.y * 0.25 || p.y > size.y * 0.75) {
+    const margin = ARROW_MARKER_SIZE / 2;
+    if (p.x < margin || p.x > size.x - margin || p.y < margin || p.y > size.y - margin) {
       map.panTo([sample.lat, sample.lon], { animate: false });
     }
   }, [currentIndex, samples]);

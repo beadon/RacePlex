@@ -23,6 +23,8 @@ export const PanelSlot = {
   Labs: "labs",
   /** The dedicated AI Coach tab in the main view. */
   Coach: "coach",
+  /** The Tools tab in the main view (utility tools, e.g. the seat-position visualizer). */
+  Tools: "tools",
   /** The user profile tab (storage usage, account) in the file-manager drawer. */
   Profile: "profile",
 } as const;

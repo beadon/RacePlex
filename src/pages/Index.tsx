@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, lazy, Suspense } from "react";
-import { Gauge, Map, ListOrdered, BarChart3, FolderOpen, Play, Pause, Eye, EyeOff, FlaskConical, AlertCircle } from "lucide-react";
+import { Gauge, Map, ListOrdered, BarChart3, FolderOpen, Play, Pause, Eye, EyeOff, FlaskConical, AlertCircle, Wrench } from "lucide-react";
 import { LandingPage } from "@/components/LandingPage";
 import { TrackEditor } from "@/components/TrackEditor"; // still used in compact header
 import { LapTimesTab } from "@/components/tabs/LapTimesTab";
@@ -20,6 +20,9 @@ const LabsTab = lazy(() =>
 );
 const CoachTab = lazy(() =>
   import("@/components/tabs/CoachTab").then((m) => ({ default: m.CoachTab })),
+);
+const ToolsTab = lazy(() =>
+  import("@/components/tabs/ToolsTab").then((m) => ({ default: m.ToolsTab })),
 );
 import { InstallPrompt } from "@/components/InstallPrompt";
 import { SettingsModal } from "@/components/SettingsModal";
@@ -65,7 +68,7 @@ import { snapshotLapSamples } from "@/lib/lapSnapshot";
 import type { PluginSnapshot } from "@/plugins/panels";
 
 
-type TopPanelView = "raceline" | "laptable" | "graphview" | "labs" | "coach";
+type TopPanelView = "raceline" | "laptable" | "graphview" | "labs" | "coach" | "tools";
 
 const enableAdmin = import.meta.env.VITE_ENABLE_ADMIN === 'true';
 const enableCloud = import.meta.env.VITE_ENABLE_CLOUD === 'true';
@@ -141,6 +144,9 @@ export default function Index() {
   // The Coach tab is self-gating: it appears only when a plugin contributes a
   // panel to the Coach slot (i.e. the coach package is installed).
   const showCoach = usePanelsForSlot(PanelSlot.Coach).length > 0;
+  // Tools tab is self-gating like Coach: it appears only when a plugin
+  // contributes a panel to the Tools slot (the first-party tools plugin does).
+  const showTools = usePanelsForSlot(PanelSlot.Tools).length > 0;
   // Profile tab is self-gating too: appears only when a plugin (cloud-sync)
   // contributes a Profile panel (i.e. the cloud build flag is on).
   const showProfile = usePanelsForSlot(PanelSlot.Profile).length > 0;
@@ -613,7 +619,7 @@ export default function Index() {
       </header>
 
       <main className="flex-1 min-h-0 overflow-hidden flex flex-col">
-        <TabBar topPanelView={topPanelView} setTopPanelView={setTopPanelView} laps={laps} showOverlays={showOverlays} onToggleOverlays={() => setShowOverlays(v => !v)} showLabs={showLabs} showCoach={showCoach} setupIndicator={setupIndicator} onSetupIndicatorClick={() => setupIndicator && fileManager.open(setupIndicator.target)} />
+        <TabBar topPanelView={topPanelView} setTopPanelView={setTopPanelView} laps={laps} showOverlays={showOverlays} onToggleOverlays={() => setShowOverlays(v => !v)} showLabs={showLabs} showCoach={showCoach} showTools={showTools} setupIndicator={setupIndicator} onSetupIndicatorClick={() => setupIndicator && fileManager.open(setupIndicator.target)} />
 
 
         <div className="flex-1 min-h-0 overflow-hidden">
@@ -623,6 +629,7 @@ export default function Index() {
             {topPanelView === "graphview" && <GraphViewTab />}
             {topPanelView === "labs" && showLabs && <LabsTab />}
             {topPanelView === "coach" && showCoach && <CoachTab />}
+            {topPanelView === "tools" && showTools && <ToolsTab />}
           </Suspense>
         </div>
       </main>
@@ -655,7 +662,7 @@ export default function Index() {
 }
 
 /** Tab navigation bar for the main data view */
-function TabBar({ topPanelView, setTopPanelView, laps, showOverlays, onToggleOverlays, showLabs, showCoach, setupIndicator, onSetupIndicatorClick }: {
+function TabBar({ topPanelView, setTopPanelView, laps, showOverlays, onToggleOverlays, showLabs, showCoach, showTools, setupIndicator, onSetupIndicatorClick }: {
   topPanelView: TopPanelView;
   setTopPanelView: (view: TopPanelView) => void;
   laps: { lapNumber: number }[];
@@ -663,6 +670,7 @@ function TabBar({ topPanelView, setTopPanelView, laps, showOverlays, onToggleOve
   onToggleOverlays: () => void;
   showLabs: boolean;
   showCoach: boolean;
+  showTools: boolean;
   setupIndicator: SetupIndicator | null;
   onSetupIndicatorClick: () => void;
 }) {
@@ -676,13 +684,13 @@ function TabBar({ topPanelView, setTopPanelView, laps, showOverlays, onToggleOve
   return (
     <div className="flex items-center border-b border-border shrink-0">
       <button onClick={() => setTopPanelView("raceline")} className={tabClass("raceline")}>
-        <Map className="w-4 h-4" /> Simple
+        <Map className="w-4 h-4" /> <span className="hidden sm:inline">Simple</span>
       </button>
       <button onClick={() => setTopPanelView("graphview")} className={tabClass("graphview")}>
         <BarChart3 className="w-4 h-4" /> <span className="hidden sm:inline">Pro</span>
       </button>
       <button onClick={() => setTopPanelView("laptable")} className={tabClass("laptable")}>
-        <ListOrdered className="w-4 h-4" /> Lap Times
+        <ListOrdered className="w-4 h-4" /> <span className="hidden sm:inline">Lap Times</span>
         {laps.length > 0 && (
           <span className="ml-1 px-1.5 py-0.5 text-xs bg-primary/20 text-primary rounded">{laps.length}</span>
         )}
@@ -695,6 +703,11 @@ function TabBar({ topPanelView, setTopPanelView, laps, showOverlays, onToggleOve
       {showCoach && (
         <button onClick={() => setTopPanelView("coach")} className={tabClass("coach")}>
           <Gauge className="w-4 h-4" /> <span className="hidden sm:inline">Coach</span>
+        </button>
+      )}
+      {showTools && (
+        <button onClick={() => setTopPanelView("tools")} className={tabClass("tools")}>
+          <Wrench className="w-4 h-4" /> <span className="hidden sm:inline">Tools</span>
         </button>
       )}
       {setupIndicator && (
@@ -727,7 +740,7 @@ function TabBar({ topPanelView, setTopPanelView, laps, showOverlays, onToggleOve
         <div className="ml-auto mr-3">
           <Button variant="ghost" size="sm" onClick={onToggleOverlays} className="h-7 px-2 gap-1.5">
             {showOverlays ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-            <span className="text-xs">Overlay</span>
+            <span className="text-xs hidden sm:inline">Overlay</span>
           </Button>
         </div>
       )}

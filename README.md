@@ -123,6 +123,16 @@ The app includes an optional admin system for managing a community track databas
 
 **The app always reads tracks from `public/tracks.json` — zero database calls on normal page loads.** The database exists solely for the admin workflow.
 
+**Course sectors.** A course may define an ordered list of up to 25 timing
+lines (start/finish + sub-sectors), exactly three of which are "major"
+(start/finish + two). In the track JSON each course carries a canonical
+`sectors` array — `[{ a_lat, a_lng, b_lat, b_lng, major }]` (start/finish
+excluded) — alongside the legacy `sector_2_*`/`sector_3_*` fields, which mirror
+the two major lines for back-compat. **Only the three major sectors are exported
+to the DovesDataLogger** (over the same wire format as before); sub-sectors are
+an app-only refinement used for finer optimal-lap timing and the lap-table "Full"
+view. Older JSON with only `sector_2_*`/`sector_3_*` is read as the two majors.
+
 ### Environment Variables
 
 | Variable | Required | Description |
@@ -521,7 +531,7 @@ Built on the shoulders of these incredible open-source projects and free service
 - [React](https://react.dev) · [Vite](https://vite.dev) · [TypeScript](https://www.typescriptlang.org)
 - [Tailwind CSS](https://tailwindcss.com) · [shadcn/ui](https://ui.shadcn.com) · [Radix UI](https://www.radix-ui.com) · [Lucide Icons](https://lucide.dev)
 - [Leaflet](https://leafletjs.com) · [CARTO basemaps](https://carto.com) · [Esri World Imagery & Wayback](https://livingatlas.arcgis.com/wayback/) (satellite + historical imagery dates)
-- [TanStack Query](https://tanstack.com/query) · [Sonner](https://sonner.emilkowal.dev) · [react-resizable-panels](https://github.com/bvaughn/react-resizable-panels)
+- [TanStack Query](https://tanstack.com/query) · [Sonner](https://sonner.emilkowal.dev) · [react-resizable-panels](https://github.com/bvaughn/react-resizable-panels) · [dnd kit](https://dndkit.com) (sector list drag-to-reorder)
 - [mp4-muxer](https://github.com/Vanilagy/mp4-muxer) · [Savitzky-Golay (ml.js)](https://github.com/mljs/savitzky-golay) · [JSZip](https://stuk.github.io/jszip) · [fix-webm-duration](https://github.com/yusitnikov/fix-webm-duration)
 - [IEM ASOS (Iowa State)](https://mesonet.agron.iastate.edu) · [NWS API](https://www.weather.gov/documentation/services-web-api) · [Open-Meteo](https://open-meteo.com) (global weather fallback, CC-BY 4.0)
 - [MoTeC i2](https://www.motec.com.au) (file format reference)

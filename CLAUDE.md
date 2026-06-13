@@ -59,6 +59,7 @@ will read it tomorrow.
 | Charts | Custom Canvas 2D (not a library — see `TelemetryChart.tsx`, `SingleSeriesChart.tsx`) |
 | Video Export | WebCodecs + [mp4-muxer](https://github.com/Vanilagy/mp4-muxer) (H.264 video + AAC audio → MP4 output) |
 | State | React hooks + React Query (for admin only) |
+| Drag/Reorder | [dnd kit](https://dndkit.com) (`@dnd-kit/core`+`sortable`+`utilities`) — sector-list reorder; lazy-loaded with the track editor |
 | Local Storage | IndexedDB (`dbUtils.ts`) for files/metadata/karts/notes/setups/video-sync/graph-prefs; localStorage for tracks & settings |
 | Backend | None for core features. Optional admin via Supabase (Lovable Cloud) |
 | BLE | Web Bluetooth API for DovesDataLogger device communication |
@@ -79,10 +80,10 @@ src/
 ├── components/
 │   ├── ui/                # shadcn/ui primitives
 │   ├── admin/             # Admin tabs (Tracks, Courses, Submissions, BannedIps, Tools, Messages)
-│   ├── tabs/              # View tabs (GraphView, RaceLine, LapTimes, Labs, Coach; Profile is mounted in the drawer)
+│   ├── tabs/              # View tabs (GraphView, RaceLine, LapTimes, Labs, Coach, Tools; Profile is mounted in the drawer)
 │   ├── graphview/         # Pro mode: GraphPanel, GraphViewPanel, MiniMap, SingleSeriesChart, GGDiagram, InfoBox
 │   ├── drawer/            # File-manager drawer tabs (Files, Vehicles/Karts, Notes, Setups, Device*)
-│   ├── track-editor/      # Track editor sub-components (VisualEditor is lazy — see Bundle Splitting)
+│   ├── track-editor/      # Track editor sub-components: VisualEditor (lazy Leaflet line placement), SectorListEditor (dnd-kit reorderable sector list — the control surface), CourseSectorEditor (bundles the two), AddCourseDialog/AddTrackDialog
 │   ├── video-overlays/    # Video-export overlay system: registry + themes + per-widget *Overlay,
 │   │                      #   sectorUtils, dataSourceResolver, OverlaySettingsPanel, VideoExportDialog
 │   ├── RaceLineView.tsx   # Leaflet map: race line, speed heatmap, braking zones
@@ -109,7 +110,8 @@ src/
 │   ├── channels.ts        # ★ Canonical channel registry (ids/labels/units/aliases) + normalizeChannels()
 │   ├── fieldResolver.ts   # Settings-facing adapter over channels.ts
 │   ├── courseDetection.ts # ★ Auto track/course/direction detection + waypoint mode
-│   ├── lapCalculation.ts  # Start/finish crossing detection → Lap[]
+│   ├── courseSectors.ts   # ★ Pure sector model: caps (25 lines / 3 majors), normalizeCourseSectors (legacy→array migration at every load boundary), sectorLabels (1/1.1/2…), validateCourseSectors, majorSectorLines + legacyMirror (the logger projection), rollupMajorSectors (fine-grained → S1/S2/S3)
+│   ├── lapCalculation.ts  # Start/finish + per-sector crossing detection → Lap[] (sectorTimes[] + sectorBoundaries[] + major rollup); calculateOptimalLap sums best of EVERY segment
 │   ├── lapDelta.ts        # ★ Position-based lap delta (arc-length resample + segment-projected gap)
 │   ├── fileBrowserTree.ts # ★ Pure file-browser hierarchy: Track→Course→logs, engine/kart filter, breadcrumbs, smart collapse
 │   ├── lapOverlays.ts     # ★ Pure multi-lap overlay logic: id format (lap/snap/file), palette, resolve selections → OverlayLine[], unionBounds
@@ -152,6 +154,8 @@ src/
 ├── plugins/               # ★ Plugin framework (auto-discovered) — see Plugin Framework section
 │   ├── (framework)        # types, registry, index, panels, mounts, storage + PluginPanelHost/PluginMount
 │   ├── cloud-sync/         # ★ First-party plugin: Supabase file + garage sync — see docs/backend.md
+│   ├── tools/              # ★ First-party plugin: Tools tab (lazy tool picker; kart seat-position
+│   │                      #   visualizer — pure rigid-body model.ts + SVG view, corner-scale calibration)
 │   └── coaching/           # Gitignored slot for the AI coach (npm pkg in production)
 ├── types/racing.ts        # ★ Core types: GpsSample, ParsedData, Lap, Course, Track, …
 ├── contexts/              # SettingsContext, SessionContext, PlaybackContext, DeviceContext (BLE), AuthContext (admin)
@@ -217,19 +221,22 @@ A plugin default-exports `{ id, name, version?, priority?, setup?(ctx) }`. In
 
 **UI panels:** the first concrete extension point. A plugin contributes
 `PluginPanel` descriptors to `PANELS_POINT`, targeting a *slot* (host surface).
-Three slots exist today: `PanelSlot.Labs` (rendered by `LabsTab.tsx`; no
+Four slots exist today: `PanelSlot.Labs` (rendered by `LabsTab.tsx`; no
 first-party panel targets it now — it shows only when the experimental
 `enableLabs` setting is on or another plugin contributes), `PanelSlot.Coach`
 (rendered by `CoachTab.tsx` — the dedicated AI Coach tab, home for the
-`@perchwerks/eye-in-the-sky` coaching plugin), and `PanelSlot.Profile`
+`@perchwerks/eye-in-the-sky` coaching plugin), `PanelSlot.Tools`
+(rendered by `ToolsTab.tsx` — the Tools tab right of Coach; the first-party
+`tools` plugin contributes its chromeless tool-picker panel there), and
+`PanelSlot.Profile`
 (rendered by `ProfileTab.tsx` — mounted as a tab **inside the file-manager
 drawer**, between Garage and Device, not in the main view tab bar; cloud-sync
 contributes the merged Account panel (sign-in/out + display name + plan +
 storage, working signed out against local storage), lap-snapshot management, and
 cloud-log management). All render contributed
 panels via `PluginPanelHost` and are
-**self-gating**: `Index.tsx` computes `hasLabsPanels`/`showCoach`/`showProfile`
-from `getPanelsForSlot`, so a tab appears only when a
+**self-gating**: `Index.tsx` computes `hasLabsPanels`/`showCoach`/`showTools`/
+`showProfile` from `getPanelsForSlot`, so a tab appears only when a
 plugin contributes a panel to it (Labs additionally shows when the experimental
 `enableLabs` setting is on). New slots are just new strings — no framework change.
 `PluginPanelHost` wraps each panel in an error boundary **and** a `Suspense`
@@ -275,6 +282,21 @@ the incremental engine. Backs the IndexedDB stores up to Supabase: structured
 stores → `sync_records` jsonb docs, raw blobs → the private `user-files` bucket.
 **Full data model, sync engine, conflict resolution, and backend live in
 `docs/backend.md`.**
+
+**Tools (first-party plugin, `src/plugins/tools/`):** contributes one chromeless
+panel to `PanelSlot.Tools`: a picker of trackside tools (icon + one-line
+description, catalog in `toolList.ts`) that opens the selected tool with a back
+bar. Everything is lazy (`ToolsPanel` and each tool component), so nothing rides
+the initial bundle, and fully offline. Tool state persists via
+`getPluginStore("tools")`. First tool: the **kart seat position visualizer**
+(`seat-position/`) — a pure, unit-tested rigid-body statics model (`model.ts`:
+4-element mass model with a feet-on-pedals leg-coupling factor, slide + tilt
+about the front anchor, closed-form + central-difference sensitivities, knee IK,
+corner-scale calibration that fits `kLegs`, and `rebaseline()` for
+"set current as zero") rendered as a side-view SVG (`SeatDiagram.tsx`) with
+controls/readouts in `SeatPositionTool.tsx`. The user plans to split this plugin
+into its own repo later — keep it free of deep host imports (it touches only the
+plugin contracts + `components/ui`).
 
 **AI coach (npm package):** published to the public npm registry as
 `@perchwerks/eye-in-the-sky` and listed in `optionalDependencies`. The loader in
@@ -364,8 +386,9 @@ and **native** lateral/longitudinal g (`LatAccel`/`LongAccel` → `lat_g_native`
 | `ParsedData` | `samples[]`, `fieldMappings[]`, `bounds`, `duration`, `startDate?`, `dovexMetadata?`, `parserStats?` |
 | `ParserStats` | `totalRows`, `acceptedRows`, `rejected: { nanFields, zeroCoords, outOfRange, speedCap, teleportation, incompleteRow }` |
 | `DovexMetadata` | `datetime?`, `driver?`, `course?`, `shortName?`, `bestLapMs?`, `optimalMs?`, `lapTimesMs?[]` |
-| `Lap` | `lapNumber`, `startTime/endTime`, `lapTimeMs`, speed stats, `startIndex/endIndex`, `sectors?` |
-| `Course` | `name`, `lengthFt?`, `startFinishA/B` (lat/lon), optional `sector2/sector3` lines, optional `layout?` (`{lat,lon}[]` user-drawn outline) |
+| `Lap` | `lapNumber`, `startTime/endTime`, `lapTimeMs`, speed stats, `startIndex/endIndex`, `sectors?` (S1/S2/S3 **major rollup**), `sectorTimes?` (fine-grained per-segment), `sectorBoundaries?` (per-line sample indices) |
+| `Course` | `name`, `lengthFt?`, `startFinishA/B` (lat/lon), `sectors?: CourseSector[]` (ordered timing lines after S/F), deprecated `sector2/sector3` (legacy mirror of the 2 majors, kept in sync by `normalizeCourseSectors`), optional `layout?` (`{lat,lon}[]` user-drawn outline) |
+| `CourseSector` | `{ line: SectorLine, major: boolean }` — one timing line after start/finish (the implicit, always-major sector 1) |
 | `Track` | `name`, `shortName?` (max 8 chars), `courses[]` |
 | `CourseDetectionResult` | `track`, `course`, `direction?`, `laps[]`, `isWaypointMode`, `waypointNotice?` |
 | `CourseDirection` | `'forward' \| 'reverse'` |
@@ -530,6 +553,50 @@ Documents, logs, and lap snapshots all draw from **one pooled per-tier byte
 budget** (`subscription_tiers.total_bytes`: free 50 MB / plus 10 GB / premium
 100 GB / pro 500 GB), shown as a single segmented bar on the Profile tab — see
 `docs/backend.md`.
+
+---
+
+## Course Sectors ("Unlimited" sectors — `lib/courseSectors.ts`)
+
+A course's timing lines are **start/finish (the implicit, always-major sector 1)
++ an ordered `Course.sectors` list** (`{line, major}[]`). Exactly three are
+"major" (start/finish + two flagged). Hidden caps: **25 timing lines**, **3
+majors** — both named constants (`MAX_SECTOR_LINES`, `MAX_MAJOR_SECTORS`), raise
+later. `courseSectors.ts` is the single source of truth; the rest of the app
+never reasons about sector geometry directly.
+
+- **One list, two visual groups.** The editor (`SectorListEditor`, dnd-kit
+  reorderable) shows the ordered list below the map; a per-row **Major** switch
+  flags the majors, sub-sectors indent under their owning major, drag order drives
+  numbering (`sectorLabels`: `1, 1.1, 2, 2.1, 3`). Save is blocked unless there
+  are 0 sectors or exactly 3 majors (`validateCourseSectors`). Three line colors
+  on every map: S/F green, major purple, sub sky-blue.
+- **The logger only ever sees the 3 majors.** `majorSectorLines`/`legacyMirror`
+  project the course down to start/finish + `sector2`/`sector3` — **byte-identical**
+  to the pre-overhaul device JSON, submission payload, and content hash.
+  `normalizeCourseSectors` migrates legacy `sector2/3` → the array (and keeps the
+  mirror in sync) at **every load boundary** (track load, device download, admin
+  read). Sub-sectors are app-only.
+- **Lap timing.** `calculateLaps` detects a crossing for every line → `Lap.sectorTimes[]`
+  (one per segment) + `Lap.sectorBoundaries[]` (sample index per line) + `Lap.sectors`
+  (the S1/S2/S3 **major rollup** via `rollupMajorSectors` — so video overlays,
+  snapshots, and the coach plugin keep working unchanged: the **coach receives the
+  major rollup only, for now**). `calculateOptimalLap` now sums the best time of
+  **every** segment (the true ideal lap), excluded-segment → `null`.
+- **Lap table** has a **Simple/Full** toggle (`LapTable.tsx`): Simple = S1/S2/S3,
+  Full = one column per fine-grained sector, zebra-striped by major group,
+  horizontally scrollable (shown only when sub-sectors exist). The per-lap "Map"
+  overlay column was removed.
+- **Crop-to-sector** (`SectorCropSelect`): the data-crop bar pairs the range
+  slider (~80%) with a sector dropdown (~20%) that snaps `visibleRange` to a
+  sector via `Lap.sectorBoundaries` (per-lap; disabled for all-laps view).
+- **Persistence.** Track JSON + community submissions + the admin `courses`/
+  `submissions` tables carry a canonical `sectors` / `sectors_data` array
+  alongside the legacy mirror columns (migration
+  `20260613000000_course_sectors_data.sql`; the generated Supabase types lag — the
+  adapter builds the insert payload as a variable to dodge the excess-property
+  check until regen). `submit-track` edge fn validates the optional `sectors`
+  array (≤24, exactly-2-majors-or-none).
 
 ---
 
@@ -933,7 +1000,7 @@ re-merges it into the main chunk.
   `GraphViewTab`, and `LabsTab` (`Index.tsx`)
 - `FileManagerDrawer` (slide-out drawer, `Index.tsx`)
 - `DataloggerDownload` (BLE entry point; keeps `lib/ble/*` out of initial bundle — `FileImport.tsx`, `drawer/FilesTab.tsx`)
-- `VisualEditor` (Leaflet drawing tools; `TrackEditor.tsx`, `track-editor/AddCourseDialog.tsx`, `admin/CoursesTab.tsx`). The shared map editor for **all** track managers — start/finish + sector lines (drag-to-place, auto-saved on release) and the course-outline Draw/Generate tools (auto-saved on each edit; no Done/Close button). There is no manual coordinate-entry mode — visual is the only editor.
+- `CourseSectorEditor` (lazy; wraps `VisualEditor` + `SectorListEditor`, used by `TrackEditor.tsx`, `track-editor/AddCourseDialog.tsx`, `admin/CoursesTab.tsx`). The shared map+list editor for **all** track managers — start/finish + every sector line (select a row → drag its endpoints on the map, auto-saved on release) and the course-outline Draw/Generate tools (auto-saved on each edit; no Done/Close button). The sector list (dnd-kit) is the control surface; there is no manual coordinate-entry mode. `@dnd-kit/*` rides this lazy boundary, off the initial bundle.
 
 **Vendor chunks** (`manualChunks` in `vite.config.ts`): `vendor-react`,
 `vendor-query`, `vendor-leaflet`, `vendor-supabase`, `vendor-radix`. These cache

@@ -1,12 +1,13 @@
-import { memo, useMemo } from 'react';
+import { Fragment, memo, useMemo, useState } from 'react';
 import { Lap, courseHasSectors, Course, GpsSample } from '@/types/racing';
 import { formatLapTime, formatSectorTime, calculateOptimalLap } from '@/lib/lapCalculation';
-import { Trophy, Zap, Snail, Target, Spline } from 'lucide-react';
+import { normalizeCourseSectors, sectorLabels } from '@/lib/courseSectors';
+import { Trophy, Zap, Snail, Target } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ExternalRefBar } from '@/components/ExternalRefBar';
 import { LapSnapshotControls } from '@/components/LapSnapshotControls';
 import type { LapSnapshot } from '@/lib/lapSnapshot';
-import { overlayId, type OverlayLine } from '@/lib/lapOverlays';
+import { type OverlayLine } from '@/lib/lapOverlays';
 import type { SaveSnapshotResult } from '@/hooks/useLapSnapshots';
 import { FileEntry } from '@/lib/fileStorage';
 import { useSettingsContext } from '@/contexts/SettingsContext';
@@ -50,6 +51,68 @@ export const LapTable = memo(function LapTable({ laps, course, samples, onLapSel
   const { useKph } = useSettingsContext();
 
   const showSectors = courseHasSectors(course);
+  const [view, setView] = useState<'simple' | 'full'>('simple');
+  // In Full view, an optional colored "S# Sum" column before each major group
+  // showing that major sector's total time (the S1/S2/S3 rollup). Default on.
+  const [showSectorSums, setShowSectorSums] = useState(true);
+
+  // Full view = one column per fine-grained sector. Only offered when the course
+  // has sub-sectors beyond the three majors.
+  const full = useMemo(() => {
+    if (!course) return null;
+    const sectors = normalizeCourseSectors(course).sectors ?? [];
+    const hasSubSectors = sectors.some((s) => !s.major);
+    if (!hasSubSectors) return null;
+
+    const labels = sectorLabels(course); // length = lineCount (incl. start/finish)
+    const lineCount = labels.length;
+    // Major-group index per segment, for zebra striping.
+    const groupOf: number[] = [];
+    let g = 0;
+    for (let k = 0; k < lineCount; k++) {
+      if (k > 0 && sectors[k - 1].major) g++;
+      groupOf.push(g);
+    }
+    // Fastest (min) time per segment across laps.
+    const fastestIdx: (number | null)[] = new Array(lineCount).fill(null);
+    const best: number[] = new Array(lineCount).fill(Infinity);
+    laps.forEach((lap, idx) => {
+      lap.sectorTimes?.forEach((t, k) => {
+        if (t !== undefined && t < best[k]) { best[k] = t; fastestIdx[k] = idx; }
+      });
+    });
+
+    // Major groups: the segment indices that compose each major sector (S1/S2/S3),
+    // and which segment begins a group (where the "S# Sum" column is inserted).
+    const groupCount = lineCount === 0 ? 0 : groupOf[lineCount - 1] + 1;
+    const segIndicesByGroup: number[][] = Array.from({ length: groupCount }, () => []);
+    for (let k = 0; k < lineCount; k++) segIndicesByGroup[groupOf[k]].push(k);
+    const isGroupStart: boolean[] = groupOf.map((gi, k) => k === 0 || gi !== groupOf[k - 1]);
+    // Sum a lap's segments for major group `gi`; undefined if any segment is missing.
+    const sumForGroup = (lap: Lap, gi: number): number | undefined => {
+      let sum = 0;
+      for (const k of segIndicesByGroup[gi]) {
+        const t = lap.sectorTimes?.[k];
+        if (t === undefined) return undefined;
+        sum += t;
+      }
+      return sum;
+    };
+    // Fastest (min) major-sum per group across laps, for highlighting.
+    const fastestSumIdx: (number | null)[] = new Array(groupCount).fill(null);
+    const bestSum: number[] = new Array(groupCount).fill(Infinity);
+    laps.forEach((lap, idx) => {
+      for (let gi = 0; gi < groupCount; gi++) {
+        const s = sumForGroup(lap, gi);
+        if (s !== undefined && s < bestSum[gi]) { bestSum[gi] = s; fastestSumIdx[gi] = idx; }
+      }
+    });
+
+    return { labels, lineCount, groupOf, fastestIdx, groupCount, isGroupStart, fastestSumIdx, sumForGroup };
+  }, [course, laps]);
+
+  const showFull = view === 'full' && full !== null;
+  const showSums = showFull && showSectorSums;
 
   // Memoize expensive lap statistics computation
   const lapStats = useMemo(() => {
@@ -169,14 +232,57 @@ export const LapTable = memo(function LapTable({ laps, course, samples, onLapSel
           ) : undefined}
         />
       )}
-      <table className="w-full">
+      {/* Simple/Full toggle — only when the course has sub-sectors. The
+          "Sector sums" toggle appears alongside it only in Full view. */}
+      {full && (
+        <div className="flex items-center justify-end gap-2 px-2 py-1.5">
+          {showFull && (
+            <button
+              className={`rounded-md border border-border px-2 py-0.5 text-xs transition-colors ${showSectorSums ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+              onClick={() => setShowSectorSums((v) => !v)}
+              title="Show a running S1/S2/S3 total before each major sector"
+            >
+              Sector sums
+            </button>
+          )}
+          <div className="inline-flex rounded-md border border-border p-0.5 text-xs">
+            <button
+              className={`rounded px-2 py-0.5 transition-colors ${!showFull ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+              onClick={() => setView('simple')}
+            >
+              Simple
+            </button>
+            <button
+              className={`rounded px-2 py-0.5 transition-colors ${showFull ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+              onClick={() => setView('full')}
+            >
+              Full
+            </button>
+          </div>
+        </div>
+      )}
+      <table className={showFull ? 'min-w-max' : 'w-full'}>
         <thead className="sticky top-0 bg-card">
           <tr className="text-left text-xs text-muted-foreground uppercase tracking-wider">
             <th className="px-2 py-3 font-medium w-16">Ref</th>
-            {onToggleOverlay && <th className="px-1 py-3 font-medium w-10 text-center" title="Show lap line on map">Map</th>}
             <th className="px-4 py-3 font-medium">Lap</th>
             <th className="px-4 py-3 font-medium">Time</th>
-            {showSectors && (
+            {showFull ? (
+              full.labels.map((label, k) => (
+                <Fragment key={k}>
+                  {showSums && full.isGroupStart[k] && (
+                    <th className="px-3 py-3 font-semibold text-center whitespace-nowrap bg-primary/20 text-primary">
+                      {`S${full.groupOf[k] + 1} Sum`}
+                    </th>
+                  )}
+                  <th
+                    className={`px-3 py-3 font-medium text-center whitespace-nowrap ${full.groupOf[k] % 2 === 1 ? 'bg-muted/40' : ''}`}
+                  >
+                    {label}
+                  </th>
+                </Fragment>
+              ))
+            ) : showSectors && (
               <>
                 <th className="px-3 py-3 font-medium text-center">S1</th>
                 <th className="px-3 py-3 font-medium text-center">S2</th>
@@ -222,23 +328,6 @@ export const LapTable = memo(function LapTable({ laps, course, samples, onLapSel
                     {isReference ? 'Ref' : 'Set Ref'}
                   </Button>
                 </td>
-                {onToggleOverlay && (() => {
-                  const ovId = overlayId('lap', lap.lapNumber);
-                  const overlay = overlayLines.find((l) => l.id === ovId);
-                  return (
-                    <td className="px-1 py-3 text-center" onClick={(e) => e.stopPropagation()}>
-                      <button
-                        className="rounded p-1.5 transition-colors hover:bg-muted/50"
-                        style={{ color: overlay ? overlay.color : undefined }}
-                        title={overlay ? 'Hide lap line on map' : 'Show lap line on map'}
-                        aria-pressed={!!overlay}
-                        onClick={() => onToggleOverlay(ovId)}
-                      >
-                        <Spline className={`w-4 h-4 ${overlay ? '' : 'text-muted-foreground'}`} />
-                      </button>
-                    </td>
-                  );
-                })()}
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-2">
                     <span className="font-mono text-sm">{lap.lapNumber}</span>
@@ -250,7 +339,32 @@ export const LapTable = memo(function LapTable({ laps, course, samples, onLapSel
                 <td className={`px-4 py-3 font-mono text-sm ${isFastest ? 'text-racing-lapBest font-semibold' : ''}`}>
                   {formatLapTime(lap.lapTimeMs)}
                 </td>
-                {showSectors && (
+                {showFull ? (
+                  full.labels.map((_, k) => {
+                    const t = lap.sectorTimes?.[k];
+                    const isFastestSeg = full.fastestIdx[k] === idx;
+                    const zebra = full.groupOf[k] % 2 === 1 ? 'bg-muted/30' : '';
+                    const g = full.groupOf[k];
+                    const sum = showSums && full.isGroupStart[k] ? full.sumForGroup(lap, g) : undefined;
+                    const isFastestSum = full.fastestSumIdx[g] === idx;
+                    return (
+                      <Fragment key={k}>
+                        {showSums && full.isGroupStart[k] && (
+                          <td
+                            className={`px-3 py-3 font-mono text-xs text-center whitespace-nowrap font-semibold ${isFastestSum ? 'text-purple-400 bg-purple-500/15' : 'text-primary bg-primary/10'}`}
+                          >
+                            {sum !== undefined ? formatSectorTime(sum) : '—'}
+                          </td>
+                        )}
+                        <td
+                          className={`px-3 py-3 font-mono text-xs text-center whitespace-nowrap ${isFastestSeg ? 'text-purple-400 font-semibold bg-purple-500/10' : zebra}`}
+                        >
+                          {t !== undefined ? formatSectorTime(t) : '—'}
+                        </td>
+                      </Fragment>
+                    );
+                  })
+                ) : showSectors && (
                   <>
                     <td className={`px-3 py-3 font-mono text-xs text-center ${hasFastestS1 ? 'text-purple-400 font-semibold bg-purple-500/10' : ''}`}>
                       {lap.sectors?.s1 !== undefined ? formatSectorTime(lap.sectors.s1) : '—'}
