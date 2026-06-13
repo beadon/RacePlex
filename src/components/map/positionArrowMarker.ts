@@ -7,10 +7,16 @@ interface PositionSample {
   heading?: number;
 }
 
+/** Side length (px) of the square position-arrow icon. Centered anchor, so its
+ *  half-extent (ARROW_MARKER_SIZE / 2) is how far the marker reaches from its
+ *  GPS point to its visual edge — used by follow-pan to snap when the arrow's
+ *  edge touches the viewport border. */
+export const ARROW_MARKER_SIZE = 20;
+
 /** SVG triangle/arrow marker pointing up; rotated per tick via CSS transform. */
 function createArrowIcon(): L.DivIcon {
   const svg = `
-    <svg width="20" height="20" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"
+    <svg width="${ARROW_MARKER_SIZE}" height="${ARROW_MARKER_SIZE}" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"
          style="transform-origin: center;">
       <polygon
         points="10,2 18,18 10,14 2,18"
@@ -23,8 +29,8 @@ function createArrowIcon(): L.DivIcon {
   return L.divIcon({
     html: svg,
     className: 'arrow-marker',
-    iconSize: [20, 20],
-    iconAnchor: [10, 10],
+    iconSize: [ARROW_MARKER_SIZE, ARROW_MARKER_SIZE],
+    iconAnchor: [ARROW_MARKER_SIZE / 2, ARROW_MARKER_SIZE / 2],
   });
 }
 

@@ -57,6 +57,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Removed the per-lap "Map" overlay toggle column from the lap-times list
   (overlays are still controlled from the header Overlays menu).
 
+### Fixed
+- **Pro-mode mini-map no longer re-centers too early.** The camera held the
+  position arrow inside the middle half of the view, so it snapped back to
+  center while the cursor was still well within the visible map. It now re-centers
+  only once the arrow's edge actually reaches the viewport border, so the map
+  stays put while the cursor crosses most of it.
+
 ## [2.4.0] - 2026-6-12
 
 ### Fixed
