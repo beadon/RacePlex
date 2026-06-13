@@ -13,6 +13,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Pro-mode panel resizing on touch.** Dragging a resizable divider (the
+  left/right split and the InfoBox/MiniMap split in pro mode, plus the video
+  panel) would stop after only a few pixels on touchscreens. The handle's
+  invisible grab strip was only a few pixels wide while the drag-start margin
+  extended over the neighbouring chart/map — so a finger landing just off the
+  divider started the resize on an element without `touch-action: none`, and the
+  browser reclaimed the gesture as a scroll. The grab strip is now wider and the
+  start margin is aligned to it, so touch drags track all the way.
+
 ### Changed
 - **Mobile garage & header polish.** The Garage/Device drawer now covers the
   full screen on mobile (it stays at half width on larger screens) so it's
