@@ -654,8 +654,8 @@ function CourseDrawingMini({ points, size = 36 }: { points: Array<{ lat: number;
 
   if (compact) {
     // A single course control: the race-course icon shows at every size; the
-    // current track : course selection rides as the button label on wider
-    // screens (and the title tooltip) so the header stays compact on mobile.
+    // current track : course selection rides as the button label from tablet up
+    // (and the title tooltip) so the header stays compact on mobile.
     const displayLabel = selection ? `${abbreviateTrackName(selection.trackName)} : ${selection.courseName}` : 'Select track';
 
     return (
@@ -663,12 +663,12 @@ function CourseDrawingMini({ points, size = 36 }: { points: Array<{ lat: number;
         <Button
           variant="ghost"
           size="sm"
-          className="h-7 max-w-[220px] gap-1.5 px-2 lg:px-3"
+          className="h-7 max-w-[220px] gap-1.5 px-2 md:px-3"
           onClick={() => setIsSelectDialogOpen(true)}
           title={displayLabel}
         >
           <Route className="w-4 h-4 shrink-0" />
-          <span className="hidden truncate lg:inline">{displayLabel}</span>
+          <span className="hidden truncate md:inline">{displayLabel}</span>
         </Button>
 
         {selectDialog}

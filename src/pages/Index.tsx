@@ -555,7 +555,7 @@ export default function Index() {
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="outline" size="icon" className="h-8 w-8 hidden sm:inline-flex" onClick={togglePlayback}>
+                <Button variant="outline" size="icon" className="h-8 w-8" onClick={togglePlayback}>
                   {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
                 </Button>
               </TooltipTrigger>

@@ -16,11 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - **Mobile garage & header polish.** The Garage/Device drawer now covers the
   full screen on mobile (it stays at half width on larger screens) so it's
-  easier to use on a phone. In the loaded-session header, the play/pause button
-  is hidden on mobile to free up room so the Garage button stays reachable, and
-  the track/course label + edit button are consolidated into a single course
-  control — now using a route icon (at every screen size) with the current
-  track : course as its label on wider screens.
+  easier to use on a phone. In the loaded-session header, the track/course label
+  and edit button are consolidated into a single course control — now using a
+  route icon (at every screen size) with the current track : course as its label
+  from tablet up.
 
 ## [2.5.1] - 2026-06-13
 
