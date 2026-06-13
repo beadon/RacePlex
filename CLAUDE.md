@@ -17,7 +17,7 @@
 4. **Update credits** (in README) when adding new FOSS dependencies.
 5. **Never do on the server what you can do on the client.**
 6. **Add tests when possible**: New parsers, pure utilities, and protocol/format logic should ship with Vitest coverage. Bug fixes should add a regression test that fails before the fix. Don't leave testable logic untested.
-7. **Keep `CHANGELOG.md` updated**: Add user-facing changes under the `[Unreleased]` heading (Keep a Changelog format) as you make them — don't wait for release time. Cut a new version section + tag when releasing.
+7. **Keep `CHANGELOG.md` updated**: Add user-facing changes as you make them — don't wait for release time. **Once a beta version number has been picked (e.g. `2.5.1`), keep that version as the heading and mark it unreleased — `## [2.5.1] - unreleased` — and keep adding every change under that same section until it actually ships. Do NOT create a new `[Unreleased]` block or bump the patch number on every commit; we are not cutting a `.1` release per change.** Only on release do you set the date and tag, then start the next version. (A bare `[Unreleased]` is fine only before any beta version has been chosen.)
 8. **Keep it professional**: This is a public, released OSS project (v1.5.0+). Hold the bar — see the standards below.
 
 ---
@@ -615,7 +615,7 @@ The `course_layouts` table stores polyline drawings of track layouts (1:1 with c
 
 **Draw tool**: In the VisualEditor, a "Draw" button allows clicking on the satellite map to build a polyline outline. It is shown whenever `showDrawTool` is set — **available to all users**, not just admin (the old `isAdminEditor` gate was removed). User-drawn (or lap-generated) outlines are persisted on `Course.layout` (a `{lat, lon}[]` polyline) through the normal track-storage CRUD, so they ride cloud-sync and travel with a community submission. Built-in courses still get their outline from `public/drawings.json` (see `loadCourseDrawings`); when editing, the user's own `course.layout` takes precedence over the built-in drawing.
 
-**Manage Tracks (home screen)**: `FileImport` renders a **Manage Tracks** button (below "Download from Datalogger") that opens `TrackEditor` via its `triggerButton` + `startInManage` props — the track manager is reachable with no datalog loaded. The create-flow dialogs (`AddTrackDialog`/`AddCourseDialog`) pass `isNewTrack`/`showDrawTool` so location search + manual drawing are available there.
+**Manage Tracks (home screen)**: `LandingPage` renders a **Manage Tracks** action tile that opens `TrackEditor` via its `triggerButton` + `startInManage` props — the track manager is reachable with no datalog loaded. The create-flow dialogs (`AddTrackDialog`/`AddCourseDialog`) pass `isNewTrack`/`showDrawTool` so location search + manual drawing are available there.
 
 **Generate Drawing**: A "Generate" button (visible when `showDrawTool` is true and either laps *or* GPS samples are available) auto-populates the drawing from GPS data. With detected laps it opens a picker — each lap **plus** a **Whole session** option; with no laps (a fresh track at a brand-new venue where waypoint mode never closed a lap) it generates straight from the full session trace, so the outline can be drawn before a course exists. Available in user-side TrackEditor when session data is loaded. Laps and samples are threaded from `Index.tsx` → `TrackEditor` → `VisualEditor` (and into the create-flow dialogs). The drawing state lives in `useTrackEditorForm` (`formLayout`) and is written into the course via `buildCourse()`. The editor's satellite basemap shares the race-line map's Esri **Wayback** imagery-date picker (`useWaybackImagery`), so lines can be placed against a cloud-free capture (online-only, lazy).
 
@@ -775,6 +775,10 @@ Profile **Cloud logs** panel reuses `SessionBrowser` with its own rows.
 - **Display name = the session's date/time**, derived from `sessionStartTime` (the
   first valid sample), e.g. "2/12/2026 11:15 AM" — *not* the upload time or raw
   filename (filename is the row's `title`/tooltip + the stable IndexedDB key).
+- **Log type bubble:** each row shows a `FileTypeBadge` (`components/FileTypeBadge.tsx`)
+  with the format derived from the file extension (`lib/logFileType.ts`, pure +
+  unit-tested) — the format isn't persisted, so the extension is the source of
+  truth. Used on FilesTab local + cloud rows and the Profile Cloud logs panel.
 - **Smart collapse:** a folder level is only rendered when there's more than one
   entry — a single track and/or single course auto-descends straight to the logs
   (the breadcrumb still records the collapsed segments so date names read in
