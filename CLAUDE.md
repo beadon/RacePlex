@@ -928,10 +928,13 @@ existing user data keeps resolving without a destructive migration.
 
 Multi-language support built on **i18next + react-i18next**. A phased overhaul
 (full plan: `docs/plans/i18n-translation-system.md`); migrated so far: the
-landing page, Settings, and the **core in-session UI** (the tab bar + session
-header in `Index.tsx`, `LapTable`, `LapSnapshotControls`, `OverlaysMenu`,
-`SectorCropSelect`). The map (`RaceLineView`), pro graphs, and video are the next
-surfaces; the framework is whole.
+landing page, Settings, the **core in-session UI** (the tab bar + session header
+in `Index.tsx`, `LapTable`, `LapSnapshotControls`, `OverlaysMenu`,
+`SectorCropSelect`), and the **live analysis views** — the map (`RaceLineView`,
+`MiniMap`) and the pro **GraphView** (`GraphViewPanel`, `GraphPanel`,
+`SingleSeriesChart`, `GGDiagram`, `InfoBox`, plus the simple `TelemetryChart`).
+The **video** player/overlays and the InfoBox setup-detail table (shared with the
+garage `SetupsTab`) are the next surfaces; the framework is whole.
 
 - **Languages.** `en` (source of truth) + `es`, `fr`, `de`, `it`, `pt-BR`, `ja`,
   declared once in `lib/i18n/config.ts` (`SUPPORTED_LANGUAGES`, `NAMESPACES`).

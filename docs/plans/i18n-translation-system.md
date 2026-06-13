@@ -1,14 +1,16 @@
 # Plan: Internationalization (i18n) / translation system
 
-Status: **Phase 1 in progress** · current branch: `claude/i18n-phase1-session-ui` → PR into `BETA`
+Status: **Phase 2 in progress** · current branch: `claude/i18n-phase2-map-graphs-video` → PR into `BETA`
 
-> **Phase 0 shipped** (engine + 6 seeded languages; landing page + Settings
-> migrated). **Phase 1 (this PR)** migrates the core in-session UI under a new
-> `session` namespace: the view tab bar + session header (`Index.tsx`),
-> `LapTable`, `LapSnapshotControls`, `OverlaysMenu`, and `SectorCropSelect`. The
-> map (`RaceLineView`), pro graphs, and the video player/overlays are the next
-> slice (Phase 1b/2) — the original Phase 1 scope below also folded in `video`;
-> it's split out here to keep PRs reviewable.
+> **Phase 0 shipped** (engine + 6 seeded languages; landing page + Settings).
+> **Phase 1 shipped** the core in-session UI under the `session` namespace (view
+> tab bar + session header, `LapTable`, `LapSnapshotControls`, `OverlaysMenu`,
+> `SectorCropSelect`). **Phase 2 (this PR)** extends `session` to the **live
+> analysis views**: the map (`RaceLineView`, `MiniMap`) and the pro **GraphView**
+> (`GraphViewPanel`, `GraphPanel`, `SingleSeriesChart`, `GGDiagram`, `InfoBox`,
+> plus the simple `TelemetryChart`). Deferred to the next slice: the **video**
+> player/overlays, and the InfoBox setup-detail table (translated with the garage
+> `SetupsTab` so the tire/PSI labels stay consistent).
 >
 > One refinement vs. the original design: the source-of-truth
 > English locales live in **`src/locales/en/`** (bundled as i18next `resources`
