@@ -79,7 +79,7 @@ src/
 ├── components/
 │   ├── ui/                # shadcn/ui primitives
 │   ├── admin/             # Admin tabs (Tracks, Courses, Submissions, BannedIps, Tools, Messages)
-│   ├── tabs/              # View tabs (GraphView, RaceLine, LapTimes, Labs, Coach; Profile is mounted in the drawer)
+│   ├── tabs/              # View tabs (GraphView, RaceLine, LapTimes, Labs, Coach, Tools; Profile is mounted in the drawer)
 │   ├── graphview/         # Pro mode: GraphPanel, GraphViewPanel, MiniMap, SingleSeriesChart, GGDiagram, InfoBox
 │   ├── drawer/            # File-manager drawer tabs (Files, Vehicles/Karts, Notes, Setups, Device*)
 │   ├── track-editor/      # Track editor sub-components (VisualEditor is lazy — see Bundle Splitting)
@@ -152,6 +152,8 @@ src/
 ├── plugins/               # ★ Plugin framework (auto-discovered) — see Plugin Framework section
 │   ├── (framework)        # types, registry, index, panels, mounts, storage + PluginPanelHost/PluginMount
 │   ├── cloud-sync/         # ★ First-party plugin: Supabase file + garage sync — see docs/backend.md
+│   ├── tools/              # ★ First-party plugin: Tools tab (lazy tool picker; kart seat-position
+│   │                      #   visualizer — pure rigid-body model.ts + SVG view, corner-scale calibration)
 │   └── coaching/           # Gitignored slot for the AI coach (npm pkg in production)
 ├── types/racing.ts        # ★ Core types: GpsSample, ParsedData, Lap, Course, Track, …
 ├── contexts/              # SettingsContext, SessionContext, PlaybackContext, DeviceContext (BLE), AuthContext (admin)
@@ -217,19 +219,22 @@ A plugin default-exports `{ id, name, version?, priority?, setup?(ctx) }`. In
 
 **UI panels:** the first concrete extension point. A plugin contributes
 `PluginPanel` descriptors to `PANELS_POINT`, targeting a *slot* (host surface).
-Three slots exist today: `PanelSlot.Labs` (rendered by `LabsTab.tsx`; no
+Four slots exist today: `PanelSlot.Labs` (rendered by `LabsTab.tsx`; no
 first-party panel targets it now — it shows only when the experimental
 `enableLabs` setting is on or another plugin contributes), `PanelSlot.Coach`
 (rendered by `CoachTab.tsx` — the dedicated AI Coach tab, home for the
-`@perchwerks/eye-in-the-sky` coaching plugin), and `PanelSlot.Profile`
+`@perchwerks/eye-in-the-sky` coaching plugin), `PanelSlot.Tools`
+(rendered by `ToolsTab.tsx` — the Tools tab right of Coach; the first-party
+`tools` plugin contributes its chromeless tool-picker panel there), and
+`PanelSlot.Profile`
 (rendered by `ProfileTab.tsx` — mounted as a tab **inside the file-manager
 drawer**, between Garage and Device, not in the main view tab bar; cloud-sync
 contributes the merged Account panel (sign-in/out + display name + plan +
 storage, working signed out against local storage), lap-snapshot management, and
 cloud-log management). All render contributed
 panels via `PluginPanelHost` and are
-**self-gating**: `Index.tsx` computes `hasLabsPanels`/`showCoach`/`showProfile`
-from `getPanelsForSlot`, so a tab appears only when a
+**self-gating**: `Index.tsx` computes `hasLabsPanels`/`showCoach`/`showTools`/
+`showProfile` from `getPanelsForSlot`, so a tab appears only when a
 plugin contributes a panel to it (Labs additionally shows when the experimental
 `enableLabs` setting is on). New slots are just new strings — no framework change.
 `PluginPanelHost` wraps each panel in an error boundary **and** a `Suspense`
@@ -275,6 +280,21 @@ the incremental engine. Backs the IndexedDB stores up to Supabase: structured
 stores → `sync_records` jsonb docs, raw blobs → the private `user-files` bucket.
 **Full data model, sync engine, conflict resolution, and backend live in
 `docs/backend.md`.**
+
+**Tools (first-party plugin, `src/plugins/tools/`):** contributes one chromeless
+panel to `PanelSlot.Tools`: a picker of trackside tools (icon + one-line
+description, catalog in `toolList.ts`) that opens the selected tool with a back
+bar. Everything is lazy (`ToolsPanel` and each tool component), so nothing rides
+the initial bundle, and fully offline. Tool state persists via
+`getPluginStore("tools")`. First tool: the **kart seat position visualizer**
+(`seat-position/`) — a pure, unit-tested rigid-body statics model (`model.ts`:
+4-element mass model with a feet-on-pedals leg-coupling factor, slide + tilt
+about the front anchor, closed-form + central-difference sensitivities, knee IK,
+corner-scale calibration that fits `kLegs`, and `rebaseline()` for
+"set current as zero") rendered as a side-view SVG (`SeatDiagram.tsx`) with
+controls/readouts in `SeatPositionTool.tsx`. The user plans to split this plugin
+into its own repo later — keep it free of deep host imports (it touches only the
+plugin contracts + `components/ui`).
 
 **AI coach (npm package):** published to the public npm registry as
 `@perchwerks/eye-in-the-sky` and listed in `optionalDependencies`. The loader in

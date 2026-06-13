@@ -11,6 +11,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > from git history and grouped by theme rather than exhaustive per-commit
 > detail.
 
+## [Unreleased]
+
+> Wearing in as the `2.5.0` beta.
+
+### Added
+- **Tools tab** — a new main-view tab to the right of Coach, contributed by a
+  new first-party `tools` plugin. The tab self-gates like Coach (it shows only
+  when a plugin contributes to the new `tools` panel slot) and opens on a
+  picker of tools — icon + one-line description — that you click into.
+- **Kart seat position visualizer** — the first tool (tagged *super
+  experimental* on its picker card): a side-view rigid-body
+  statics model showing how a fore/aft seat slide (±1", 1/16" detents) and a
+  seat tilt (±5°, or rear-mount mm) shift front/rear weight distribution and
+  CoG height relative to a user-set zero point. A stick-figure driver with
+  feet-on-pedals knee IK makes the leg-coupling model visible. Readouts:
+  signed Δrear %, per-axle weight in lb/kg, CoG height change, local
+  sensitivities (%/inch and %/degree), and a 1.5 g lateral-transfer indicator
+  (rigid-frame approximation). An advanced panel tunes the leg-coupling factor
+  and seat/driver geometry, and a corner-scale calibration flow anchors the
+  baseline to your kart and fits the leg coupling from a measured seat slide.
+  Fully offline; settings persist in the tools plugin's own IndexedDB store.
+
+### Changed
+- **The main tab bar is icons-only on phones.** Every view tab (Simple, Pro,
+  Lap Times, Labs, Coach, Tools) and the Simple-view Overlay toggle now show
+  just their icon at phone widths; labels return at tablet width and up.
+
 ## [2.4.0] - 2026-6-12
 
 ### Fixed
