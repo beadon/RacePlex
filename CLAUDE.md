@@ -775,6 +775,10 @@ Profile **Cloud logs** panel reuses `SessionBrowser` with its own rows.
 - **Display name = the session's date/time**, derived from `sessionStartTime` (the
   first valid sample), e.g. "2/12/2026 11:15 AM" — *not* the upload time or raw
   filename (filename is the row's `title`/tooltip + the stable IndexedDB key).
+- **Log type bubble:** each row shows a `FileTypeBadge` (`components/FileTypeBadge.tsx`)
+  with the format derived from the file extension (`lib/logFileType.ts`, pure +
+  unit-tested) — the format isn't persisted, so the extension is the source of
+  truth. Used on FilesTab local + cloud rows and the Profile Cloud logs panel.
 - **Smart collapse:** a folder level is only rendered when there's more than one
   entry — a single track and/or single course auto-descends straight to the logs
   (the breadcrumb still records the collapsed segments so date names read in

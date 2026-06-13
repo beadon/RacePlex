@@ -13,6 +13,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Log type bubble in the file browser.** Each session row (shown by date/time)
+  now carries a small pill with the log's format — Dove, Dovex, XRK, XRZ,
+  iRacing, VBO, MoTeC, UBX, NMEA, CSV, … — derived from the file's extension, so
+  you can tell at a glance what kind of log each one is. Appears on local and
+  cloud rows and in the Profile → Cloud logs list.
+
 ### Fixed
 - **Pro-mode panel resizing on touch.** Dragging a resizable divider (the
   left/right split and the InfoBox/MiniMap split in pro mode, plus the video
