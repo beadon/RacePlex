@@ -11,6 +11,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > from git history and grouped by theme rather than exhaustive per-commit
 > detail.
 
+## [Unreleased]
+
+### Fixed
+- **Pro-mode panel resizing on touch.** Dragging a resizable divider (the
+  left/right split and the InfoBox/MiniMap split in pro mode, plus the video
+  panel) would stop after only a few pixels on touchscreens. The handle's
+  invisible grab strip was only a few pixels wide while the drag-start margin
+  extended over the neighbouring chart/map — so a finger landing just off the
+  divider started the resize on an element without `touch-action: none`, and the
+  browser reclaimed the gesture as a scroll. The grab strip is now wider and the
+  start margin is aligned to it, so touch drags track all the way.
+
+### Changed
+- **Mobile garage & header polish.** The Garage/Device drawer now covers the
+  full screen on mobile (it stays at half width on larger screens) so it's
+  easier to use on a phone. In the loaded-session header, the track/course label
+  and edit button are consolidated into a single course control — now using a
+  route icon (at every screen size) with the current track : course as its label
+  from tablet up.
+
 ## [2.5.1] - 2026-06-13
 
 ### Changed

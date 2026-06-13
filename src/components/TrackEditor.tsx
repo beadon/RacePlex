@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useContext, lazy, Suspense } from 'react';
-import { Plus, Trash2, Edit2, Check, X, Settings, Code, Copy, HelpCircle } from 'lucide-react';
+import { Plus, Trash2, Edit2, Check, X, Settings, Code, Copy, HelpCircle, Route } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
@@ -653,17 +653,23 @@ function CourseDrawingMini({ points, size = 36 }: { points: Array<{ lat: number;
   }
 
   if (compact) {
-    const displayLabel = selection ? `${abbreviateTrackName(selection.trackName)} : ${selection.courseName}` : 'No track selected';
+    // A single course control: the race-course icon shows at every size; the
+    // current track : course selection rides as the button label from tablet up
+    // (and the title tooltip) so the header stays compact on mobile.
+    const displayLabel = selection ? `${abbreviateTrackName(selection.trackName)} : ${selection.courseName}` : 'Select track';
 
     return (
       <>
-        <div className="flex items-center gap-2">
-          <span className="font-mono text-sm">{displayLabel}</span>
-          <Button variant="ghost" size="sm" className="h-7 gap-1.5 px-2 lg:px-3" onClick={() => setIsSelectDialogOpen(true)}>
-            <Edit2 className="w-4 h-4" />
-            <span className="hidden lg:inline">Select track</span>
-          </Button>
-        </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 max-w-[220px] gap-1.5 px-2 md:px-3"
+          onClick={() => setIsSelectDialogOpen(true)}
+          title={displayLabel}
+        >
+          <Route className="w-4 h-4 shrink-0" />
+          <span className="hidden truncate md:inline">{displayLabel}</span>
+        </Button>
 
         {selectDialog}
         {jsonViewDialog}
