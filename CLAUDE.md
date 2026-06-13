@@ -27,8 +27,8 @@
 This repo is public, released, and CI-gated. Treat every change as if a stranger
 will read it tomorrow.
 
-- **Green before merge**: `npm run lint`, `npm run typecheck`, `npm run test:run`,
-  and `npm run build` must all pass. CI runs them as four separate workflows on
+- **Green before merge**: `bun run lint`, `bun run typecheck`, `bun run test:run`,
+  and `bun run build` must all pass. CI runs them as four separate workflows on
   every PR — don't merge red.
 - **Tests are part of the change, not a follow-up.** See Golden Rule #6.
 - **Changelog is part of the change.** See Golden Rule #7.
@@ -150,7 +150,9 @@ src/
 │   ├── buildInfo.ts       # Build version/hash/branch/commit-date stamp (landing footer "what changed" marker; main → version+hash, other branches → branch+hash+commit time + amber preview-DB warning via isPreviewBuild(); values injected by vite define)
 │   ├── debugConsole.ts    # ★ On-screen debug console (`?dbg=true`): pure flag-parse + log ring-buffer + console/global-error capture (mobile/PWA has no dev tools) — rendered by components/DebugConsole.tsx
 │   ├── units.ts           # ★ Pure unit conversions + display formatters for the 3 imperial/metric toggles (speed/distance/weather) — single home for every conversion constant
+│   ├── i18n/              # ★ Internationalization (i18next): config (languages/namespaces + pure resolveInitialLanguage), index (init + lazy dynamic-import backend, English bundled), format (Intl date/number/list), seedUtils (pure parity/placeholder checks) — see Internationalization section
 │   └── utils.ts           # Tailwind cn() helper
+├── locales/              # ★ Translation JSON, src/locales/<lng>/<ns>.json. en/ = source of truth (bundled + typed); es/fr/de/it/pt-BR/ja machine-seeded (lazy chunks). New surfaces add keys here as they're migrated.
 ├── plugins/               # ★ Plugin framework (auto-discovered) — see Plugin Framework section
 │   ├── (framework)        # types, registry, index, panels, mounts, storage + PluginPanelHost/PluginMount
 │   ├── cloud-sync/         # ★ First-party plugin: Supabase file + garage sync — see docs/backend.md
@@ -922,6 +924,61 @@ existing user data keeps resolving without a destructive migration.
 
 ---
 
+## Internationalization (i18n) — `src/lib/i18n/` + `src/locales/`
+
+Multi-language support built on **i18next + react-i18next**. Phase 0 of a phased
+overhaul (full plan: `docs/plans/i18n-translation-system.md`); only the landing
+page + Settings are migrated so far, but the framework is whole.
+
+- **Languages.** `en` (source of truth) + `es`, `fr`, `de`, `it`, `pt-BR`, `ja`,
+  declared once in `lib/i18n/config.ts` (`SUPPORTED_LANGUAGES`, `NAMESPACES`).
+  Adding a language = one entry there + its `src/locales/<lng>/` files. **RTL is
+  out of scope** (needs a bidi/layout pass).
+- **Loading is offline-first + lazy.** English is **bundled** as i18next
+  `resources` (the always-present fallback, zero flash). Every other language is
+  a **dynamic import** of `src/locales/<lng>/<ns>.json` (`importBackend` in
+  `index.ts`) → Vite code-splits each into its own chunk, precached by the SW's
+  JS glob, so switching language works fully offline with no eager bundle cost.
+  i18next + react-i18next live in the `vendor-i18n` chunk.
+- **Language is a setting.** `AppSettings.language` (in `useSettings`, persisted
+  to the existing settings blob). `useSettings` bridges it to
+  `i18n.changeLanguage` via an effect, so the active language always tracks the
+  setting regardless of which UI changed it. First-run default is
+  browser-detected (`resolveInitialLanguage`, pure/tested), read **synchronously
+  from localStorage before render** in `index.ts` (imported first in `main.tsx`)
+  to avoid an English flash. `<html lang>` is kept in sync. The picker is in
+  `SettingsModal`.
+- **Keys are typed.** `src/types/i18next.d.ts` augments react-i18next's resources
+  with the English JSON shape, so `t("settings:title")` is autocompleted and a
+  missing/renamed key fails `tsc -b`. English is the canonical key set.
+- **Namespaces** (`common`, `landing`, `settings`) map to per-language JSON files
+  and load on demand for their surface. Rich text uses `<Trans>` (e.g. the
+  preview-DB warning); interpolation uses `{{var}}`; pluralization uses i18next's
+  `count`/CLDR (never hand-rolled `s` suffixes). Unit symbols (`km`, `°C`, …),
+  brand/product names, channel ids and formats stay **literal** — translate words
+  around them, not them. Locale-aware date/number/list rendering lives in
+  `lib/i18n/format.ts` (`Intl` wrappers); **units stay a separate axis** owned by
+  `lib/units.ts` — language never swaps imperial/metric.
+- **Seeding.** Non-English files are machine-translated by
+  `scripts/seed-translations.mjs` (`bun run i18n:seed`) using
+  `scripts/i18n-glossary.json` (a motorsport glossary + do-not-translate list).
+  It's re-runnable (only translates new/changed keys, never overwrites a
+  `_reviewed` key), validates placeholder preservation, and writes
+  `"_machine": true` provenance. **Maintainer tool only** — it makes network/LLM
+  calls (`ANTHROPIC_API_KEY`, model via `I18N_SEED_MODEL`); it's never in the app
+  or the standard CI build. Pure parity/placeholder logic lives in
+  `lib/i18n/seedUtils.ts` (unit-tested; `i18n.test.ts` asserts every language has
+  exactly the English keys with placeholders preserved).
+- **Legal pages stay English by design** — the framework can translate them, but
+  Privacy/Terms are not machine-translated (legal review required).
+
+**Migrating a surface:** replace literals with `t("ns:key")`, add the key to
+`src/locales/en/<ns>.json` (new namespace → register in `config.ts` + add to the
+typing in `types/i18next.d.ts`), then run `bun run i18n:seed` to fill the other
+languages. `tsc -b` + the parity test gate key integrity.
+
+---
+
 ## Environment Variables
 
 | Variable | Client/Server | Description |
@@ -936,11 +993,13 @@ existing user data keeps resolving without a destructive migration.
 | `TURNSTILE_SECRET_KEY` | Server (edge fn) | Turnstile secret — `???` |
 | `VITE_FIRMWARE_MANIFEST_URL` | Client | Override the logger firmware OTA manifest URL. When unset, `main` builds use the production manifest (`…/DovesDataLogger/manifest.json`) and non-`main`/preview builds use the **beta channel** (`…/DovesDataLogger/beta/manifest.json`) — same `isPreviewBuild()` switch as the footer/preview-DB. Set this to force a specific channel on any branch. |
 | `DOVE_PLUGIN_PACKAGES` | Build | Comma-separated external plugin npm packages to load. Overrides the default (`@perchwerks/eye-in-the-sky`) when set |
+| `ANTHROPIC_API_KEY` | Maintainer tool | Required by `bun run i18n:seed` (`scripts/seed-translations.mjs`) to machine-translate locales — `???`. **Not** used by the app or the standard CI build. |
+| `I18N_SEED_MODEL` | Maintainer tool | Optional override for the model `bun run i18n:seed` uses (default `claude-sonnet-4-6`). |
 | `VITE_APP_VERSION` / `VITE_GIT_HASH` / `VITE_BUILD_DATE` / `VITE_GIT_BRANCH` / `VITE_GIT_COMMIT_DATE` | Build (auto) | Footer version stamp — **not hand-set**. `vite.config.ts` bakes them in from `package.json` + git (`buildInfo.ts` reads them). The stamp mirrors the `_PREVIEW` switch: `main` shows `v<version> · <hash>`; any other branch shows `<branch> · <hash> · <commit time>`. Hash prefers CI SHAs (`WORKERS_CI_COMMIT_SHA`/`CF_PAGES_COMMIT_SHA`/`GITHUB_SHA`), branch prefers CI branch vars (`WORKERS_CI_BRANCH`/`CF_PAGES_BRANCH`/`GITHUB_REF_NAME`); both fall back to local `git`, then `"unknown"`. |
 
 PWA deployment detail: the active offline-capable worker is emitted as `/service-worker.js` and registered only outside preview/iframe contexts. `public/sw.js` is reserved as a legacy kill-switch worker to evict stale caches from older installs that previously registered `/sw.js`.
 
-Static hosting (Cloudflare Workers): the build is a pure static SPA (no server runtime). `wrangler.jsonc` (repo root) configures a static-assets-only Worker — no `main` script — with `assets.directory: "./dist"` and `not_found_handling: "single-page-application"` for client-side route fallback. `public/_headers` (copied into `./dist` by Vite, honored by Workers static assets) sets `no-cache` on the service workers + `index.html` and immutable long-cache on `/assets/*`. `.nvmrc` pins Node 20. Workers Builds runs `npm run build` then `wrangler deploy`. Supabase edge functions stay on Supabase — the Worker only serves the frontend. See the README "Deployment" section.
+Static hosting (Cloudflare Workers): the build is a pure static SPA (no server runtime). `wrangler.jsonc` (repo root) configures a static-assets-only Worker — no `main` script — with `assets.directory: "./dist"` and `not_found_handling: "single-page-application"` for client-side route fallback. `public/_headers` (copied into `./dist` by Vite, honored by Workers static assets) sets `no-cache` on the service workers + `index.html` and immutable long-cache on `/assets/*`. `.nvmrc` pins Node 20. Workers Builds runs `bun run build` then `wrangler deploy`. Supabase edge functions stay on Supabase — the Worker only serves the frontend. See the README "Deployment" section.
 
 `vite.config.ts` defines public backend fallbacks for `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, and `VITE_SUPABASE_PROJECT_ID` so production builds still boot if managed env injection is missing; `.env` stays the preferred source when present.
 
@@ -950,15 +1009,24 @@ Per-branch preview backend: `vite.config.ts`'s `pick()` checks `WORKERS_CI_BRANC
 
 ## Commands
 
+**Package manager: Bun (only).** `bun.lock` is the **sole committed lockfile**;
+CI and the Cloudflare deploy both run `bun install --frozen-lockfile`. Do **not**
+add an npm/yarn/pnpm lockfile — a second lockfile silently drifts when deps
+change and breaks the frozen install (`package-lock.json` etc. are gitignored).
+Run scripts with `bun run <script>` — note `bun run test` (Vitest), **not**
+`bun test` (Bun's own runner). When you add/remove a dependency, run
+`bun install` and commit the updated `bun.lock`.
+
 ```bash
-npm run dev        # Dev server on :8080
-npm run build      # Production build → dist/
-npm run lint       # ESLint
-npm run typecheck  # tsc -b (must use build mode to follow project references)
-npm run preview    # Preview production build
-npm test           # Vitest in watch mode
-npm run test:run   # Vitest single pass (CI-style)
-npm run test:coverage  # Vitest + v8 coverage (enforces thresholds in vitest.config.ts)
+bun install        # Install deps (use --frozen-lockfile in CI)
+bun run dev        # Dev server on :8080
+bun run build      # Production build → dist/
+bun run lint       # ESLint
+bun run typecheck  # tsc -b (must use build mode to follow project references)
+bun run preview    # Preview production build
+bun run test       # Vitest in watch mode (NOT `bun test`)
+bun run test:run   # Vitest single pass (CI-style)
+bun run test:coverage  # Vitest + v8 coverage (enforces thresholds in vitest.config.ts)
 ```
 
 > **Coverage scope (`vitest.config.ts`).** Coverage is deliberately scoped to
