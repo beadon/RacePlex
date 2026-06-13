@@ -23,9 +23,9 @@
     "test": "vitest",
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "coverage:badge": "node scripts/coverage-badge.mjs",
-    "coverage:summary": "node scripts/coverage-summary.mjs",
-    "i18n:seed": "node scripts/seed-translations.mjs",
+    "coverage:badge": "bun scripts/coverage-badge.mjs",
+    "coverage:summary": "bun scripts/coverage-summary.mjs",
+    "i18n:seed": "bun scripts/seed-translations.mjs",
     "typecheck": "tsc -b"
   },
   "dependencies": {

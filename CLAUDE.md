@@ -27,8 +27,8 @@
 This repo is public, released, and CI-gated. Treat every change as if a stranger
 will read it tomorrow.
 
-- **Green before merge**: `npm run lint`, `npm run typecheck`, `npm run test:run`,
-  and `npm run build` must all pass. CI runs them as four separate workflows on
+- **Green before merge**: `bun run lint`, `bun run typecheck`, `bun run test:run`,
+  and `bun run build` must all pass. CI runs them as four separate workflows on
   every PR — don't merge red.
 - **Tests are part of the change, not a follow-up.** See Golden Rule #6.
 - **Changelog is part of the change.** See Golden Rule #7.
@@ -960,7 +960,7 @@ page + Settings are migrated so far, but the framework is whole.
   `lib/i18n/format.ts` (`Intl` wrappers); **units stay a separate axis** owned by
   `lib/units.ts` — language never swaps imperial/metric.
 - **Seeding.** Non-English files are machine-translated by
-  `scripts/seed-translations.mjs` (`npm run i18n:seed`) using
+  `scripts/seed-translations.mjs` (`bun run i18n:seed`) using
   `scripts/i18n-glossary.json` (a motorsport glossary + do-not-translate list).
   It's re-runnable (only translates new/changed keys, never overwrites a
   `_reviewed` key), validates placeholder preservation, and writes
@@ -974,7 +974,7 @@ page + Settings are migrated so far, but the framework is whole.
 
 **Migrating a surface:** replace literals with `t("ns:key")`, add the key to
 `src/locales/en/<ns>.json` (new namespace → register in `config.ts` + add to the
-typing in `types/i18next.d.ts`), then run `npm run i18n:seed` to fill the other
+typing in `types/i18next.d.ts`), then run `bun run i18n:seed` to fill the other
 languages. `tsc -b` + the parity test gate key integrity.
 
 ---
@@ -993,13 +993,13 @@ languages. `tsc -b` + the parity test gate key integrity.
 | `TURNSTILE_SECRET_KEY` | Server (edge fn) | Turnstile secret — `???` |
 | `VITE_FIRMWARE_MANIFEST_URL` | Client | Override the logger firmware OTA manifest URL. When unset, `main` builds use the production manifest (`…/DovesDataLogger/manifest.json`) and non-`main`/preview builds use the **beta channel** (`…/DovesDataLogger/beta/manifest.json`) — same `isPreviewBuild()` switch as the footer/preview-DB. Set this to force a specific channel on any branch. |
 | `DOVE_PLUGIN_PACKAGES` | Build | Comma-separated external plugin npm packages to load. Overrides the default (`@perchwerks/eye-in-the-sky`) when set |
-| `ANTHROPIC_API_KEY` | Maintainer tool | Required by `npm run i18n:seed` (`scripts/seed-translations.mjs`) to machine-translate locales — `???`. **Not** used by the app or the standard CI build. |
-| `I18N_SEED_MODEL` | Maintainer tool | Optional override for the model `npm run i18n:seed` uses (default `claude-sonnet-4-6`). |
+| `ANTHROPIC_API_KEY` | Maintainer tool | Required by `bun run i18n:seed` (`scripts/seed-translations.mjs`) to machine-translate locales — `???`. **Not** used by the app or the standard CI build. |
+| `I18N_SEED_MODEL` | Maintainer tool | Optional override for the model `bun run i18n:seed` uses (default `claude-sonnet-4-6`). |
 | `VITE_APP_VERSION` / `VITE_GIT_HASH` / `VITE_BUILD_DATE` / `VITE_GIT_BRANCH` / `VITE_GIT_COMMIT_DATE` | Build (auto) | Footer version stamp — **not hand-set**. `vite.config.ts` bakes them in from `package.json` + git (`buildInfo.ts` reads them). The stamp mirrors the `_PREVIEW` switch: `main` shows `v<version> · <hash>`; any other branch shows `<branch> · <hash> · <commit time>`. Hash prefers CI SHAs (`WORKERS_CI_COMMIT_SHA`/`CF_PAGES_COMMIT_SHA`/`GITHUB_SHA`), branch prefers CI branch vars (`WORKERS_CI_BRANCH`/`CF_PAGES_BRANCH`/`GITHUB_REF_NAME`); both fall back to local `git`, then `"unknown"`. |
 
 PWA deployment detail: the active offline-capable worker is emitted as `/service-worker.js` and registered only outside preview/iframe contexts. `public/sw.js` is reserved as a legacy kill-switch worker to evict stale caches from older installs that previously registered `/sw.js`.
 
-Static hosting (Cloudflare Workers): the build is a pure static SPA (no server runtime). `wrangler.jsonc` (repo root) configures a static-assets-only Worker — no `main` script — with `assets.directory: "./dist"` and `not_found_handling: "single-page-application"` for client-side route fallback. `public/_headers` (copied into `./dist` by Vite, honored by Workers static assets) sets `no-cache` on the service workers + `index.html` and immutable long-cache on `/assets/*`. `.nvmrc` pins Node 20. Workers Builds runs `npm run build` then `wrangler deploy`. Supabase edge functions stay on Supabase — the Worker only serves the frontend. See the README "Deployment" section.
+Static hosting (Cloudflare Workers): the build is a pure static SPA (no server runtime). `wrangler.jsonc` (repo root) configures a static-assets-only Worker — no `main` script — with `assets.directory: "./dist"` and `not_found_handling: "single-page-application"` for client-side route fallback. `public/_headers` (copied into `./dist` by Vite, honored by Workers static assets) sets `no-cache` on the service workers + `index.html` and immutable long-cache on `/assets/*`. `.nvmrc` pins Node 20. Workers Builds runs `bun run build` then `wrangler deploy`. Supabase edge functions stay on Supabase — the Worker only serves the frontend. See the README "Deployment" section.
 
 `vite.config.ts` defines public backend fallbacks for `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, and `VITE_SUPABASE_PROJECT_ID` so production builds still boot if managed env injection is missing; `.env` stays the preferred source when present.
 
@@ -1009,15 +1009,24 @@ Per-branch preview backend: `vite.config.ts`'s `pick()` checks `WORKERS_CI_BRANC
 
 ## Commands
 
+**Package manager: Bun (only).** `bun.lock` is the **sole committed lockfile**;
+CI and the Cloudflare deploy both run `bun install --frozen-lockfile`. Do **not**
+add an npm/yarn/pnpm lockfile — a second lockfile silently drifts when deps
+change and breaks the frozen install (`package-lock.json` etc. are gitignored).
+Run scripts with `bun run <script>` — note `bun run test` (Vitest), **not**
+`bun test` (Bun's own runner). When you add/remove a dependency, run
+`bun install` and commit the updated `bun.lock`.
+
 ```bash
-npm run dev        # Dev server on :8080
-npm run build      # Production build → dist/
-npm run lint       # ESLint
-npm run typecheck  # tsc -b (must use build mode to follow project references)
-npm run preview    # Preview production build
-npm test           # Vitest in watch mode
-npm run test:run   # Vitest single pass (CI-style)
-npm run test:coverage  # Vitest + v8 coverage (enforces thresholds in vitest.config.ts)
+bun install        # Install deps (use --frozen-lockfile in CI)
+bun run dev        # Dev server on :8080
+bun run build      # Production build → dist/
+bun run lint       # ESLint
+bun run typecheck  # tsc -b (must use build mode to follow project references)
+bun run preview    # Preview production build
+bun run test       # Vitest in watch mode (NOT `bun test`)
+bun run test:run   # Vitest single pass (CI-style)
+bun run test:coverage  # Vitest + v8 coverage (enforces thresholds in vitest.config.ts)
 ```
 
 > **Coverage scope (`vitest.config.ts`).** Coverage is deliberately scoped to
