@@ -310,7 +310,10 @@ bucket from horizontal accuracy, the phone's HDOP analog — plus
 emits `GpsObservation`s), `sessionGate.ts` (pure arm/auto-idle state machine:
 record above 5 mph, auto-end after 5 min stopped), `realtimeTimer.ts`
 (`RealtimeLapTimer` — incremental laps/major-sectors/best/optimal/delta by
-re-driving the batch timing fns over a growing buffer), and `dovepWriter.ts`
+re-driving the batch timing fns over a growing buffer; the two O(n) recomputes
+are throttled to ≤5 Hz of session time. Exposes `nearKnownTrack`: >~10 mi from
+every known track it stops timing and just logs — the tool then shows speed + a
+"logging for post-race analysis" note), and `dovepWriter.ts`
 (serializes the session to **`.dovep`** — "Dove phone", byte-compatible with
 `.dovex` so the app parses it unchanged; omits channels the phone can't measure
 rather than faking them). `useDatalogger.ts` is the thin browser glue (GPS +

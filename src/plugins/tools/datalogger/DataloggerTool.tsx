@@ -128,6 +128,25 @@ export default function DataloggerTool(props: PluginPanelProps) {
 
 /** The laptimer heads-up: delta dominant, then current/best/last/optimal + speed. */
 function LiveView({ timing, speed, speedUnit }: { timing: TimingState; speed: number; speedUnit: string }) {
+  // Nowhere near a known track: no timing context, so just show speed + reassure
+  // the user the session is still being recorded for later analysis.
+  if (timing.nearKnownTrack === false) {
+    return (
+      <div className="flex h-full flex-col items-center justify-center gap-5 p-6 text-center">
+        <div>
+          <div className="text-[11px] uppercase tracking-widest text-muted-foreground">Speed</div>
+          <div className="font-mono text-7xl font-bold tabular-nums text-foreground sm:text-8xl">
+            {speed.toFixed(0)}
+            <span className="ml-2 text-2xl font-normal text-muted-foreground">{speedUnit}</span>
+          </div>
+        </div>
+        <p className="max-w-xs text-sm text-muted-foreground">
+          Data being logged for post-race analysis. No track within ~10&nbsp;mi — create one here later to get lap times.
+        </p>
+      </div>
+    );
+  }
+
   const delta = timing.deltaSec;
   const deltaColor = delta == null ? "text-muted-foreground" : delta > 0 ? "text-destructive" : "text-success";
   const deltaText = delta == null ? "—" : `${delta >= 0 ? "+" : "−"}${Math.abs(delta).toFixed(2)}`;

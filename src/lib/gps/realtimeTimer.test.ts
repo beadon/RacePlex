@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { RealtimeLapTimer, EMPTY_TIMING_STATE } from './realtimeTimer';
-import type { GpsSample, Course } from '@/types/racing';
+import type { GpsSample, Course, Track } from '@/types/racing';
 
 function makeSample(t: number, lat: number, lon: number, speedMps = 20): GpsSample {
   return { t, lat, lon, speedMps, speedMph: speedMps * 2.23694, speedKph: speedMps * 3.6, extraFields: {} };
@@ -149,6 +149,41 @@ describe('RealtimeLapTimer — locked course, incremental feed', () => {
     // extra stationary sample at the last position shouldn't drop laps
     timer.update(makeSample(200_000, 0, 0.001, 0));
     expect(timer.getState().lapCount).toBe(before);
+  });
+});
+
+describe("RealtimeLapTimer — track proximity (log-only when far)", () => {
+  const farTrack: Track = {
+    name: "Far",
+    courses: [{ name: "c", startFinishA: { lat: 40, lon: 40 }, startFinishB: { lat: 40, lon: 40.001 } }],
+  };
+  const nearTrack: Track = {
+    name: "Near",
+    courses: [{ name: "c", startFinishA: { lat: 0, lon: 0 }, startFinishB: { lat: 0.0001, lon: 0 } }],
+  };
+
+  it("reports nearKnownTrack = null until tracks have loaded", () => {
+    const timer = new RealtimeLapTimer(); // setTracks never called
+    expect(timer.update(makeSample(0, 0, 0, 10)).nearKnownTrack).toBeNull();
+  });
+
+  it("flags far-from-track and keeps logging (no course, speed still shown)", () => {
+    const timer = new RealtimeLapTimer();
+    timer.setTracks([farTrack]);
+    let state = timer.getState();
+    for (let i = 0; i < 12; i++) state = timer.update(makeSample(i * 1000, 0, 0.0001 * i, 10));
+    expect(state.nearKnownTrack).toBe(false);
+    expect(state.courseName).toBeNull();
+    expect(state.isWaypointMode).toBe(false); // far → don't even waypoint-time
+    expect(state.speedMph).toBeGreaterThan(0);
+  });
+
+  it("does not flag far when within range of a known track", () => {
+    const timer = new RealtimeLapTimer();
+    timer.setTracks([nearTrack]);
+    let state = timer.getState();
+    for (let i = 0; i < 12; i++) state = timer.update(makeSample(i * 1000, 0, 0.0001 * i, 10));
+    expect(state.nearKnownTrack).toBe(true);
   });
 });
 

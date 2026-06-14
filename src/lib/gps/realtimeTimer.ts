@@ -18,6 +18,8 @@
  * This is the timing *engine* only — no UI, no persistence, no GPS I/O.
  */
 import type { GpsSample, Track, Course, Lap, CourseDirection } from '@/types/racing';
+import { findNearestTrack } from '@/lib/trackUtils';
+import { validateGpsCoords } from '@/lib/parserUtils';
 import { autoDetectCourse } from '@/lib/courseDetection';
 import { calculateLaps, calculateOptimalLap } from '@/lib/lapCalculation';
 import {
@@ -53,6 +55,12 @@ export interface TimingState {
   majorSectors: MajorSectorState[];
   /** Latest speed (mph). */
   speedMph: number | null;
+  /**
+   * Whether the current position is within ~10 mi of any known track. `false`
+   * means "nowhere near a track" (no timing context — the UI shows speed + a
+   * "logging for post-race analysis" note); `null` until tracks have loaded.
+   */
+  nearKnownTrack: boolean | null;
 }
 
 export const EMPTY_TIMING_STATE: TimingState = {
@@ -69,6 +77,7 @@ export const EMPTY_TIMING_STATE: TimingState = {
   deltaSec: null,
   majorSectors: [],
   speedMph: null,
+  nearKnownTrack: null,
 };
 
 /** Min samples before attempting detection (mirrors autoDetectCourse). */
@@ -77,6 +86,9 @@ const MIN_DETECT_SAMPLES = 10;
 const DETECT_EVERY = 5;
 /** Arc-length grid spacing (m) for the delta reference. */
 const DELTA_SAMPLE_METERS = 2;
+/** Beyond this distance (m) from every known track we don't try to time — just
+ *  log. 10 miles, wider than the 5 mi detection radius so there's a margin. */
+const NEAR_TRACK_RADIUS_M = 16_093;
 /**
  * Minimum session-time gap between the two O(n) recomputes (full `calculateLaps`
  * over the buffer + the position-delta search). At phone rates (~1 Hz) every fix
@@ -96,6 +108,8 @@ export class RealtimeLapTimer {
   private isWaypointMode = false;
   private waypointCourseName: string | null = null;
   private samplesAtLastDetect = -DETECT_EVERY;
+  private tracksLoaded = false;
+  private nearKnownTrack: boolean | null = null;
 
   private laps: Lap[] = [];
   private refLap: ResampledLap | null = null;
@@ -114,6 +128,7 @@ export class RealtimeLapTimer {
   /** Provide/replace the known-tracks list (e.g. once loadTracks resolves). */
   setTracks(tracks: Track[]): void {
     this.tracks = tracks;
+    this.tracksLoaded = true;
   }
 
   /** Clear all session state (keeps the tracks list) so a new session can start. */
@@ -126,6 +141,7 @@ export class RealtimeLapTimer {
     this.isWaypointMode = false;
     this.waypointCourseName = null;
     this.samplesAtLastDetect = -DETECT_EVERY;
+    this.nearKnownTrack = null;
     this.refLap = null;
     this.refForBestLapNumber = null;
     this.lastHeavyT = Number.NEGATIVE_INFINITY;
@@ -144,16 +160,42 @@ export class RealtimeLapTimer {
   /** Feed one sample (`t` = elapsed ms from session start). Returns the new state. */
   update(sample: GpsSample): TimingState {
     this.samples.push(sample);
-    if (!this.course) this.tryDetect();
+    if (!this.course) this.evalNearTrack(sample);
+
     if (this.course) {
+      this.nearKnownTrack = true;
       this.state = this.computeState(sample);
-    } else if (this.isWaypointMode) {
-      // Waypoint laps are refreshed (throttled) by tryDetect; derive each tick.
-      this.state = this.deriveFromLaps(this.waypointCourseName, sample);
+    } else if (this.nearKnownTrack === false) {
+      // Nowhere near a known track — don't try to time, just keep logging.
+      this.state = { ...EMPTY_TIMING_STATE, speedMph: sample.speedMph, nearKnownTrack: false };
     } else {
-      this.state = { ...EMPTY_TIMING_STATE, speedMph: sample.speedMph };
+      this.tryDetect();
+      if (this.course) {
+        this.nearKnownTrack = true;
+        this.state = this.computeState(sample);
+      } else if (this.isWaypointMode) {
+        // Waypoint laps are refreshed (throttled) by tryDetect; derive each tick.
+        this.state = this.deriveFromLaps(this.waypointCourseName, sample);
+      } else {
+        this.state = { ...EMPTY_TIMING_STATE, speedMph: sample.speedMph, nearKnownTrack: this.nearKnownTrack };
+      }
     }
     return this.state;
+  }
+
+  /**
+   * Update whether we're within ~10 mi of any known track. Null until tracks
+   * have loaded; once loaded, false means "nowhere near a track" (the tool then
+   * just logs + shows speed). Cheap haversine over the (small) track list.
+   */
+  private evalNearTrack(sample: GpsSample): void {
+    if (!this.tracksLoaded) {
+      this.nearKnownTrack = null;
+      return;
+    }
+    if (validateGpsCoords(sample.lat, sample.lon) !== null) return; // keep prior on a bad fix
+    this.nearKnownTrack =
+      findNearestTrack(sample.lat, sample.lon, this.tracks, NEAR_TRACK_RADIUS_M) !== null;
   }
 
   getState(): TimingState {
@@ -250,6 +292,7 @@ export class RealtimeLapTimer {
       deltaSec: this.cachedDeltaSec,
       majorSectors: this.computeMajorSectors(last),
       speedMph: latest.speedMph,
+      nearKnownTrack: this.nearKnownTrack,
     };
   }
 
