@@ -1,6 +1,15 @@
 # Plan: Internationalization (i18n) / translation system
 
-Status: **Phase 8 — admin panel (shell + 4 tabs)** · current branch: `claude/i18n-admin-shell` → PR into `BETA`
+Status: **COMPLETE** — every user-facing surface is translated. · last branch: `claude/i18n-admin-submissions-courses` → PR into `BETA`
+
+> **Phase 8b (this PR):** the admin **Submissions** + **Courses** tabs — the two
+> largest, finishing the `admin` namespace and the whole migration. DB-stored
+> values (submission status badge) use an English-value→key map like the
+> contact-category badge, so the stored value stays English. Plurals
+> (batch approve/deny, point/course/track counts, layout points) use i18next
+> `_one`/`_other`, replicated across every language per the parity test. **The
+> i18n migration is now complete** — only the legal pages (Privacy/Terms) remain
+> English, by design.
 
 > **Phase 8a (this PR):** the **admin** panel shell (`Admin.tsx`: login gate, header,
 > tab bar) + the **Messages**, **Tracks**, **Tools** and **Banned IPs** tabs — a

@@ -1028,10 +1028,12 @@ visualizer), which owns its translations **plugin-locally**
 travel with the plugin on extraction, and the **auth pages** — sign-in, sign-up,
 forgot/reset password, and the OAuth callback (`Login`, `Register`,
 `ForgotPassword`, `ResetPassword`, `AuthCallback`) — the `auth` namespace, and
-the **admin** panel (env-gated) — the shell + Messages, Tracks, Tools and Banned
-IPs tabs done (the `admin` namespace; `browserCompat`-style id maps keep the
-contact-category badge translated while its DB value stays English). Only the
-admin **Submissions** + **Courses** tabs remain; the framework is whole.
+the **admin** panel (env-gated) — every tab (shell, Messages, Tracks, Tools,
+Banned IPs, Submissions, Courses) in the `admin` namespace; English-value→key
+maps keep DB-stored values (contact-category badge, submission status) shown
+translated while the stored/queried value stays English. **Every user-facing
+surface is now translated** — the i18n migration is complete (legal pages stay
+English by design).
 (Device-setting **labels** still come from
 `deviceSettingsSchema.ts` data — schema-level i18n is a deliberate follow-up so
 unknown device keys keep passing through as raw labels.)
