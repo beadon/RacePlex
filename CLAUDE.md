@@ -935,13 +935,14 @@ in `Index.tsx`, `LapTable`, `LapSnapshotControls`, `OverlaysMenu`,
 `SingleSeriesChart`, `GGDiagram`, `InfoBox`, plus the simple `TelemetryChart`),
 and the **video** player + overlay/export system (`VideoPlayer`,
 `VideoExportDialog`, `OverlaySettingsPanel`, the overlay-type/theme catalog
-labels, and the text-bearing overlay widgets), and the **garage drawer's shell +
-Files + Vehicles** (`FileManagerDrawer` tab chrome, `FilesTab`, `SessionBrowser`,
-`VehiclesTab`, `EngineCombobox` — `drawer` namespace; the pure
-`fileBrowserTree` takes translated `allSessions`/`untagged` labels so it stays
-i18n-free). The rest of the garage (Setups/Notes/Device — incl. the InfoBox
-setup-detail table shared with `SetupsTab`), tracks, plugins, and auth/admin are
-the next surfaces; the framework is whole.
+labels, and the text-bearing overlay widgets), and the **garage drawer** —
+shell + Files + Vehicles (`FileManagerDrawer` tab chrome, `FilesTab`,
+`SessionBrowser`, `VehiclesTab`, `EngineCombobox`; the pure `fileBrowserTree`
+takes translated `allSessions`/`untagged` labels so it stays i18n-free) **and
+Setups + Notes** (`SetupsTab`, `TemplateCreator`, `NotesTab`, and the shared
+`InfoBox` `SetupDetails` table) — all the `drawer` namespace. The garage
+**Device** sub-tabs (Settings/Tracks/firmware), tracks, plugins, and auth/admin
+are the next surfaces; the framework is whole.
 
 - **Languages.** `en` (source of truth) + `es`, `fr`, `de`, `it`, `pt-BR`, `ja`,
   declared once in `lib/i18n/config.ts` (`SUPPORTED_LANGUAGES`, `NAMESPACES`).

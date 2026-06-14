@@ -26,10 +26,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   views** — the race-line map and the pro graph view (legends, the graph picker,
   the G-G diagram, and the info panel), and the **video** player and overlay/
   export tools (player controls, the export dialog, overlay settings, and the
-  overlay widget labels), and the **Garage drawer's Files & Vehicles** tabs (the
-  drawer/device tab chrome, the file browser, and the vehicle + engine manager).
-  More of the app follows in later updates. (Legal pages remain English by
-  design.)
+  overlay widget labels), and most of the **Garage drawer** — Files & Vehicles
+  (the drawer/device tab chrome, the file browser, the vehicle + engine manager)
+  plus **Setups & Notes** (the setup editor, the vehicle-type builder, session
+  notes, and the read-only setup table). More of the app follows in later updates.
+  (Legal pages remain English by design.)
 - **Log type bubble in the file browser.** Each session row (shown by date/time)
   now carries a small pill with the log's format — Dove, Dovex, XRK, XRZ,
   iRacing, VBO, MoTeC, UBX, NMEA, CSV, … — derived from the file's extension, so

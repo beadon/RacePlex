@@ -1,6 +1,15 @@
 # Plan: Internationalization (i18n) / translation system
 
-Status: **Phase 4 in progress (garage, sub-slice 1/?)** · current branch: `claude/i18n-phase4-garage-files-vehicles` → PR into `BETA`
+Status: **Phase 4 in progress (garage, sub-slice 2/3)** · current branch: `claude/i18n-phase4-garage-setups-notes` → PR into `BETA`
+
+> **Garage sub-slice 2 (this PR):** Setups + Notes — `SetupsTab`,
+> `TemplateCreator`, `NotesTab`, and the shared `InfoBox` `SetupDetails` table
+> (the tire/PSI/diameter labels deferred from Phase 2, now in `drawer.setupDetails`
+> so they match `SetupsTab`). Tire position codes (FL/FR/RL/RR) stay literal;
+> descriptive words are translated. **Remaining:** garage sub-slice 3 = Device
+> (Settings/Tracks/firmware), then tracks, plugins, auth/admin.
+>
+> (sub-slice 1 — shell + Files + Vehicles — already merged.)
 
 > **Phases 0–3 shipped:** engine + 6 languages + landing/Settings (`common`/
 > `landing`/`settings`); core in-session UI + live analysis views (`session`);
