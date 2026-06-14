@@ -49,13 +49,22 @@ export default function DataloggerTool(props: PluginPanelProps) {
   const speed = useKph ? speedMps * 3.6 : speedMps * 2.236936;
   const speedUnit = useKph ? "km/h" : "mph";
 
+  // Speedometer-only mode: before logging arms, or recording far from any known
+  // track. No timing context, so there's no lap list to show.
+  const speedoOnly = phase === "waiting" || timing.nearKnownTrack === false;
+  const effectiveView: View = speedoOnly ? "live" : view;
+
   return (
     <div className="relative flex h-full w-full flex-col bg-background">
       {/* Header: view toggle + status + end */}
       <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-2 shrink-0">
         <div className="flex gap-1">
-          <Tab active={view === "live"} onClick={() => setView("live")}>{t("datalogger.tabLive")}</Tab>
-          <Tab active={view === "laps"} onClick={() => setView("laps")}>{t("datalogger.tabLaps")}</Tab>
+          {!speedoOnly && (
+            <>
+              <Tab active={effectiveView === "live"} onClick={() => setView("live")}>{t("datalogger.tabLive")}</Tab>
+              <Tab active={effectiveView === "laps"} onClick={() => setView("laps")}>{t("datalogger.tabLaps")}</Tab>
+            </>
+          )}
         </div>
         <div className="flex items-center gap-3">
           <Status phase={phase} courseName={timing.courseName} trackName={timing.trackName} />
@@ -74,7 +83,7 @@ export default function DataloggerTool(props: PluginPanelProps) {
       )}
 
       <div className="min-h-0 flex-1 overflow-auto">
-        {view === "live" ? (
+        {effectiveView === "live" ? (
           <LiveView timing={timing} speed={speed} speedUnit={speedUnit} phase={phase} latest={latest} />
         ) : (
           <LapTimesView laps={laps} bestLapNumber={timing.bestLapNumber} />
@@ -274,19 +283,23 @@ function SpeedometerView({
     );
   }
   return (
-    <div className="flex h-full flex-col items-center justify-center gap-5 p-6 text-center">
-      {title && <p className="text-sm font-semibold text-foreground">{title}</p>}
-      <div>
+    <div className="flex h-full flex-col">
+      {/* Speed — centered and dominant */}
+      <div className="flex flex-1 flex-col items-center justify-center text-center">
         <div className="text-[11px] uppercase tracking-widest text-muted-foreground">{t("datalogger.speed")}</div>
         <div className="font-mono text-8xl font-bold leading-none tabular-nums text-foreground">
           {speed.toFixed(0)}
           <span className="ml-2 text-2xl font-normal text-muted-foreground">{speedUnit}</span>
         </div>
       </div>
-      <p className="max-w-xs text-sm text-muted-foreground">{hint}</p>
-      <p className="text-xs text-muted-foreground/70">
-        {t("datalogger.gpsQuality", { accuracy: latest.fix.accuracy.toFixed(0), quality: latest.fix.quality })}
-      </p>
+      {/* Message — pinned to the bottom of the speedo screen */}
+      <div className="shrink-0 border-t border-border p-4 text-center">
+        {title && <p className="text-sm font-semibold text-foreground">{title}</p>}
+        <p className="mx-auto mt-1 max-w-xs text-sm text-muted-foreground">{hint}</p>
+        <p className="mt-2 text-xs text-muted-foreground/70">
+          {t("datalogger.gpsQuality", { accuracy: latest.fix.accuracy.toFixed(0), quality: latest.fix.quality })}
+        </p>
+      </div>
     </div>
   );
 }
