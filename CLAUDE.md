@@ -127,6 +127,7 @@ src/
 │   ├── fileLoadingState.ts # ★ Host pub/sub for the global file-load overlay; parseDatalogFile brackets begin/end
 │   ├── *Storage.ts        # IDB stores: file, kart(compat), vehicle, engine, template, note, setup,
 │   │                      #   video, videoFile, graphPrefs; trackStorage = localStorage (user tracks)
+│   ├── gps/               # ★ Phone-as-datalogger capture layer (no timing yet): gpsFix (pure GpsFix record = NMEA-sentence replacement + quality/motion/rate helpers) + customGps (CustomGps source class over watchPosition, injectable geolocation)
 │   ├── (racing math)      # brakingZones, speedEvents, speedBounds, gforceCalculation, referenceUtils, trackUtils
 │   ├── (charts/video)     # chartUtils (+ buildSeriesPoints per-pixel min/max decimation),
 │   │                      #   canvas2d (prepare2dCanvas conditional buffer resize + strokeSeriesPath),
@@ -299,9 +300,17 @@ mirroring `ProfileTab`. Everything is lazy (`ToolsPanel`, the landing tile, and
 each tool component), so nothing rides the initial bundle, and fully offline. Tool
 state persists via `getPluginStore("tools")`. Tools: the **kart seat position
 visualizer** and a **Phone Datalogger** (`datalogger/DataloggerTool.tsx`) — a
-skeleton stub for using the phone's GPS as a lap-timing logger (the real capture
-is prototyped at the standalone `/gps-test` route, `pages/GpsTest.tsx` +
-`lib/gpsTestMetrics.ts`). First tool: the **kart seat position visualizer**
+skeleton stub for using the phone's GPS as a lap-timing logger. Its capture
+foundation is the **`lib/gps/`** module (host-agnostic, not yet wired into the
+tool): `gpsFix.ts` (the pure `GpsFix` record — an NMEA-sentence replacement
+carrying one normalized browser fix + a `GpsFixQuality` bucket derived from
+horizontal accuracy, the phone's HDOP analog — plus `deriveMotion`/`averageHz`)
+and `customGps.ts` (the `CustomGps` source class — the software analog of the
+logger's GPS reader: drives `watchPosition` high-accuracy/never-cached,
+injectable geolocation for tests, emits `GpsObservation`s with cross-fix rate +
+derived speed/course; **no lap-timing logic — capture layer only**). The earlier
+`/gps-test` route (`pages/GpsTest.tsx` + `lib/gpsTestMetrics.ts`) is a throwaway
+prototype that predates this module. First tool: the **kart seat position visualizer**
 (`seat-position/`) — a pure, unit-tested rigid-body statics model (`model.ts`:
 4-element mass model with a feet-on-pedals leg-coupling factor, slide + tilt
 about the front anchor, closed-form + central-difference sensitivities, knee IK,
