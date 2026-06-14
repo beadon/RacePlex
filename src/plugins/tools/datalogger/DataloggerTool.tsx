@@ -58,7 +58,7 @@ export default function DataloggerTool(props: PluginPanelProps) {
           <Status phase={phase} courseName={timing.courseName} trackName={timing.trackName} />
           {phase !== "ended" && (
             <Button variant="destructive" size="sm" className="h-8 gap-1" onClick={() => setConfirmOpen(true)}>
-              <Square className="h-3.5 w-3.5" /> End
+              <Square className="h-3.5 w-3.5 fill-current" /> End
             </Button>
           )}
         </div>
