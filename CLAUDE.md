@@ -127,7 +127,7 @@ src/
 │   ├── fileLoadingState.ts # ★ Host pub/sub for the global file-load overlay; parseDatalogFile brackets begin/end
 │   ├── *Storage.ts        # IDB stores: file, kart(compat), vehicle, engine, template, note, setup,
 │   │                      #   video, videoFile, graphPrefs; trackStorage = localStorage (user tracks)
-│   ├── gps/               # ★ Phone-as-datalogger capture layer (no timing yet): gpsFix (pure GpsFix record = NMEA-sentence replacement + quality/motion/rate helpers) + customGps (CustomGps source class over watchPosition, injectable geolocation)
+│   ├── gps/               # ★ Phone-as-datalogger layer: gpsFix (pure GpsFix record = NMEA-sentence replacement + quality/motion/rate helpers), customGps (CustomGps source over watchPosition, injectable geolocation), observationSample (→GpsSample bridge), sessionGate (arm>5mph / auto-end after 5min idle), realtimeTimer (RealtimeLapTimer — incremental laps/sectors/delta reusing the batch timing fns), dovepWriter (.dovep log serializer)
 │   ├── (racing math)      # brakingZones, speedEvents, speedBounds, gforceCalculation, referenceUtils, trackUtils
 │   ├── (charts/video)     # chartUtils (+ buildSeriesPoints per-pixel min/max decimation),
 │   │                      #   canvas2d (prepare2dCanvas conditional buffer resize + strokeSeriesPath),
@@ -299,16 +299,22 @@ contexts and falls back to nulls (the landing page is outside those providers),
 mirroring `ProfileTab`. Everything is lazy (`ToolsPanel`, the landing tile, and
 each tool component), so nothing rides the initial bundle, and fully offline. Tool
 state persists via `getPluginStore("tools")`. Tools: the **kart seat position
-visualizer** and a **Phone Datalogger** (`datalogger/DataloggerTool.tsx`) — a
-skeleton stub for using the phone's GPS as a lap-timing logger. Its capture
-foundation is the **`lib/gps/`** module (host-agnostic, not yet wired into the
-tool): `gpsFix.ts` (the pure `GpsFix` record — an NMEA-sentence replacement
-carrying one normalized browser fix + a `GpsFixQuality` bucket derived from
-horizontal accuracy, the phone's HDOP analog — plus `deriveMotion`/`averageHz`)
-and `customGps.ts` (the `CustomGps` source class — the software analog of the
-logger's GPS reader: drives `watchPosition` high-accuracy/never-cached,
-injectable geolocation for tests, emits `GpsObservation`s with cross-fix rate +
-derived speed/course; **no lap-timing logic — capture layer only**). The earlier
+visualizer** and a **Phone Datalogger** (`datalogger/`) — live GPS lap timing
+using the phone as the logger (PHASE 1, rough UI). Its foundation is the
+host-agnostic **`lib/gps/`** module: `gpsFix.ts` (the pure `GpsFix` record — an
+NMEA-sentence replacement carrying one normalized browser fix + a `GpsFixQuality`
+bucket from horizontal accuracy, the phone's HDOP analog — plus
+`deriveMotion`/`averageHz`), `customGps.ts` (the `CustomGps` source — drives
+`watchPosition` high-accuracy/never-cached, injectable geolocation for tests,
+emits `GpsObservation`s), `sessionGate.ts` (pure arm/auto-idle state machine:
+record above 5 mph, auto-end after 5 min stopped), `realtimeTimer.ts`
+(`RealtimeLapTimer` — incremental laps/major-sectors/best/optimal/delta by
+re-driving the batch timing fns over a growing buffer), and `dovepWriter.ts`
+(serializes the session to **`.dovep`** — "Dove phone", byte-compatible with
+`.dovex` so the app parses it unchanged; omits channels the phone can't measure
+rather than faking them). `useDatalogger.ts` is the thin browser glue (GPS +
+IndexedDB) and saves the `.dovep` log on session end (manual red **End** →
+confirm, or auto-idle) so it's reopened/processed like any upload. The earlier
 `/gps-test` route (`pages/GpsTest.tsx` + `lib/gpsTestMetrics.ts`) is a throwaway
 prototype that predates this module. First tool: the **kart seat position visualizer**
 (`seat-position/`) — a pure, unit-tested rigid-body statics model (`model.ts`:
@@ -447,6 +453,15 @@ Byte 8192+: standard .dove CSV (timestamp,sats,hdop,lat,lng,...)
 ```
 
 GPS data is always parseable even if metadata is corrupted. Metadata is attached as `ParsedData.dovexMetadata`.
+
+**`.dovep` ("Dove phone")** is the Phone Datalogger tool's output
+(`lib/gps/dovepWriter.ts`). It is **byte-compatible `.dovex`** — same metadata
+preamble + Dove CSV — so `isDovexFormat`/`parseDovexFile` read it with no new
+parser (content-based routing in `datalogParser.ts` already matches it). The only
+difference: it carries **only the channels a phone can measure**
+(`timestamp,lat,lng,speed_mph,altitude_m,heading_deg,h_acc_m`) and omits the
+device-only ones (`sats,hdop,rpm,accel_*`) rather than fabricating them. The
+`.dovep` extension just drives the file-browser type bubble (`logFileType.ts`).
 
 ---
 

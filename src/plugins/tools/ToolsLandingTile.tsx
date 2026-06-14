@@ -35,33 +35,32 @@ export default function ToolsLandingTile(_props: { ctx: LandingContext }) {
       />
 
       {open && (
-        <>
-          <div className="fixed inset-0 z-[10000] bg-black/40" onClick={() => setOpen(false)} />
-          <div className="fixed inset-y-0 right-0 z-[10001] w-full sm:w-1/2 min-w-[320px] bg-background border-l border-border flex flex-col shadow-2xl animate-in slide-in-from-right duration-200">
-            <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
-              <div className="flex items-center gap-2">
-                <Wrench className="w-5 h-5 text-primary" />
-                <h2 className="font-semibold text-foreground">Tools</h2>
-              </div>
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setOpen(false)}>
-                <X className="w-4 h-4" />
-              </Button>
+        // Full-screen panel — tools (esp. the live datalogger) need the whole
+        // viewport to show data, not a side drawer.
+        <div className="fixed inset-0 z-[10001] bg-background flex flex-col animate-in fade-in duration-150">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
+            <div className="flex items-center gap-2">
+              <Wrench className="w-5 h-5 text-primary" />
+              <h2 className="font-semibold text-foreground">Tools</h2>
             </div>
-            <div className="flex-1 min-h-0 overflow-hidden">
-              <PluginPanelHost
-                slot={PanelSlot.Tools}
-                data={session?.data ?? null}
-                laps={session?.laps ?? []}
-                selectedLapNumber={session?.selectedLapNumber ?? null}
-                course={session?.course ?? null}
-                useKph={settings?.useKph ?? false}
-                sessionSetup={session?.sessionSetup ?? null}
-                activeSnapshot={session?.activeSnapshot ?? null}
-                fallback={<ToolsEmpty />}
-              />
-            </div>
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setOpen(false)}>
+              <X className="w-4 h-4" />
+            </Button>
           </div>
-        </>
+          <div className="flex-1 min-h-0 overflow-hidden">
+            <PluginPanelHost
+              slot={PanelSlot.Tools}
+              data={session?.data ?? null}
+              laps={session?.laps ?? []}
+              selectedLapNumber={session?.selectedLapNumber ?? null}
+              course={session?.course ?? null}
+              useKph={settings?.useKph ?? false}
+              sessionSetup={session?.sessionSetup ?? null}
+              activeSnapshot={session?.activeSnapshot ?? null}
+              fallback={<ToolsEmpty />}
+            />
+          </div>
+        </div>
       )}
     </>
   );
