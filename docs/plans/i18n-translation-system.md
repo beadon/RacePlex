@@ -1,8 +1,21 @@
 # Plan: Internationalization (i18n) / translation system
 
-Status: **Phase 6 plugins — cloud-sync slice complete** · current branch: `claude/i18n-phase6-plugins` → PR into `BETA`
+Status: **Phase 6 plugins complete (cloud-sync + Tools)** · current branch: `claude/i18n-phase6-tools` → PR into `BETA`
 
-> **Phase 6, slice 1 (this PR):** the **`plugins` namespace**, cloud-sync slice —
+> **Phase 6, slice 2 (this PR):** the **Tools plugin**, translated
+> **plugin-locally** — `ToolsPanel`, the `toolList` catalog labels, and the
+> seat-position visualizer (`SeatPositionTool` + `SeatDiagram`). Unlike every
+> prior surface, the strings live in the plugin's *own* folder
+> (`src/plugins/tools/locales/<lng>.json`, namespace `tools`) and register via a
+> new host seam `registerPluginLocale` (`lib/i18n/pluginLocales.ts`): English
+> eager via `addResourceBundle`, other languages lazy-imported from the plugin
+> dir through the backend's `read` hook (still offline-precached). Keys are typed
+> off the plugin's own `en.json` (`useToolsT`) and a plugin-local parity test
+> guards them — so nothing about Tools depends on host locale files, keeping it
+> extraction-ready. cloud-sync stays host-coupled in the shared `plugins`
+> namespace. **Remaining:** auth/admin. (Legal pages stay English by design.)
+
+> **Phase 6, slice 1 (merged):** the **`plugins` namespace**, cloud-sync slice —
 > every cloud-sync Profile panel (`StoragePanel`/Account, `LapSnapshotsPanel`,
 > `CloudLogsPanel`, `DataPrivacyPanel`), the per-file `FileSyncToggle` +
 > `FileDeleteToggle` mounts, and the two non-React modules (`autoSync` quota/

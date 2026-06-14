@@ -36,7 +36,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the auto-detect prompt) and the community track-submission flow, and the
   **Cloud Sync** Profile panels — Account, Lap snapshots, Cloud logs, and Data &
   privacy, plus the per-file cloud sync/delete toggles and the background
-  sync/export status messages. More of the app follows in later updates. (Legal
+  sync/export status messages, and the **Tools** tab — the tool picker and the
+  kart seat-position visualizer. More of the app follows in later updates. (Legal
   pages remain English by design.)
 - **Log type bubble in the file browser.** Each session row (shown by date/time)
   now carries a small pill with the log's format — Dove, Dovex, XRK, XRZ,

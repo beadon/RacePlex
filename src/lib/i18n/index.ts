@@ -65,9 +65,21 @@ const importBackend: BackendModule = {
   type: "backend",
   init: () => undefined,
   read: (language: string, namespace: string, callback: ReadCallback) => {
-    import(`../../locales/${language}/${namespace}.json`)
-      .then((mod) => callback(null, mod.default))
-      .catch((err: unknown) => callback(err as Error, false));
+    // Plugin-owned namespaces resolve from the plugin's own folder (English is
+    // already bundled via addResourceBundle; this loads the other languages).
+    // Imported lazily to avoid an import cycle at module-eval time.
+    void import("./pluginLocales").then(({ getPluginLocaleLoader }) => {
+      const loader = getPluginLocaleLoader(namespace, language);
+      if (loader) {
+        loader()
+          .then((mod) => callback(null, mod.default))
+          .catch((err: unknown) => callback(err as Error, false));
+        return;
+      }
+      import(`../../locales/${language}/${namespace}.json`)
+        .then((mod) => callback(null, mod.default))
+        .catch((err: unknown) => callback(err as Error, false));
+    });
   },
 };
 
