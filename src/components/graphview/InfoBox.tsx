@@ -274,7 +274,8 @@ export function InfoBox({
 
 /** Read-only display of setup fields — now dynamic from template */
 function SetupDetails({ setup, templates }: { setup: VehicleSetup; templates: SetupTemplate[] }) {
-  const template = templates.find(t => t.id === setup.templateId);
+  const { t } = useTranslation("drawer");
+  const template = templates.find(tpl => tpl.id === setup.templateId);
   const rows: { label: string; value: string }[] = [];
 
   const add = (label: string, value: string | number | null | undefined, suffix = '') => {
@@ -294,49 +295,49 @@ function SetupDetails({ setup, templates }: { setup: VehicleSetup; templates: Se
     const frontSprocket = setup.customFields["f-front-sprocket"];
     const rearSprocket = setup.customFields["f-rear-sprocket"];
     if (typeof frontSprocket === "number" && typeof rearSprocket === "number" && frontSprocket > 0) {
-      rows.push({ label: "Ratio", value: (rearSprocket / frontSprocket).toFixed(3) });
+      rows.push({ label: t("setupDetails.ratio"), value: (rearSprocket / frontSprocket).toFixed(3) });
     }
   }
 
-  add('Tire Brand', setup.tireBrand);
+  add(t("setupDetails.tireBrand"), setup.tireBrand);
   if (setup.psiFrontLeft !== null) {
     if (setup.psiFrontLeft === setup.psiFrontRight && setup.psiRearLeft === setup.psiRearRight && setup.psiFrontLeft === setup.psiRearLeft) {
-      add('PSI (all)', setup.psiFrontLeft?.toFixed(2));
+      add(t("setupDetails.psiAll"), setup.psiFrontLeft?.toFixed(2));
     } else if (setup.psiFrontLeft === setup.psiFrontRight && setup.psiRearLeft === setup.psiRearRight) {
-      add('PSI Front', setup.psiFrontLeft?.toFixed(2));
-      add('PSI Rear', setup.psiRearLeft?.toFixed(2));
+      add(t("setupDetails.psiFront"), setup.psiFrontLeft?.toFixed(2));
+      add(t("setupDetails.psiRear"), setup.psiRearLeft?.toFixed(2));
     } else {
-      add('PSI FL', setup.psiFrontLeft?.toFixed(2));
-      add('PSI FR', setup.psiFrontRight?.toFixed(2));
-      add('PSI RL', setup.psiRearLeft?.toFixed(2));
-      add('PSI RR', setup.psiRearRight?.toFixed(2));
+      add(t("setupDetails.psiFL"), setup.psiFrontLeft?.toFixed(2));
+      add(t("setupDetails.psiFR"), setup.psiFrontRight?.toFixed(2));
+      add(t("setupDetails.psiRL"), setup.psiRearLeft?.toFixed(2));
+      add(t("setupDetails.psiRR"), setup.psiRearRight?.toFixed(2));
     }
   }
   const wu = setup.unitSystem || "mm";
   if (setup.tireWidthFrontLeft !== null) {
     if (setup.tireWidthFrontLeft === setup.tireWidthFrontRight && setup.tireWidthRearLeft === setup.tireWidthRearRight) {
-      add('Tire Width Front', setup.tireWidthFrontLeft?.toFixed(2), ` ${wu}`);
-      add('Tire Width Rear', setup.tireWidthRearLeft?.toFixed(2), ` ${wu}`);
+      add(t("setupDetails.tireWidthFront"), setup.tireWidthFrontLeft?.toFixed(2), ` ${wu}`);
+      add(t("setupDetails.tireWidthRear"), setup.tireWidthRearLeft?.toFixed(2), ` ${wu}`);
     } else {
-      add('Tire Width FL', setup.tireWidthFrontLeft?.toFixed(2), ` ${wu}`);
-      add('Tire Width FR', setup.tireWidthFrontRight?.toFixed(2), ` ${wu}`);
-      add('Tire Width RL', setup.tireWidthRearLeft?.toFixed(2), ` ${wu}`);
-      add('Tire Width RR', setup.tireWidthRearRight?.toFixed(2), ` ${wu}`);
+      add(t("setupDetails.tireWidthFL"), setup.tireWidthFrontLeft?.toFixed(2), ` ${wu}`);
+      add(t("setupDetails.tireWidthFR"), setup.tireWidthFrontRight?.toFixed(2), ` ${wu}`);
+      add(t("setupDetails.tireWidthRL"), setup.tireWidthRearLeft?.toFixed(2), ` ${wu}`);
+      add(t("setupDetails.tireWidthRR"), setup.tireWidthRearRight?.toFixed(2), ` ${wu}`);
     }
   }
   if (setup.tireDiameterFrontLeft !== null) {
     if (setup.tireDiameterFrontLeft === setup.tireDiameterFrontRight && setup.tireDiameterRearLeft === setup.tireDiameterRearRight) {
-      add('Tire Diameter Front', setup.tireDiameterFrontLeft?.toFixed(2), ` ${wu}`);
-      add('Tire Diameter Rear', setup.tireDiameterRearLeft?.toFixed(2), ` ${wu}`);
+      add(t("setupDetails.tireDiameterFront"), setup.tireDiameterFrontLeft?.toFixed(2), ` ${wu}`);
+      add(t("setupDetails.tireDiameterRear"), setup.tireDiameterRearLeft?.toFixed(2), ` ${wu}`);
     } else {
-      add('Tire Diameter FL', setup.tireDiameterFrontLeft?.toFixed(2), ` ${wu}`);
-      add('Tire Diameter FR', setup.tireDiameterFrontRight?.toFixed(2), ` ${wu}`);
-      add('Tire Diameter RL', setup.tireDiameterRearLeft?.toFixed(2), ` ${wu}`);
-      add('Tire Diameter RR', setup.tireDiameterRearRight?.toFixed(2), ` ${wu}`);
+      add(t("setupDetails.tireDiameterFL"), setup.tireDiameterFrontLeft?.toFixed(2), ` ${wu}`);
+      add(t("setupDetails.tireDiameterFR"), setup.tireDiameterFrontRight?.toFixed(2), ` ${wu}`);
+      add(t("setupDetails.tireDiameterRL"), setup.tireDiameterRearLeft?.toFixed(2), ` ${wu}`);
+      add(t("setupDetails.tireDiameterRR"), setup.tireDiameterRearRight?.toFixed(2), ` ${wu}`);
     }
   }
 
-  if (rows.length === 0) return <p className="text-xs text-muted-foreground">No setup data</p>;
+  if (rows.length === 0) return <p className="text-xs text-muted-foreground">{t("setupDetails.noSetupData")}</p>;
 
   return (
     <div className="space-y-0.5">
