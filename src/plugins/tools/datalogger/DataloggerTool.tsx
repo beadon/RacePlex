@@ -27,7 +27,7 @@ import type { PluginPanelProps } from "@/plugins/panels";
 import type { Lap } from "@/types/racing";
 import { formatLapTime, formatSectorTime } from "@/lib/lapCalculation";
 import { useDatalogger } from "./useDatalogger";
-import type { TimingState } from "@/lib/gps";
+import type { TimingState, GpsObservation, SessionPhase } from "@/lib/gps";
 
 type View = "live" | "laps";
 
@@ -72,7 +72,7 @@ export default function DataloggerTool(props: PluginPanelProps) {
 
       <div className="min-h-0 flex-1 overflow-auto">
         {view === "live" ? (
-          <LiveView timing={timing} speed={speed} speedUnit={speedUnit} />
+          <LiveView timing={timing} speed={speed} speedUnit={speedUnit} phase={phase} latest={latest} />
         ) : (
           <LapTimesView laps={laps} bestLapNumber={timing.bestLapNumber} />
         )}
@@ -127,23 +127,36 @@ export default function DataloggerTool(props: PluginPanelProps) {
 }
 
 /** The laptimer heads-up: delta dominant, then current/best/last/optimal + speed. */
-function LiveView({ timing, speed, speedUnit }: { timing: TimingState; speed: number; speedUnit: string }) {
-  // Nowhere near a known track: no timing context, so just show speed + reassure
-  // the user the session is still being recorded for later analysis.
+function LiveView({
+  timing,
+  speed,
+  speedUnit,
+  phase,
+  latest,
+}: {
+  timing: TimingState;
+  speed: number;
+  speedUnit: string;
+  phase: SessionPhase;
+  latest: GpsObservation | null;
+}) {
+  // Before logging arms, run as a plain digital speedometer so the user can
+  // confirm GPS/speed are live while stationary (logging stays locked to 5 mph).
+  if (phase === "waiting") {
+    return (
+      <SpeedometerView speed={speed} speedUnit={speedUnit} latest={latest} hint="Drive above 5 mph to start logging." />
+    );
+  }
+  // Recording but nowhere near a known track: no timing context, just keep
+  // logging and reassure the user it's saved for later.
   if (timing.nearKnownTrack === false) {
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-5 p-6 text-center">
-        <div>
-          <div className="text-[11px] uppercase tracking-widest text-muted-foreground">Speed</div>
-          <div className="font-mono text-7xl font-bold tabular-nums text-foreground sm:text-8xl">
-            {speed.toFixed(0)}
-            <span className="ml-2 text-2xl font-normal text-muted-foreground">{speedUnit}</span>
-          </div>
-        </div>
-        <p className="max-w-xs text-sm text-muted-foreground">
-          Data being logged for post-race analysis. No track within ~10&nbsp;mi — create one here later to get lap times.
-        </p>
-      </div>
+      <SpeedometerView
+        speed={speed}
+        speedUnit={speedUnit}
+        latest={latest}
+        hint="Data being logged for post-race analysis. No track within ~10 mi — create one here later to get lap times."
+      />
     );
   }
 
@@ -233,6 +246,43 @@ const LapTimesView = memo(function LapTimesView({ laps, bestLapNumber }: { laps:
   );
 });
 
+/** Plain digital speedometer + a hint and live GPS quality readout. */
+function SpeedometerView({
+  speed,
+  speedUnit,
+  latest,
+  hint,
+}: {
+  speed: number;
+  speedUnit: string;
+  latest: GpsObservation | null;
+  hint: string;
+}) {
+  if (!latest) {
+    return (
+      <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        <p className="text-sm text-muted-foreground">Acquiring GPS…</p>
+      </div>
+    );
+  }
+  return (
+    <div className="flex h-full flex-col items-center justify-center gap-5 p-6 text-center">
+      <div>
+        <div className="text-[11px] uppercase tracking-widest text-muted-foreground">Speed</div>
+        <div className="font-mono text-8xl font-bold leading-none tabular-nums text-foreground">
+          {speed.toFixed(0)}
+          <span className="ml-2 text-2xl font-normal text-muted-foreground">{speedUnit}</span>
+        </div>
+      </div>
+      <p className="max-w-xs text-sm text-muted-foreground">{hint}</p>
+      <p className="text-xs text-muted-foreground/70">
+        GPS ±{latest.fix.accuracy.toFixed(0)} m · {latest.fix.quality}
+      </p>
+    </div>
+  );
+}
+
 function Tab({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
     <button
@@ -256,7 +306,7 @@ function Status({ phase, courseName, trackName }: { phase: string; courseName: s
     );
   }
   if (phase === "ended") return <span className="text-xs text-muted-foreground">Ended</span>;
-  return <span className="text-xs text-muted-foreground">Waiting — drive above 5 mph</span>;
+  return <span className="text-xs text-muted-foreground">Waiting</span>;
 }
 
 function Cell({ label, value, unit }: { label: string; value: string; unit?: string }) {
