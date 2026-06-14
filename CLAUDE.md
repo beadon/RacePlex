@@ -151,7 +151,7 @@ src/
 │   ├── buildInfo.ts       # Build version/hash/branch/commit-date stamp (landing footer "what changed" marker; main → version+hash, other branches → branch+hash+commit time + amber preview-DB warning via isPreviewBuild(); values injected by vite define)
 │   ├── debugConsole.ts    # ★ On-screen debug console (`?dbg=true`): pure flag-parse + log ring-buffer + console/global-error capture (mobile/PWA has no dev tools) — rendered by components/DebugConsole.tsx
 │   ├── units.ts           # ★ Pure unit conversions + display formatters for the 3 imperial/metric toggles (speed/distance/weather) — single home for every conversion constant
-│   ├── i18n/              # ★ Internationalization (i18next): config (languages/namespaces + pure resolveInitialLanguage), index (init + lazy dynamic-import backend, English bundled), format (Intl date/number/list), seedUtils (pure parity/placeholder checks) — see Internationalization section
+│   ├── i18n/              # ★ Internationalization (i18next): config (languages/namespaces + pure resolveInitialLanguage), index (init + lazy dynamic-import backend, English bundled), pluginLocales (registerPluginLocale: plugin-owned namespaces sourced from the plugin's own folder), format (Intl date/number/list), seedUtils (pure parity/placeholder checks) — see Internationalization section
 │   └── utils.ts           # Tailwind cn() helper
 ├── locales/              # ★ Translation JSON, src/locales/<lng>/<ns>.json. en/ = source of truth (bundled + typed); es/fr/de/it/pt-BR/ja machine-seeded (lazy chunks). New surfaces add keys here as they're migrated.
 ├── plugins/               # ★ Plugin framework (auto-discovered) — see Plugin Framework section
@@ -972,9 +972,38 @@ landing page, Settings, the **core in-session UI** (the tab bar + session header
 in `Index.tsx`, `LapTable`, `LapSnapshotControls`, `OverlaysMenu`,
 `SectorCropSelect`), and the **live analysis views** — the map (`RaceLineView`,
 `MiniMap`) and the pro **GraphView** (`GraphViewPanel`, `GraphPanel`,
-`SingleSeriesChart`, `GGDiagram`, `InfoBox`, plus the simple `TelemetryChart`).
-The **video** player/overlays and the InfoBox setup-detail table (shared with the
-garage `SetupsTab`) are the next surfaces; the framework is whole.
+`SingleSeriesChart`, `GGDiagram`, `InfoBox`, plus the simple `TelemetryChart`),
+and the **video** player + overlay/export system (`VideoPlayer`,
+`VideoExportDialog`, `OverlaySettingsPanel`, the overlay-type/theme catalog
+labels, and the text-bearing overlay widgets), and the **garage drawer** —
+shell + Files + Vehicles (`FileManagerDrawer` tab chrome, `FilesTab`,
+`SessionBrowser`, `VehiclesTab`, `EngineCombobox`; the pure `fileBrowserTree`
+takes translated `allSessions`/`untagged` labels so it stays i18n-free) **and
+Setups + Notes** (`SetupsTab`, `TemplateCreator`, `NotesTab`, and the shared
+`InfoBox` `SetupDetails` table) and **Device** (Settings/Tracks/firmware:
+`DeviceSettingsTab`, `DeviceTracksTab`, `FirmwareUpdateSection`) — all the
+`drawer` namespace — plus the **weather** UI (`WeatherPanel`, `LocalWeatherDialog`
+— the `weather` namespace, shared by the in-session panel and the landing-page
+dialog), and the **tracks** UI — the track/course editor + manager
+(`TrackEditor`, `AddTrackDialog`, `AddCourseDialog`, `SectorListEditor`,
+`VisualEditor`, `TrackPromptDialog`) and the community **submission** flow
+(`SubmitTrackDialog`) — the `tracks` namespace (the pure `courseSectors`
+validation strings + `deviceSettingsSchema` labels stay English data), and the
+**cloud-sync plugin** UI — every Profile-tab panel (`StoragePanel`/Account,
+`LapSnapshotsPanel`, `CloudLogsPanel`, `DataPrivacyPanel`), the per-file sync +
+delete toggles, the background `autoSync` quota/offline notices and the
+`accountExport` progress phases (both non-React modules call `i18n.t` directly),
+plus the host `PluginPanelHost` (panel titles are now i18n keys translated at
+render, error/loading chrome) — the `plugins` namespace — and the **Tools
+plugin** (`ToolsPanel`, the tool catalog labels, and the seat-position
+visualizer), which owns its translations **plugin-locally**
+(`src/plugins/tools/locales/<lng>.json`, its own `tools` namespace registered via
+`registerPluginLocale`, with a plugin-local parity test + typed keys) so they
+travel with the plugin on extraction. Auth/admin are the next surfaces; the
+framework is whole.
+(Device-setting **labels** still come from
+`deviceSettingsSchema.ts` data — schema-level i18n is a deliberate follow-up so
+unknown device keys keep passing through as raw labels.)
 
 - **Languages.** `en` (source of truth) + `es`, `fr`, `de`, `it`, `pt-BR`, `ja`,
   declared once in `lib/i18n/config.ts` (`SUPPORTED_LANGUAGES`, `NAMESPACES`).
@@ -997,14 +1026,26 @@ garage `SetupsTab`) are the next surfaces; the framework is whole.
 - **Keys are typed.** `src/types/i18next.d.ts` augments react-i18next's resources
   with the English JSON shape, so `t("settings:title")` is autocompleted and a
   missing/renamed key fails `tsc -b`. English is the canonical key set.
-- **Namespaces** (`common`, `landing`, `settings`, `session`) map to per-language JSON files
-  and load on demand for their surface. Rich text uses `<Trans>` (e.g. the
+- **Namespaces** (`common`, `landing`, `settings`, `session`, `video`, `drawer`, `weather`, `tracks`, `plugins`) map to per-language JSON files
+  under `src/locales/` and load on demand for their surface. Rich text uses `<Trans>` (e.g. the
   preview-DB warning); interpolation uses `{{var}}`; pluralization uses i18next's
   `count`/CLDR (never hand-rolled `s` suffixes). Unit symbols (`km`, `°C`, …),
   brand/product names, channel ids and formats stay **literal** — translate words
   around them, not them. Locale-aware date/number/list rendering lives in
   `lib/i18n/format.ts` (`Intl` wrappers); **units stay a separate axis** owned by
   `lib/units.ts` — language never swaps imperial/metric.
+- **Plugin-owned namespaces.** A plugin destined for its own repo keeps its
+  translations *in its own folder* instead of `src/locales/`. It calls
+  `registerPluginLocale(ns, en, { es: () => import('./locales/es.json'), … })`
+  (`lib/i18n/pluginLocales.ts`): English is added eagerly via
+  `i18n.addResourceBundle` (zero flash), other languages lazy-load from the
+  plugin dir through the host backend's `read` hook (still offline-precached).
+  The **Tools** plugin is the first user — `src/plugins/tools/locales/<lng>.json`,
+  namespace `tools`, registered in its `setup()`, with a plugin-local parity test
+  (`tools/i18n.test.ts`) and typed keys derived from its own `en.json`
+  (`useToolsT`), so nothing about it depends on the host locale files. cloud-sync,
+  by contrast, is permanently host-coupled and lives in the shared `plugins`
+  namespace under `src/locales/`.
 - **Seeding.** Non-English files are machine-translated by
   `scripts/seed-translations.mjs` (`bun run i18n:seed`) using
   `scripts/i18n-glossary.json` (a motorsport glossary + do-not-translate list).

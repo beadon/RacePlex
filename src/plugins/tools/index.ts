@@ -10,6 +10,7 @@ import { Wrench } from "lucide-react";
 import type { DataViewerPlugin } from "@/plugins/types";
 import { PANELS_POINT, PanelSlot, type PluginPanel } from "@/plugins/panels";
 import { MOUNTS_POINT, MountSlot, type LandingContext, type PluginMountDef } from "@/plugins/mounts";
+import { registerToolsLocale } from "./i18n";
 
 const ToolsPanel = lazy(() => import("./ToolsPanel"));
 const ToolsLandingTile = lazy(() => import("./ToolsLandingTile"));
@@ -19,6 +20,10 @@ const plugin: DataViewerPlugin = {
   name: "Track Tools",
   version: "0.1.0",
   setup(ctx) {
+    // Register the plugin's own translations (English bundled, others lazy from
+    // ./locales/) before any tool panel renders.
+    registerToolsLocale();
+
     ctx.registry.contribute(PANELS_POINT, {
       id: "tools-home",
       title: "Tools",

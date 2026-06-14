@@ -19,8 +19,10 @@ import { useOptionalSettingsContext } from "@/contexts/SettingsContext";
 import { PluginPanelHost } from "@/plugins/PluginPanelHost";
 import { PanelSlot } from "@/plugins/panels";
 import type { LandingContext } from "@/plugins/mounts";
+import { useToolsT } from "./i18n";
 
 export default function ToolsLandingTile(_props: { ctx: LandingContext }) {
+  const t = useToolsT();
   const [open, setOpen] = useState(false);
   const session = useOptionalSessionContext();
   const settings = useOptionalSettingsContext();
@@ -29,8 +31,8 @@ export default function ToolsLandingTile(_props: { ctx: LandingContext }) {
     <>
       <ActionTile
         icon={Wrench}
-        title="Tools"
-        description="Trackside calculators and utilities — no datalog needed."
+        title={t("picker.heading")}
+        description={t("landing.tileDescription")}
         onClick={() => setOpen(true)}
       />
 
@@ -41,7 +43,7 @@ export default function ToolsLandingTile(_props: { ctx: LandingContext }) {
           <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
             <div className="flex items-center gap-2">
               <Wrench className="w-5 h-5 text-primary" />
-              <h2 className="font-semibold text-foreground">Tools</h2>
+              <h2 className="font-semibold text-foreground">{t("picker.heading")}</h2>
             </div>
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setOpen(false)}>
               <X className="w-4 h-4" />
@@ -67,12 +69,13 @@ export default function ToolsLandingTile(_props: { ctx: LandingContext }) {
 }
 
 function ToolsEmpty() {
+  const t = useToolsT();
   return (
     <div className="h-full flex items-center justify-center">
       <div className="max-w-sm space-y-5 text-center px-4">
         <Wrench className="w-10 h-10 text-muted-foreground/40 mx-auto" />
-        <p className="text-sm font-medium text-foreground">Tools</p>
-        <p className="text-xs text-muted-foreground">No tools are available in this build.</p>
+        <p className="text-sm font-medium text-foreground">{t("picker.heading")}</p>
+        <p className="text-xs text-muted-foreground">{t("landing.noTools")}</p>
       </div>
     </div>
   );

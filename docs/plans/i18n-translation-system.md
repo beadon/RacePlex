@@ -1,16 +1,87 @@
 # Plan: Internationalization (i18n) / translation system
 
-Status: **Phase 2 in progress** · current branch: `claude/i18n-phase2-map-graphs-video` → PR into `BETA`
+Status: **Phase 6 plugins complete (cloud-sync + Tools)** · current branch: `claude/i18n-phase6-tools` → PR into `BETA`
 
-> **Phase 0 shipped** (engine + 6 seeded languages; landing page + Settings).
-> **Phase 1 shipped** the core in-session UI under the `session` namespace (view
-> tab bar + session header, `LapTable`, `LapSnapshotControls`, `OverlaysMenu`,
-> `SectorCropSelect`). **Phase 2 (this PR)** extends `session` to the **live
-> analysis views**: the map (`RaceLineView`, `MiniMap`) and the pro **GraphView**
-> (`GraphViewPanel`, `GraphPanel`, `SingleSeriesChart`, `GGDiagram`, `InfoBox`,
-> plus the simple `TelemetryChart`). Deferred to the next slice: the **video**
-> player/overlays, and the InfoBox setup-detail table (translated with the garage
-> `SetupsTab` so the tire/PSI labels stay consistent).
+> **Phase 6, slice 2 (this PR):** the **Tools plugin**, translated
+> **plugin-locally** — `ToolsPanel`, the `toolList` catalog labels, and the
+> seat-position visualizer (`SeatPositionTool` + `SeatDiagram`). Unlike every
+> prior surface, the strings live in the plugin's *own* folder
+> (`src/plugins/tools/locales/<lng>.json`, namespace `tools`) and register via a
+> new host seam `registerPluginLocale` (`lib/i18n/pluginLocales.ts`): English
+> eager via `addResourceBundle`, other languages lazy-imported from the plugin
+> dir through the backend's `read` hook (still offline-precached). Keys are typed
+> off the plugin's own `en.json` (`useToolsT`) and a plugin-local parity test
+> guards them — so nothing about Tools depends on host locale files, keeping it
+> extraction-ready. cloud-sync stays host-coupled in the shared `plugins`
+> namespace. **Remaining:** auth/admin. (Legal pages stay English by design.)
+>
+> **Follow-up (deferred, low priority):** retrofit **cloud-sync** onto the same
+> plugin-local seam (`registerPluginLocale`) so its strings live in
+> `src/plugins/cloud-sync/locales/` too. The translation *content* already exists
+> (just moves from `src/locales/<lng>/plugins.json`), so this is mechanical — the
+> one wrinkle is that the `plugins` namespace is **shared**: the host
+> `PluginPanelHost` also owns `panelError`, the `loading` fallback, and renders
+> the panel **titles**. So the retrofit must first **split** that namespace —
+> keep the host chrome host-side (fold `panelError`/`loading` into `common`, let
+> titles resolve cross-namespace) and move only the cloud-sync-owned keys into the
+> plugin. Worth doing once the cloud-sync UI is itself further split out; skipped
+> for now because cloud-sync is permanently host-coupled (never extracted), so it
+> gains nothing from extraction-readiness today.
+
+> **Phase 6, slice 1 (merged):** the **`plugins` namespace**, cloud-sync slice —
+> every cloud-sync Profile panel (`StoragePanel`/Account, `LapSnapshotsPanel`,
+> `CloudLogsPanel`, `DataPrivacyPanel`), the per-file `FileSyncToggle` +
+> `FileDeleteToggle` mounts, and the two non-React modules (`autoSync` quota/
+> offline notices + `accountExport` progress phases) via direct `i18n.t`. Panel
+> **titles** are now i18n keys: `PluginPanelHost` resolves `t(panel.title)` at
+> render (a literal non-key title falls through unchanged), so the host's error/
+> loading chrome is translated too. **Remaining:** the **Tools** plugin slice
+> (`ToolsPanel`, `toolList`, the seat-position visualizer) and then auth/admin.
+> (Legal pages stay English by design.)
+
+> **Phase 5 (merged):** the **`tracks` namespace** — the track/course editor +
+> manager (`TrackEditor`, `AddTrackDialog`, `AddCourseDialog`, `SectorListEditor`,
+> `VisualEditor`, `TrackPromptDialog`) and the community **submission** flow
+> (`SubmitTrackDialog`). Sector numbering labels (from `sectorLabels()`) stay
+> literal; the pure `courseSectors` validation strings + `deviceSettingsSchema`
+> labels remain English data. With this the whole track-management surface is
+> translated. **Remaining:** plugins/cloud (cloud-sync panels, Tools) and
+> auth/admin. (Legal pages stay English by design.)
+>
+> (Phases 0–4 — engine + landing/Settings, core session UI, video, the full
+> garage drawer, and weather — already merged.)
+
+> **Garage sub-slice 3 (Phase 4):** Device — `DeviceSettingsTab`,
+> `DeviceTracksTab`, `FirmwareUpdateSection` (`drawer.device`/`drawer.firmware`/
+> `drawer.deviceTracks`) — **plus the catch-up `weather` namespace**
+> (`WeatherPanel` + `LocalWeatherDialog`). Device-setting field labels stay
+> sourced from `deviceSettingsSchema.ts` (data; unknown keys pass through) — a
+> schema-level i18n pass is the deliberate follow-up. With this, the **whole
+> garage drawer is translated.** **Remaining:** tracks (editor + community
+> submission), plugins/cloud, auth/admin.
+>
+> (sub-slices 1 & 2 — shell+Files+Vehicles, Setups+Notes — already merged.)
+
+> **Garage sub-slice 2 (this PR):** Setups + Notes — `SetupsTab`,
+> `TemplateCreator`, `NotesTab`, and the shared `InfoBox` `SetupDetails` table
+> (the tire/PSI/diameter labels deferred from Phase 2, now in `drawer.setupDetails`
+> so they match `SetupsTab`). Tire position codes (FL/FR/RL/RR) stay literal;
+> descriptive words are translated. **Remaining:** garage sub-slice 3 = Device
+> (Settings/Tracks/firmware), then tracks, plugins, auth/admin.
+>
+> (sub-slice 1 — shell + Files + Vehicles — already merged.)
+
+> **Phases 0–3 shipped:** engine + 6 languages + landing/Settings (`common`/
+> `landing`/`settings`); core in-session UI + live analysis views (`session`);
+> video (`video`). **Phase 4 (this PR)** opens the **`drawer` namespace** and
+> does the garage drawer's **shell + Files + Vehicles** sub-slice
+> (`FileManagerDrawer` tab chrome incl. the Device connect/battery states,
+> `FilesTab` + the shared `SessionBrowser`, `VehiclesTab`, `EngineCombobox`). The
+> pure `fileBrowserTree` gained an optional labels arg so the UI passes
+> translated `allSessions`/`untagged` while the module + its tests stay i18n-free;
+> `KartsTab` is dead code and was skipped. **Remaining garage sub-slices:**
+> Setups (`SetupsTab` + the shared InfoBox setup-detail table) and Notes, then
+> Device (Settings/Tracks/firmware). After garage: tracks, plugins, auth/admin.
 >
 > One refinement vs. the original design: the source-of-truth
 > English locales live in **`src/locales/en/`** (bundled as i18next `resources`

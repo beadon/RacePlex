@@ -27,6 +27,11 @@ import enCommon from "@/locales/en/common.json";
 import enLanding from "@/locales/en/landing.json";
 import enSettings from "@/locales/en/settings.json";
 import enSession from "@/locales/en/session.json";
+import enVideo from "@/locales/en/video.json";
+import enDrawer from "@/locales/en/drawer.json";
+import enWeather from "@/locales/en/weather.json";
+import enTracks from "@/locales/en/tracks.json";
+import enPlugins from "@/locales/en/plugins.json";
 
 const SETTINGS_KEY = "dove-dataviewer-settings";
 
@@ -49,15 +54,32 @@ const bundledEnglish = {
   landing: enLanding,
   settings: enSettings,
   session: enSession,
+  video: enVideo,
+  drawer: enDrawer,
+  weather: enWeather,
+  tracks: enTracks,
+  plugins: enPlugins,
 } as const;
 
 const importBackend: BackendModule = {
   type: "backend",
   init: () => undefined,
   read: (language: string, namespace: string, callback: ReadCallback) => {
-    import(`../../locales/${language}/${namespace}.json`)
-      .then((mod) => callback(null, mod.default))
-      .catch((err: unknown) => callback(err as Error, false));
+    // Plugin-owned namespaces resolve from the plugin's own folder (English is
+    // already bundled via addResourceBundle; this loads the other languages).
+    // Imported lazily to avoid an import cycle at module-eval time.
+    void import("./pluginLocales").then(({ getPluginLocaleLoader }) => {
+      const loader = getPluginLocaleLoader(namespace, language);
+      if (loader) {
+        loader()
+          .then((mod) => callback(null, mod.default))
+          .catch((err: unknown) => callback(err as Error, false));
+        return;
+      }
+      import(`../../locales/${language}/${namespace}.json`)
+        .then((mod) => callback(null, mod.default))
+        .catch((err: unknown) => callback(err as Error, false));
+    });
   },
 };
 
