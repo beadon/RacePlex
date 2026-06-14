@@ -202,6 +202,18 @@ export class RealtimeLapTimer {
     return this.state;
   }
 
+  /**
+   * Pure proximity probe: is `(lat, lon)` within ~10 mi of any known track?
+   * `null` until tracks have loaded (or on a bad fix). Lets a caller surface
+   * "no track nearby" *before* recording arms (the engine only evaluates this
+   * internally while recording).
+   */
+  nearTrack(lat: number, lon: number): boolean | null {
+    if (!this.tracksLoaded) return null;
+    if (validateGpsCoords(lat, lon) !== null) return null;
+    return findNearestTrack(lat, lon, this.tracks, NEAR_TRACK_RADIUS_M) !== null;
+  }
+
   /** All samples fed so far (the would-be log buffer). */
   getSamples(): readonly GpsSample[] {
     return this.samples;

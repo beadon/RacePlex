@@ -1,6 +1,12 @@
 import { describe, it, expect, vi } from "vitest";
 import { DataloggerSession, type DataloggerSnapshot } from "./dataloggerSession";
 import { CustomGps, RealtimeLapTimer, AUTO_END_STOPPED_MS } from "@/lib/gps";
+import type { Track } from "@/types/racing";
+
+const FAR_TRACK: Track = {
+  name: "Far",
+  courses: [{ name: "c", startFinishA: { lat: 40, lon: 40 }, startFinishB: { lat: 40, lon: 40.001 } }],
+};
 
 /** Controllable fake Geolocation (mirrors the one in customGps.test.ts). */
 class FakeGeo {
@@ -72,6 +78,16 @@ describe("DataloggerSession", () => {
     const s = session.getSnapshot();
     expect(s.phase).toBe("recording");
     expect(s.latest).not.toBeNull();
+  });
+
+  it("surfaces 'no track nearby' while still waiting (before arming)", () => {
+    const { geo, timer, session } = setup();
+    timer.setTracks([FAR_TRACK]);
+    session.start();
+    geo.emit({ latitude: 0, longitude: 0.0005, speed: 1 }, BASE_TS); // ~2 mph → waiting
+    const s = session.getSnapshot();
+    expect(s.phase).toBe("waiting");
+    expect(s.timing.nearKnownTrack).toBe(false);
   });
 
   // Regression: ending with nothing recorded must NOT get stuck "saving" and must

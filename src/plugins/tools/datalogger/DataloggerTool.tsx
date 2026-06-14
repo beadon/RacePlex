@@ -151,21 +151,20 @@ function LiveView({
   latest: GpsObservation | null;
 }) {
   const t = useToolsT();
-  // Before logging arms, run as a plain digital speedometer so the user can
-  // confirm GPS/speed are live while stationary (logging stays locked to 5 mph).
-  if (phase === "waiting") {
-    return <SpeedometerView speed={speed} speedUnit={speedUnit} latest={latest} hint={t("datalogger.waitingHint")} />;
-  }
-  // Recording but nowhere near a known track: no timing context, just keep
-  // logging and reassure the user it's saved for later.
-  if (timing.nearKnownTrack === false) {
+  const farFromTrack = timing.nearKnownTrack === false;
+  const waiting = phase === "waiting";
+  // Speedometer mode: before logging arms (confirm GPS/speed while stationary),
+  // or recording far from any known track (no timing context). The "no tracks
+  // nearby" title shows whenever we know there's no track — including while
+  // waiting — so the reason for speedometer mode is always explained.
+  if (waiting || farFromTrack) {
     return (
       <SpeedometerView
         speed={speed}
         speedUnit={speedUnit}
         latest={latest}
-        title={t("datalogger.speedometerMode")}
-        hint={t("datalogger.farHint")}
+        title={farFromTrack ? t("datalogger.speedometerMode") : undefined}
+        hint={waiting ? t("datalogger.waitingHint") : t("datalogger.farHint")}
       />
     );
   }

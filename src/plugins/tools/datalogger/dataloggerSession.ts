@@ -135,6 +135,13 @@ export class DataloggerSession {
       // re-render the table) when a lap actually completes.
       const completed = this.deps.timer.getLaps();
       if (completed.length !== this.snapshot.laps.length) patch.laps = [...completed];
+    } else {
+      // Before logging arms, still surface track proximity so the UI can explain
+      // speedometer mode ("no tracks nearby") while waiting.
+      patch.timing = {
+        ...this.snapshot.timing,
+        nearKnownTrack: this.deps.timer.nearTrack(obs.fix.lat, obs.fix.lon),
+      };
     }
     this.patch(patch);
 
