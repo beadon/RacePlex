@@ -155,7 +155,8 @@ function LiveView({
         speed={speed}
         speedUnit={speedUnit}
         latest={latest}
-        hint="Data being logged for post-race analysis. No track within ~10 mi — create one here later to get lap times."
+        title="Speedometer mode — no tracks found nearby"
+        hint="Data being logged for post-race analysis. Create a track here later to get lap times."
       />
     );
   }
@@ -246,17 +247,19 @@ const LapTimesView = memo(function LapTimesView({ laps, bestLapNumber }: { laps:
   );
 });
 
-/** Plain digital speedometer + a hint and live GPS quality readout. */
+/** Plain digital speedometer + an optional title, a hint, and a live GPS readout. */
 function SpeedometerView({
   speed,
   speedUnit,
   latest,
   hint,
+  title,
 }: {
   speed: number;
   speedUnit: string;
   latest: GpsObservation | null;
   hint: string;
+  title?: string;
 }) {
   if (!latest) {
     return (
@@ -268,6 +271,7 @@ function SpeedometerView({
   }
   return (
     <div className="flex h-full flex-col items-center justify-center gap-5 p-6 text-center">
+      {title && <p className="text-sm font-semibold text-foreground">{title}</p>}
       <div>
         <div className="text-[11px] uppercase tracking-widest text-muted-foreground">Speed</div>
         <div className="font-mono text-8xl font-bold leading-none tabular-nums text-foreground">
