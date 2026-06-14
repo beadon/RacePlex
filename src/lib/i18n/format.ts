@@ -35,6 +35,43 @@ export function formatNumber(
   return new Intl.NumberFormat(locale, options).format(value);
 }
 
+/**
+ * Format a number with a fixed number of fraction digits, using the locale's
+ * decimal separator (e.g. `formatDecimal(0.34, "de", 2)` → `"0,34"`).
+ */
+export function formatDecimal(
+  value: number,
+  locale: string,
+  fractionDigits: number,
+): string {
+  return formatNumber(value, locale, {
+    minimumFractionDigits: fractionDigits,
+    maximumFractionDigits: fractionDigits,
+  });
+}
+
+/**
+ * Format an integer with locale-aware thousands grouping and no fraction part
+ * (e.g. `formatInteger(1200, "de")` → `"1.200"`).
+ */
+export function formatInteger(value: number, locale: string): string {
+  return formatNumber(value, locale, { maximumFractionDigits: 0 });
+}
+
+/**
+ * Format a signed delta: a leading `+` on positives, the locale's `-` on
+ * negatives, and no sign on zero (e.g. `+0,25` in German). Useful for gaps and
+ * change indicators where the direction must read at a glance.
+ */
+export function formatSignedDelta(
+  value: number,
+  locale: string,
+  options?: Intl.NumberFormatOptions,
+): string {
+  const formatted = formatNumber(value, locale, options);
+  return value > 0 ? `+${formatted}` : formatted;
+}
+
 /** Options for {@link formatList} — mirrors `Intl.ListFormat`'s constructor
  * options without depending on the ES2021 lib typings (our `lib` is ES2020). */
 export interface ListFormatLikeOptions {

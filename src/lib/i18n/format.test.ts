@@ -1,5 +1,13 @@
 import { describe, it, expect } from "vitest";
-import { formatDate, formatDateTime, formatNumber, formatList } from "./format";
+import {
+  formatDate,
+  formatDateTime,
+  formatNumber,
+  formatList,
+  formatDecimal,
+  formatInteger,
+  formatSignedDelta,
+} from "./format";
 
 // A fixed instant: 2026-02-12T16:15:00Z. Assertions check locale-specific
 // separators/ordering rather than exact wording, which can vary by ICU version.
@@ -14,6 +22,27 @@ describe("format: numbers", () => {
 
   it("honours NumberFormat options", () => {
     expect(formatNumber(0.5, "en-US", { style: "percent" })).toBe("50%");
+  });
+
+  it("formats fixed-fraction decimals with the locale separator", () => {
+    expect(formatDecimal(2, "en", 1)).toBe("2.0");
+    expect(formatDecimal(2, "de", 1)).toBe("2,0");
+    expect(formatDecimal(0.34, "en", 2)).toBe("0.34");
+    expect(formatDecimal(0.34, "de", 2)).toBe("0,34");
+  });
+
+  it("formats grouped integers per locale", () => {
+    expect(formatInteger(1200, "en")).toBe("1,200");
+    expect(formatInteger(1200, "de")).toBe("1.200");
+    expect(formatInteger(42, "fr")).toBe("42");
+  });
+
+  it("signs deltas: + on positive, - on negative, none on zero", () => {
+    expect(formatSignedDelta(1, "en")).toBe("+1");
+    expect(formatSignedDelta(-1, "en")).toBe("-1");
+    expect(formatSignedDelta(0, "en")).toBe("0");
+    expect(formatSignedDelta(0.25, "en")).toBe("+0.25");
+    expect(formatSignedDelta(0.25, "de")).toBe("+0,25");
   });
 });
 
