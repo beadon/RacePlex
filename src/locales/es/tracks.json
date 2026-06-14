@@ -26,7 +26,8 @@
     "guidance": "Añade un sector para empezar a dividir la vuelta. Marca exactamente tres líneas (salida/meta + dos) como sectores principales para guardar.",
     "dragReorder": "Arrastra para reordenar",
     "markMajor": "Marcar como sector principal",
-    "deleteSector": "Eliminar sector"
+    "deleteSector": "Eliminar sector",
+    "resetStartFinish": "Restablecer línea de salida/meta"
   },
   "visual": {
     "draw": "Dibujar",
@@ -149,7 +150,7 @@
     "whySubmit": "¿Por qué enviar a la base de datos?",
     "submitTooltipEmpty": "Nada nuevo que compartir ahora mismo: crea o edita una pista/trazado (o añade un dibujo) y aparecerá aquí para contribuir.",
     "submitTooltip": "Compartir tus configuraciones de pista en la base de datos ayuda a que el proyecto crezca: tus pistas quedan disponibles para todos, así la comunidad dedica menos tiempo a mapear y más a conducir.",
-    "backToSelection": "Volver a la selección",
+    "back": "Atrás",
     "jsonTitle": "JSON de {{name}}",
     "copyToClipboard": "Copiar al portapapeles",
     "close": "Cerrar",

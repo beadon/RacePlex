@@ -26,7 +26,8 @@
     "guidance": "Aggiungi un settore per iniziare a suddividere il giro. Contrassegna esattamente tre linee (partenza/arrivo + due) come settori principali per salvare.",
     "dragReorder": "Trascina per riordinare",
     "markMajor": "Contrassegna come settore principale",
-    "deleteSector": "Elimina settore"
+    "deleteSector": "Elimina settore",
+    "resetStartFinish": "Reimposta linea di partenza/arrivo"
   },
   "visual": {
     "draw": "Disegna",
@@ -149,7 +150,7 @@
     "whySubmit": "Perché inviare al database?",
     "submitTooltipEmpty": "Niente di nuovo da condividere al momento — crea o modifica una pista/tracciato (o aggiungi un disegno) e apparirà qui per contribuire.",
     "submitTooltip": "Condividere le tue configurazioni di pista nel database aiuta il progetto a crescere — le tue piste diventano disponibili per tutti, così la community passa meno tempo a mappare e più tempo a guidare.",
-    "backToSelection": "Torna alla selezione",
+    "back": "Indietro",
     "jsonTitle": "JSON di {{name}}",
     "copyToClipboard": "Copia negli appunti",
     "close": "Chiudi",
