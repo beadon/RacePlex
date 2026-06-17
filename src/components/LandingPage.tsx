@@ -232,6 +232,9 @@ export function LandingPage({
                 ({t("landing:roadmap.estimated")})
               </span>
             </div>
+            <p className="mt-3 text-sm text-muted-foreground">
+              {t("landing:roadmap.blurb")}
+            </p>
             <ul className="mt-3 space-y-2">
               {roadmapItems.map((item) => (
                 <li key={item} className="flex items-start gap-2 text-sm text-muted-foreground">
