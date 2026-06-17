@@ -12,6 +12,7 @@ import {
   FolderOpen,
   Map,
   Bluetooth,
+  Route,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useTranslation, Trans } from "react-i18next";
@@ -82,8 +83,10 @@ export function LandingPage({
   enableCloud,
 }: LandingPageProps) {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logout, isAdmin } = useAuth();
   const { t } = useTranslation(["landing", "common"]);
+
+  const roadmapItems = t("landing:roadmap.items", { returnObjects: true }) as string[];
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -218,6 +221,33 @@ export function LandingPage({
             <PluginMount slot={MountSlot.Landing} ctx={{}} />
           </div>
 
+          {/* Roadmap — what's still coming, with rough timing estimates. */}
+          <div className="rounded-xl border border-border bg-card/50 p-5">
+            <div className="flex items-center gap-2">
+              <Route className="h-5 w-5 text-primary" />
+              <h3 className="text-base font-semibold text-foreground">
+                {t("landing:roadmap.title")}
+              </h3>
+              <span className="text-xs text-muted-foreground">
+                ({t("landing:roadmap.estimated")})
+              </span>
+            </div>
+            <p className="mt-3 text-sm text-muted-foreground">
+              {t("landing:roadmap.blurb")}
+            </p>
+            <ul className="mt-3 space-y-2">
+              {roadmapItems.map((item) => (
+                <li key={item} className="flex items-start gap-2 text-sm text-muted-foreground">
+                  <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary/60" />
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+            <p className="mt-3 text-sm font-medium text-foreground">
+              {t("landing:roadmap.contact")}
+            </p>
+          </div>
+
           {/* Reference dialogs */}
           <div className="flex flex-wrap items-center justify-center gap-3">
             <BrowserCompatDialog />
@@ -253,13 +283,13 @@ export function LandingPage({
               {t("landing:links.terms")}
             </Link>
             <CreditsDialog />
-            {enableAdmin && (
+            {enableAdmin && isAdmin && (
               <button
                 onClick={() => navigate('/admin')}
                 className="inline-flex items-center gap-1 text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors"
               >
                 <Shield className="w-3 h-3" />
-                {t("landing:links.trackManagement")}
+                {t("landing:links.admin")}
               </button>
             )}
           </div>
