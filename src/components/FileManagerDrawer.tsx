@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { X, Gauge, Cpu, User, Bluetooth, BluetoothOff, Loader2, Settings, MapPin, Battery, BatteryLow, BatteryMedium, BatteryFull, BatteryWarning } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { FileEntry, FileMetadata } from "@/lib/fileStorage";
+import { FileEntry, FileMetadata, PostSessionData } from "@/lib/fileStorage";
 import { Vehicle } from "@/lib/vehicleStorage";
 import { VehicleSetup } from "@/lib/setupStorage";
 import { VehicleType, SetupTemplate, TemplateSection } from "@/lib/templateStorage";
@@ -62,6 +62,9 @@ interface FileManagerDrawerProps {
   sessionSetupId: string | null;
   sessionSetupRev: string | null;
   onSaveSessionSetup: (kartId: string | null, setupId: string | null) => Promise<void>;
+  // Post-session measurements (tire pressure, weight)
+  postSession: PostSessionData | null;
+  onSavePostSession: (data: PostSessionData) => Promise<void>;
   // Setup props
   setups: VehicleSetup[];
   onAddSetup: (setup: Omit<VehicleSetup, "id" | "createdAt" | "updatedAt">) => Promise<void>;
@@ -83,6 +86,7 @@ export function FileManagerDrawer({
   currentTrackName, currentCourseName,
   currentFileName, notes, onAddNote, onUpdateNote, onRemoveNote,
   sessionKartId, sessionSetupId, sessionSetupRev, onSaveSessionSetup,
+  postSession, onSavePostSession,
   setups, onAddSetup, onUpdateSetup, onRemoveSetup, onGetLatestSetupForVehicle,
   onAddVehicleType, onRemoveVehicleType,
 }: FileManagerDrawerProps) {
@@ -231,6 +235,8 @@ export function FileManagerDrawer({
                 sessionSetupId={sessionSetupId}
                 sessionSetupRev={sessionSetupRev}
                 onSaveSessionSetup={onSaveSessionSetup}
+                postSession={postSession}
+                onSavePostSession={onSavePostSession}
               />
             )}
           </>

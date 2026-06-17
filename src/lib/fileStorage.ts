@@ -11,6 +11,26 @@ export interface FileEntry {
   savedAt: number;
 }
 
+/** Granularity for the post-session tire-pressure entry (mirrors the setup PSI modes). */
+export type TirePsiMode = "single" | "halves" | "quarters";
+
+/**
+ * Post-session measurements captured on the Notes tab after a session is run
+ * (tire pressures, total weight). Stored on FileMetadata so they ride the same
+ * cloud-sync path as the rest of the session's metadata. Held for later
+ * processing — nothing consumes these yet.
+ */
+export interface PostSessionData {
+  /** UI granularity of the pressures below (defaults to quarters). */
+  tirePsiMode?: TirePsiMode;
+  tirePsiFrontLeft?: number | null;
+  tirePsiFrontRight?: number | null;
+  tirePsiRearLeft?: number | null;
+  tirePsiRearRight?: number | null;
+  /** Single post-session weight (unit-agnostic — lbs or kg, user's choice). */
+  weight?: number | null;
+}
+
 export interface FileMetadata {
   fileName: string;
   trackName: string;
@@ -42,6 +62,8 @@ export interface FileMetadata {
   // Marks the bundled sample log so the browser can hide it behind the
   // "show sample files" setting. Sample files are otherwise ordinary logs.
   isSample?: boolean;
+  // Post-session measurements entered on the Notes tab (tire pressures, weight).
+  postSession?: PostSessionData;
 }
 
 interface StoredFile {

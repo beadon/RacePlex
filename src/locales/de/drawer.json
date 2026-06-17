@@ -165,6 +165,14 @@
     "updateNote": "Notiz aktualisieren",
     "addNote": "Notiz hinzufügen"
   },
+  "postSession": {
+    "title": "Nach der Session",
+    "tirePressure": "Reifendruck",
+    "weight": "Gewicht",
+    "weightPlaceholder": "z. B. 380",
+    "save": "Speichern",
+    "update": "Aktualisieren"
+  },
   "templateCreator": {
     "title": "Neuer Fahrzeugtyp",
     "vehicleTypeName": "Name des Fahrzeugtyps",

@@ -14,6 +14,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [2.6.0] - unreleased
 
 ### Added
+- **Post-session tire pressure & weight on the Notes tab.** A new collapsible
+  **Post-Session** panel sits under the session-setup selector on the Notes page,
+  letting you record the tire pressures you measured after a run (single / halves
+  / quarters — same picker as the setup editor, defaulting to quarters) and a
+  single post-session weight. The values save with the session and cloud-sync like
+  your notes, ready for later processing.
 - **Device Name setting for the logger.** The Device → Settings screen now
   supports a **Device Name** field (a free-text name, up to 32 characters) for
   loggers whose firmware exposes it. When you're signed in, a **Use profile name**
