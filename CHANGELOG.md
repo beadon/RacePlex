@@ -89,6 +89,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   cloud rows and in the Profile → Cloud logs list.
 
 ### Changed
+- **Track manager is now a simple drill-down.** The track/course manager was
+  reworked into a clear two-step flow: a **list of tracks** → tap one → its
+  **courses**. The list scrolls once you have more than a handful of tracks, and
+  grows a **search box** to quickly filter once you have more than ten. The course
+  screen no longer has a separate track dropdown (you got there by tapping the
+  track) and has a **back** arrow to the track list. Opening the manager — from the
+  home screen *or* in a loaded session — now skips the old selection screen: the
+  home screen opens on the track list, and in a session it jumps straight to the
+  current track's courses, where **tapping a course applies it to your session**
+  (the active course is highlighted).
+- **Faster course creation.** Two fewer-clicks tweaks to the course editor: new
+  sector lines now default to **Major** until the three traditional sectors are
+  filled (so a standard 3-sector course is valid right after adding two lines, no
+  toggling needed), and creating a new course with a session already loaded now
+  **auto-generates the track outline** from your fastest lap — the drawing is
+  there before you start, instead of having to open the Generate picker yourself.
 - **Sample data is now just a normal log.** The bundled sample session lives in
   your file browser as an ordinary file named **"SAMPLE - Tillotson 225rs"**, and
   the home-screen **Load sample data** button simply opens it like any other log —
