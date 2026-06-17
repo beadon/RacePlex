@@ -14,6 +14,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [2.6.0] - unreleased
 
 ### Added
+- **Feature roadmap on the home screen.** The landing page now shows a short
+  "Remaining feature roadmap" panel under the action tiles, listing what's still
+  coming (cheaper DIY logger, leaderboards & public profiles, 3rd-party logger
+  downloads, race-day organization, team management, coaching updates, and the
+  "Vulture" logger) with rough timing estimates.
 - **Earn free cloud storage by contributing tracks.** When you submit tracks to
   the community database while signed in, your contribution is now linked to your
   account — and the submit screen shows a note that signed-in contributions earn
@@ -93,6 +98,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   cloud rows and in the Profile → Cloud logs list.
 
 ### Changed
+- **Admin link tidied up.** The home-screen "Track Management" link is now
+  labelled **Admin** and only appears when an admin is actually signed in (it was
+  previously shown to anyone on an admin-enabled build).
+- **Prices show their currency.** The paid plan cards on the pricing/sign-up
+  screens now note **USD** next to the price.
 - **Track manager is now a simple drill-down.** The track/course manager was
   reworked into a clear two-step flow: a **list of tracks** → tap one → its
   **courses**. The list scrolls once you have more than a handful of tracks, and

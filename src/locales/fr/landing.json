@@ -33,7 +33,21 @@
   "links": {
     "privacy": "Politique de confidentialité",
     "terms": "Conditions d'utilisation",
-    "trackManagement": "Gestion des circuits"
+    "admin": "Administration"
+  },
+  "roadmap": {
+    "title": "Feuille de route des fonctionnalités à venir",
+    "estimated": "les délais sont estimés",
+    "items": [
+      "Logger DIY moins cher mis à jour (juin '26)",
+      "Classements de circuits et profils publics (juin '26)",
+      "Téléchargements depuis des loggers tiers (juin '26)",
+      "Organisation des jours de course (juillet '26)",
+      "Gestion d'équipe et inventaire — gratuit pour les équipes de 5 personnes ou moins (juillet '26)",
+      "Améliorations du coaching hors ligne (juillet '26)",
+      "Coaching IA, une fois les fonctions principales stabilisées (août '26)",
+      "Sortie du logger « Vulture » (T1 '27)"
+    ]
   },
   "footer": {
     "operatedBy": "Exploité par",
