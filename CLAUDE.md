@@ -120,6 +120,7 @@ src/
 │   ├── db/                # Admin DB layer: ITrackDatabase + supabaseAdapter + getDatabase()
 │   ├── billing*.ts        # Subscription logic + Supabase billing I/O (→ docs/backend.md)
 │   ├── weatherService.ts  # Historical weather (online-only): NWS/IEM METAR → Open-Meteo fallback
+│   ├── weatherCacheStorage.ts # Per-session historical-weather cache (IndexedDB, local-only/never cloud-synced): a session's date is fixed so its weather is immutable — cache it once, stop re-pinging the station/API on reopen
 │   ├── buildInfo.ts       # Build version/hash/branch stamp + isPreviewBuild()
 │   ├── debugConsole.ts    # ★ On-screen debug console (`?dbg=true`) — mobile/PWA has no dev tools
 │   ├── units.ts           # ★ Pure unit conversions for the 3 imperial/metric toggles
@@ -200,7 +201,7 @@ Web Worker) and the binary **iRacing `.ibt`**. Details, plus the **.dovex/.dovep
 
 ## IndexedDB Storage (`src/lib/dbUtils.ts`)
 
-Single shared database: `"dove-file-manager"`, **version 12**.
+Single shared database: `"dove-file-manager"`, **version 13**.
 
 | Store | Key | Module |
 |-------|-----|--------|
@@ -214,6 +215,7 @@ Single shared database: `"dove-file-manager"`, **version 12**.
 | `engines` | `id` | `engineStorage.ts` |
 | `lap-snapshots` | `id` (indexed by `courseKey`, `engineKey`) | `lapSnapshotStorage.ts` |
 | `setup-revisions` | `id` = content hash (indexed by `setupId`) | `setupRevisionStorage.ts` |
+| `weather-cache` | `fileName` | `weatherCacheStorage.ts` (local-only, **not** cloud-synced) |
 
 To add a store: increment `DB_VERSION`, add to `STORE_NAMES`, add creation logic in
 `openDB()`, create a storage module using `withReadTransaction`/`withWriteTransaction`.
