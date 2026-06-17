@@ -10,7 +10,8 @@
     "autoSave": "Importierte/hochgeladene Dateien automatisch auf dem Gerät speichern",
     "autoSaveHint": "Speichert Dateien automatisch im Gerätespeicher für späteren Zugriff",
     "showSamples": "Beispieldateien anzeigen",
-    "showSamplesHint": "Das mitgelieferte Beispiel-Log im Dateibrowser behalten"
+    "showSamplesHint": "Das mitgelieferte Beispiel-Log im Dateibrowser behalten",
+    "showSamplesLocked": "Füge eine eigene Datei hinzu, um das Beispiel ausblenden zu können"
   },
   "speedUnit": {
     "heading": "Geschwindigkeitseinheit",

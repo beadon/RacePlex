@@ -10,7 +10,8 @@
     "autoSave": "Salvar automaticamente no dispositivo os arquivos importados/enviados",
     "autoSaveHint": "Armazena os arquivos automaticamente no dispositivo para acesso posterior",
     "showSamples": "Mostrar arquivos de exemplo",
-    "showSamplesHint": "Mantenha o registro de exemplo incluído no seu navegador de arquivos"
+    "showSamplesHint": "Mantenha o registro de exemplo incluído no seu navegador de arquivos",
+    "showSamplesLocked": "Adicione um arquivo seu para poder ocultar o exemplo"
   },
   "speedUnit": {
     "heading": "Unidade de velocidade",

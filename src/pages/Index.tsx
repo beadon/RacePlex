@@ -84,6 +84,9 @@ export default function Index() {
   const templateManager = useTemplateManager();
   const useKph = settings.useKph;
   const useMetricDistance = settings.useMetricDistance;
+  // The sample stays visible when it's the user's only file, so hiding it can
+  // never lock them out of the only file (and the only way back to Settings).
+  const effectiveShowSampleFiles = fileManager.hasOtherFiles ? settings.showSampleFiles : true;
 
   // Sync dark mode class when settings change (global init is in App.tsx)
   useEffect(() => {
@@ -485,7 +488,7 @@ export default function Index() {
     onSaveFile: fileManager.saveFile,
     onDataLoaded: handleDataLoaded,
     autoSave: settings.autoSaveFiles,
-    showSampleFiles: settings.showSampleFiles,
+    showSampleFiles: effectiveShowSampleFiles,
     initialGarageTab: fileManager.initialGarageTab,
     showProfile,
     vehicles: vehicleManager.vehicles,
@@ -516,7 +519,7 @@ export default function Index() {
     fileManager.isOpen, fileManager.files, fileManager.fileMetadataMap, fileManager.storageUsed, fileManager.storageQuota,
     fileManager.close, fileManager.loadFile, fileManager.removeFile, fileManager.exportFile, fileManager.saveFile,
     fileManager.initialGarageTab,
-    handleDataLoaded, settings.autoSaveFiles, settings.showSampleFiles, showProfile,
+    handleDataLoaded, settings.autoSaveFiles, effectiveShowSampleFiles, showProfile,
     vehicleManager.vehicles, vehicleManager.addVehicle, vehicleManager.updateVehicle, vehicleManager.removeVehicle,
     templateManager.vehicleTypes, templateManager.templates, templateManager.addVehicleType, templateManager.removeVehicleType,
     currentFileName,
@@ -538,7 +541,7 @@ export default function Index() {
             autoSaveFile={fileManager.saveFile}
             onLoadSample={handleLoadSample}
             isLoadingSample={isLoadingSample}
-            showSampleFiles={settings.showSampleFiles}
+            showSampleFiles={effectiveShowSampleFiles}
             enableAdmin={enableAdmin}
             enableCloud={enableCloud}
           />
@@ -623,7 +626,7 @@ export default function Index() {
             onSetOverlayReference={handleSetOverlayReference}
           />
 
-          <SettingsModal settings={settings} onSettingsChange={setSettings} onToggleFieldDefault={toggleFieldDefault} />
+          <SettingsModal settings={settings} onSettingsChange={setSettings} onToggleFieldDefault={toggleFieldDefault} canHideSampleFiles={fileManager.hasOtherFiles} />
           <Button variant="outline" size="sm" className="h-8 gap-1.5 px-2 lg:px-3" onClick={() => fileManager.open()}>
             <FolderOpen className="w-4 h-4" />
             <span className="hidden lg:inline">{t("header.garage")}</span>

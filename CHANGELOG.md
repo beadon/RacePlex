@@ -71,6 +71,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   files** toggle in Settings (on by default) hides it from the browser — and the
   home-screen sample tile — if you'd rather not see it. The sample always shows as
   cloud-synced and can't be uploaded, so it never eats into your cloud storage.
+  When the sample is your *only* file, the toggle stays locked on so you can never
+  hide your only way back into the app.
 - **Landing page UX overhaul** — the home screen is simpler and friendlier. The
   cluster of small buttons that used to live inside the file dropzone is gone;
   importing a file is now a single large drag-and-drop / click-to-browse zone,

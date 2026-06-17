@@ -10,7 +10,8 @@
     "autoSave": "Enregistrer automatiquement les fichiers importés/téléversés sur l'appareil",
     "autoSaveHint": "Stocke automatiquement les fichiers sur l'appareil pour y accéder plus tard",
     "showSamples": "Afficher les fichiers d'exemple",
-    "showSamplesHint": "Conserver le journal d'exemple fourni dans votre explorateur de fichiers"
+    "showSamplesHint": "Conserver le journal d'exemple fourni dans votre explorateur de fichiers",
+    "showSamplesLocked": "Ajoutez un de vos fichiers pour pouvoir masquer l'exemple"
   },
   "speedUnit": {
     "heading": "Unité de vitesse",
