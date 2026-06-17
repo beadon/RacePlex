@@ -120,6 +120,7 @@ src/
 │   ├── lapSnapshotStorage.ts # ★ IndexedDB CRUD for lap snapshots (emits garageEvents)
 │   ├── setupRevision.ts  # ★ Pure content-addressed setup history: hash + freeze (immutable revisions)
 │   ├── setupRevisionStorage.ts # ★ IndexedDB CRUD for setup revisions (freezeSetupRevision; emits garageEvents)
+│   ├── setupHistory.ts   # ★ Pure setup-history view-model: flatten revision→fields, diff vs previous (numeric up/down), aggregate sessions (fastest lap, karts/courses) + kart/course filter — renders in drawer/SetupHistoryPanel
 │   ├── trackSubmission.ts # ★ Pure community-DB upload plan: diff local tracks vs built-ins → new/edited, geometry hash + dedupe
 │   ├── submittedTracksStorage.ts # localStorage record of already-submitted course hashes (dedupe)
 │   ├── dbUtils.ts         # ★ Shared IndexedDB: DB_NAME, DB_VERSION, openDB(), tx helpers
@@ -577,6 +578,17 @@ exactly as it was the day it ran, even after the live setup is later edited.
 - **Display.** `shortRevHash()` surfaces the leading 6 hex chars (git-style). The
   **SetupsTab** list shows each setup's current would-be hash; **NotesTab** shows
   the frozen `#hash` of the session's setup revision.
+- **History panel.** Each **SetupsTab** row has a history (book) icon opening
+  `drawer/SetupHistoryPanel.tsx` — a full-panel chronological timeline built by the
+  pure `lib/setupHistory.ts` (`buildSetupHistory`). It joins this setup's revisions
+  with the `FileMetadata` that reference them (`sessionSetupRev`) to show: the
+  **original** revision in full, each later one as a **diff vs the previous** (only
+  changed fields; numbers coloured green=up / red=down via `diffRevisionFields`,
+  with a per-row full/diff toggle), each revision's **fastest lap** (the overall
+  fastest highlighted), kart/course **bubbles** for the fastest usage, and a
+  **kart + course filter** (drops non-matching revisions). Field flattening
+  (`flattenRevisionFields`) reads each revision's *frozen* template so old history
+  renders with the labels it had that day.
 - **Orphan prune (GC).** A revision is an orphan once no `FileMetadata.sessionSetupRev`
   points at it. `pruneSetupRevisions()` deletes orphans (pure split:
   `findOrphanRevisionIds`); `maybePruneSetupRevisions()` throttles it to ~once every
