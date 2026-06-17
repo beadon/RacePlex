@@ -165,6 +165,14 @@
     "updateNote": "メモを更新",
     "addNote": "メモを追加"
   },
+  "postSession": {
+    "title": "走行後",
+    "tirePressure": "タイヤ空気圧",
+    "weight": "重量",
+    "weightPlaceholder": "例: 380",
+    "save": "保存",
+    "update": "更新"
+  },
   "templateCreator": {
     "title": "新しい車両の種類",
     "vehicleTypeName": "車両の種類の名前",

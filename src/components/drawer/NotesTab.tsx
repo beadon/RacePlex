@@ -7,7 +7,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Note, MAX_NOTE_BYTES } from "@/lib/noteStorage";
 import { Vehicle } from "@/lib/vehicleStorage";
 import { VehicleSetup } from "@/lib/setupStorage";
+import { PostSessionData } from "@/lib/fileStorage";
 import { shortRevHash } from "@/lib/setupRevision";
+import { PostSessionPanel } from "@/components/drawer/PostSessionPanel";
 
 interface NotesTabProps {
   fileName: string | null;
@@ -22,11 +24,15 @@ interface NotesTabProps {
   /** Content hash of the frozen setup revision this session ran (immutable id). */
   sessionSetupRev: string | null;
   onSaveSessionSetup: (kartId: string | null, setupId: string | null) => Promise<void>;
+  /** Post-session measurements (tire pressure, weight) for this session. */
+  postSession: PostSessionData | null;
+  onSavePostSession: (data: PostSessionData) => Promise<void>;
 }
 
 export function NotesTab({
   fileName, notes, onAdd, onUpdate, onRemove,
   vehicles, setups, sessionKartId, sessionSetupId, sessionSetupRev, onSaveSessionSetup,
+  postSession, onSavePostSession,
 }: NotesTabProps) {
   const { t } = useTranslation("drawer");
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -138,6 +144,9 @@ export function NotesTab({
           </p>
         )}
       </div>
+
+      {/* Post-session measurements (tire pressure + weight) */}
+      <PostSessionPanel postSession={postSession} onSave={onSavePostSession} />
 
       {/* Delete Confirmation */}
       {confirmDelete && (

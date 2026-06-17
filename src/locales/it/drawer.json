@@ -165,6 +165,14 @@
     "updateNote": "Aggiorna nota",
     "addNote": "Aggiungi nota"
   },
+  "postSession": {
+    "title": "Post-sessione",
+    "tirePressure": "Pressione pneumatici",
+    "weight": "Peso",
+    "weightPlaceholder": "es. 380",
+    "save": "Salva",
+    "update": "Aggiorna"
+  },
   "templateCreator": {
     "title": "Nuovo tipo di veicolo",
     "vehicleTypeName": "Nome del tipo di veicolo",

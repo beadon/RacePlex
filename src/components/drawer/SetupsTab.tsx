@@ -11,6 +11,7 @@ import { Vehicle } from "@/lib/vehicleStorage";
 import { VehicleSetup } from "@/lib/setupStorage";
 import { VehicleType, SetupTemplate, TemplateSection, TemplateFieldDef } from "@/lib/templateStorage";
 import { TemplateCreator } from "@/components/drawer/TemplateCreator";
+import { ModeToggle } from "@/components/drawer/ModeToggle";
 import { computeSetupHash, shortRevHash } from "@/lib/setupRevision";
 import { SetupHistoryPanel } from "@/components/drawer/SetupHistoryPanel";
 import { useAuth } from "@/contexts/AuthContext";
@@ -618,28 +619,3 @@ function Field({ label, changed, children }: { label: string; changed?: boolean;
   );
 }
 
-function ModeToggle<T extends string>({
-  options, labels, value, onChange,
-}: {
-  options: readonly T[];
-  labels: string[];
-  value: T;
-  onChange: (v: T) => void;
-}) {
-  return (
-    <div className="flex gap-1 bg-muted/50 rounded-md p-0.5">
-      {options.map((opt, i) => (
-        <button
-          key={opt}
-          type="button"
-          onClick={() => onChange(opt)}
-          className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
-            value === opt ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          {labels[i]}
-        </button>
-      ))}
-    </div>
-  );
-}

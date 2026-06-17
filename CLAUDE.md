@@ -177,7 +177,7 @@ File Import (drag-drop / BLE download / file manager)
 | `Track` | `name`, `shortName?` (max 8 chars), `courses[]` |
 | `CourseDetectionResult` | `track`, `course`, `direction?`, `laps[]`, `isWaypointMode`, `waypointNotice?` |
 | `FieldMapping` | `index`, `name` (canonical ChannelId or `custom:` slug), `label?`, `unit?`, `enabled` |
-| `FileMetadata` | `fileName`, `trackName`, `courseName`, `weatherStation*?`, `sessionKartId?`, `sessionSetupId?`, `sessionSetupRev?` (frozen hash), `sessionEngine?`, `sessionStartTime?`, `fastestLapMs?`, `fastestLapNumber?`, `displayName?` (browser-name override — the bundled sample), `isSample?` (marks the sample so the browser can hide it). Partial updates go through `updateFileMetadata(fileName, patch)` (read-merge-write — never clobbers untouched tags). |
+| `FileMetadata` | `fileName`, `trackName`, `courseName`, `weatherStation*?`, `sessionKartId?`, `sessionSetupId?`, `sessionSetupRev?` (frozen hash), `sessionEngine?`, `sessionStartTime?`, `fastestLapMs?`, `fastestLapNumber?`, `displayName?` (browser-name override — the bundled sample), `isSample?` (marks the sample so the browser can hide it), `postSession?` (`PostSessionData`: post-session tire pressures — single/halves/quarters — + a single weight, entered on the Notes tab; cloud-synced via metadata, held for later processing). Partial updates go through `updateFileMetadata(fileName, patch)` (read-merge-write — never clobbers untouched tags). |
 
 ---
 
