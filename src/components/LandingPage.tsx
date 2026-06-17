@@ -240,6 +240,9 @@ export function LandingPage({
                 </li>
               ))}
             </ul>
+            <p className="mt-3 text-sm font-medium text-foreground">
+              {t("landing:roadmap.contact")}
+            </p>
           </div>
 
           {/* Reference dialogs */}
