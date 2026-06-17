@@ -1,9 +1,21 @@
 {
   "_machine": true,
   "shell": {
-    "tabs": { "garage": "ガレージ", "profile": "プロフィール", "device": "デバイス" },
-    "garageTabs": { "files": "ファイル", "vehicles": "車両", "setups": "セットアップ", "notes": "メモ" },
-    "deviceTabs": { "settings": "設定", "tracks": "コース" },
+    "tabs": {
+      "garage": "ガレージ",
+      "profile": "プロフィール",
+      "device": "デバイス"
+    },
+    "garageTabs": {
+      "files": "ファイル",
+      "vehicles": "車両",
+      "setups": "セットアップ",
+      "notes": "メモ"
+    },
+    "deviceTabs": {
+      "settings": "設定",
+      "tracks": "コース"
+    },
     "disconnect": "切断",
     "batteryTitle": "{{voltage}} V — クリックして更新",
     "btNotAvailable": "Bluetooth を利用できません",
@@ -207,6 +219,7 @@
     "readingSettings": "設定を読み込み中…",
     "retry": "再試行",
     "noSettings": "デバイスに設定が見つかりません。",
+    "useProfileName": "プロフィール名を使う",
     "reset": "設定を既定値に戻す",
     "resetConfirm": "リセットを確定 — デバイスが再起動します",
     "cancel": "キャンセル",

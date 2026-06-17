@@ -14,6 +14,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [2.6.0] - unreleased
 
 ### Added
+- **Device Name setting for the logger.** The Device → Settings screen now
+  supports a **Device Name** field (a free-text name, up to 32 characters) for
+  loggers whose firmware exposes it. When you're signed in, a **Use profile name**
+  shortcut fills the field with your account name in one tap.
 - **Feature roadmap on the home screen.** The landing page now shows a short
   "Remaining feature roadmap" panel under the action tiles, listing what's still
   coming (cheaper DIY logger, leaderboards & public profiles, 3rd-party logger

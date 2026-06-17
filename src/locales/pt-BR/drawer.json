@@ -1,9 +1,21 @@
 {
   "_machine": true,
   "shell": {
-    "tabs": { "garage": "Garagem", "profile": "Perfil", "device": "Dispositivo" },
-    "garageTabs": { "files": "Arquivos", "vehicles": "Veículos", "setups": "Acertos", "notes": "Notas" },
-    "deviceTabs": { "settings": "Configurações", "tracks": "Pistas" },
+    "tabs": {
+      "garage": "Garagem",
+      "profile": "Perfil",
+      "device": "Dispositivo"
+    },
+    "garageTabs": {
+      "files": "Arquivos",
+      "vehicles": "Veículos",
+      "setups": "Acertos",
+      "notes": "Notas"
+    },
+    "deviceTabs": {
+      "settings": "Configurações",
+      "tracks": "Pistas"
+    },
     "disconnect": "Desconectar",
     "batteryTitle": "{{voltage}} V — clique para atualizar",
     "btNotAvailable": "Bluetooth indisponível",
@@ -207,6 +219,7 @@
     "readingSettings": "Lendo configurações…",
     "retry": "Tentar novamente",
     "noSettings": "Nenhuma configuração encontrada no dispositivo.",
+    "useProfileName": "Usar nome do perfil",
     "reset": "Restaurar configurações padrão",
     "resetConfirm": "Confirmar restauração — o dispositivo vai reiniciar",
     "cancel": "Cancelar",
