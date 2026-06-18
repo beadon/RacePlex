@@ -24,8 +24,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Fully client-side and offline, no stitching tool needed. Saved playlists
   reload automatically next session. On mobile, where the file picker can't be
   filtered, selecting *everything* still works: sidecar files (`.LRV`/`.THM`),
-  photos, and unrelated clips are silently ignored and only the first
-  recording's chapters are loaded.
+  photos, and other junk are silently ignored. If the selection happens to span
+  more than one recording, you're asked which one to load — and only that one is
+  kept in memory; otherwise the single recording loads straight away.
 - **Video export across GoPro chapters.** Exporting a full session (or a single
   lap) with overlays now stitches across all chapters into one MP4 — the frame
   encoder seeks through the whole virtual timeline and the audio from each

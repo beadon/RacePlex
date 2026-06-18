@@ -3,7 +3,7 @@ import {
   parseGoProName,
   orderVideoFiles,
   isVideoFile,
-  selectRecordingChunks,
+  groupVideoRecordings,
   buildPlaylist,
   virtualToLocal,
   localToVirtual,
@@ -83,46 +83,63 @@ describe("isVideoFile", () => {
   });
 });
 
-describe("selectRecordingChunks", () => {
+describe("groupVideoRecordings", () => {
   const f = (name: string) => ({ name });
+  const shape = (groups: ReturnType<typeof groupVideoRecordings>) =>
+    groups.map((g) => ({ label: g.label, files: g.files.map((x) => x.name) }));
 
-  it("keeps only the first recording's chapters, dropping a second recording", () => {
-    const picked = selectRecordingChunks([
-      f("GH010042.MP4"), f("GH020042.MP4"), f("GH010099.MP4"), f("GH020099.MP4"),
+  it("collapses one recording's chapters into a single group", () => {
+    const groups = groupVideoRecordings([f("GH030042.MP4"), f("GH010042.MP4"), f("GH020042.MP4")]);
+    expect(shape(groups)).toEqual([
+      { label: "GH010042.MP4", files: ["GH010042.MP4", "GH020042.MP4", "GH030042.MP4"] },
     ]);
-    expect(picked.map((x) => x.name)).toEqual(["GH010042.MP4", "GH020042.MP4"]);
   });
 
-  it("orders the kept recording's chapters regardless of selection order", () => {
-    const picked = selectRecordingChunks([f("GH030042.MP4"), f("GH010042.MP4"), f("GH020042.MP4")]);
-    expect(picked.map((x) => x.name)).toEqual(["GH010042.MP4", "GH020042.MP4", "GH030042.MP4"]);
+  it("separates distinct recordings, each ordered by chapter", () => {
+    const groups = groupVideoRecordings([
+      f("GH020099.MP4"), f("GH010042.MP4"), f("GH010099.MP4"), f("GH020042.MP4"),
+    ]);
+    expect(shape(groups)).toEqual([
+      { label: "GH010042.MP4", files: ["GH010042.MP4", "GH020042.MP4"] },
+      { label: "GH010099.MP4", files: ["GH010099.MP4", "GH020099.MP4"] },
+    ]);
   });
 
   it("unites the legacy GOPR first file with its GP continuations", () => {
-    const picked = selectRecordingChunks([f("GP020042.MP4"), f("GOPR0042.MP4"), f("GP010042.MP4")]);
-    expect(picked.map((x) => x.name)).toEqual(["GOPR0042.MP4", "GP010042.MP4", "GP020042.MP4"]);
+    const groups = groupVideoRecordings([f("GP020042.MP4"), f("GOPR0042.MP4"), f("GP010042.MP4")]);
+    expect(shape(groups)).toEqual([
+      { label: "GOPR0042.MP4", files: ["GOPR0042.MP4", "GP010042.MP4", "GP020042.MP4"] },
+    ]);
   });
 
-  it("ignores non-video sidecars from a blind mobile 'select all'", () => {
-    const picked = selectRecordingChunks([
+  it("drops non-video sidecars from a blind mobile 'select all'", () => {
+    const groups = groupVideoRecordings([
       f("GX010042.LRV"), f("GX010042.THM"), f("GX010042.MP4"),
       f("GX020042.LRV"), f("GX020042.MP4"), f("IMG_0001.JPG"),
     ]);
-    expect(picked.map((x) => x.name)).toEqual(["GX010042.MP4", "GX020042.MP4"]);
+    expect(shape(groups)).toEqual([
+      { label: "GX010042.MP4", files: ["GX010042.MP4", "GX020042.MP4"] },
+    ]);
   });
 
-  it("loads a single non-GoPro video and ignores other unrelated clips", () => {
-    const picked = selectRecordingChunks([f("my-race.mp4"), f("another.mov")]);
-    expect(picked.map((x) => x.name)).toEqual(["my-race.mp4"]);
+  it("treats each standalone clip as its own recording", () => {
+    const groups = groupVideoRecordings([f("my-race.mp4"), f("another.mov")]);
+    expect(shape(groups)).toEqual([
+      { label: "my-race.mp4", files: ["my-race.mp4"] },
+      { label: "another.mov", files: ["another.mov"] },
+    ]);
   });
 
-  it("prefers a GoPro recording over a standalone clip in the selection", () => {
-    const picked = selectRecordingChunks([f("random.mp4"), f("GH010042.MP4"), f("GH020042.MP4")]);
-    expect(picked.map((x) => x.name)).toEqual(["GH010042.MP4", "GH020042.MP4"]);
+  it("lists GoPro recordings before standalone clips", () => {
+    const groups = groupVideoRecordings([f("random.mp4"), f("GH010042.MP4"), f("GH020042.MP4")]);
+    expect(shape(groups)).toEqual([
+      { label: "GH010042.MP4", files: ["GH010042.MP4", "GH020042.MP4"] },
+      { label: "random.mp4", files: ["random.mp4"] },
+    ]);
   });
 
   it("returns nothing when the selection has no playable video", () => {
-    expect(selectRecordingChunks([f("a.txt"), f("b.lrv"), f("c.jpg")])).toEqual([]);
+    expect(groupVideoRecordings([f("a.txt"), f("b.lrv"), f("c.jpg")])).toEqual([]);
   });
 });
 
