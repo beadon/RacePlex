@@ -2,6 +2,8 @@ import { describe, it, expect } from "vitest";
 import {
   parseGoProName,
   orderVideoFiles,
+  isVideoFile,
+  selectRecordingChunks,
   buildPlaylist,
   virtualToLocal,
   localToVirtual,
@@ -64,6 +66,63 @@ describe("orderVideoFiles", () => {
 
   it("leaves a single non-GoPro file untouched", () => {
     expect(orderVideoFiles([f("race.mp4")]).map((x) => x.name)).toEqual(["race.mp4"]);
+  });
+});
+
+describe("isVideoFile", () => {
+  it("accepts playable video extensions, case-insensitively", () => {
+    for (const name of ["a.mp4", "b.M4V", "c.mov", "d.webm", "e.mkv", "f.AVI"]) {
+      expect(isVideoFile(name)).toBe(true);
+    }
+  });
+
+  it("rejects GoPro sidecars and photos", () => {
+    for (const name of ["GX010042.LRV", "GX010042.THM", "GOPR0042.JPG", "notes.txt", "GX010042.GPR"]) {
+      expect(isVideoFile(name)).toBe(false);
+    }
+  });
+});
+
+describe("selectRecordingChunks", () => {
+  const f = (name: string) => ({ name });
+
+  it("keeps only the first recording's chapters, dropping a second recording", () => {
+    const picked = selectRecordingChunks([
+      f("GH010042.MP4"), f("GH020042.MP4"), f("GH010099.MP4"), f("GH020099.MP4"),
+    ]);
+    expect(picked.map((x) => x.name)).toEqual(["GH010042.MP4", "GH020042.MP4"]);
+  });
+
+  it("orders the kept recording's chapters regardless of selection order", () => {
+    const picked = selectRecordingChunks([f("GH030042.MP4"), f("GH010042.MP4"), f("GH020042.MP4")]);
+    expect(picked.map((x) => x.name)).toEqual(["GH010042.MP4", "GH020042.MP4", "GH030042.MP4"]);
+  });
+
+  it("unites the legacy GOPR first file with its GP continuations", () => {
+    const picked = selectRecordingChunks([f("GP020042.MP4"), f("GOPR0042.MP4"), f("GP010042.MP4")]);
+    expect(picked.map((x) => x.name)).toEqual(["GOPR0042.MP4", "GP010042.MP4", "GP020042.MP4"]);
+  });
+
+  it("ignores non-video sidecars from a blind mobile 'select all'", () => {
+    const picked = selectRecordingChunks([
+      f("GX010042.LRV"), f("GX010042.THM"), f("GX010042.MP4"),
+      f("GX020042.LRV"), f("GX020042.MP4"), f("IMG_0001.JPG"),
+    ]);
+    expect(picked.map((x) => x.name)).toEqual(["GX010042.MP4", "GX020042.MP4"]);
+  });
+
+  it("loads a single non-GoPro video and ignores other unrelated clips", () => {
+    const picked = selectRecordingChunks([f("my-race.mp4"), f("another.mov")]);
+    expect(picked.map((x) => x.name)).toEqual(["my-race.mp4"]);
+  });
+
+  it("prefers a GoPro recording over a standalone clip in the selection", () => {
+    const picked = selectRecordingChunks([f("random.mp4"), f("GH010042.MP4"), f("GH020042.MP4")]);
+    expect(picked.map((x) => x.name)).toEqual(["GH010042.MP4", "GH020042.MP4"]);
+  });
+
+  it("returns nothing when the selection has no playable video", () => {
+    expect(selectRecordingChunks([f("a.txt"), f("b.lrv"), f("c.jpg")])).toEqual([]);
   });
 });
 

@@ -5,7 +5,7 @@ import { loadSessionVideo, hasSessionVideo, deleteSessionVideo, getSessionVideoM
 import type { OverlaySettings } from "@/components/video-overlays/types";
 import { DEFAULT_OVERLAY_SETTINGS } from "@/components/video-overlays/types";
 import { findNearestIndex } from "@/components/video-overlays/overlayUtils";
-import { buildPlaylist, orderVideoFiles, virtualToLocal, localToVirtual, type Playlist } from "@/lib/videoPlaylist";
+import { buildPlaylist, selectRecordingChunks, virtualToLocal, localToVirtual, type Playlist } from "@/lib/videoPlaylist";
 
 interface UseVideoSyncOptions {
   samples: GpsSample[];
@@ -307,7 +307,10 @@ export function useVideoSync({ samples, allSamples, currentIndex, onScrub, sessi
           }],
         });
         const files = await Promise.all(handles.map((h) => h.getFile()));
-        const ordered = orderVideoFiles(files.map((f, i) => ({ name: f.name, file: f, handle: handles[i] })));
+        // Keep only the first video's GoPro recording — a mobile "select all"
+        // can drag in sidecars and unrelated clips; we silently ignore them.
+        const ordered = selectRecordingChunks(files.map((f, i) => ({ name: f.name, file: f, handle: handles[i] })));
+        if (ordered.length === 0) return;
         revokeAllUrls();
         await applyPlaylist(ordered.map((e) => ({ name: e.name, url: URL.createObjectURL(e.file), handle: e.handle })));
         persistSync(syncOffsetMsRef.current);
@@ -330,7 +333,8 @@ export function useVideoSync({ samples, allSamples, currentIndex, onScrub, sessi
     input.onchange = async () => {
       const files = input.files ? Array.from(input.files) : [];
       if (files.length === 0) return;
-      const ordered = orderVideoFiles(files.map((f) => ({ name: f.name, file: f })));
+      const ordered = selectRecordingChunks(files.map((f) => ({ name: f.name, file: f })));
+      if (ordered.length === 0) { input.value = ""; return; }
       revokeAllUrls();
       await applyPlaylist(ordered.map((e) => ({ name: e.name, url: URL.createObjectURL(e.file) })));
       persistSync(syncOffsetMsRef.current);

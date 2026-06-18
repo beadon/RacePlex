@@ -105,6 +105,53 @@ export function orderVideoFiles<T extends { name: string }>(files: T[]): T[] {
   return [...gopro.map((g) => g.file), ...other.map((o) => o.file)];
 }
 
+/** Video container extensions the player can actually open. */
+const VIDEO_EXTENSIONS = [".mp4", ".m4v", ".mov", ".webm", ".mkv", ".avi"];
+
+/** True when a filename ends in a playable video extension (case-insensitive). */
+export function isVideoFile(name: string): boolean {
+  const lower = name.toLowerCase();
+  return VIDEO_EXTENSIONS.some((ext) => lower.endsWith(ext));
+}
+
+/**
+ * Stable key uniting one GoPro recording's chapters. A recording's chapters
+ * share the encoding family and recording number; the legacy first file (GOPR)
+ * and its GP continuations belong to the same recording, so both fold into one
+ * `legacy-<number>` key.
+ */
+function recordingKey(parts: GoProNameParts): string {
+  if (parts.encoding === "GOPR" || parts.encoding === "GP") return `legacy-${parts.fileNumber}`;
+  return `${parts.encoding}-${parts.fileNumber}`;
+}
+
+/**
+ * Pick the single recording to load from a (possibly messy) multi-selection.
+ *
+ * On mobile there's no way to filter a file picker, so a user is likely to just
+ * "select all" — pulling in GoPro `.LRV`/`.THM` sidecars, photos, and unrelated
+ * recordings alongside the chapters they want. Rather than alerting them or
+ * stitching everything into one nonsensical timeline, we quietly: drop anything
+ * that isn't a playable video, take the first video, and keep only *its* GoPro
+ * recording (all chapters, in order). A non-GoPro first video loads on its own.
+ * Everything else in the selection is silently ignored.
+ */
+export function selectRecordingChunks<T extends { name: string }>(files: T[]): T[] {
+  const videos = files.filter((f) => isVideoFile(f.name));
+  if (videos.length === 0) return [];
+
+  const ordered = orderVideoFiles(videos);
+  const firstParts = parseGoProName(ordered[0].name);
+  // Not a GoPro chunk → a plain single video; load just that one, ignore the rest.
+  if (!firstParts) return [ordered[0]];
+
+  const key = recordingKey(firstParts);
+  return ordered.filter((f) => {
+    const parts = parseGoProName(f.name);
+    return parts != null && recordingKey(parts) === key;
+  });
+}
+
 /** Build a playlist with cumulative start offsets from ordered chunks. */
 export function buildPlaylist(
   chunks: { name: string; durationSec: number }[],
