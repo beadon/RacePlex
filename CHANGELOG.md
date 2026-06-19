@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > from git history and grouped by theme rather than exhaustive per-commit
 > detail.
 
-## [2.8.0] - unreleased
+## [2.7.1] - 2026-06-19
 
 ### Changed
 - **Course editor sector toggles.** Once all three major sectors are assigned
