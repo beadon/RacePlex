@@ -26,6 +26,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   vehicle type — but only when nothing depends on it (no saved setups, and not
   the built-in default). Edits sync to the cloud like the rest of your garage
   (newest edit wins).
+- **Vehicle history cards.** Vehicles in the Garage now have a little **history**
+  button, just like setups. It opens a panel that gathers every setup you've run
+  on that vehicle — one card per frozen setup revision — showing the setup name,
+  its content hash, and the fastest lap turned on it. Cards are ordered fastest
+  lap first (so your quickest setup is on top), the fastest overall is
+  highlighted, and each card is collapsed by default — expand it to see the full
+  frozen setup (no diff). A course filter narrows the view to a single track and
+  course. Built on a shared history-card module reused by both the setup- and
+  vehicle-history panels.
+- **Jump to a history card's session.** In both the setup- and vehicle-history
+  panels, the fastest-lap time and each session in a card's "Fastest laps" list
+  are now tappable — they load that session straight into the viewer (closing the
+  garage drawer), so you can go from "which setup was quickest" to the actual
+  telemetry in one tap. The fastest-lap value is read from each session's own
+  cached best lap, so it always points back to a real, openable log.
 - **Collapsible Pro panel + relocatable Video/Mini-Map on mobile.** The Pro
   view's left column (info/vehicle/video + mini-map) is roomy on tablet and
   desktop but cramped on a phone. On mobile a small flag tab now sits at the top
@@ -106,14 +121,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Tools on the home screen.** A new **Tools** tile on the landing page opens the
   trackside tools (the seat-position visualizer and more) in a full-screen panel —
   no datalog needed.
-- **Datalogger (early/experimental).** A new tool that turns your phone's GPS into
+- **Lap Timer (early/experimental).** A new tool that turns your phone's GPS into
   a live lap timer: a big delta to your best lap (red when you're slower, green
   when faster), current/best/last/optimal lap times, speed, and a **Lap Times**
-  list with major-sector splits. It starts recording once you're moving above
-  5 mph and saves the session as a `.dovep` log to your files when you end it
-  (auto-ends after 5 minutes stopped, or tap **End**) — then opens and reviews
-  exactly like any other log. Early days: the timing and UI will be refined in
-  upcoming updates.
+  list with major-sector splits. It keeps your screen awake for the whole
+  session, starts recording once you're moving above 5 mph, and saves the session
+  as a `.dovep` log to your files when you end it (auto-ends after 5 minutes
+  stopped, or tap **End**) — then opens and reviews exactly like any other log.
+  Early days: the timing and UI will be refined in upcoming updates.
 - **Translations / multi-language support (foundation).** The app now has an
   internationalization system (built on i18next) with a **Language** picker in
   Settings. It auto-detects your browser language on first run and ships
@@ -247,7 +262,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   fonts are now self-hosted (via Fontsource) and bundled into the offline
   precache like the rest of the app, so they render correctly from the first paint
   with no network. This also removes a third-party request on every page load.
-- **Datalogger looked like it didn't recognise the track while parked.** Sitting
+- **Lap Timer looked like it didn't recognise the track while parked.** Sitting
   still at a known venue, the tool shows a plain speedometer (lap timing only arms
   once you're moving above 5 mph) — but it gave no sign the track had been
   detected, so it was indistinguishable from the genuine "no tracks found nearby"

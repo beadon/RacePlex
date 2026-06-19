@@ -30,6 +30,8 @@ interface SetupsTabProps {
   onAddVehicleType: (name: string, wheelCount: 2 | 4, includeTires: boolean, sections: TemplateSection[]) => Promise<unknown>;
   onRemoveVehicleType: (vehicleTypeId: string, templateId: string) => Promise<void>;
   onUpdateVehicleType: (vehicleType: VehicleType, template: SetupTemplate) => Promise<void>;
+  /** Open a saved session by file name (history card → fastest-lap session). */
+  onOpenFile?: (fileName: string) => void | Promise<void>;
   /** When toggled true, jump straight into the vehicle-type creator (e.g. from
    *  the Vehicles tab's "New type" shortcut). Cleared via onRequestNewTypeHandled. */
   requestNewType?: boolean;
@@ -67,7 +69,7 @@ const emptyForm = (): Omit<VehicleSetup, "id" | "createdAt" | "updatedAt"> => ({
 export function SetupsTab({
   vehicles, setups, vehicleTypes, templates,
   onAdd, onUpdate, onRemove, onGetLatestForVehicle,
-  onAddVehicleType, onRemoveVehicleType, onUpdateVehicleType,
+  onAddVehicleType, onRemoveVehicleType, onUpdateVehicleType, onOpenFile,
   requestNewType, onRequestNewTypeHandled,
   onCreateVehicle,
 }: SetupsTabProps) {
@@ -344,6 +346,7 @@ export function SetupsTab({
         setup={historySetup}
         vehicles={vehicles}
         onBack={() => { setHistorySetup(null); setMode("list"); }}
+        onOpenFile={onOpenFile}
       />
     );
   }

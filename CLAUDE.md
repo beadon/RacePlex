@@ -109,6 +109,7 @@ src/
 │   ├── lapSnapshot*.ts    # ★ Snapshot types/buffer + IndexedDB CRUD (→ docs/subsystems.md)
 │   ├── setupRevision*.ts  # ★ Content-addressed setup history + IndexedDB CRUD (→ docs/subsystems.md)
 │   ├── setupHistory.ts    # ★ Pure setup-history view-model (diff + fastest-lap aggregation) → drawer/SetupHistoryPanel (→ docs/subsystems.md)
+│   ├── vehicleHistory.ts  # ★ Pure vehicle-history view-model (per-vehicle setup revisions, fastest-lap first, course filter) → drawer/VehicleHistoryPanel; reuses setupHistory primitives; shared card chrome in drawer/HistoryCard.tsx
 │   ├── trackSubmission.ts # ★ Community-DB upload plan (→ docs/subsystems.md)
 │   ├── dbUtils.ts         # ★ Shared IndexedDB: DB_NAME, DB_VERSION, openDB(), tx helpers
 │   ├── garageEvents.ts    # ★ Host pub/sub: storage emits {store,key,put|delete}; cloud-sync syncs off it
@@ -133,7 +134,7 @@ src/
 ├── plugins/               # ★ Plugin framework (auto-discovered) — see src/plugins/README.md
 │   ├── (framework)        # types, registry, index, panels, mounts, fileSources, storage + hosts
 │   ├── cloud-sync/        # ★ First-party plugin: Supabase file + garage sync (→ docs/backend.md)
-│   ├── tools/             # ★ First-party plugin: Tools tab (kart seat-position viz; phone Datalogger)
+│   ├── tools/             # ★ First-party plugin: Tools tab (kart seat-position viz; phone Lap Timer)
 │   └── coaching/          # Gitignored slot for the AI coach (npm pkg in production)
 ├── types/racing.ts        # ★ Core types: GpsSample, ParsedData, Lap, Course, Track, …
 ├── contexts/              # SettingsContext, SessionContext, PlaybackContext, DeviceContext, AuthContext
@@ -253,7 +254,7 @@ A plugin default-exports `{ id, name, version?, priority?, setup?(ctx) }`. In
   into the host browser as inline `cloud` rows without coupling the host to cloud.
 
 First-party plugins: **cloud-sync** (Supabase file + garage sync → `docs/backend.md`)
-and **tools** (Tools tab: kart seat-position visualizer + phone Datalogger built on
+and **tools** (Tools tab: kart seat-position visualizer + phone Lap Timer built on
 `lib/gps/`). New slots/points are just new strings — no framework change.
 
 > ## ⚠️ SUPER IMPORTANT — coach source differs by branch (DO NOT MERGE BLINDLY)
