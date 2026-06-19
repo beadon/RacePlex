@@ -138,7 +138,8 @@
     "noSetupData": "セットアップデータなし",
     "showFull": "セットアップ全体を表示",
     "showChanges": "変更のみ表示",
-    "lapsHeader": "最速ラップ"
+    "lapsHeader": "最速ラップ",
+    "openSession": "このセッションを開く"
   },
   "vehicleHistory": {
     "title": "車両履歴",
@@ -152,7 +153,8 @@
     "noSetupData": "セットアップデータなし",
     "showFull": "セットアップを表示",
     "hideFull": "セットアップを非表示",
-    "lapsHeader": "最速ラップ"
+    "lapsHeader": "最速ラップ",
+    "openSession": "このセッションを開く"
   },
   "notes": {
     "loadSession": "メモを追加するにはセッションを読み込んでください",

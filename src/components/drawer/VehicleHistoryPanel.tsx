@@ -14,10 +14,12 @@ interface VehicleHistoryPanelProps {
   vehicle: Vehicle;
   vehicles: Vehicle[];
   onBack: () => void;
+  /** Open a saved session by file name (a card's fastest-lap session). */
+  onOpenFile?: (fileName: string) => void | Promise<void>;
 }
 
 /** Full-panel history of every setup revision run on one vehicle, fastest first. */
-export function VehicleHistoryPanel({ vehicle, vehicles, onBack }: VehicleHistoryPanelProps) {
+export function VehicleHistoryPanel({ vehicle, vehicles, onBack, onOpenFile }: VehicleHistoryPanelProps) {
   const { t } = useTranslation("drawer");
   const [revisions, setRevisions] = useState<SetupRevision[]>([]);
   const [metas, setMetas] = useState<FileMetadata[]>([]);
@@ -129,6 +131,9 @@ export function VehicleHistoryPanel({ vehicle, vehicles, onBack }: VehicleHistor
                 }}
                 usages={entry.usages}
                 lapsHeaderLabel={t("vehicleHistory.lapsHeader")}
+                onOpenFile={onOpenFile}
+                fastestFileName={entry.fastestUsage?.fileName}
+                openSessionLabel={t("vehicleHistory.openSession")}
               >
                 {expanded && (
                   <FullSetup

@@ -137,7 +137,8 @@
     "noSetupData": "No setup data",
     "showFull": "Show full setup",
     "showChanges": "Show changes only",
-    "lapsHeader": "Fastest laps"
+    "lapsHeader": "Fastest laps",
+    "openSession": "Open this session"
   },
   "vehicleHistory": {
     "title": "Vehicle History",
@@ -151,7 +152,8 @@
     "noSetupData": "No setup data",
     "showFull": "Show setup",
     "hideFull": "Hide setup",
-    "lapsHeader": "Fastest laps"
+    "lapsHeader": "Fastest laps",
+    "openSession": "Open this session"
   },
   "notes": {
     "loadSession": "Load a session to add notes",

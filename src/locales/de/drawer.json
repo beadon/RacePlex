@@ -138,7 +138,8 @@
     "noSetupData": "Keine Setup-Daten",
     "showFull": "Vollständiges Setup anzeigen",
     "showChanges": "Nur Änderungen anzeigen",
-    "lapsHeader": "Schnellste Runden"
+    "lapsHeader": "Schnellste Runden",
+    "openSession": "Diese Sitzung öffnen"
   },
   "vehicleHistory": {
     "title": "Fahrzeugverlauf",
@@ -152,7 +153,8 @@
     "noSetupData": "Keine Setup-Daten",
     "showFull": "Setup anzeigen",
     "hideFull": "Setup ausblenden",
-    "lapsHeader": "Schnellste Runden"
+    "lapsHeader": "Schnellste Runden",
+    "openSession": "Diese Sitzung öffnen"
   },
   "notes": {
     "loadSession": "Lade eine Session, um Notizen hinzuzufügen",

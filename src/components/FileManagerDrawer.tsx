@@ -43,6 +43,8 @@ interface FileManagerDrawerProps {
   onAddVehicle: (vehicle: Omit<Vehicle, "id">) => Promise<void>;
   onUpdateVehicle: (vehicle: Vehicle) => Promise<void>;
   onRemoveVehicle: (id: string) => Promise<void>;
+  // Open a saved session by file name (vehicle history → fastest-lap session).
+  onOpenFile: (fileName: string) => void | Promise<void>;
   // Current session context (the browser opens at this track/course)
   currentTrackName: string | null;
   currentCourseName: string | null;
@@ -56,6 +58,7 @@ export function FileManagerDrawer({
   showProfile,
   vehicles, vehicleTypes,
   onAddVehicle, onUpdateVehicle, onRemoveVehicle,
+  onOpenFile,
   currentTrackName, currentCourseName,
 }: FileManagerDrawerProps) {
   const { t } = useTranslation("drawer");
@@ -172,7 +175,7 @@ export function FileManagerDrawer({
               <FilesTab files={files} fileMetadataMap={fileMetadataMap} vehicles={vehicles} currentTrackName={currentTrackName} currentCourseName={currentCourseName} isOpen={isOpen} storageUsed={storageUsed} storageQuota={storageQuota} onLoadFile={onLoadFile} onDeleteFile={onDeleteFile} onExportFile={onExportFile} onSaveFile={onSaveFile} onDataLoaded={onDataLoaded} onClose={onClose} autoSave={autoSave} showSampleFiles={showSampleFiles} />
             )}
             {garageTab === "vehicles" && (
-              <VehiclesTab vehicles={vehicles} vehicleTypes={vehicleTypes} onAdd={onAddVehicle} onUpdate={onUpdateVehicle} onRemove={onRemoveVehicle} />
+              <VehiclesTab vehicles={vehicles} vehicleTypes={vehicleTypes} onAdd={onAddVehicle} onUpdate={onUpdateVehicle} onRemove={onRemoveVehicle} onOpenFile={onOpenFile} />
             )}
           </>
         )}

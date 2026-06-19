@@ -18,6 +18,8 @@ interface VehiclesTabProps {
   onAdd: (vehicle: Omit<Vehicle, "id">) => Promise<void>;
   onUpdate: (vehicle: Vehicle) => Promise<void>;
   onRemove: (id: string) => Promise<void>;
+  /** Open a saved session by file name (history card → fastest-lap session). */
+  onOpenFile?: (fileName: string) => void | Promise<void>;
 }
 
 const emptyForm = (defaultTypeId: string): Omit<Vehicle, "id"> => ({
@@ -29,7 +31,7 @@ const emptyForm = (defaultTypeId: string): Omit<Vehicle, "id"> => ({
   weightUnit: "lb",
 });
 
-export function VehiclesTab({ vehicles, vehicleTypes, onAdd, onUpdate, onRemove }: VehiclesTabProps) {
+export function VehiclesTab({ vehicles, vehicleTypes, onAdd, onUpdate, onRemove, onOpenFile }: VehiclesTabProps) {
   const { t } = useTranslation("drawer");
   const defaultTypeId = vehicleTypes[0]?.id ?? "";
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -95,6 +97,7 @@ export function VehiclesTab({ vehicles, vehicleTypes, onAdd, onUpdate, onRemove 
         vehicle={historyVehicle}
         vehicles={vehicles}
         onBack={() => setHistoryVehicle(null)}
+        onOpenFile={onOpenFile}
       />
     );
   }

@@ -138,7 +138,8 @@
     "noSetupData": "Sem dados de configuração",
     "showFull": "Mostrar configuração completa",
     "showChanges": "Mostrar apenas alterações",
-    "lapsHeader": "Voltas mais rápidas"
+    "lapsHeader": "Voltas mais rápidas",
+    "openSession": "Abrir esta sessão"
   },
   "vehicleHistory": {
     "title": "Histórico do veículo",
@@ -152,7 +153,8 @@
     "noSetupData": "Sem dados de configuração",
     "showFull": "Mostrar configuração",
     "hideFull": "Ocultar configuração",
-    "lapsHeader": "Voltas mais rápidas"
+    "lapsHeader": "Voltas mais rápidas",
+    "openSession": "Abrir esta sessão"
   },
   "notes": {
     "loadSession": "Carregue uma sessão para adicionar notas",

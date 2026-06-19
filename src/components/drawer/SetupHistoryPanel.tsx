@@ -16,10 +16,12 @@ interface SetupHistoryPanelProps {
   setup: VehicleSetup;
   vehicles: Vehicle[];
   onBack: () => void;
+  /** Open a saved session by file name (a card's fastest-lap session). */
+  onOpenFile?: (fileName: string) => void | Promise<void>;
 }
 
 /** Full-panel chronological history of a setup's frozen revisions. */
-export function SetupHistoryPanel({ setup, vehicles, onBack }: SetupHistoryPanelProps) {
+export function SetupHistoryPanel({ setup, vehicles, onBack, onOpenFile }: SetupHistoryPanelProps) {
   const { t } = useTranslation("drawer");
   const [revisions, setRevisions] = useState<SetupRevision[]>([]);
   const [metas, setMetas] = useState<FileMetadata[]>([]);
@@ -131,6 +133,7 @@ export function SetupHistoryPanel({ setup, vehicles, onBack }: SetupHistoryPanel
               hideKartBubble={!!kartFilter}
               hideCourseBubble={!!courseFilter}
               labelFor={labelFor}
+              onOpenFile={onOpenFile}
               t={t}
             />
           ))
@@ -148,11 +151,12 @@ interface RevisionCardProps {
   hideKartBubble: boolean;
   hideCourseBubble: boolean;
   labelFor: (f: { label?: string; labelKey?: string }) => string;
+  onOpenFile?: (fileName: string) => void | Promise<void>;
   t: TFunction<"drawer">;
 }
 
 function RevisionCard({
-  entry, isOriginal, showFull, onToggleFull, hideKartBubble, hideCourseBubble, labelFor, t,
+  entry, isOriginal, showFull, onToggleFull, hideKartBubble, hideCourseBubble, labelFor, onOpenFile, t,
 }: RevisionCardProps) {
   const { revision, fastestLapMs, fastestUsage, isFastestOverall, diff, usages } = entry;
   const date = new Date(revision.createdAt).toLocaleDateString();
@@ -198,6 +202,9 @@ function RevisionCard({
       }
       usages={usages}
       lapsHeaderLabel={t("setupHistory.lapsHeader")}
+      onOpenFile={onOpenFile}
+      fastestFileName={fastestUsage?.fileName}
+      openSessionLabel={t("setupHistory.openSession")}
     >
       {body}
     </HistoryCard>

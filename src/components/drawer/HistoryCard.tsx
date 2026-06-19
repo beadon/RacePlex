@@ -35,6 +35,12 @@ interface HistoryCardProps {
   /** Sessions completed with this revision, fastest lap first. */
   usages: SetupUsage[];
   lapsHeaderLabel: string;
+  /** When set, the fastest lap time + each session row open that session. */
+  onOpenFile?: (fileName: string) => void | Promise<void>;
+  /** The session file holding this card's fastest lap (the header lap time). */
+  fastestFileName?: string | null;
+  /** Tooltip for the open-session affordances. */
+  openSessionLabel?: string;
 }
 
 /**
@@ -55,8 +61,12 @@ export function HistoryCard({
   toggle,
   usages,
   lapsHeaderLabel,
+  onOpenFile,
+  fastestFileName,
+  openSessionLabel,
 }: HistoryCardProps) {
   const visibleBubbles = bubbles?.filter((b) => b.text) ?? [];
+  const canOpenFastest = !!(onOpenFile && fastestFileName && fastestLapMs !== null);
   return (
     <div
       className={`rounded-lg border p-3 space-y-2.5 ${
@@ -79,7 +89,18 @@ export function HistoryCard({
         </div>
         <div className="text-right shrink-0">
           {fastestLapMs !== null ? (
-            <span className="font-mono text-sm font-semibold text-foreground">{formatLapTime(fastestLapMs)}</span>
+            canOpenFastest ? (
+              <button
+                type="button"
+                onClick={() => onOpenFile!(fastestFileName!)}
+                title={openSessionLabel}
+                className="font-mono text-sm font-semibold text-primary hover:underline"
+              >
+                {formatLapTime(fastestLapMs)}
+              </button>
+            ) : (
+              <span className="font-mono text-sm font-semibold text-foreground">{formatLapTime(fastestLapMs)}</span>
+            )
           ) : (
             <span className="text-xs text-muted-foreground">{noLapLabel}</span>
           )}
@@ -121,16 +142,30 @@ export function HistoryCard({
           <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
             {lapsHeaderLabel}
           </p>
-          {usages.slice(0, 6).map((u) => (
-            <div key={u.fileName} className="flex items-center justify-between gap-2 text-[11px]">
-              <span className="text-muted-foreground truncate">
-                {[u.courseLabel, u.kartName].filter(Boolean).join(" · ") || u.fileName}
-              </span>
-              <span className="font-mono text-foreground shrink-0">
-                {u.fastestLapMs !== undefined ? formatLapTime(u.fastestLapMs) : noLapLabel}
-              </span>
-            </div>
-          ))}
+          {usages.slice(0, 6).map((u) => {
+            const label = [u.courseLabel, u.kartName].filter(Boolean).join(" · ") || u.fileName;
+            const lap = u.fastestLapMs !== undefined ? formatLapTime(u.fastestLapMs) : noLapLabel;
+            if (onOpenFile) {
+              return (
+                <button
+                  key={u.fileName}
+                  type="button"
+                  onClick={() => onOpenFile(u.fileName)}
+                  title={openSessionLabel}
+                  className="w-full flex items-center justify-between gap-2 text-[11px] rounded px-1 -mx-1 py-0.5 hover:bg-muted/60"
+                >
+                  <span className="text-muted-foreground truncate text-left hover:text-foreground">{label}</span>
+                  <span className="font-mono text-foreground shrink-0">{lap}</span>
+                </button>
+              );
+            }
+            return (
+              <div key={u.fileName} className="flex items-center justify-between gap-2 text-[11px]">
+                <span className="text-muted-foreground truncate">{label}</span>
+                <span className="font-mono text-foreground shrink-0">{lap}</span>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
