@@ -23,6 +23,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   on it, the revision holding the overall fastest lap is **highlighted**, and the
   history is **filterable by kart and course** — when unfiltered, each revision
   shows a bubble for the kart/course where its fastest lap was set.
+- **Edit your vehicle types.** The Setups tab gains a **Manage Vehicle Types**
+  button (below *New Vehicle Type*) that opens the type editor: pick an existing
+  type from the dropdown — it starts empty so editing is a deliberate choice —
+  tweak its sections, fields, wheel count or tires, then **Update**. Renaming a
+  field is always safe (your saved setups stay attached to it); but if an edit
+  *removes* a field or flips its data type (number ↔ text) and existing setups
+  already hold values there, a warning lists exactly which fields are affected.
+  Cancel that warning and the risky changes are rolled back and highlighted in
+  orange so you can see what was restored. The editor can also **delete** a
+  vehicle type — but only when nothing depends on it (no saved setups, and not
+  the built-in default). Edits sync to the cloud like the rest of your garage
+  (newest edit wins).
 - **Vehicle history cards.** Vehicles in the Garage now have a little **history**
   button, just like setups. It opens a panel that gathers every setup you've run
   on that vehicle — one card per frozen setup revision — showing the setup name,

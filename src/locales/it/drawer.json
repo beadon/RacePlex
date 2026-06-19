@@ -94,6 +94,7 @@
     "confirm": "Conferma",
     "cancel": "Annulla",
     "newVehicleType": "Nuovo tipo di veicolo",
+    "manageVehicleTypes": "Gestisci tipi di veicolo",
     "addNewSetup": "Aggiungi nuovo assetto",
     "editSetup": "Modifica assetto",
     "newSetup": "Nuovo assetto",
@@ -355,5 +356,23 @@
     "startLineDistance": "Distanza della linea di partenza:",
     "sendToDevice": "Invia al dispositivo",
     "downloadToApp": "Scarica nell'app"
+  },
+  "vehicleTypeEditor": {
+    "title": "Gestisci tipi di veicolo",
+    "selectType": "Tipo di veicolo",
+    "selectTypePlaceholder": "Seleziona un tipo di veicolo…",
+    "pickPrompt": "Seleziona un tipo di veicolo qui sopra per iniziare la modifica.",
+    "update": "Aggiorna",
+    "warningTitle": "Influisce sulle configurazioni esistenti",
+    "warningBody": "Questi campi contengono dati in configurazioni esistenti. Applicando le modifiche andranno persi:",
+    "warningRemoved": "rimosso — valori salvati nascosti",
+    "warningTypeChanged": "tipo modificato — valori salvati cancellati",
+    "warningConfirm": "Applica comunque",
+    "warningCancel": "Annulla",
+    "delete": "Elimina questo tipo di veicolo",
+    "deleteConfirm": "Eliminare questo tipo di veicolo? L'azione è irreversibile.",
+    "deleteConfirmBtn": "Elimina",
+    "deleteHasSetups": "Questo tipo ha configurazioni salvate: eliminale prima.",
+    "deleteDefault": "Il tipo predefinito integrato non può essere eliminato."
   }
 }

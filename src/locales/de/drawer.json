@@ -94,6 +94,7 @@
     "confirm": "Bestätigen",
     "cancel": "Abbrechen",
     "newVehicleType": "Neuer Fahrzeugtyp",
+    "manageVehicleTypes": "Fahrzeugtypen verwalten",
     "addNewSetup": "Neues Setup hinzufügen",
     "editSetup": "Setup bearbeiten",
     "newSetup": "Neues Setup",
@@ -355,5 +356,23 @@
     "startLineDistance": "Abstand der Startlinie:",
     "sendToDevice": "An das Gerät senden",
     "downloadToApp": "In die App herunterladen"
+  },
+  "vehicleTypeEditor": {
+    "title": "Fahrzeugtypen verwalten",
+    "selectType": "Fahrzeugtyp",
+    "selectTypePlaceholder": "Fahrzeugtyp auswählen…",
+    "pickPrompt": "Wähle oben einen Fahrzeugtyp aus, um mit der Bearbeitung zu beginnen.",
+    "update": "Aktualisieren",
+    "warningTitle": "Betrifft vorhandene Setups",
+    "warningBody": "Diese Felder enthalten Daten in vorhandenen Setups. Beim Anwenden gehen sie verloren:",
+    "warningRemoved": "entfernt – gespeicherte Werte ausgeblendet",
+    "warningTypeChanged": "Typ geändert – gespeicherte Werte gelöscht",
+    "warningConfirm": "Trotzdem anwenden",
+    "warningCancel": "Abbrechen",
+    "delete": "Diesen Fahrzeugtyp löschen",
+    "deleteConfirm": "Diesen Fahrzeugtyp löschen? Das kann nicht rückgängig gemacht werden.",
+    "deleteConfirmBtn": "Löschen",
+    "deleteHasSetups": "Dieser Typ hat gespeicherte Setups – lösche diese zuerst.",
+    "deleteDefault": "Der integrierte Standardtyp kann nicht gelöscht werden."
   }
 }
