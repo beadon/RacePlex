@@ -14,6 +14,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [2.7.0] - unreleased
 
 ### Added
+- **Setup history.** Each setup in the Garage now has a **history** (book) icon
+  that opens a full-panel timeline of every saved revision. It starts with the
+  original setup shown in full, then lists each later revision as a **diff** —
+  only the values that changed, coloured **green when a number went up** and
+  **red when it went down** vs the previous revision (with a per-revision toggle
+  to show the full setup instead). Every revision shows the **fastest lap** run
+  on it, the revision holding the overall fastest lap is **highlighted**, and the
+  history is **filterable by kart and course** — when unfiltered, each revision
+  shows a bubble for the kart/course where its fastest lap was set.
 - **Vehicle history cards.** Vehicles in the Garage now have a little **history**
   button, just like setups. It opens a panel that gathers every setup you've run
   on that vehicle — one card per frozen setup revision — showing the setup name,
@@ -39,10 +48,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Map** — that drop the video player or the track map into the regular,
   resizable graph stack alongside your data channels. Tablet/desktop are
   unchanged.
-
-## [2.6.0] - unreleased
-
-### Added
 - **GoPro chunked-video support.** GoPro cameras split one recording into
   sequential 3–5 minute files (`GH010042.MP4`, `GH020042.MP4`, … or legacy
   `GOPR0042.MP4` + `GP010042.MP4`). You can now select **all** the chapter files
@@ -97,63 +102,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Complimentary plan badge.** If you've been granted free premium, your Profile
   now shows a "Complimentary" badge and how long it lasts — and hides the Stripe
   billing buttons (there's no paid subscription to manage).
-- **Setup history.** Each setup in the Garage now has a **history** (book) icon
-  that opens a full-panel timeline of every saved revision. It starts with the
-  original setup shown in full, then lists each later revision as a **diff** —
-  only the values that changed, coloured **green when a number went up** and
-  **red when it went down** vs the previous revision (with a per-revision toggle
-  to show the full setup instead). Every revision shows the **fastest lap** run
-  on it, the revision holding the overall fastest lap is **highlighted**, and the
-  history is **filterable by kart and course** — when unfiltered, each revision
-  shows a bubble for the kart/course where its fastest lap was set.
-- **Tools on the home screen.** A new **Tools** tile on the landing page opens the
-  trackside tools (the seat-position visualizer and more) in a full-screen panel —
-  no datalog needed.
-- **Lap Timer (early/experimental).** A new tool that turns your phone's GPS into
-  a live lap timer: a big delta to your best lap (red when you're slower, green
-  when faster), current/best/last/optimal lap times, speed, and a **Lap Times**
-  list with major-sector splits. It keeps your screen awake for the whole
-  session, starts recording once you're moving above 5 mph, and saves the session
-  as a `.dovep` log to your files when you end it (auto-ends after 5 minutes
-  stopped, or tap **End**) — then opens and reviews exactly like any other log.
-  Early days: the timing and UI will be refined in upcoming updates.
-- **Translations / multi-language support (foundation).** The app now has an
-  internationalization system (built on i18next) with a **Language** picker in
-  Settings. It auto-detects your browser language on first run and ships
-  **English, Spanish, French, German, Italian, Brazilian Portuguese and
-  Japanese**. Non-English languages start as machine translations and will be
-  hand-tuned over time. Everything stays fully offline — each language loads on
-  demand and is cached by the app. Translated so far: the home screen, the
-  Settings panel, the **core in-session UI** (view tabs, the lap-times table, and
-  the Snapshots, Overlays and crop-to-sector controls), and the **live analysis
-  views** — the race-line map and the pro graph view (legends, the graph picker,
-  the G-G diagram, and the info panel), and the **video** player and overlay/
-  export tools (player controls, the export dialog, overlay settings, and the
-  overlay widget labels), and most of the **Garage drawer** — Files & Vehicles
-  (the drawer/device tab chrome, the file browser, the vehicle + engine manager)
-  plus **Setups & Notes** (the setup editor, the vehicle-type builder, session
-  notes, and the read-only setup table) and **Device** (device settings, the
-  firmware updater, and the track-sync manager). The **weather** panel and METAR
-  lookup dialog are also translated now, along with the **track tools** — the
-  track/course editor and manager (including the visual line/outline editor and
-  the auto-detect prompt) and the community track-submission flow, and the
-  **Cloud Sync** Profile panels — Account, Lap snapshots, Cloud logs, and Data &
-  privacy, plus the per-file cloud sync/delete toggles and the background
-  sync/export status messages, and the **Tools** tab — the tool picker and the
-  kart seat-position visualizer, and the **account pages** — sign in, create
-  account, forgot/reset password, the sign-in callback, and the **plans &
-  pricing** section on the sign-up page — and the home-screen
-  **file drop zone** ("Open a datalog") plus the **About**, **Supported Files**,
-  **Credits**, **Contact** and **browser-compatibility** dialogs, and the entire
-  **admin panel** (every tab — Messages, Submissions, Tracks, Courses, Tools and
-  Banned IPs). With this, the whole app is translated.
-  (Open-source library names and GitHub link names stay in English by design, as
-  do the legal pages.)
-- **Log type bubble in the file browser.** Each session row (shown by date/time)
-  now carries a small pill with the log's format — Dove, Dovex, XRK, XRZ,
-  iRacing, VBO, MoTeC, UBX, NMEA, CSV, … — derived from the file's extension, so
-  you can tell at a glance what kind of log each one is. Appears on local and
-  cloud rows and in the Profile → Cloud logs list.
 
 ### Changed
 - **Notes and Setups moved to the main toolbar.** Session notes (with the
@@ -224,6 +172,72 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   device (it isn't cloud-synced — there's no point re-uploading data the next
   device can look up for free), and the home-screen **Local Weather** check still
   fetches live, current conditions as before.
+
+### Removed
+- **Labs tab removed.** The experimental Labs tab (and its hidden settings
+  toggle) has been retired — it carried no active features.
+
+### Fixed
+- **Fonts now work fully offline.** The Inter and JetBrains Mono typefaces were
+  loaded from Google's font CDN at runtime, which had no offline cache rule — so a
+  fresh load with no signal (e.g. at the track) fell back to system fonts. The
+  fonts are now self-hosted (via Fontsource) and bundled into the offline
+  precache like the rest of the app, so they render correctly from the first paint
+  with no network. This also removes a third-party request on every page load.
+
+## [2.6.0] - 2026-06-15
+
+### Added
+- **Tools on the home screen.** A new **Tools** tile on the landing page opens the
+  trackside tools (the seat-position visualizer and more) in a full-screen panel —
+  no datalog needed.
+- **Datalogger (early/experimental).** A new tool that turns your phone's GPS into
+  a live lap timer: a big delta to your best lap (red when you're slower, green
+  when faster), current/best/last/optimal lap times, speed, and a **Lap Times**
+  list with major-sector splits. It starts recording once you're moving above
+  5 mph and saves the session as a `.dovep` log to your files when you end it
+  (auto-ends after 5 minutes stopped, or tap **End**) — then opens and reviews
+  exactly like any other log. Early days: the timing and UI will be refined in
+  upcoming updates.
+- **Translations / multi-language support (foundation).** The app now has an
+  internationalization system (built on i18next) with a **Language** picker in
+  Settings. It auto-detects your browser language on first run and ships
+  **English, Spanish, French, German, Italian, Brazilian Portuguese and
+  Japanese**. Non-English languages start as machine translations and will be
+  hand-tuned over time. Everything stays fully offline — each language loads on
+  demand and is cached by the app. Translated so far: the home screen, the
+  Settings panel, the **core in-session UI** (view tabs, the lap-times table, and
+  the Snapshots, Overlays and crop-to-sector controls), and the **live analysis
+  views** — the race-line map and the pro graph view (legends, the graph picker,
+  the G-G diagram, and the info panel), and the **video** player and overlay/
+  export tools (player controls, the export dialog, overlay settings, and the
+  overlay widget labels), and most of the **Garage drawer** — Files & Vehicles
+  (the drawer/device tab chrome, the file browser, the vehicle + engine manager)
+  plus **Setups & Notes** (the setup editor, the vehicle-type builder, session
+  notes, and the read-only setup table) and **Device** (device settings, the
+  firmware updater, and the track-sync manager). The **weather** panel and METAR
+  lookup dialog are also translated now, along with the **track tools** — the
+  track/course editor and manager (including the visual line/outline editor and
+  the auto-detect prompt) and the community track-submission flow, and the
+  **Cloud Sync** Profile panels — Account, Lap snapshots, Cloud logs, and Data &
+  privacy, plus the per-file cloud sync/delete toggles and the background
+  sync/export status messages, and the **Tools** tab — the tool picker and the
+  kart seat-position visualizer, and the **account pages** — sign in, create
+  account, forgot/reset password, the sign-in callback, and the **plans &
+  pricing** section on the sign-up page — and the home-screen
+  **file drop zone** ("Open a datalog") plus the **About**, **Supported Files**,
+  **Credits**, **Contact** and **browser-compatibility** dialogs, and the entire
+  **admin panel** (every tab — Messages, Submissions, Tracks, Courses, Tools and
+  Banned IPs). With this, the whole app is translated.
+  (Open-source library names and GitHub link names stay in English by design, as
+  do the legal pages.)
+- **Log type bubble in the file browser.** Each session row (shown by date/time)
+  now carries a small pill with the log's format — Dove, Dovex, XRK, XRZ,
+  iRacing, VBO, MoTeC, UBX, NMEA, CSV, … — derived from the file's extension, so
+  you can tell at a glance what kind of log each one is. Appears on local and
+  cloud rows and in the Profile → Cloud logs list.
+
+### Changed
 - **Landing page UX overhaul** — the home screen is simpler and friendlier. The
   cluster of small buttons that used to live inside the file dropzone is gone;
   importing a file is now a single large drag-and-drop / click-to-browse zone,
@@ -239,18 +253,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   route icon (at every screen size) with the current track : course as its label
   from tablet up.
 
-### Removed
-- **Labs tab removed.** The experimental Labs tab (and its hidden settings
-  toggle) has been retired — it carried no active features.
-
 ### Fixed
-- **Fonts now work fully offline.** The Inter and JetBrains Mono typefaces were
-  loaded from Google's font CDN at runtime, which had no offline cache rule — so a
-  fresh load with no signal (e.g. at the track) fell back to system fonts. The
-  fonts are now self-hosted (via Fontsource) and bundled into the offline
-  precache like the rest of the app, so they render correctly from the first paint
-  with no network. This also removes a third-party request on every page load.
-- **Lap Timer looked like it didn't recognise the track while parked.** Sitting
+- **Datalogger looked like it didn't recognise the track while parked.** Sitting
   still at a known venue, the tool shows a plain speedometer (lap timing only arms
   once you're moving above 5 mph) — but it gave no sign the track had been
   detected, so it was indistinguishable from the genuine "no tracks found nearby"
