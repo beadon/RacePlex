@@ -5,6 +5,7 @@ import { LandingPage } from "@/components/LandingPage";
 import { TrackEditor } from "@/components/TrackEditor"; // still used in compact header
 import { LapTimesTab } from "@/components/tabs/LapTimesTab";
 import { NotesTab } from "@/components/drawer/NotesTab";
+import { SetupsNotesPanel } from "@/components/tabs/SetupsNotesPanel";
 // Heavy tabs lazy-loaded so the initial bundle doesn't carry their deps.
 // RaceLine pulls in Leaflet (vendor-leaflet, ~150 kB) + the telemetry chart —
 // lazy keeps the whole mapping stack off the landing page; it loads the moment
@@ -42,6 +43,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { ParsedData } from "@/types/racing";
 import { calculateDistanceArray } from "@/lib/referenceUtils";
 import { formatAxisDistance } from "@/lib/chartAxis";
+import { cn } from "@/lib/utils";
 import { usePanelsForSlot, PanelSlot } from "@/plugins/panels";
 import { TrackPromptDialog } from "@/components/TrackPromptDialog";
 import { useSettings } from "@/hooks/useSettings";
@@ -628,45 +630,52 @@ export default function Index() {
 
         <div className="flex-1 min-h-0 overflow-hidden">
           {topPanelView === "laptable" && <LapTimesTab />}
-          {topPanelView === "notes" && (
-            <div className="h-full flex flex-col max-w-2xl mx-auto w-full">
-              <NotesTab
-                fileName={currentFileName}
-                notes={noteManager.notes}
-                onAdd={noteManager.addNote}
-                onUpdate={noteManager.updateNote}
-                onRemove={noteManager.removeNote}
-                vehicles={vehicleManager.vehicles}
-                setups={setupManager.setups}
-                sessionKartId={sessionKartId}
-                sessionSetupId={sessionSetupId}
-                sessionSetupRev={sessionSetupRev}
-                onSaveSessionSetup={handleSaveSessionSetupWithSnapshot}
-                postSession={postSession}
-                onSavePostSession={sessionMeta.handleSavePostSession}
-              />
-            </div>
-          )}
           <Suspense fallback={null}>
             {topPanelView === "raceline" && <RaceLineTab showOverlays={showOverlays} />}
             {topPanelView === "graphview" && <GraphViewTab />}
             {topPanelView === "coach" && showCoach && <CoachTab />}
             {topPanelView === "tools" && showTools && <ToolsTab />}
-            {topPanelView === "setups" && (
-              <div className="h-full flex flex-col max-w-2xl mx-auto w-full">
-                <SetupsTab
-                  vehicles={vehicleManager.vehicles}
-                  setups={setupManager.setups}
-                  vehicleTypes={templateManager.vehicleTypes}
-                  templates={templateManager.templates}
-                  onAdd={setupManager.addSetup}
-                  onUpdate={setupManager.updateSetup}
-                  onRemove={setupManager.removeSetup}
-                  onGetLatestForVehicle={setupManager.getLatestForVehicle}
-                  onAddVehicleType={templateManager.addVehicleType}
-                  onRemoveVehicleType={templateManager.removeVehicleType}
-                />
-              </div>
+            {/* Setups + Notes share one surface: a 50/50 split on tablet/desktop,
+                separate full-width tabs on phones (see SetupsNotesPanel). */}
+            {(topPanelView === "setups" || topPanelView === "notes") && (
+              <SetupsNotesPanel
+                active={topPanelView}
+                setups={
+                  // Own Suspense: the lazy SetupsTab chunk loading must not blank
+                  // out the (eager) Notes half rendered beside it in the split.
+                  <Suspense fallback={null}>
+                    <SetupsTab
+                      vehicles={vehicleManager.vehicles}
+                      setups={setupManager.setups}
+                      vehicleTypes={templateManager.vehicleTypes}
+                      templates={templateManager.templates}
+                      onAdd={setupManager.addSetup}
+                      onUpdate={setupManager.updateSetup}
+                      onRemove={setupManager.removeSetup}
+                      onGetLatestForVehicle={setupManager.getLatestForVehicle}
+                      onAddVehicleType={templateManager.addVehicleType}
+                      onRemoveVehicleType={templateManager.removeVehicleType}
+                    />
+                  </Suspense>
+                }
+                notes={
+                  <NotesTab
+                    fileName={currentFileName}
+                    notes={noteManager.notes}
+                    onAdd={noteManager.addNote}
+                    onUpdate={noteManager.updateNote}
+                    onRemove={noteManager.removeNote}
+                    vehicles={vehicleManager.vehicles}
+                    setups={setupManager.setups}
+                    sessionKartId={sessionKartId}
+                    sessionSetupId={sessionSetupId}
+                    sessionSetupRev={sessionSetupRev}
+                    onSaveSessionSetup={handleSaveSessionSetupWithSnapshot}
+                    postSession={postSession}
+                    onSavePostSession={sessionMeta.handleSavePostSession}
+                  />
+                }
+              />
             )}
           </Suspense>
         </div>
@@ -712,12 +721,15 @@ function TabBar({ topPanelView, setTopPanelView, laps, showOverlays, onToggleOve
   onSetupIndicatorClick: () => void;
 }) {
   const { t } = useTranslation("session");
-  const tabClass = (view: TopPanelView) =>
-    `flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors ${
-      topPanelView === view
-        ? "text-primary border-b-2 border-primary bg-primary/5"
-        : "text-muted-foreground hover:text-foreground"
-    }`;
+  const tabBase = "flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors";
+  const tabState = (active: boolean) =>
+    active
+      ? "text-primary border-b-2 border-primary bg-primary/5"
+      : "text-muted-foreground hover:text-foreground";
+  const tabClass = (view: TopPanelView) => cn(tabBase, tabState(topPanelView === view));
+  // Setups and Notes live on one combined surface; either being active lights
+  // up the small-screen tabs and the merged tablet/desktop tab alike.
+  const setupsNotesActive = topPanelView === "setups" || topPanelView === "notes";
 
   return (
     <div className="flex items-center border-b border-border shrink-0">
@@ -743,11 +755,23 @@ function TabBar({ topPanelView, setTopPanelView, laps, showOverlays, onToggleOve
           <Wrench className="w-4 h-4" /> <span className="hidden sm:inline">{t("tabs.tools")}</span>
         </button>
       )}
-      <button onClick={() => setTopPanelView("setups")} className={tabClass("setups")}>
+      {/* Phones: Setups and Notes are separate tabs. Tablet/desktop: one merged
+          tab opens the 50/50 split (SetupsNotesPanel handles the layout). */}
+      <button onClick={() => setTopPanelView("setups")} className={cn(tabClass("setups"), "md:hidden")}>
         <SlidersHorizontal className="w-4 h-4" /> <span className="hidden sm:inline">{t("tabs.setups")}</span>
       </button>
-      <button onClick={() => setTopPanelView("notes")} className={tabClass("notes")}>
+      <button onClick={() => setTopPanelView("notes")} className={cn(tabClass("notes"), "md:hidden")}>
         <NotebookPen className="w-4 h-4" /> <span className="hidden sm:inline">{t("tabs.notes")}</span>
+      </button>
+      <button
+        onClick={() => setTopPanelView("setups")}
+        className={cn(tabBase, tabState(setupsNotesActive), "hidden md:flex")}
+      >
+        <span className="flex items-center gap-1">
+          <SlidersHorizontal className="w-4 h-4" />
+          <NotebookPen className="w-4 h-4" />
+        </span>
+        {t("tabs.setupsNotes")}
       </button>
       {setupIndicator && (
         <TooltipProvider>

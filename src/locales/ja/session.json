@@ -7,7 +7,8 @@
     "coach": "コーチ",
     "tools": "ツール",
     "setups": "セットアップ",
-    "notes": "メモ"
+    "notes": "メモ",
+    "setupsNotes": "セットアップとメモ"
   },
   "header": {
     "play": "再生",

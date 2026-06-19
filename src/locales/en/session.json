@@ -6,7 +6,8 @@
     "coach": "Coach",
     "tools": "Tools",
     "setups": "Setups",
-    "notes": "Notes"
+    "notes": "Notes",
+    "setupsNotes": "Setups & Notes"
   },
   "header": {
     "play": "Play",

@@ -132,7 +132,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   their own tabs in the main view bar — **Setups** then **Notes**, to the right of
   Tools — instead of living inside the Garage drawer. They update often, so this
   keeps them a single tap away. **Vehicles** stay in the Garage (you set those up
-  once). The setup-status nag jumps straight to the right place.
+  once). The setup-status nag jumps straight to the right place. On **tablets and
+  desktop** the two share one **Setups & Notes** tab shown as a 50/50 split, so
+  the extra width isn't wasted; phones keep them as separate full-width tabs.
 - **Tighter lap selector.** The lap dropdown in the session header now sizes to
   its label instead of a fixed width, freeing up room so the toolbar controls
   (snapshots, overlays) don't get squeezed off-screen on mobile.
