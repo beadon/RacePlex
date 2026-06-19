@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowUp, Trophy, Car, MapPin, ChevronDown, ChevronUp } from "lucide-react";
+import { ArrowDown, ArrowUp, Trophy, Car, MapPin, ChevronDown, ChevronUp, SquareArrowOutUpRight } from "lucide-react";
 import { formatLapTime } from "@/lib/lapCalculation";
 import type { SetupField, SetupFieldDiff, SetupUsage } from "@/lib/setupHistory";
 
@@ -94,8 +94,9 @@ export function HistoryCard({
                 type="button"
                 onClick={() => onOpenFile!(fastestFileName!)}
                 title={openSessionLabel}
-                className="font-mono text-sm font-semibold text-primary hover:underline"
+                className="inline-flex items-center gap-1 font-mono text-sm font-semibold text-primary hover:underline"
               >
+                <SquareArrowOutUpRight className="w-3 h-3" />
                 {formatLapTime(fastestLapMs)}
               </button>
             ) : (
@@ -152,9 +153,12 @@ export function HistoryCard({
                   type="button"
                   onClick={() => onOpenFile(u.fileName)}
                   title={openSessionLabel}
-                  className="w-full flex items-center justify-between gap-2 text-[11px] rounded px-1 -mx-1 py-0.5 hover:bg-muted/60"
+                  className="group w-full flex items-center justify-between gap-2 text-[11px] rounded px-1 -mx-1 py-0.5 hover:bg-muted/60"
                 >
-                  <span className="text-muted-foreground truncate text-left hover:text-foreground">{label}</span>
+                  <span className="flex items-center gap-1 min-w-0 text-muted-foreground group-hover:text-foreground">
+                    <SquareArrowOutUpRight className="w-3 h-3 shrink-0 opacity-60 group-hover:opacity-100" />
+                    <span className="truncate text-left">{label}</span>
+                  </span>
                   <span className="font-mono text-foreground shrink-0">{lap}</span>
                 </button>
               );
