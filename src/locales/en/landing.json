@@ -21,7 +21,8 @@
     },
     "tracks": {
       "title": "Manage tracks",
-      "description": "Create, draw and edit track & course layouts"
+      "description": "Create, draw and edit track & course layouts",
+      "badge": "🎁 Contribute tracks signed in to earn free cloud storage"
     },
     "build": {
       "title": "Build your own logger",
@@ -31,7 +32,26 @@
   "links": {
     "privacy": "Privacy Policy",
     "terms": "Terms of Service",
-    "trackManagement": "Track Management"
+    "admin": "Admin"
+  },
+  "roadmap": {
+    "title": "Remaining feature roadmap",
+    "estimated": "times are estimated",
+    "blurb": "We're backed by a team that's been building enterprise-grade software for 20+ years. We're here to ship quality.",
+    "items": [
+      "Updated cheaper DIY logger (June '26)",
+      "Track leaderboards & public user profiles (June '26)",
+      "Downloads from 3rd-party loggers (June '26)",
+      "Native app (July '26)",
+      "Race day organization (July '26)",
+      "Team management & inventory — free for teams of 5 and smaller (July '26)",
+      "Updates to offline coaching (July '26)",
+      "Weight balancing and other misc tools (July '26)",
+      "Video editor updates (August '26)",
+      "AI coaching, after core features are stable (August '26)",
+      "Release of \"Vulture\" logger (Q1 '27)"
+    ],
+    "contact": "Contact us for any features you may need!"
   },
   "footer": {
     "operatedBy": "Operated by",

@@ -7,7 +7,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Note, MAX_NOTE_BYTES } from "@/lib/noteStorage";
 import { Vehicle } from "@/lib/vehicleStorage";
 import { VehicleSetup } from "@/lib/setupStorage";
+import { PostSessionData } from "@/lib/fileStorage";
 import { shortRevHash } from "@/lib/setupRevision";
+import { PostSessionPanel } from "@/components/drawer/PostSessionPanel";
 
 interface NotesTabProps {
   fileName: string | null;
@@ -22,29 +24,49 @@ interface NotesTabProps {
   /** Content hash of the frozen setup revision this session ran (immutable id). */
   sessionSetupRev: string | null;
   onSaveSessionSetup: (kartId: string | null, setupId: string | null) => Promise<void>;
+  /** Post-session measurements (tire pressure, weight) for this session. */
+  postSession: PostSessionData | null;
+  onSavePostSession: (data: PostSessionData) => Promise<void>;
 }
 
 export function NotesTab({
   fileName, notes, onAdd, onUpdate, onRemove,
   vehicles, setups, sessionKartId, sessionSetupId, sessionSetupRev, onSaveSessionSetup,
+  postSession, onSavePostSession,
 }: NotesTabProps) {
   const { t } = useTranslation("drawer");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [text, setText] = useState("");
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [confirmClearSession, setConfirmClearSession] = useState(false);
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
   const [selectedSetupId, setSelectedSetupId] = useState<string | null>(null);
 
+  // The setup to default to for a vehicle: its only one, or none when ambiguous.
+  const defaultSetupFor = useCallback((vehicleId: string): string | null => {
+    const forVehicle = setups.filter(s => s.vehicleId === vehicleId);
+    return forVehicle.length === 1 ? forVehicle[0].id : null;
+  }, [setups]);
+
   useEffect(() => {
-    setSelectedVehicleId(sessionKartId);
-    setSelectedSetupId(sessionSetupId);
-  }, [sessionKartId, sessionSetupId]);
+    if (sessionKartId) {
+      // Session already linked — restore exactly what was saved.
+      setSelectedVehicleId(sessionKartId);
+      setSelectedSetupId(sessionSetupId);
+      return;
+    }
+    // Unlinked session: pre-fill the obvious choices (the only vehicle, and its
+    // only setup) so the user just has to hit Save — we never auto-save for them.
+    const onlyVehicle = vehicles.length === 1 ? vehicles[0].id : null;
+    setSelectedVehicleId(onlyVehicle);
+    setSelectedSetupId(onlyVehicle ? defaultSetupFor(onlyVehicle) : null);
+  }, [sessionKartId, sessionSetupId, vehicles, defaultSetupFor]);
 
   const handleVehicleChange = useCallback((value: string) => {
     const id = value === "none" ? null : value;
     setSelectedVehicleId(id);
-    setSelectedSetupId(null);
-  }, []);
+    setSelectedSetupId(id ? defaultSetupFor(id) : null);
+  }, [defaultSetupFor]);
 
   const handleSetupChange = useCallback((value: string) => {
     setSelectedSetupId(value === "none" ? null : value);
@@ -61,6 +83,13 @@ export function NotesTab({
   const handleSaveSetup = useCallback(async () => {
     await onSaveSessionSetup(selectedVehicleId, selectedSetupId);
   }, [selectedVehicleId, selectedSetupId, onSaveSessionSetup]);
+
+  // Escape hatch for a setup saved to the session by mistake: unlink it so the
+  // user can re-assign the correct one. Notes/measurements are left untouched.
+  const handleClearSession = useCallback(async () => {
+    await onSaveSessionSetup(null, null);
+    setConfirmClearSession(false);
+  }, [onSaveSessionSetup]);
 
   const resetForm = () => { setEditingId(null); setText(""); };
 
@@ -137,7 +166,26 @@ export function NotesTab({
             {t("notes.setupFrozen")}
           </p>
         )}
+        {/* Recover from a wrong setup saved to the session: clear and re-assign. */}
+        {(sessionKartId || sessionSetupId) && (
+          confirmClearSession ? (
+            <div className="p-3 rounded-md border border-border bg-muted/60 space-y-2">
+              <p className="text-sm text-foreground">{t("notes.clearConfirm")}</p>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" size="sm" onClick={() => setConfirmClearSession(false)}>{t("notes.cancel")}</Button>
+                <Button variant="destructive" size="sm" onClick={handleClearSession}>{t("notes.clearConfirmAction")}</Button>
+              </div>
+            </div>
+          ) : (
+            <Button variant="ghost" size="sm" className="w-full text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => setConfirmClearSession(true)}>
+              {t("notes.clearSession")}
+            </Button>
+          )
+        )}
       </div>
+
+      {/* Post-session measurements (tire pressure + weight) */}
+      <PostSessionPanel postSession={postSession} onSave={onSavePostSession} />
 
       {/* Delete Confirmation */}
       {confirmDelete && (

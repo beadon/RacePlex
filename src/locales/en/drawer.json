@@ -62,6 +62,7 @@
     "unknownType": "Unknown type",
     "edit": "Edit",
     "vehicleType": "Vehicle Type",
+    "newType": "New type",
     "selectType": "Select type…",
     "name": "Name",
     "namePlaceholder": "Vehicle name",
@@ -92,6 +93,7 @@
     "confirm": "Confirm",
     "cancel": "Cancel",
     "newVehicleType": "New Vehicle Type",
+    "manageVehicleTypes": "Manage Vehicle Types",
     "addNewSetup": "Add New Setup",
     "editSetup": "Edit Setup",
     "newSetup": "New Setup",
@@ -119,7 +121,46 @@
     "halves": "Halves",
     "quarters": "Quarters",
     "update": "Update",
-    "save": "Save"
+    "save": "Save",
+    "copyFrom": "Copy setup from…",
+    "setup": "Setup",
+    "selectSetup": "Select setup…",
+    "copy": "Copy",
+    "firstCreateVehicle": "First create a vehicle"
+  },
+  "setupHistory": {
+    "title": "Setup History",
+    "openTitle": "View setup history",
+    "loading": "Loading history…",
+    "empty": "No history yet",
+    "emptyHint": "Assign this setup to a session to start building its history.",
+    "allKarts": "All karts",
+    "allCourses": "All courses",
+    "original": "Original",
+    "revision": "Revision",
+    "fastestTag": "Fastest lap",
+    "noLap": "—",
+    "noChanges": "No changes from previous revision",
+    "noSetupData": "No setup data",
+    "showFull": "Show full setup",
+    "showChanges": "Show changes only",
+    "lapsHeader": "Fastest laps",
+    "openSession": "Open this session"
+  },
+  "vehicleHistory": {
+    "title": "Vehicle History",
+    "openTitle": "View vehicle history",
+    "loading": "Loading history…",
+    "empty": "No history yet",
+    "emptyHint": "Run a session with this vehicle and assign a setup to start building its history.",
+    "allCourses": "All courses",
+    "fastestTag": "Fastest lap",
+    "noLap": "—",
+    "noSetupData": "No setup data",
+    "showFull": "Show setup",
+    "hideFull": "Hide setup",
+    "lapsHeader": "Fastest laps",
+    "openSession": "Open this session"
   },
   "notes": {
     "loadSession": "Load a session to add notes",
@@ -144,7 +185,18 @@
     "edit": "Edit",
     "writeNote": "Write a note…",
     "updateNote": "Update Note",
-    "addNote": "Add Note"
+    "addNote": "Add Note",
+    "clearSession": "Clear session data",
+    "clearConfirm": "This clears the vehicle and setup saved to this session. This cannot be undone.",
+    "clearConfirmAction": "Clear"
+  },
+  "postSession": {
+    "title": "Post-Session",
+    "tirePressure": "Tire Pressure",
+    "weight": "Weight",
+    "weightPlaceholder": "e.g. 380",
+    "save": "Save",
+    "update": "Update"
   },
   "templateCreator": {
     "title": "New Vehicle Type",
@@ -200,6 +252,7 @@
     "readingSettings": "Reading settings…",
     "retry": "Retry",
     "noSettings": "No settings found on device.",
+    "useProfileName": "Use profile name",
     "reset": "Reset Settings to Default",
     "resetConfirm": "Confirm Reset — Device Will Reboot",
     "cancel": "Cancel",
@@ -302,5 +355,23 @@
     "startLineDistance": "Start line distance:",
     "sendToDevice": "Send to Device",
     "downloadToApp": "Download to App"
+  },
+  "vehicleTypeEditor": {
+    "title": "Manage Vehicle Types",
+    "selectType": "Vehicle Type",
+    "selectTypePlaceholder": "Select a vehicle type…",
+    "pickPrompt": "Select a vehicle type above to start editing.",
+    "update": "Update",
+    "warningTitle": "Affects existing setups",
+    "warningBody": "These fields hold data in existing setups. Applying will discard it:",
+    "warningRemoved": "removed — saved values hidden",
+    "warningTypeChanged": "type changed — saved values cleared",
+    "warningConfirm": "Apply anyway",
+    "warningCancel": "Cancel",
+    "delete": "Delete this vehicle type",
+    "deleteConfirm": "Delete this vehicle type? This can't be undone.",
+    "deleteConfirmBtn": "Delete",
+    "deleteHasSetups": "This type has saved setups — delete those first.",
+    "deleteDefault": "The built-in default type can't be deleted."
   }
 }

@@ -4,9 +4,11 @@
     "simple": "Semplice",
     "pro": "Pro",
     "lapTimes": "Tempi sul giro",
-    "labs": "Labs",
     "coach": "Coach",
-    "tools": "Strumenti"
+    "tools": "Strumenti",
+    "setups": "Assetti",
+    "notes": "Note",
+    "setupsNotes": "Assetti e note"
   },
   "header": {
     "play": "Riproduci",
@@ -156,7 +158,10 @@
     "brakeGps": "Freno % (GPS)",
     "brakeComputed": "Freno % (calcolato)",
     "ggDiagram": "Diagramma G-G",
-    "removeGraph": "Rimuovi grafico"
+    "removeGraph": "Rimuovi grafico",
+    "miniMap": "Mini mappa",
+    "collapsePanel": "Comprimi pannello",
+    "expandPanel": "Espandi pannello"
   },
   "gg": {
     "noData": "Nessun dato di forza G",

@@ -34,7 +34,7 @@
 - Pro graph view with multi-series telemetry charts
 - Reference lap overlay & pace delta comparison
 - Lap snapshots — save a "course fastest lap" per engine, frozen for cross-session comparison (local-first, optionally cloud-synced)
-- Video sync with telemetry playback
+- Video sync with telemetry playback (incl. GoPro chunked recordings — select all chapter files and they play as one continuous video)
 - 9 overlay gauge types (digital, analog, graph, bar, bubble, map, pace, sector, lap time)
 - MP4 video export with overlays & audio (H.264 + AAC)
 - Vehicle profiles & setup sheet management
@@ -76,7 +76,7 @@ All formats are auto-detected on import:
 | VBO | Racelogic VBOX, RaceBox | `.vbo` |
 | Dove CSV | DovesDataLogger | `.dove` |
 | Dovex | DovesDataLogger (extended with metadata) | `.dovex` |
-| Dovep | Phone Datalogger tool (Dove-phone; `.dovex`-compatible) | `.dovep` |
+| Dovep | Phone Lap Timer tool (Dove-phone; `.dovex`-compatible) | `.dovep` |
 | Alfano CSV | Alfano ADA app, Off Camber Data | `.csv` |
 | AiM CSV | MyChron 5/6, Race Studio 3 | `.csv` |
 | AiM XRK/XRZ | MyChron / SoloDL native binary | `.xrk`, `.xrz` |
@@ -158,7 +158,7 @@ view. Older JSON with only `sector_2_*`/`sector_3_*` is read as the two majors.
 | `VITE_SUPABASE_PUBLISHABLE_KEY` | Yes (if using Cloud) | Backend public/anon key (auto-set by Lovable Cloud) |
 | `VITE_SUPABASE_PROJECT_ID` | Yes (if using Cloud) | Backend project ID (auto-set by Lovable Cloud) |
 | `VITE_ENABLE_ADMIN` | No | Set to `true` to enable admin UI and `/admin` route. `/login` mounts when admin OR cloud is enabled. Default `false` — a fresh clone ships the public, offline-first app, not admin UI pointed at an upstream backend. |
-| `VITE_ENABLE_CLOUD` | No | Set to `true` to enable public user accounts: Cloud Sync Labs panel, email sign-in/registration, `/register`, `/forgot-password`, `/reset-password`, `/auth/callback`. Default `false` — flag-off builds ship zero cloud auth code (offline-first invariant). |
+| `VITE_ENABLE_CLOUD` | No | Set to `true` to enable public user accounts: Cloud Sync panels, email sign-in/registration, `/register`, `/forgot-password`, `/reset-password`, `/auth/callback`. Default `false` — flag-off builds ship zero cloud auth code (offline-first invariant). |
 | `VITE_ENABLE_GOOGLE_AUTH` | No | Set to `true` to show the "Continue with Google" buttons (login, register, Profile). Requires `VITE_ENABLE_CLOUD`. Default `false`: Google sign-in currently routes through Lovable's hosted OAuth broker, so it stays hidden until native Supabase Google OAuth is configured (Google Cloud OAuth client + Supabase provider). |
 | `VITE_TURNSTILE_SITE_KEY` | No | Cloudflare Turnstile site key for track submission CAPTCHA |
 | `VITE_FIRMWARE_MANIFEST_URL` | No | Override the DovesDataLogger firmware OTA manifest URL used by the in-app firmware updater. When unset: `main` builds use the production manifest (`https://theangryraven.github.io/DovesDataLogger/manifest.json`); non-`main`/preview builds use the **beta channel** (`https://theangryraven.github.io/DovesDataLogger/beta/manifest.json`). Set this to force a specific channel on any branch. |
@@ -278,8 +278,9 @@ src/lib/db/
 
 | Function | Purpose |
 |----------|---------|
-| `submit-track` | Public endpoint for track submissions (with IP ban check) |
+| `submit-track` | Public endpoint for track submissions (with IP ban check); attributes the submission to the signed-in user when a valid JWT is present |
 | `admin-build-zip` | Admin-only: generates per-track JSON files |
+| `admin-users` | Admin-only: lists users with plan/storage/contribution count; grants or clears comped premium months |
 | `check-login-rate` | Rate limiting for login attempts |
 | `submit-message` | Public contact-form endpoint (with IP ban + rate limit) |
 | `stripe-prices` | Public: reports whether Stripe is configured + live monthly/annual prices (resolved by lookup_key) for the pricing UI |
@@ -552,6 +553,7 @@ Built on the shoulders of these incredible open-source projects and free service
 
 - [React](https://react.dev) · [Vite](https://vite.dev) · [TypeScript](https://www.typescriptlang.org)
 - [Tailwind CSS](https://tailwindcss.com) · [shadcn/ui](https://ui.shadcn.com) · [Radix UI](https://www.radix-ui.com) · [Lucide Icons](https://lucide.dev)
+- [Inter](https://rsms.me/inter/) · [JetBrains Mono](https://www.jetbrains.com/lp/mono/) (OFL fonts) · [Fontsource](https://fontsource.org) (self-hosted, offline-ready)
 - [Leaflet](https://leafletjs.com) · [CARTO basemaps](https://carto.com) · [Esri World Imagery & Wayback](https://livingatlas.arcgis.com/wayback/) (satellite + historical imagery dates)
 - [TanStack Query](https://tanstack.com/query) · [Sonner](https://sonner.emilkowal.dev) · [react-resizable-panels](https://github.com/bvaughn/react-resizable-panels) · [dnd kit](https://dndkit.com) (sector list drag-to-reorder)
 - [i18next](https://www.i18next.com) · [react-i18next](https://react.i18next.com) (internationalization)

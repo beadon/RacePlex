@@ -4,7 +4,9 @@
     "noVideo": "Kein Video geladen",
     "lastUsed": "Zuletzt verwendet: {{name}}",
     "loadVideo": "Video laden",
-    "segmentedUnsupported": "Segmentierte Videos werden noch nicht unterstützt.",
+    "goproHint": "Mit einer GoPro aufgenommen? Wählen Sie alle Kapiteldateien auf einmal aus – sie werden als ein durchgehendes Video abgespielt.",
+    "chapterShort": "{{current}}/{{total}}",
+    "chapterOf": "Kapitel {{current}} von {{total}}",
     "noVideoForPortion": "Kein Video für diesen Abschnitt",
     "overlaySettingsTitle": "Overlay-Einstellungen",
     "mute": "Stummschalten",
@@ -19,7 +21,10 @@
     "unlockOverlays": "Overlays entsperren",
     "overlaySettings": "Overlay-Einstellungen",
     "exportVideo": "Video exportieren",
-    "replaceVideo": "Video ersetzen"
+    "replaceVideo": "Video ersetzen",
+    "pickRecordingTitle": "Welches Video?",
+    "pickRecordingDesc": "Du hast mehr als eine Aufnahme ausgewählt. Wähle die zu ladende aus – die anderen werden verworfen.",
+    "pickRecordingCount": "{{count}} Kapitel"
   },
   "export": {
     "title": "Video exportieren",

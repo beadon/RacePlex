@@ -3,11 +3,32 @@
  */
 
 import { openDB, STORE_NAMES } from './dbUtils';
+import { deleteCachedWeather } from './weatherCacheStorage';
 
 export interface FileEntry {
   name: string;
   size: number;
   savedAt: number;
+}
+
+/** Granularity for the post-session tire-pressure entry (mirrors the setup PSI modes). */
+export type TirePsiMode = "single" | "halves" | "quarters";
+
+/**
+ * Post-session measurements captured on the Notes tab after a session is run
+ * (tire pressures, total weight). Stored on FileMetadata so they ride the same
+ * cloud-sync path as the rest of the session's metadata. Held for later
+ * processing — nothing consumes these yet.
+ */
+export interface PostSessionData {
+  /** UI granularity of the pressures below (defaults to quarters). */
+  tirePsiMode?: TirePsiMode;
+  tirePsiFrontLeft?: number | null;
+  tirePsiFrontRight?: number | null;
+  tirePsiRearLeft?: number | null;
+  tirePsiRearRight?: number | null;
+  /** Single post-session weight (unit-agnostic — lbs or kg, user's choice). */
+  weight?: number | null;
 }
 
 export interface FileMetadata {
@@ -35,6 +56,14 @@ export interface FileMetadata {
   // Fastest lap cache
   fastestLapMs?: number;
   fastestLapNumber?: number;
+  // Browser display-name override. When set, the file browser shows this instead
+  // of the date/time derived name (used by the bundled sample log).
+  displayName?: string;
+  // Marks the bundled sample log so the browser can hide it behind the
+  // "show sample files" setting. Sample files are otherwise ordinary logs.
+  isSample?: boolean;
+  // Post-session measurements entered on the Notes tab (tire pressures, weight).
+  postSession?: PostSessionData;
 }
 
 interface StoredFile {
@@ -114,6 +143,9 @@ export async function deleteFile(name: string): Promise<void> {
       tx.onerror = () => reject(tx.error);
     });
     db.close();
+    // Drop the session's locally-cached weather so a future file reusing this
+    // name doesn't inherit stale conditions (best-effort).
+    await deleteCachedWeather(name);
   } catch (e) {
     console.warn("Failed to delete file from IndexedDB:", e);
     throw e;

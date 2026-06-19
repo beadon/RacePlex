@@ -4,9 +4,11 @@
     "simple": "Einfach",
     "pro": "Pro",
     "lapTimes": "Rundenzeiten",
-    "labs": "Labs",
     "coach": "Coach",
-    "tools": "Werkzeuge"
+    "tools": "Werkzeuge",
+    "setups": "Setups",
+    "notes": "Notizen",
+    "setupsNotes": "Setups & Notizen"
   },
   "header": {
     "play": "Abspielen",
@@ -156,7 +158,10 @@
     "brakeGps": "Bremse % (GPS)",
     "brakeComputed": "Bremse % (berechnet)",
     "ggDiagram": "G-G-Diagramm",
-    "removeGraph": "Diagramm entfernen"
+    "removeGraph": "Diagramm entfernen",
+    "miniMap": "Minikarte",
+    "collapsePanel": "Bereich einklappen",
+    "expandPanel": "Bereich ausklappen"
   },
   "gg": {
     "noData": "Keine G-Kraft-Daten",

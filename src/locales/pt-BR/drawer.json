@@ -1,9 +1,21 @@
 {
   "_machine": true,
   "shell": {
-    "tabs": { "garage": "Garagem", "profile": "Perfil", "device": "Dispositivo" },
-    "garageTabs": { "files": "Arquivos", "vehicles": "Veículos", "setups": "Acertos", "notes": "Notas" },
-    "deviceTabs": { "settings": "Configurações", "tracks": "Pistas" },
+    "tabs": {
+      "garage": "Garagem",
+      "profile": "Perfil",
+      "device": "Dispositivo"
+    },
+    "garageTabs": {
+      "files": "Arquivos",
+      "vehicles": "Veículos",
+      "setups": "Acertos",
+      "notes": "Notas"
+    },
+    "deviceTabs": {
+      "settings": "Configurações",
+      "tracks": "Pistas"
+    },
     "disconnect": "Desconectar",
     "batteryTitle": "{{voltage}} V — clique para atualizar",
     "btNotAvailable": "Bluetooth indisponível",
@@ -51,6 +63,7 @@
     "unknownType": "Tipo desconhecido",
     "edit": "Editar",
     "vehicleType": "Tipo de veículo",
+    "newType": "Novo tipo",
     "selectType": "Selecionar tipo…",
     "name": "Nome",
     "namePlaceholder": "Nome do veículo",
@@ -81,6 +94,7 @@
     "confirm": "Confirmar",
     "cancel": "Cancelar",
     "newVehicleType": "Novo tipo de veículo",
+    "manageVehicleTypes": "Gerenciar tipos de veículo",
     "addNewSetup": "Adicionar novo acerto",
     "editSetup": "Editar acerto",
     "newSetup": "Novo acerto",
@@ -108,7 +122,46 @@
     "halves": "Metades",
     "quarters": "Quartos",
     "update": "Atualizar",
-    "save": "Salvar"
+    "save": "Salvar",
+    "copyFrom": "Copiar acerto de…",
+    "setup": "Acerto",
+    "selectSetup": "Selecionar acerto…",
+    "copy": "Copiar",
+    "firstCreateVehicle": "Crie um veículo primeiro"
+  },
+  "setupHistory": {
+    "title": "Histórico de configuração",
+    "openTitle": "Ver histórico de configuração",
+    "loading": "Carregando histórico…",
+    "empty": "Ainda não há histórico",
+    "emptyHint": "Atribua esta configuração a uma sessão para começar a criar o histórico.",
+    "allKarts": "Todos os karts",
+    "allCourses": "Todas as pistas",
+    "original": "Original",
+    "revision": "Revisão",
+    "fastestTag": "Volta mais rápida",
+    "noLap": "—",
+    "noChanges": "Sem alterações em relação à revisão anterior",
+    "noSetupData": "Sem dados de configuração",
+    "showFull": "Mostrar configuração completa",
+    "showChanges": "Mostrar apenas alterações",
+    "lapsHeader": "Voltas mais rápidas",
+    "openSession": "Abrir esta sessão"
+  },
+  "vehicleHistory": {
+    "title": "Histórico do veículo",
+    "openTitle": "Ver histórico do veículo",
+    "loading": "Carregando histórico…",
+    "empty": "Ainda não há histórico",
+    "emptyHint": "Faça uma sessão com este veículo e atribua uma configuração para começar a criar o histórico.",
+    "allCourses": "Todas as pistas",
+    "fastestTag": "Volta mais rápida",
+    "noLap": "—",
+    "noSetupData": "Sem dados de configuração",
+    "showFull": "Mostrar configuração",
+    "hideFull": "Ocultar configuração",
+    "lapsHeader": "Voltas mais rápidas",
+    "openSession": "Abrir esta sessão"
   },
   "notes": {
     "loadSession": "Carregue uma sessão para adicionar notas",
@@ -133,7 +186,18 @@
     "edit": "Editar",
     "writeNote": "Escreva uma nota…",
     "updateNote": "Atualizar nota",
-    "addNote": "Adicionar nota"
+    "addNote": "Adicionar nota",
+    "clearSession": "Limpar dados da sessão",
+    "clearConfirm": "Isso limpa o veículo e o acerto salvos nesta sessão. Não pode ser desfeito.",
+    "clearConfirmAction": "Limpar"
+  },
+  "postSession": {
+    "title": "Pós-sessão",
+    "tirePressure": "Pressão dos pneus",
+    "weight": "Peso",
+    "weightPlaceholder": "ex. 380",
+    "save": "Salvar",
+    "update": "Atualizar"
   },
   "templateCreator": {
     "title": "Novo tipo de veículo",
@@ -189,6 +253,7 @@
     "readingSettings": "Lendo configurações…",
     "retry": "Tentar novamente",
     "noSettings": "Nenhuma configuração encontrada no dispositivo.",
+    "useProfileName": "Usar nome do perfil",
     "reset": "Restaurar configurações padrão",
     "resetConfirm": "Confirmar restauração — o dispositivo vai reiniciar",
     "cancel": "Cancelar",
@@ -291,5 +356,23 @@
     "startLineDistance": "Distância da linha de largada:",
     "sendToDevice": "Enviar ao dispositivo",
     "downloadToApp": "Baixar para o app"
+  },
+  "vehicleTypeEditor": {
+    "title": "Gerenciar tipos de veículo",
+    "selectType": "Tipo de veículo",
+    "selectTypePlaceholder": "Selecione um tipo de veículo…",
+    "pickPrompt": "Selecione um tipo de veículo acima para começar a editar.",
+    "update": "Atualizar",
+    "warningTitle": "Afeta configurações existentes",
+    "warningBody": "Estes campos têm dados em configurações existentes. Aplicar irá descartá-los:",
+    "warningRemoved": "removido — valores salvos ocultados",
+    "warningTypeChanged": "tipo alterado — valores salvos apagados",
+    "warningConfirm": "Aplicar mesmo assim",
+    "warningCancel": "Cancelar",
+    "delete": "Excluir este tipo de veículo",
+    "deleteConfirm": "Excluir este tipo de veículo? Isso não pode ser desfeito.",
+    "deleteConfirmBtn": "Excluir",
+    "deleteHasSetups": "Este tipo tem configurações salvas — exclua-as primeiro.",
+    "deleteDefault": "O tipo padrão integrado não pode ser excluído."
   }
 }

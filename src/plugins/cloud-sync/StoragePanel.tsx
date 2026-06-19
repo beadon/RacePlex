@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { useSubscription } from "@/hooks/useSubscription";
-import { isPaidTier } from "@/lib/billing";
+import { isPaidTier, isComped, hasCompGrant, daysUntilTrim } from "@/lib/billing";
 import { createPortal } from "@/lib/billingClient";
 import { onGarageChange } from "@/lib/garageEvents";
 import { getStorageUsage } from "./syncEngine";
@@ -257,17 +257,23 @@ function PlanSection() {
   const label = tiers.find((t) => t.tier === currentTier)?.label
     ?? currentTier.charAt(0).toUpperCase() + currentTier.slice(1);
   const subscribed = isPaidTier(currentTier);
+  // An admin comp (complimentary plan) — a paid tier with no Stripe subscription
+  // behind it. It has no billing portal to manage, so the comp note replaces the
+  // renews/cancel line and the Stripe buttons are hidden.
+  const comped = isComped(subscription);
   const renews = subscription?.current_period_end
     ? new Date(subscription.current_period_end).toLocaleDateString()
     : null;
   const cancelsAtPeriodEnd = !!subscription?.cancel_at_period_end;
-  // A cancelled subscription drops to free but keeps a grace window before logs
-  // are trimmed; the row persists (with a Stripe customer) so they can resubscribe.
+  // A lapsed plan (cancelled Stripe sub OR expired comp) drops to free limits but
+  // keeps a grace window before its over-limit logs are trimmed. Warn during it.
   const graceUntil = subscription?.grace_until
     ? new Date(subscription.grace_until).toLocaleDateString()
     : null;
   const inGrace = !subscribed && !!graceUntil;
-  const canManage = !!subscription?.current_period_end || subscribed || inGrace;
+  const trimDays = daysUntilTrim(subscription?.grace_until);
+  // A comp (active or lapsed) has no Stripe customer, so the portal can't open.
+  const canManage = !hasCompGrant(subscription) && (!!subscription?.current_period_end || subscribed || inGrace);
 
   // Open the Stripe portal — generic (cancel / payment methods) or, with
   // flow "update", deep-linked into the change-plan screen.
@@ -287,15 +293,28 @@ function PlanSection() {
       <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{t("plan.title")}</p>
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-sm font-medium text-foreground">{loading ? "…" : label}</p>
-          {subscribed && renews && (
+          <p className="text-sm font-medium text-foreground">
+            {loading ? "…" : label}
+            {comped && (
+              <span className="ml-2 rounded bg-primary/15 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-primary align-middle">
+                {t("plan.compBadge")}
+              </span>
+            )}
+          </p>
+          {comped ? (
+            <p className="text-[11px] text-primary">
+              {renews ? t("plan.compUntil", { date: renews }) : t("plan.comp")}
+            </p>
+          ) : subscribed && renews && (
             <p className="text-[11px] text-muted-foreground">
               {cancelsAtPeriodEnd ? t("plan.cancels", { date: renews }) : t("plan.renews", { date: renews })}
             </p>
           )}
-          {inGrace && (
+          {!comped && inGrace && (
             <p className="text-[11px] text-amber-600 dark:text-amber-500">
-              {t("plan.grace", { date: graceUntil })}
+              {trimDays && trimDays > 0
+                ? t("plan.trimWarning", { count: trimDays, date: graceUntil })
+                : t("plan.trimmed")}
             </p>
           )}
           {!subscribed && !inGrace && (

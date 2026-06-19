@@ -4,9 +4,11 @@
     "simple": "シンプル",
     "pro": "プロ",
     "lapTimes": "ラップタイム",
-    "labs": "ラボ",
     "coach": "コーチ",
-    "tools": "ツール"
+    "tools": "ツール",
+    "setups": "セットアップ",
+    "notes": "メモ",
+    "setupsNotes": "セットアップとメモ"
   },
   "header": {
     "play": "再生",
@@ -156,7 +158,10 @@
     "brakeGps": "ブレーキ % (GPS)",
     "brakeComputed": "ブレーキ % (計算値)",
     "ggDiagram": "G-G ダイアグラム",
-    "removeGraph": "グラフを削除"
+    "removeGraph": "グラフを削除",
+    "miniMap": "ミニマップ",
+    "collapsePanel": "パネルを折りたたむ",
+    "expandPanel": "パネルを展開"
   },
   "gg": {
     "noData": "G フォースのデータなし",

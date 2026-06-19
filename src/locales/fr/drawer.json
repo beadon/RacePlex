@@ -1,9 +1,21 @@
 {
   "_machine": true,
   "shell": {
-    "tabs": { "garage": "Garage", "profile": "Profil", "device": "Appareil" },
-    "garageTabs": { "files": "Fichiers", "vehicles": "Véhicules", "setups": "Réglages", "notes": "Notes" },
-    "deviceTabs": { "settings": "Réglages", "tracks": "Circuits" },
+    "tabs": {
+      "garage": "Garage",
+      "profile": "Profil",
+      "device": "Appareil"
+    },
+    "garageTabs": {
+      "files": "Fichiers",
+      "vehicles": "Véhicules",
+      "setups": "Réglages",
+      "notes": "Notes"
+    },
+    "deviceTabs": {
+      "settings": "Réglages",
+      "tracks": "Circuits"
+    },
     "disconnect": "Déconnecter",
     "batteryTitle": "{{voltage}} V — cliquez pour actualiser",
     "btNotAvailable": "Bluetooth non disponible",
@@ -51,6 +63,7 @@
     "unknownType": "Type inconnu",
     "edit": "Modifier",
     "vehicleType": "Type de véhicule",
+    "newType": "Nouveau type",
     "selectType": "Sélectionner un type…",
     "name": "Nom",
     "namePlaceholder": "Nom du véhicule",
@@ -81,6 +94,7 @@
     "confirm": "Confirmer",
     "cancel": "Annuler",
     "newVehicleType": "Nouveau type de véhicule",
+    "manageVehicleTypes": "Gérer les types de véhicule",
     "addNewSetup": "Ajouter un réglage",
     "editSetup": "Modifier le réglage",
     "newSetup": "Nouveau réglage",
@@ -108,7 +122,46 @@
     "halves": "Moitiés",
     "quarters": "Quarts",
     "update": "Mettre à jour",
-    "save": "Enregistrer"
+    "save": "Enregistrer",
+    "copyFrom": "Copier le réglage de…",
+    "setup": "Réglage",
+    "selectSetup": "Sélectionner un réglage…",
+    "copy": "Copier",
+    "firstCreateVehicle": "Créez d'abord un véhicule"
+  },
+  "setupHistory": {
+    "title": "Historique des réglages",
+    "openTitle": "Voir l'historique des réglages",
+    "loading": "Chargement de l'historique…",
+    "empty": "Pas encore d'historique",
+    "emptyHint": "Associez ce réglage à une session pour commencer à construire son historique.",
+    "allKarts": "Tous les karts",
+    "allCourses": "Tous les circuits",
+    "original": "Original",
+    "revision": "Révision",
+    "fastestTag": "Meilleur tour",
+    "noLap": "—",
+    "noChanges": "Aucun changement par rapport à la révision précédente",
+    "noSetupData": "Aucune donnée de réglage",
+    "showFull": "Afficher le réglage complet",
+    "showChanges": "Afficher uniquement les changements",
+    "lapsHeader": "Meilleurs tours",
+    "openSession": "Ouvrir cette session"
+  },
+  "vehicleHistory": {
+    "title": "Historique du véhicule",
+    "openTitle": "Voir l'historique du véhicule",
+    "loading": "Chargement de l'historique…",
+    "empty": "Pas encore d'historique",
+    "emptyHint": "Effectuez une session avec ce véhicule et associez-lui un réglage pour commencer à construire son historique.",
+    "allCourses": "Tous les circuits",
+    "fastestTag": "Meilleur tour",
+    "noLap": "—",
+    "noSetupData": "Aucune donnée de réglage",
+    "showFull": "Afficher le réglage",
+    "hideFull": "Masquer le réglage",
+    "lapsHeader": "Meilleurs tours",
+    "openSession": "Ouvrir cette session"
   },
   "notes": {
     "loadSession": "Chargez une session pour ajouter des notes",
@@ -133,7 +186,18 @@
     "edit": "Modifier",
     "writeNote": "Écrire une note…",
     "updateNote": "Mettre à jour la note",
-    "addNote": "Ajouter une note"
+    "addNote": "Ajouter une note",
+    "clearSession": "Effacer les données de session",
+    "clearConfirm": "Ceci efface le véhicule et le réglage enregistrés pour cette session. Cette action est irréversible.",
+    "clearConfirmAction": "Effacer"
+  },
+  "postSession": {
+    "title": "Après-session",
+    "tirePressure": "Pression des pneus",
+    "weight": "Poids",
+    "weightPlaceholder": "p. ex. 380",
+    "save": "Enregistrer",
+    "update": "Mettre à jour"
   },
   "templateCreator": {
     "title": "Nouveau type de véhicule",
@@ -189,6 +253,7 @@
     "readingSettings": "Lecture des réglages…",
     "retry": "Réessayer",
     "noSettings": "Aucun réglage trouvé sur l'appareil.",
+    "useProfileName": "Utiliser le nom du profil",
     "reset": "Réinitialiser les réglages par défaut",
     "resetConfirm": "Confirmer la réinitialisation — l'appareil va redémarrer",
     "cancel": "Annuler",
@@ -291,5 +356,23 @@
     "startLineDistance": "Distance de la ligne de départ :",
     "sendToDevice": "Envoyer à l'appareil",
     "downloadToApp": "Télécharger dans l'app"
+  },
+  "vehicleTypeEditor": {
+    "title": "Gérer les types de véhicule",
+    "selectType": "Type de véhicule",
+    "selectTypePlaceholder": "Sélectionnez un type de véhicule…",
+    "pickPrompt": "Sélectionnez un type de véhicule ci-dessus pour commencer la modification.",
+    "update": "Mettre à jour",
+    "warningTitle": "Affecte les configurations existantes",
+    "warningBody": "Ces champs contiennent des données dans des configurations existantes. Les appliquer les supprimera :",
+    "warningRemoved": "supprimé — valeurs enregistrées masquées",
+    "warningTypeChanged": "type modifié — valeurs enregistrées effacées",
+    "warningConfirm": "Appliquer quand même",
+    "warningCancel": "Annuler",
+    "delete": "Supprimer ce type de véhicule",
+    "deleteConfirm": "Supprimer ce type de véhicule ? Cette action est irréversible.",
+    "deleteConfirmBtn": "Supprimer",
+    "deleteHasSetups": "Ce type a des configurations enregistrées — supprimez-les d'abord.",
+    "deleteDefault": "Le type par défaut intégré ne peut pas être supprimé."
   }
 }

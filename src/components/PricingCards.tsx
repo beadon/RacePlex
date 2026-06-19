@@ -74,6 +74,7 @@ function TierCard({
   name,
   price,
   cadence,
+  currencyNote,
   inherits,
   features,
   highlight,
@@ -83,6 +84,7 @@ function TierCard({
   name: string;
   price: string;
   cadence?: string;
+  currencyNote?: string;
   inherits?: string;
   features: Feature[];
   highlight?: boolean;
@@ -104,6 +106,7 @@ function TierCard({
       {price && (
         <div className="mt-3 flex items-baseline gap-1">
           <span className="text-2xl font-bold text-foreground">{price}</span>
+          {currencyNote && <span className="text-sm text-muted-foreground">{currencyNote}</span>}
           {cadence && <span className="text-sm text-muted-foreground">{cadence}</span>}
         </div>
       )}
@@ -309,6 +312,7 @@ export function PricingCards({ className, variant = "home" }: { className?: stri
                 name={tier.name}
                 price={formatPrice(price.unitAmount, price.currency)}
                 cadence={cadence}
+                currencyNote={t("pricing.usd")}
                 inherits={tier.inherits}
                 features={tier.features}
                 highlight={tier.highlight}

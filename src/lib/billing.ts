@@ -21,6 +21,8 @@ export interface UserSubscriptionRow {
   cancel_at_period_end?: boolean;
   billing_interval?: string | null;
   grace_until?: string | null;
+  /** Set for Stripe-managed subscriptions; NULL for admin comps. */
+  stripe_subscription_id?: string | null;
 }
 
 // Paid plans bill either monthly or annually. The slug encodes both halves of a
@@ -105,6 +107,48 @@ export function effectiveTier(
 
 export function isPaidTier(tier: string): boolean {
   return tier !== "free";
+}
+
+/**
+ * Whether the user is on an admin **comp** (complimentary) rather than a paid
+ * Stripe subscription. Mirrors the server `user_tier()` comp branch: an active
+ * paid tier with no `stripe_subscription_id`, still within its granted window
+ * (an open-ended comp has no `current_period_end`). A comp has no Stripe
+ * customer, so the billing-portal actions must be hidden for it.
+ */
+export function isComped(
+  sub: Pick<UserSubscriptionRow, "tier" | "status" | "stripe_subscription_id" | "current_period_end"> | null | undefined,
+  now: number = Date.now(),
+): boolean {
+  if (!sub || !isActiveStatus(sub.status) || !isPaidTier(sub.tier)) return false;
+  if (sub.stripe_subscription_id) return false; // Stripe-managed — not a comp
+  if (!sub.current_period_end) return true; // open-ended comp
+  return new Date(sub.current_period_end).getTime() > now;
+}
+
+/**
+ * Whether a subscription row is an admin comp grant at all — active *or* lapsed
+ * (a paid tier with no `stripe_subscription_id`). Unlike `isComped` this ignores
+ * the date window, so it stays true after a comp expires. Used to keep the Stripe
+ * billing-portal actions hidden (a comp has no Stripe customer to manage).
+ */
+export function hasCompGrant(
+  sub: Pick<UserSubscriptionRow, "tier" | "stripe_subscription_id"> | null | undefined,
+): boolean {
+  return !!sub && !sub.stripe_subscription_id && isPaidTier(sub.tier);
+}
+
+/**
+ * Whole days from now until `graceUntil` (when cloud logs get trimmed to the free
+ * tier). `null` when there's no grace date; clamped at 0 once it has passed.
+ */
+export function daysUntilTrim(
+  graceUntil: string | null | undefined,
+  now: number = Date.now(),
+): number | null {
+  if (!graceUntil) return null;
+  const ms = new Date(graceUntil).getTime() - now;
+  return Math.max(0, Math.ceil(ms / 86_400_000));
 }
 
 // Tiers that exist but aren't yet self-service purchasable — shown as

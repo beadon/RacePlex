@@ -119,7 +119,9 @@
     "back": "Retour",
     "submitting": "Envoi…",
     "submitBtn_one": "Envoyer {{count}} tracé",
-    "submitBtn_other": "Envoyer {{count}} tracés"
+    "submitBtn_other": "Envoyer {{count}} tracés",
+    "accountNotice": "Envoi sans compte. Connectez-vous d'abord pour obtenir un stockage cloud gratuit pour les circuits que vous partagez.",
+    "accountNoticeSignedIn": "Vous êtes connecté — partager ces circuits vous offre un stockage cloud gratuit."
   },
   "trackEditor": {
     "toastCopied": "Copié !",
@@ -133,6 +135,8 @@
     "selectCourse": "Sélectionner un tracé...",
     "coursesTab": "Tracés",
     "tracksTab": "Circuits",
+    "searchTracks": "Rechercher des circuits…",
+    "noTracksMatch": "Aucun circuit ne correspond à votre recherche",
     "editCourse": "Modifier le tracé",
     "update": "Mettre à jour",
     "selectTrackToView": "Sélectionnez un circuit pour voir les tracés",
@@ -160,6 +164,7 @@
     "apply": "Appliquer",
     "manage": "Gérer",
     "selectTrackShort": "Sélectionner un circuit",
-    "applySelection": "Appliquer la sélection"
+    "applySelection": "Appliquer la sélection",
+    "submitGift": "Les contributions connecté donnent un stockage cloud gratuit"
   }
 }

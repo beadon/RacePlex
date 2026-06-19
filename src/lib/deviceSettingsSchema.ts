@@ -14,6 +14,13 @@ export interface DeviceSettingDef {
 
 export const DEVICE_SETTINGS_SCHEMA: DeviceSettingDef[] = [
   {
+    key: 'device_name',
+    label: 'Device Name',
+    type: 'string',
+    maxLength: 32,
+    description: 'A custom name for this logger',
+  },
+  {
     key: 'bluetooth_name',
     label: 'Bluetooth Name',
     type: 'string',

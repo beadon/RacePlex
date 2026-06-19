@@ -1,9 +1,21 @@
 {
   "_machine": true,
   "shell": {
-    "tabs": { "garage": "ガレージ", "profile": "プロフィール", "device": "デバイス" },
-    "garageTabs": { "files": "ファイル", "vehicles": "車両", "setups": "セットアップ", "notes": "メモ" },
-    "deviceTabs": { "settings": "設定", "tracks": "コース" },
+    "tabs": {
+      "garage": "ガレージ",
+      "profile": "プロフィール",
+      "device": "デバイス"
+    },
+    "garageTabs": {
+      "files": "ファイル",
+      "vehicles": "車両",
+      "setups": "セットアップ",
+      "notes": "メモ"
+    },
+    "deviceTabs": {
+      "settings": "設定",
+      "tracks": "コース"
+    },
     "disconnect": "切断",
     "batteryTitle": "{{voltage}} V — クリックして更新",
     "btNotAvailable": "Bluetooth を利用できません",
@@ -51,6 +63,7 @@
     "unknownType": "不明な種類",
     "edit": "編集",
     "vehicleType": "車両の種類",
+    "newType": "新しいタイプ",
     "selectType": "種類を選択…",
     "name": "名前",
     "namePlaceholder": "車両名",
@@ -81,6 +94,7 @@
     "confirm": "確定",
     "cancel": "キャンセル",
     "newVehicleType": "新しい車両の種類",
+    "manageVehicleTypes": "車両タイプを管理",
     "addNewSetup": "セットアップを追加",
     "editSetup": "セットアップを編集",
     "newSetup": "新しいセットアップ",
@@ -108,7 +122,46 @@
     "halves": "前後",
     "quarters": "4輪別",
     "update": "更新",
-    "save": "保存"
+    "save": "保存",
+    "copyFrom": "セットアップをコピー…",
+    "setup": "セットアップ",
+    "selectSetup": "セットアップを選択…",
+    "copy": "コピー",
+    "firstCreateVehicle": "まず車両を作成"
+  },
+  "setupHistory": {
+    "title": "セットアップ履歴",
+    "openTitle": "セットアップ履歴を表示",
+    "loading": "履歴を読み込み中…",
+    "empty": "まだ履歴がありません",
+    "emptyHint": "このセットアップをセッションに割り当てると履歴の作成が始まります。",
+    "allKarts": "すべてのカート",
+    "allCourses": "すべてのコース",
+    "original": "オリジナル",
+    "revision": "リビジョン",
+    "fastestTag": "最速ラップ",
+    "noLap": "—",
+    "noChanges": "前のリビジョンから変更なし",
+    "noSetupData": "セットアップデータなし",
+    "showFull": "セットアップ全体を表示",
+    "showChanges": "変更のみ表示",
+    "lapsHeader": "最速ラップ",
+    "openSession": "このセッションを開く"
+  },
+  "vehicleHistory": {
+    "title": "車両履歴",
+    "openTitle": "車両履歴を表示",
+    "loading": "履歴を読み込み中…",
+    "empty": "まだ履歴がありません",
+    "emptyHint": "この車両でセッションを実行しセットアップを割り当てると履歴の作成が始まります。",
+    "allCourses": "すべてのコース",
+    "fastestTag": "最速ラップ",
+    "noLap": "—",
+    "noSetupData": "セットアップデータなし",
+    "showFull": "セットアップを表示",
+    "hideFull": "セットアップを非表示",
+    "lapsHeader": "最速ラップ",
+    "openSession": "このセッションを開く"
   },
   "notes": {
     "loadSession": "メモを追加するにはセッションを読み込んでください",
@@ -133,7 +186,18 @@
     "edit": "編集",
     "writeNote": "メモを入力…",
     "updateNote": "メモを更新",
-    "addNote": "メモを追加"
+    "addNote": "メモを追加",
+    "clearSession": "セッションデータを消去",
+    "clearConfirm": "このセッションに保存された車両とセットアップを消去します。この操作は元に戻せません。",
+    "clearConfirmAction": "消去"
+  },
+  "postSession": {
+    "title": "走行後",
+    "tirePressure": "タイヤ空気圧",
+    "weight": "重量",
+    "weightPlaceholder": "例: 380",
+    "save": "保存",
+    "update": "更新"
   },
   "templateCreator": {
     "title": "新しい車両の種類",
@@ -189,6 +253,7 @@
     "readingSettings": "設定を読み込み中…",
     "retry": "再試行",
     "noSettings": "デバイスに設定が見つかりません。",
+    "useProfileName": "プロフィール名を使う",
     "reset": "設定を既定値に戻す",
     "resetConfirm": "リセットを確定 — デバイスが再起動します",
     "cancel": "キャンセル",
@@ -291,5 +356,23 @@
     "startLineDistance": "スタートライン距離：",
     "sendToDevice": "デバイスに送信",
     "downloadToApp": "アプリにダウンロード"
+  },
+  "vehicleTypeEditor": {
+    "title": "車両タイプを管理",
+    "selectType": "車両タイプ",
+    "selectTypePlaceholder": "車両タイプを選択…",
+    "pickPrompt": "編集を始めるには、上で車両タイプを選択してください。",
+    "update": "更新",
+    "warningTitle": "既存のセットアップに影響します",
+    "warningBody": "これらのフィールドには既存のセットアップのデータが含まれています。適用すると失われます:",
+    "warningRemoved": "削除 — 保存された値は非表示になります",
+    "warningTypeChanged": "タイプ変更 — 保存された値は消去されます",
+    "warningConfirm": "それでも適用",
+    "warningCancel": "キャンセル",
+    "delete": "この車両タイプを削除",
+    "deleteConfirm": "この車両タイプを削除しますか？元に戻せません。",
+    "deleteConfirmBtn": "削除",
+    "deleteHasSetups": "このタイプには保存されたセットアップがあります。先に削除してください。",
+    "deleteDefault": "組み込みの既定タイプは削除できません。"
   }
 }

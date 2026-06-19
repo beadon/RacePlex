@@ -25,7 +25,7 @@ import { MapOverlay } from "@/components/video-overlays/MapOverlay";
 import { PaceOverlay } from "@/components/video-overlays/PaceOverlay";
 import { SectorOverlay } from "@/components/video-overlays/SectorOverlay";
 import { LapTimeOverlay } from "@/components/video-overlays/LapTimeOverlay";
-import { startVideoExport, downloadBlob, ExportContext } from "@/lib/videoExport";
+import { startVideoExport, downloadBlob, ExportContext, ExportSource } from "@/lib/videoExport";
 import { computeBrakingGSeriesSG, gToBrakePercent } from "@/lib/brakingZones";
 import { saveSessionVideo, loadSessionVideo, deleteSessionVideo } from "@/lib/videoFileStorage";
 import { courseHasSectors } from "@/types/racing";
@@ -225,6 +225,46 @@ function OverlayRenderer({ instance, ctx, fontSize }: { instance: OverlayInstanc
   }
 }
 
+/**
+ * Prompt shown when a single file selection spans several distinct recordings
+ * (e.g. a mobile "select all" of a whole GoPro card). The user picks the one
+ * recording to load; every other selected file is dropped from memory.
+ */
+function RecordingPicker({ state, actions }: { state: VideoSyncState; actions: VideoSyncActions }) {
+  const { t } = useTranslation("video");
+  const pending = state.pendingRecordings;
+  return (
+    <Dialog open={!!pending && pending.length > 0} onOpenChange={(open) => { if (!open) actions.cancelRecordingChoice(); }}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Video className="w-5 h-5" />
+            {t("player.pickRecordingTitle")}
+          </DialogTitle>
+        </DialogHeader>
+        <p className="text-sm text-muted-foreground">{t("player.pickRecordingDesc")}</p>
+        <div className="flex flex-col gap-2 mt-1">
+          {pending?.map((r) => (
+            <Button
+              key={r.key}
+              variant="outline"
+              className="justify-between h-auto py-2.5"
+              onClick={() => actions.chooseRecording(r.key)}
+            >
+              <span className="font-mono text-sm truncate">{r.label}</span>
+              {r.count > 1 && (
+                <span className="text-xs text-muted-foreground ml-2 shrink-0">
+                  {t("player.pickRecordingCount", { count: r.count })}
+                </span>
+              )}
+            </Button>
+          ))}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export const VideoPlayer = memo(function VideoPlayer({
   state, actions, onLoadedMetadata,
   samples = [], allSamples = [],
@@ -397,12 +437,12 @@ export const VideoPlayer = memo(function VideoPlayer({
     : 0;
 
   // Build export context that resolves overlay data from video time
-  const buildExportRenderCtx = useCallback((_videoTime: number): OverlayRenderContext | null => {
-    // During export, the video element's currentTime is the source of truth.
-    // We map that to the telemetry timeline using the sync offset.
-    const video = actions.videoRef.current;
-    if (!video) return null;
-    const videoMs = video.currentTime * 1000;
+  const buildExportRenderCtx = useCallback((videoTime: number): OverlayRenderContext | null => {
+    // `videoTime` is the virtual (whole-recording) time of the frame being
+    // exported; map it to the telemetry timeline using the sync offset. (Reading
+    // the live element's currentTime would be wrong for multi-chunk exports,
+    // which seek a separate offscreen element.)
+    const videoMs = videoTime * 1000;
     const telemetryMs = videoMs + state.syncOffsetMs;
     const all = allSamplesRef.current;
     const vis = samplesRef.current;
@@ -430,7 +470,7 @@ export const VideoPlayer = memo(function VideoPlayer({
       containerWidth: 0,
       containerHeight: 0,
     };
-  }, [actions.videoRef, state.syncOffsetMs, dataSources, fieldMappings, laps, selectedLapNumber, course, referenceSamples, useKph]);
+  }, [state.syncOffsetMs, dataSources, fieldMappings, laps, selectedLapNumber, course, referenceSamples, useKph]);
 
   // Export
   const handleExport = useCallback((options: ExportOptions) => {
@@ -439,7 +479,11 @@ export const VideoPlayer = memo(function VideoPlayer({
     setIsExporting(true);
     setExportProgress(0);
 
-    // Compute time range for lap export
+    // Whole-recording (virtual) duration; falls back to the element's own
+    // duration when no playlist is present.
+    const totalDuration = state.videoDuration || video.duration;
+
+    // Compute time range for lap export (in virtual time across all chunks)
     let startTime: number | undefined;
     let endTime: number | undefined;
     if (options.range === "lap" && selectedLapNumber !== null) {
@@ -447,7 +491,7 @@ export const VideoPlayer = memo(function VideoPlayer({
       if (lap) {
         // Convert telemetry time to video time using sync offset
         startTime = Math.max(0, (lap.startTime - state.syncOffsetMs) / 1000);
-        endTime = Math.min(video.duration, (lap.endTime - state.syncOffsetMs) / 1000);
+        endTime = Math.min(totalDuration, (lap.endTime - state.syncOffsetMs) / 1000);
       }
     }
 
@@ -464,7 +508,13 @@ export const VideoPlayer = memo(function VideoPlayer({
 
     const destination = options.destination;
 
-    startVideoExport(video, exportContext, exportOptions, {
+    // Single file → 1-chunk playlist so the exporter has one code path.
+    const chunks = state.exportChunks.length > 0
+      ? state.exportChunks
+      : [{ url: video.currentSrc || video.src, startOffsetSec: 0, durationSec: totalDuration }];
+    const exportSource: ExportSource = { liveVideo: video, chunks, totalDuration };
+
+    startVideoExport(exportSource, exportContext, exportOptions, {
       onProgress: (p) => setExportProgress(p),
       onComplete: (blob) => {
         setIsExporting(false);
@@ -498,7 +548,7 @@ export const VideoPlayer = memo(function VideoPlayer({
     // the whole `actions` object would invalidate handleExport on every parent
     // render, defeating the memoization.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [actions.videoRef, state.videoFileName, state.syncOffsetMs, overlays, buildExportRenderCtx, sessionFileName, selectedLapNumber, laps]);
+  }, [actions.videoRef, state.videoFileName, state.syncOffsetMs, state.videoDuration, state.exportChunks, overlays, buildExportRenderCtx, sessionFileName, selectedLapNumber, laps]);
 
   // Download existing stored video
   const handleSaveExisting = useCallback(async () => {
@@ -529,7 +579,8 @@ export const VideoPlayer = memo(function VideoPlayer({
         <Button variant="outline" size="sm" onClick={actions.loadVideo} className="gap-2">
           <Video className="w-4 h-4" /> {t("player.loadVideo")}
         </Button>
-        <p className="text-xs text-muted-foreground/70">{t("player.segmentedUnsupported")}</p>
+        <p className="text-xs text-muted-foreground/70">{t("player.goproHint")}</p>
+        <RecordingPicker state={state} actions={actions} />
       </div>
     );
   }
@@ -547,6 +598,17 @@ export const VideoPlayer = memo(function VideoPlayer({
           preload="auto"
           muted={isMuted}
         />
+
+        {/* Hidden element that buffers the next chunk so the boundary swap is near-seamless. */}
+        {state.preloadUrl && (
+          <video
+            ref={actions.preloadVideoRef}
+            src={state.preloadUrl}
+            className="hidden"
+            preload="auto"
+            muted
+          />
+        )}
 
         {/* Out of range overlay */}
         {state.isOutOfRange && (
@@ -619,6 +681,9 @@ export const VideoPlayer = memo(function VideoPlayer({
         onSaveExisting={handleSaveExisting}
         onDeleteStored={handleDeleteStored}
       />
+
+      {/* Recording picker (multi-recording selection) */}
+      <RecordingPicker state={state} actions={actions} />
 
       {/* Unified bottom toolbar + progress bar */}
       <div
@@ -711,6 +776,11 @@ export const VideoPlayer = memo(function VideoPlayer({
               style={{ width: `${progressFraction * 100}%` }}
             />
           </div>
+          {state.chunkCount > 1 && (
+            <span className="text-white/50 text-xs font-mono whitespace-nowrap" title={t("player.chapterOf", { current: state.currentChunkIndex + 1, total: state.chunkCount })}>
+              {t("player.chapterShort", { current: state.currentChunkIndex + 1, total: state.chunkCount })}
+            </span>
+          )}
           <span className="text-white/60 text-xs font-mono min-w-[80px] text-right">
             {formatTime(state.videoCurrentTime)} / {formatTime(state.videoDuration)}
           </span>

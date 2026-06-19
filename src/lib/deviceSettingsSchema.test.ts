@@ -22,10 +22,24 @@ describe("DEVICE_SETTINGS_SCHEMA", () => {
 
   it("includes the known device keys", () => {
     const keys = DEVICE_SETTINGS_SCHEMA.map((d) => d.key);
+    expect(keys).toContain("device_name");
     expect(keys).toContain("bluetooth_name");
     expect(keys).toContain("bluetooth_pin");
     expect(keys).toContain("lap_detection_distance");
     expect(keys).toContain("use_legacy_csv");
+  });
+
+  it("defines device_name as a 32-character string field", () => {
+    const def = getSettingDef("device_name");
+    expect(def?.type).toBe("string");
+    expect(def?.maxLength).toBe(32);
+  });
+
+  it("rejects a device_name over 32 characters", () => {
+    expect(validateSettingValue("device_name", "x".repeat(32))).toBeNull();
+    expect(validateSettingValue("device_name", "x".repeat(33))).toBe(
+      "Maximum 32 characters"
+    );
   });
 });
 

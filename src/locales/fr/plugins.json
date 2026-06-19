@@ -33,11 +33,16 @@
     "title": "Forfait",
     "renews": "Renouvellement le {{date}}",
     "cancels": "Résiliation le {{date}}",
-    "grace": "Abonnement terminé. Les journaux dans le cloud seront ramenés au niveau gratuit le {{date}} — réabonnez-vous pour les conserver.",
     "upgrade": "Mettez à niveau depuis les cartes Forfaits et tarifs.",
     "changePlan": "Changer de forfait",
     "manageSubscription": "Gérer l'abonnement",
-    "portalFailed": "Impossible d'ouvrir le portail de facturation."
+    "portalFailed": "Impossible d'ouvrir le portail de facturation.",
+    "compBadge": "Offert",
+    "comp": "Plan offert — gracieusement par l'équipe.",
+    "compUntil": "Plan offert — gratuit jusqu'au {{date}}.",
+    "trimWarning_one": "Accès gratuit terminé — les logs cloud seront réduits au niveau gratuit dans {{count}} jour (le {{date}}). Abonnez-vous pour les conserver.",
+    "trimWarning_other": "Accès gratuit terminé — les logs cloud seront réduits au niveau gratuit dans {{count}} jours (le {{date}}). Abonnez-vous pour les conserver.",
+    "trimmed": "Les logs cloud au-delà du niveau gratuit ont été réduits. Abonnez-vous pour rétablir la limite supérieure."
   },
   "storage": {
     "title": "Stockage",
@@ -137,7 +142,8 @@
   "fileSync": {
     "off": "Synchroniser ce fichier vers le cloud",
     "pending": "Sélectionné — sera envoyé une fois connecté et en ligne",
-    "synced": "Synchronisé — cliquez pour arrêter la synchronisation (la copie dans le cloud est conservée)"
+    "synced": "Synchronisé — cliquez pour arrêter la synchronisation (la copie dans le cloud est conservée)",
+    "sample": "Journal d'exemple — présent sur chaque appareil, aucun téléversement nécessaire"
   },
   "fileDelete": {
     "alsoCloud": "Supprimer aussi la copie synchronisée de la sauvegarde dans le cloud"

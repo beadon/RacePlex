@@ -33,11 +33,16 @@
     "title": "Piano",
     "renews": "Si rinnova il {{date}}",
     "cancels": "Si annulla il {{date}}",
-    "grace": "Abbonamento terminato. I registri nel cloud verranno ridotti al livello gratuito il {{date}}: riabbonati per conservarli.",
     "upgrade": "Esegui l'upgrade dalle schede Piani e prezzi.",
     "changePlan": "Cambia piano",
     "manageSubscription": "Gestisci abbonamento",
-    "portalFailed": "Impossibile aprire il portale di fatturazione."
+    "portalFailed": "Impossibile aprire il portale di fatturazione.",
+    "compBadge": "Omaggio",
+    "comp": "Piano omaggio — offerto dal team.",
+    "compUntil": "Piano omaggio — gratis fino al {{date}}.",
+    "trimWarning_one": "Accesso gratuito terminato — i log cloud verranno ridotti al piano gratuito tra {{count}} giorno (il {{date}}). Abbonati per conservarli.",
+    "trimWarning_other": "Accesso gratuito terminato — i log cloud verranno ridotti al piano gratuito tra {{count}} giorni (il {{date}}). Abbonati per conservarli.",
+    "trimmed": "I log cloud oltre il piano gratuito sono stati ridotti. Abbonati per ripristinare il limite superiore."
   },
   "storage": {
     "title": "Spazio",
@@ -137,7 +142,8 @@
   "fileSync": {
     "off": "Sincronizza questo file nel cloud",
     "pending": "Selezionato: verrà caricato una volta effettuato l'accesso e online",
-    "synced": "Sincronizzato: fai clic per interrompere la sincronizzazione (la copia nel cloud viene conservata)"
+    "synced": "Sincronizzato: fai clic per interrompere la sincronizzazione (la copia nel cloud viene conservata)",
+    "sample": "Log di esempio — presente su ogni dispositivo, nessun caricamento necessario"
   },
   "fileDelete": {
     "alsoCloud": "Elimina anche la copia sincronizzata dal backup nel cloud"

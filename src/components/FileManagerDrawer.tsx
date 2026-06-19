@@ -1,17 +1,13 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { X, Gauge, Cpu, User, Bluetooth, BluetoothOff, Loader2, Settings, MapPin, Battery, BatteryLow, BatteryMedium, BatteryFull, BatteryWarning } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FileEntry, FileMetadata } from "@/lib/fileStorage";
 import { Vehicle } from "@/lib/vehicleStorage";
-import { VehicleSetup } from "@/lib/setupStorage";
-import { VehicleType, SetupTemplate, TemplateSection } from "@/lib/templateStorage";
-import { Note } from "@/lib/noteStorage";
+import { VehicleType } from "@/lib/templateStorage";
 import { ParsedData } from "@/types/racing";
 import { FilesTab } from "./drawer/FilesTab";
 import { VehiclesTab } from "./drawer/VehiclesTab";
-import { SetupsTab } from "./drawer/SetupsTab";
-import { NotesTab } from "./drawer/NotesTab";
 import { DeviceSettingsTab } from "./drawer/DeviceSettingsTab";
 import { DeviceTracksTab } from "./drawer/DeviceTracksTab";
 import { ProfileTab } from "./tabs/ProfileTab";
@@ -19,7 +15,7 @@ import { useDeviceContext } from "@/contexts/DeviceContext";
 import { isBleSupported, requestBatteryLevel, type BatteryInfo } from "@/lib/bleDatalogger";
 
 type TopTab = "garage" | "profile" | "device";
-type GarageTab = "files" | "vehicles" | "setups" | "notes";
+type GarageTab = "files" | "vehicles" | "setups";
 type DeviceTab = "settings" | "tracks";
 
 interface FileManagerDrawerProps {
@@ -35,6 +31,8 @@ interface FileManagerDrawerProps {
   onSaveFile: (name: string, blob: Blob) => Promise<void>;
   onDataLoaded: (data: ParsedData, fileName?: string) => void;
   autoSave: boolean;
+  // Show the bundled sample log in the file browser (the "show sample files" setting).
+  showSampleFiles: boolean;
   // Garage sub-tab to open straight to (defaults to "files").
   initialGarageTab?: GarageTab;
   // Profile tab is gated on a plugin (cloud-sync) contributing a Profile panel.
@@ -42,46 +40,35 @@ interface FileManagerDrawerProps {
   // Vehicle props
   vehicles: Vehicle[];
   vehicleTypes: VehicleType[];
-  templates: SetupTemplate[];
   onAddVehicle: (vehicle: Omit<Vehicle, "id">) => Promise<void>;
   onUpdateVehicle: (vehicle: Vehicle) => Promise<void>;
   onRemoveVehicle: (id: string) => Promise<void>;
+  // Open a saved session by file name (vehicle history → fastest-lap session).
+  onOpenFile: (fileName: string) => void | Promise<void>;
+  // Jump to the vehicle-type creator (closes the drawer, opens the Setups tab).
+  // Omitted off-session, where the Setups tab isn't reachable.
+  onCreateVehicleType?: () => void;
+  // Off-session fallback: Setups normally lives in the main toolbar, but that
+  // tab only exists once a session is loaded. When provided (landing page only),
+  // host it as a garage sub-tab so setups/vehicle-types stay reachable. Passed as
+  // a ready-made node so the drawer needn't know about setup props.
+  setupsTab?: ReactNode;
   // Current session context (the browser opens at this track/course)
   currentTrackName: string | null;
   currentCourseName: string | null;
-  // Note props
-  currentFileName: string | null;
-  notes: Note[];
-  onAddNote: (text: string) => Promise<void>;
-  onUpdateNote: (id: string, text: string) => Promise<void>;
-  onRemoveNote: (id: string) => Promise<void>;
-  // Session setup link
-  sessionKartId: string | null;
-  sessionSetupId: string | null;
-  sessionSetupRev: string | null;
-  onSaveSessionSetup: (kartId: string | null, setupId: string | null) => Promise<void>;
-  // Setup props
-  setups: VehicleSetup[];
-  onAddSetup: (setup: Omit<VehicleSetup, "id" | "createdAt" | "updatedAt">) => Promise<void>;
-  onUpdateSetup: (setup: VehicleSetup) => Promise<void>;
-  onRemoveSetup: (id: string) => Promise<void>;
-  onGetLatestSetupForVehicle: (vehicleId: string) => Promise<VehicleSetup | null>;
-  onAddVehicleType: (name: string, wheelCount: 2 | 4, includeTires: boolean, sections: TemplateSection[]) => Promise<unknown>;
-  onRemoveVehicleType: (vehicleTypeId: string, templateId: string) => Promise<void>;
 }
 
 export function FileManagerDrawer({
   isOpen, files, fileMetadataMap, storageUsed, storageQuota,
   onClose, onLoadFile, onDeleteFile, onExportFile, onSaveFile, onDataLoaded, autoSave,
+  showSampleFiles,
   initialGarageTab = "files",
   showProfile,
-  vehicles, vehicleTypes, templates,
-  onAddVehicle, onUpdateVehicle, onRemoveVehicle,
+  vehicles, vehicleTypes,
+  onAddVehicle, onUpdateVehicle, onRemoveVehicle, onCreateVehicleType,
+  onOpenFile,
+  setupsTab,
   currentTrackName, currentCourseName,
-  currentFileName, notes, onAddNote, onUpdateNote, onRemoveNote,
-  sessionKartId, sessionSetupId, sessionSetupRev, onSaveSessionSetup,
-  setups, onAddSetup, onUpdateSetup, onRemoveSetup, onGetLatestSetupForVehicle,
-  onAddVehicleType, onRemoveVehicleType,
 }: FileManagerDrawerProps) {
   const { t } = useTranslation("drawer");
   const [topTab, setTopTab] = useState<TopTab>("garage");
@@ -91,8 +78,7 @@ export function FileManagerDrawer({
   const garageTabs: { key: GarageTab; label: string }[] = [
     { key: "files", label: t("shell.garageTabs.files") },
     { key: "vehicles", label: t("shell.garageTabs.vehicles") },
-    { key: "setups", label: t("shell.garageTabs.setups") },
-    { key: "notes", label: t("shell.garageTabs.notes") },
+    ...(setupsTab ? [{ key: "setups" as const, label: t("shell.garageTabs.setups") }] : []),
   ];
 
   const deviceTabs: { key: DeviceTab; label: string; icon: React.ReactNode }[] = [
@@ -196,40 +182,12 @@ export function FileManagerDrawer({
             </div>
 
             {garageTab === "files" && (
-              <FilesTab files={files} fileMetadataMap={fileMetadataMap} vehicles={vehicles} currentTrackName={currentTrackName} currentCourseName={currentCourseName} isOpen={isOpen} storageUsed={storageUsed} storageQuota={storageQuota} onLoadFile={onLoadFile} onDeleteFile={onDeleteFile} onExportFile={onExportFile} onSaveFile={onSaveFile} onDataLoaded={onDataLoaded} onClose={onClose} autoSave={autoSave} />
+              <FilesTab files={files} fileMetadataMap={fileMetadataMap} vehicles={vehicles} currentTrackName={currentTrackName} currentCourseName={currentCourseName} isOpen={isOpen} storageUsed={storageUsed} storageQuota={storageQuota} onLoadFile={onLoadFile} onDeleteFile={onDeleteFile} onExportFile={onExportFile} onSaveFile={onSaveFile} onDataLoaded={onDataLoaded} onClose={onClose} autoSave={autoSave} showSampleFiles={showSampleFiles} />
             )}
             {garageTab === "vehicles" && (
-              <VehiclesTab vehicles={vehicles} vehicleTypes={vehicleTypes} onAdd={onAddVehicle} onUpdate={onUpdateVehicle} onRemove={onRemoveVehicle} />
+              <VehiclesTab vehicles={vehicles} vehicleTypes={vehicleTypes} onAdd={onAddVehicle} onUpdate={onUpdateVehicle} onRemove={onRemoveVehicle} onCreateVehicleType={onCreateVehicleType} onOpenFile={onOpenFile} />
             )}
-            {garageTab === "setups" && (
-              <SetupsTab
-                vehicles={vehicles}
-                setups={setups}
-                vehicleTypes={vehicleTypes}
-                templates={templates}
-                onAdd={onAddSetup}
-                onUpdate={onUpdateSetup}
-                onRemove={onRemoveSetup}
-                onGetLatestForVehicle={onGetLatestSetupForVehicle}
-                onAddVehicleType={onAddVehicleType}
-                onRemoveVehicleType={onRemoveVehicleType}
-              />
-            )}
-            {garageTab === "notes" && (
-              <NotesTab
-                fileName={currentFileName}
-                notes={notes}
-                onAdd={onAddNote}
-                onUpdate={onUpdateNote}
-                onRemove={onRemoveNote}
-                vehicles={vehicles}
-                setups={setups}
-                sessionKartId={sessionKartId}
-                sessionSetupId={sessionSetupId}
-                sessionSetupRev={sessionSetupRev}
-                onSaveSessionSetup={onSaveSessionSetup}
-              />
-            )}
+            {garageTab === "setups" && setupsTab}
           </>
         )}
 

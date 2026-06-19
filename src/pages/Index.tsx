@@ -1,29 +1,33 @@
 import { useCallback, useEffect, useMemo, useState, lazy, Suspense } from "react";
 import { useTranslation } from "react-i18next";
-import { Gauge, Map, ListOrdered, BarChart3, FolderOpen, Play, Pause, Eye, EyeOff, FlaskConical, AlertCircle, Wrench } from "lucide-react";
+import { Gauge, Map, ListOrdered, BarChart3, FolderOpen, Play, Pause, Eye, EyeOff, AlertCircle, Wrench, NotebookPen, SlidersHorizontal } from "lucide-react";
 import { LandingPage } from "@/components/LandingPage";
 import { TrackEditor } from "@/components/TrackEditor"; // still used in compact header
 import { LapTimesTab } from "@/components/tabs/LapTimesTab";
+import { NotesTab } from "@/components/drawer/NotesTab";
+import { SetupsNotesPanel } from "@/components/tabs/SetupsNotesPanel";
 // Heavy tabs lazy-loaded so the initial bundle doesn't carry their deps.
 // RaceLine pulls in Leaflet (vendor-leaflet, ~150 kB) + the telemetry chart —
 // lazy keeps the whole mapping stack off the landing page; it loads the moment
 // a session is opened (the default tab). GraphView pulls in the multi-series
-// canvas chart + InfoBox + MiniMap; Labs is behind a settings flag and almost
-// never opened. All load on first render of their respective tab.
+// canvas chart + InfoBox + MiniMap. All load on first render of their tab.
 const RaceLineTab = lazy(() =>
   import("@/components/tabs/RaceLineTab").then((m) => ({ default: m.RaceLineTab })),
 );
 const GraphViewTab = lazy(() =>
   import("@/components/tabs/GraphViewTab").then((m) => ({ default: m.GraphViewTab })),
 );
-const LabsTab = lazy(() =>
-  import("@/components/tabs/LabsTab").then((m) => ({ default: m.LabsTab })),
-);
 const CoachTab = lazy(() =>
   import("@/components/tabs/CoachTab").then((m) => ({ default: m.CoachTab })),
 );
 const ToolsTab = lazy(() =>
   import("@/components/tabs/ToolsTab").then((m) => ({ default: m.ToolsTab })),
+);
+// Setups is a main-view tab built on the same component the garage drawer used.
+// Lazy-loaded — it pulls in the template creator + setup-history panel that the
+// landing/initial view never needs.
+const SetupsTab = lazy(() =>
+  import("@/components/drawer/SetupsTab").then((m) => ({ default: m.SetupsTab })),
 );
 import { InstallPrompt } from "@/components/InstallPrompt";
 import { SettingsModal } from "@/components/SettingsModal";
@@ -37,8 +41,10 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ParsedData } from "@/types/racing";
+import { parseDatalogFile } from "@/lib/datalogParser";
 import { calculateDistanceArray } from "@/lib/referenceUtils";
 import { formatAxisDistance } from "@/lib/chartAxis";
+import { cn } from "@/lib/utils";
 import { usePanelsForSlot, PanelSlot } from "@/plugins/panels";
 import { TrackPromptDialog } from "@/components/TrackPromptDialog";
 import { useSettings } from "@/hooks/useSettings";
@@ -61,6 +67,7 @@ import { LapSnapshotPromptDialog } from "@/components/LapSnapshotPromptDialog";
 import { useSessionMetadata } from "@/hooks/useSessionMetadata";
 import { useVideoSync } from "@/hooks/useVideoSync";
 import { useDataLoader } from "@/hooks/useDataLoader";
+import { ensureSampleFile } from "@/lib/sampleData";
 import { SettingsProvider } from "@/contexts/SettingsContext";
 import { DeviceProvider } from "@/contexts/DeviceContext";
 import { SessionProvider, type SessionContextValue } from "@/contexts/SessionContext";
@@ -69,7 +76,7 @@ import { snapshotLapSamples } from "@/lib/lapSnapshot";
 import type { PluginSnapshot } from "@/plugins/panels";
 
 
-type TopPanelView = "raceline" | "laptable" | "graphview" | "labs" | "coach" | "tools";
+type TopPanelView = "raceline" | "laptable" | "graphview" | "coach" | "tools" | "setups" | "notes";
 
 const enableAdmin = import.meta.env.VITE_ENABLE_ADMIN === 'true';
 const enableCloud = import.meta.env.VITE_ENABLE_CLOUD === 'true';
@@ -83,15 +90,26 @@ export default function Index() {
   const templateManager = useTemplateManager();
   const useKph = settings.useKph;
   const useMetricDistance = settings.useMetricDistance;
+  // The sample stays visible when it's the user's only file, so hiding it can
+  // never lock them out of the only file (and the only way back to Settings).
+  const effectiveShowSampleFiles = fileManager.hasOtherFiles ? settings.showSampleFiles : true;
 
   // Sync dark mode class when settings change (global init is in App.tsx)
   useEffect(() => {
     document.documentElement.classList.toggle('dark', settings.darkMode);
   }, [settings.darkMode]);
 
+  // Seed the bundled sample log into IndexedDB as a real file so it's always
+  // available in the browser and opens through the normal path. Idempotent;
+  // refresh the file list afterwards so an open drawer reflects it immediately.
+  const refreshFiles = fileManager.refresh;
+  useEffect(() => {
+    void ensureSampleFile().then(() => refreshFiles());
+  }, [refreshFiles]);
+
   // Core session data
   const sessionData = useSessionData(isFieldHiddenByDefault, settings.defaultHiddenFields);
-  const { data, currentFileName, fieldMappings, isLoadingSample, sessionGpsPoint } = sessionData;
+  const { data, currentFileName, fieldMappings, sessionGpsPoint } = sessionData;
 
   const noteManager = useNoteManager(currentFileName);
 
@@ -125,7 +143,7 @@ export default function Index() {
 
   // Session metadata
   const sessionMeta = useSessionMetadata(currentFileName);
-  const { cachedWeatherStation, sessionKartId, sessionSetupId, sessionSetupRev } = sessionMeta;
+  const { cachedWeatherStation, sessionKartId, sessionSetupId, sessionSetupRev, postSession } = sessionMeta;
 
   // Playback
   const { isPlaying, toggle: togglePlayback, averageFrameRate } = usePlayback({
@@ -141,8 +159,6 @@ export default function Index() {
   // asynchronously (after this first render), so we read them through the
   // reactive hook — a plain useMemo([]) would freeze the snapshot and the tabs
   // would never appear that session.
-  const hasLabsPanels = usePanelsForSlot(PanelSlot.Labs).length > 0;
-  const showLabs = settings.enableLabs || hasLabsPanels;
   // The Coach tab is self-gating: it appears only when a plugin contributes a
   // panel to the Coach slot (i.e. the coach package is installed).
   const showCoach = usePanelsForSlot(PanelSlot.Coach).length > 0;
@@ -164,7 +180,28 @@ export default function Index() {
     [sessionSetupId, setupManager.setups.length, vehicleManager.vehicles.length],
   );
 
-  // Video sync for Labs tab
+  // Vehicle/setup/notes navigation: setups + notes are main-view tabs, vehicles
+  // (and files) still live in the garage drawer. One callback routes either way
+  // so callers (InfoBox "Open Garage", the setup-status nag) stay agnostic.
+  const navigateToManage = useCallback((target?: "files" | "vehicles" | "setups" | "notes") => {
+    if (target === "setups" || target === "notes") setTopPanelView(target);
+    else fileManager.open(target);
+  }, [fileManager]);
+  // Open the garage on the Vehicles tab — setups need a vehicle to attach to.
+  const openVehiclesGarage = useCallback(() => fileManager.open("vehicles"), [fileManager]);
+
+  // "New type" shortcut on the Vehicles tab: close the garage, jump to the Setups
+  // tab, and ask it to open the vehicle-type creator (one-shot, cleared once the
+  // tab consumes it — see SetupsTab's requestNewType).
+  const [requestNewVehicleType, setRequestNewVehicleType] = useState(false);
+  const handleCreateVehicleType = useCallback(() => {
+    fileManager.close();
+    setTopPanelView("setups");
+    setRequestNewVehicleType(true);
+  }, [fileManager]);
+  const handleNewVehicleTypeHandled = useCallback(() => setRequestNewVehicleType(false), []);
+
+  // Video sync for the video player
   const videoSync = useVideoSync({
     samples: visibleSamples,
     allSamples: data?.samples ?? [],
@@ -178,10 +215,28 @@ export default function Index() {
   // sample-loader. Returns the three callbacks Index.tsx wires up to imports.
   const dataLoader = useDataLoader({ sessionData, lapMgmt, sessionMeta });
   const {
-    handleDataLoaded, handleLoadSample, handleTrackPromptSelect,
+    handleDataLoaded, handleLoadSample, isLoadingSample, handleTrackPromptSelect,
     trackPromptOpen, setTrackPromptOpen, detectedTrack, detectionResult,
     allTracks, gpsCenter,
   } = dataLoader;
+
+  // Open a saved session by file name — used by the setup/vehicle history cards to
+  // jump straight to the session that holds a card's fastest lap. Loads + parses
+  // the blob like FilesTab does, closes the garage drawer, and (when sitting on a
+  // doc-style tab that shows no telemetry) drops back to the race line so the
+  // freshly-loaded session is actually visible.
+  const handleOpenFile = useCallback(async (fileName: string) => {
+    try {
+      const blob = await fileManager.loadFile(fileName);
+      if (!blob) return;
+      const parsed = await parseDatalogFile(new File([blob], fileName));
+      handleDataLoaded(parsed, fileName);
+      fileManager.close();
+      setTopPanelView((v) => (v === "setups" || v === "notes" ? "raceline" : v));
+    } catch (e) {
+      console.error("Failed to open session:", e);
+    }
+  }, [fileManager, handleDataLoaded]);
 
   // Lap snapshots: frozen "course fastest lap" captures, loaded as a comparison
   // overlay through the same external-reference slot (so they never auto-play or
@@ -311,11 +366,10 @@ export default function Index() {
     gForceSmoothing: settings.gForceSmoothing,
     gForceSmoothingStrength: settings.gForceSmoothingStrength,
     brakingZoneSettings,
-    enableLabs: settings.enableLabs,
     darkMode: settings.darkMode,
     gForceSource: settings.gForceSource,
     chartXAxis: settings.chartXAxis,
-  }), [useKph, useMetricDistance, settings.useMetricWeather, settings.gForceSmoothing, settings.gForceSmoothingStrength, brakingZoneSettings, settings.enableLabs, settings.darkMode, settings.gForceSource, settings.chartXAxis]);
+  }), [useKph, useMetricDistance, settings.useMetricWeather, settings.gForceSmoothing, settings.gForceSmoothingStrength, brakingZoneSettings, settings.darkMode, settings.gForceSource, settings.chartXAxis]);
 
   // Memoize sliced data arrays to avoid recreating on every render
   const slicedPaceData = useMemo(
@@ -436,7 +490,7 @@ export default function Index() {
     onFieldToggle: sessionData.handleFieldToggle,
     onWeatherStationResolved: sessionMeta.handleWeatherStationResolved,
     onSaveSessionSetup: handleSaveSessionSetupWithSnapshot,
-    onOpenGarage: fileManager.open,
+    onOpenGarage: navigateToManage,
     formatRangeLabel,
   }), [
     data, visibleSamples, filteredSamples, referenceSamples, fieldMappings,
@@ -459,7 +513,7 @@ export default function Index() {
     handleSelectExternalLapWithClear, handleClearExternalRefWithSnapshot, handleLoadFileForRef,
     refreshSavedFiles, handleRangeChange,
     sessionData.handleFieldToggle, sessionMeta.handleWeatherStationResolved,
-    handleSaveSessionSetupWithSnapshot, fileManager.open, formatRangeLabel,
+    handleSaveSessionSetupWithSnapshot, navigateToManage, formatRangeLabel,
   ]);
 
   // Shared FileManagerDrawer props
@@ -476,43 +530,53 @@ export default function Index() {
     onSaveFile: fileManager.saveFile,
     onDataLoaded: handleDataLoaded,
     autoSave: settings.autoSaveFiles,
+    showSampleFiles: effectiveShowSampleFiles,
     initialGarageTab: fileManager.initialGarageTab,
     showProfile,
     vehicles: vehicleManager.vehicles,
     vehicleTypes: templateManager.vehicleTypes,
-    templates: templateManager.templates,
     onAddVehicle: vehicleManager.addVehicle,
     onUpdateVehicle: vehicleManager.updateVehicle,
     onRemoveVehicle: vehicleManager.removeVehicle,
-    currentFileName,
-    notes: noteManager.notes,
-    onAddNote: noteManager.addNote,
-    onUpdateNote: noteManager.updateNote,
-    onRemoveNote: noteManager.removeNote,
-    setups: setupManager.setups,
-    onAddSetup: setupManager.addSetup,
-    onUpdateSetup: setupManager.updateSetup,
-    onRemoveSetup: setupManager.removeSetup,
-    onGetLatestSetupForVehicle: setupManager.getLatestForVehicle,
-    onAddVehicleType: templateManager.addVehicleType,
-    onRemoveVehicleType: templateManager.removeVehicleType,
+    onOpenFile: handleOpenFile,
+    // The "New type" shortcut targets the Setups tab, which only exists once a
+    // session is loaded — omit it (hiding the button) on the landing page.
+    onCreateVehicleType: data ? handleCreateVehicleType : undefined,
     currentTrackName: lapMgmt.selection?.trackName ?? null,
     currentCourseName: lapMgmt.selection?.courseName ?? null,
-    sessionKartId,
-    sessionSetupId,
-    sessionSetupRev,
-    onSaveSessionSetup: handleSaveSessionSetupWithSnapshot,
   }), [
     fileManager.isOpen, fileManager.files, fileManager.fileMetadataMap, fileManager.storageUsed, fileManager.storageQuota,
     fileManager.close, fileManager.loadFile, fileManager.removeFile, fileManager.exportFile, fileManager.saveFile,
     fileManager.initialGarageTab,
-    handleDataLoaded, settings.autoSaveFiles, showProfile,
+    handleDataLoaded, settings.autoSaveFiles, effectiveShowSampleFiles, showProfile,
     vehicleManager.vehicles, vehicleManager.addVehicle, vehicleManager.updateVehicle, vehicleManager.removeVehicle,
-    templateManager.vehicleTypes, templateManager.templates, templateManager.addVehicleType, templateManager.removeVehicleType,
-    currentFileName,
-    noteManager.notes, noteManager.addNote, noteManager.updateNote, noteManager.removeNote,
-    setupManager.setups, setupManager.addSetup, setupManager.updateSetup, setupManager.removeSetup, setupManager.getLatestForVehicle,
-    lapMgmt.selection, sessionKartId, sessionSetupId, sessionSetupRev, handleSaveSessionSetupWithSnapshot,
+    data, handleCreateVehicleType,
+    templateManager.vehicleTypes,
+    handleOpenFile,
+    lapMgmt.selection,
+  ]);
+
+  // Shared SetupsTab wiring — used by the main-view Setups tab and (off-session)
+  // by the Setups garage sub-tab on the landing page.
+  const setupsTabProps = useMemo(() => ({
+    vehicles: vehicleManager.vehicles,
+    setups: setupManager.setups,
+    vehicleTypes: templateManager.vehicleTypes,
+    templates: templateManager.templates,
+    onAdd: setupManager.addSetup,
+    onUpdate: setupManager.updateSetup,
+    onRemove: setupManager.removeSetup,
+    onGetLatestForVehicle: setupManager.getLatestForVehicle,
+    onAddVehicleType: templateManager.addVehicleType,
+    onRemoveVehicleType: templateManager.removeVehicleType,
+    onUpdateVehicleType: templateManager.updateVehicleType,
+    onCreateVehicle: openVehiclesGarage,
+    onOpenFile: handleOpenFile,
+  }), [
+    vehicleManager.vehicles, setupManager.setups, templateManager.vehicleTypes, templateManager.templates,
+    setupManager.addSetup, setupManager.updateSetup, setupManager.removeSetup, setupManager.getLatestForVehicle,
+    templateManager.addVehicleType, templateManager.removeVehicleType, templateManager.updateVehicleType,
+    openVehiclesGarage, handleOpenFile,
   ]);
 
   // No data loaded - show import UI
@@ -528,11 +592,15 @@ export default function Index() {
             autoSaveFile={fileManager.saveFile}
             onLoadSample={handleLoadSample}
             isLoadingSample={isLoadingSample}
+            showSampleFiles={effectiveShowSampleFiles}
             enableAdmin={enableAdmin}
             enableCloud={enableCloud}
           />
           <Suspense fallback={null}>
-            <FileManagerDrawer {...fileManagerProps} />
+            {/* Off-session stopgap: Setups normally lives in the main toolbar
+                (session-only), so host it inside the garage here on the landing
+                page. A planned UI overhaul will revisit this relocation. */}
+            <FileManagerDrawer {...fileManagerProps} setupsTab={<SetupsTab {...setupsTabProps} />} />
           </Suspense>
         </>
       </DeviceProvider>
@@ -571,7 +639,7 @@ export default function Index() {
 
           {laps.length > 0 && (
             <Select value={selectedLapNumber?.toString() ?? "all"} onValueChange={handleLapDropdownChange}>
-              <SelectTrigger className="w-[140px] h-8 text-sm">
+              <SelectTrigger className="w-auto gap-1 h-8 px-2 text-sm">
                 <SelectValue placeholder={t("header.allLaps")} />
               </SelectTrigger>
               <SelectContent>
@@ -612,7 +680,7 @@ export default function Index() {
             onSetOverlayReference={handleSetOverlayReference}
           />
 
-          <SettingsModal settings={settings} onSettingsChange={setSettings} onToggleFieldDefault={toggleFieldDefault} />
+          <SettingsModal settings={settings} onSettingsChange={setSettings} onToggleFieldDefault={toggleFieldDefault} canHideSampleFiles={fileManager.hasOtherFiles} />
           <Button variant="outline" size="sm" className="h-8 gap-1.5 px-2 lg:px-3" onClick={() => fileManager.open()}>
             <FolderOpen className="w-4 h-4" />
             <span className="hidden lg:inline">{t("header.garage")}</span>
@@ -621,7 +689,7 @@ export default function Index() {
       </header>
 
       <main className="flex-1 min-h-0 overflow-hidden flex flex-col">
-        <TabBar topPanelView={topPanelView} setTopPanelView={setTopPanelView} laps={laps} showOverlays={showOverlays} onToggleOverlays={() => setShowOverlays(v => !v)} showLabs={showLabs} showCoach={showCoach} showTools={showTools} setupIndicator={setupIndicator} onSetupIndicatorClick={() => setupIndicator && fileManager.open(setupIndicator.target)} />
+        <TabBar topPanelView={topPanelView} setTopPanelView={setTopPanelView} laps={laps} showOverlays={showOverlays} onToggleOverlays={() => setShowOverlays(v => !v)} showCoach={showCoach} showTools={showTools} setupIndicator={setupIndicator} onSetupIndicatorClick={() => setupIndicator && navigateToManage(setupIndicator.target)} />
 
 
         <div className="flex-1 min-h-0 overflow-hidden">
@@ -629,9 +697,43 @@ export default function Index() {
           <Suspense fallback={null}>
             {topPanelView === "raceline" && <RaceLineTab showOverlays={showOverlays} />}
             {topPanelView === "graphview" && <GraphViewTab />}
-            {topPanelView === "labs" && showLabs && <LabsTab />}
             {topPanelView === "coach" && showCoach && <CoachTab />}
             {topPanelView === "tools" && showTools && <ToolsTab />}
+            {/* Setups + Notes share one surface: a 50/50 split on tablet/desktop,
+                separate full-width tabs on phones (see SetupsNotesPanel). */}
+            {(topPanelView === "setups" || topPanelView === "notes") && (
+              <SetupsNotesPanel
+                active={topPanelView}
+                setups={
+                  // Own Suspense: the lazy SetupsTab chunk loading must not blank
+                  // out the (eager) Notes half rendered beside it in the split.
+                  <Suspense fallback={null}>
+                    <SetupsTab
+                      {...setupsTabProps}
+                      requestNewType={requestNewVehicleType}
+                      onRequestNewTypeHandled={handleNewVehicleTypeHandled}
+                    />
+                  </Suspense>
+                }
+                notes={
+                  <NotesTab
+                    fileName={currentFileName}
+                    notes={noteManager.notes}
+                    onAdd={noteManager.addNote}
+                    onUpdate={noteManager.updateNote}
+                    onRemove={noteManager.removeNote}
+                    vehicles={vehicleManager.vehicles}
+                    setups={setupManager.setups}
+                    sessionKartId={sessionKartId}
+                    sessionSetupId={sessionSetupId}
+                    sessionSetupRev={sessionSetupRev}
+                    onSaveSessionSetup={handleSaveSessionSetupWithSnapshot}
+                    postSession={postSession}
+                    onSavePostSession={sessionMeta.handleSavePostSession}
+                  />
+                }
+              />
+            )}
           </Suspense>
         </div>
       </main>
@@ -664,25 +766,27 @@ export default function Index() {
 }
 
 /** Tab navigation bar for the main data view */
-function TabBar({ topPanelView, setTopPanelView, laps, showOverlays, onToggleOverlays, showLabs, showCoach, showTools, setupIndicator, onSetupIndicatorClick }: {
+function TabBar({ topPanelView, setTopPanelView, laps, showOverlays, onToggleOverlays, showCoach, showTools, setupIndicator, onSetupIndicatorClick }: {
   topPanelView: TopPanelView;
   setTopPanelView: (view: TopPanelView) => void;
   laps: { lapNumber: number }[];
   showOverlays: boolean;
   onToggleOverlays: () => void;
-  showLabs: boolean;
   showCoach: boolean;
   showTools: boolean;
   setupIndicator: SetupIndicator | null;
   onSetupIndicatorClick: () => void;
 }) {
   const { t } = useTranslation("session");
-  const tabClass = (view: TopPanelView) =>
-    `flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors ${
-      topPanelView === view
-        ? "text-primary border-b-2 border-primary bg-primary/5"
-        : "text-muted-foreground hover:text-foreground"
-    }`;
+  const tabBase = "flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors";
+  const tabState = (active: boolean) =>
+    active
+      ? "text-primary border-b-2 border-primary bg-primary/5"
+      : "text-muted-foreground hover:text-foreground";
+  const tabClass = (view: TopPanelView) => cn(tabBase, tabState(topPanelView === view));
+  // Setups and Notes live on one combined surface; either being active lights
+  // up the small-screen tabs and the merged tablet/desktop tab alike.
+  const setupsNotesActive = topPanelView === "setups" || topPanelView === "notes";
 
   return (
     <div className="flex items-center border-b border-border shrink-0">
@@ -698,11 +802,6 @@ function TabBar({ topPanelView, setTopPanelView, laps, showOverlays, onToggleOve
           <span className="ml-1 px-1.5 py-0.5 text-xs bg-primary/20 text-primary rounded">{laps.length}</span>
         )}
       </button>
-      {showLabs && (
-        <button onClick={() => setTopPanelView("labs")} className={tabClass("labs")}>
-          <FlaskConical className="w-4 h-4" /> <span className="hidden sm:inline">{t("tabs.labs")}</span>
-        </button>
-      )}
       {showCoach && (
         <button onClick={() => setTopPanelView("coach")} className={tabClass("coach")}>
           <Gauge className="w-4 h-4" /> <span className="hidden sm:inline">{t("tabs.coach")}</span>
@@ -713,6 +812,24 @@ function TabBar({ topPanelView, setTopPanelView, laps, showOverlays, onToggleOve
           <Wrench className="w-4 h-4" /> <span className="hidden sm:inline">{t("tabs.tools")}</span>
         </button>
       )}
+      {/* Phones: Setups and Notes are separate tabs. Tablet/desktop: one merged
+          tab opens the 50/50 split (SetupsNotesPanel handles the layout). */}
+      <button onClick={() => setTopPanelView("setups")} className={cn(tabClass("setups"), "md:hidden")}>
+        <SlidersHorizontal className="w-4 h-4" /> <span className="hidden sm:inline">{t("tabs.setups")}</span>
+      </button>
+      <button onClick={() => setTopPanelView("notes")} className={cn(tabClass("notes"), "md:hidden")}>
+        <NotebookPen className="w-4 h-4" /> <span className="hidden sm:inline">{t("tabs.notes")}</span>
+      </button>
+      <button
+        onClick={() => setTopPanelView("setups")}
+        className={cn(tabBase, tabState(setupsNotesActive), "hidden md:flex")}
+      >
+        <span className="flex items-center gap-1">
+          <SlidersHorizontal className="w-4 h-4" />
+          <NotebookPen className="w-4 h-4" />
+        </span>
+        {t("tabs.setupsNotes")}
+      </button>
       {setupIndicator && (
         <TooltipProvider>
           <Tooltip>

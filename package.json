@@ -1,7 +1,7 @@
 {
   "name": "doves-dataviewer",
   "private": true,
-  "version": "2.6.0",
+  "version": "2.7.0",
   "description": "Open-source, offline-first motorsport telemetry viewer (Dove's DataViewer / HackTheTrack).",
   "license": "GPL-3.0-or-later",
   "author": "TheAngryRaven",
@@ -32,6 +32,8 @@
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
+    "@fontsource/inter": "^5.2.8",
+    "@fontsource/jetbrains-mono": "^5.2.8",
     "@lovable.dev/cloud-auth-js": "^1.1.2",
     "@radix-ui/react-collapsible": "^1.1.11",
     "@radix-ui/react-dialog": "^1.1.14",

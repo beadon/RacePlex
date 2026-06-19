@@ -11,7 +11,193 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > from git history and grouped by theme rather than exhaustive per-commit
 > detail.
 
-## [2.6.0] - unreleased
+## [2.7.0] - 2026-06-19
+
+### Added
+- **Setup history.** Each setup in the Garage now has a **history** (book) icon
+  that opens a full-panel timeline of every saved revision. It starts with the
+  original setup shown in full, then lists each later revision as a **diff** —
+  only the values that changed, coloured **green when a number went up** and
+  **red when it went down** vs the previous revision (with a per-revision toggle
+  to show the full setup instead). Every revision shows the **fastest lap** run
+  on it, the revision holding the overall fastest lap is **highlighted**, and the
+  history is **filterable by kart and course** — when unfiltered, each revision
+  shows a bubble for the kart/course where its fastest lap was set.
+- **Edit your vehicle types.** The Setups tab gains a **Manage Vehicle Types**
+  button (below *New Vehicle Type*) that opens the type editor: pick an existing
+  type from the dropdown — it starts empty so editing is a deliberate choice —
+  tweak its sections, fields, wheel count or tires, then **Update**. Renaming a
+  field is always safe (your saved setups stay attached to it); but if an edit
+  *removes* a field or flips its data type (number ↔ text) and existing setups
+  already hold values there, a warning lists exactly which fields are affected.
+  Cancel that warning and the risky changes are rolled back and highlighted in
+  orange so you can see what was restored. The editor can also **delete** a
+  vehicle type — but only when nothing depends on it (no saved setups, and not
+  the built-in default). Edits sync to the cloud like the rest of your garage
+  (newest edit wins).
+- **Vehicle history cards.** Vehicles in the Garage now have a little **history**
+  button, just like setups. It opens a panel that gathers every setup you've run
+  on that vehicle — one card per frozen setup revision — showing the setup name,
+  its content hash, and the fastest lap turned on it. Cards are ordered fastest
+  lap first (so your quickest setup is on top), the fastest overall is
+  highlighted, and each card is collapsed by default — expand it to see the full
+  frozen setup (no diff). A course filter narrows the view to a single track and
+  course. Built on a shared history-card module reused by both the setup- and
+  vehicle-history panels.
+- **Jump to a history card's session.** In both the setup- and vehicle-history
+  panels, the fastest-lap time and each session in a card's "Fastest laps" list
+  are now tappable — they load that session straight into the viewer (closing the
+  garage drawer), so you can go from "which setup was quickest" to the actual
+  telemetry in one tap. The fastest-lap value is read from each session's own
+  cached best lap, so it always points back to a real, openable log.
+- **Collapsible Pro panel + relocatable Video/Mini-Map on mobile.** The Pro
+  view's left column (info/vehicle/video + mini-map) is roomy on tablet and
+  desktop but cramped on a phone. On mobile a small flag tab now sits at the top
+  of the divider between the two columns — tap it to collapse the left column so
+  the graphs get the full screen width, tap again to bring it back. So you don't
+  lose the video or the map when collapsed, the graph picker (the "Add Graph"
+  dropdown) gains two extra options at the top on mobile — **Video** and **Mini
+  Map** — that drop the video player or the track map into the regular,
+  resizable graph stack alongside your data channels. Tablet/desktop are
+  unchanged.
+- **GoPro chunked-video support.** GoPro cameras split one recording into
+  sequential 3–5 minute files (`GH010042.MP4`, `GH020042.MP4`, … or legacy
+  `GOPR0042.MP4` + `GP010042.MP4`). You can now select **all** the chapter files
+  at once in the video player and they play back — and sync to your telemetry —
+  as one continuous video. Chapters are auto-detected and ordered (you can also
+  multi-select any set of files manually), the next chapter is preloaded so the
+  boundary is near-seamless, and a small chapter indicator shows where you are.
+  Fully client-side and offline, no stitching tool needed. Saved playlists
+  reload automatically next session. On mobile, where the file picker can't be
+  filtered, selecting *everything* still works: sidecar files (`.LRV`/`.THM`),
+  photos, and other junk are silently ignored. If the selection happens to span
+  more than one recording, you're asked which one to load — and only that one is
+  kept in memory; otherwise the single recording loads straight away.
+- **Video export across GoPro chapters.** Exporting a full session (or a single
+  lap) with overlays now stitches across all chapters into one MP4 — the frame
+  encoder seeks through the whole virtual timeline and the audio from each
+  chapter is concatenated in sync. Multi-chapter export requires a browser with
+  WebCodecs (Chrome/Edge); single-file export is unchanged everywhere.
+- **Post-session tire pressure & weight on the Notes tab.** A new collapsible
+  **Post-Session** panel sits under the session-setup selector on the Notes page,
+  letting you record the tire pressures you measured after a run (single / halves
+  / quarters — same picker as the setup editor, defaulting to quarters) and a
+  single post-session weight. The values save with the session and cloud-sync like
+  your notes, ready for later processing.
+- **Device Name setting for the logger.** The Device → Settings screen now
+  supports a **Device Name** field (a free-text name, up to 32 characters) for
+  loggers whose firmware exposes it. When you're signed in, a **Use profile name**
+  shortcut fills the field with your account name in one tap.
+- **Feature roadmap on the home screen.** The landing page now shows a short
+  "Remaining feature roadmap" panel under the action tiles, listing what's still
+  coming (cheaper DIY logger, leaderboards & public profiles, 3rd-party logger
+  downloads, native app, race-day organization, team management, coaching
+  updates, video editor updates, and the "Vulture" logger) with rough timing
+  estimates.
+- **Earn free cloud storage by contributing tracks.** When you submit tracks to
+  the community database while signed in, your contribution is now linked to your
+  account — and the submit screen shows a note that signed-in contributions earn
+  free cloud storage. Submitting without an account still works exactly as before.
+  The home-screen **Manage tracks** card and the **Submit to DB** button now show
+  a 🎁 reminder of the perk too.
+- **Admin: user management.** A new **Users** tab in the admin panel lists every
+  account with its email/display name, plan, storage used, and number of track
+  contributions. Click a user to see details and **grant them free months of
+  premium** (or remove the grant). Comped premium expires automatically when the
+  granted months run out, then follows the same 60-day grace as a cancelled
+  subscription before any over-limit cloud logs are trimmed.
+- **Storage trim warning.** When a paid plan or a comped one lapses, your Profile
+  now shows a clear countdown — "cloud logs trim to the free tier in N days" — so
+  you have time to subscribe or download them first.
+- **Admin: see who submitted a track.** The Submissions tab now shows the
+  contributor's account name (or "Anonymous") alongside the existing IP/date.
+- **Complimentary plan badge.** If you've been granted free premium, your Profile
+  now shows a "Complimentary" badge and how long it lasts — and hides the Stripe
+  billing buttons (there's no paid subscription to manage).
+
+### Changed
+- **Notes and Setups moved to the main toolbar.** Session notes (with the
+  session-setup + post-session measurement panel) and your vehicle setups are now
+  their own tabs in the main view bar — **Setups** then **Notes**, to the right of
+  Tools — instead of living inside the Garage drawer. They update often, so this
+  keeps them a single tap away. **Vehicles** stay in the Garage (you set those up
+  once). The setup-status nag jumps straight to the right place. On **tablets and
+  desktop** the two share one **Setups & Notes** tab shown as a 50/50 split, so
+  the extra width isn't wasted; phones keep them as separate full-width tabs.
+- **Fewer taps for single-vehicle garages.** The new-setup form now pre-fills
+  (and locks) the vehicle type when you only have one, and the vehicle when only
+  one fits — the pickers stay visible, just filled in for you. The session-setup
+  selector on Notes likewise pre-fills your only vehicle (and its only setup).
+  Nothing is auto-saved — you still tap Save. And if you linked the wrong setup to
+  a session, a **Clear session data** button (with an "are you sure" confirm)
+  unlinks it so you can re-assign; your notes and measurements are kept.
+- **Easier vehicle types.** Adding a vehicle now locks the type when there's only
+  one (nothing to choose), and a **New type** button on the Vehicles tab jumps you
+  straight to the vehicle-type creator on the Setups tab so it's clear where types
+  come from. On the landing page (no session loaded) the Setups tab is hosted
+  inside the Garage so vehicles, setups and types stay reachable before you open a
+  log.
+- **Setups guide you to a vehicle first.** With no vehicles yet, the **Add setup**
+  button is disabled and a **First create a vehicle** button takes you to the
+  Vehicles tab — no more dead-end where a setup has nothing to attach to.
+- **Copy setup from another vehicle.** When a same-type vehicle already has a
+  setup, the new-setup form shows a **Copy setup from…** button: pick a vehicle
+  (filtered to the current type) and one of its setups, and the form is pre-filled
+  so you can tweak and save — a big time-saver across similar karts/cars.
+- **Tighter lap selector.** The lap dropdown in the session header now sizes to
+  its label instead of a fixed width, freeing up room so the toolbar controls
+  (snapshots, overlays) don't get squeezed off-screen on mobile.
+- **Admin link tidied up.** The home-screen "Track Management" link is now
+  labelled **Admin** and only appears when an admin is actually signed in (it was
+  previously shown to anyone on an admin-enabled build).
+- **Prices show their currency.** The paid plan cards on the pricing/sign-up
+  screens now note **USD** next to the price.
+- **Track manager is now a simple drill-down.** The track/course manager was
+  reworked into a clear two-step flow: a **list of tracks** → tap one → its
+  **courses**. The list scrolls once you have more than a handful of tracks, and
+  grows a **search box** to quickly filter once you have more than ten. The course
+  screen no longer has a separate track dropdown (you got there by tapping the
+  track) and has a **back** arrow to the track list. Opening the manager — from the
+  home screen *or* in a loaded session — now skips the old selection screen: the
+  home screen opens on the track list, and in a session it jumps straight to the
+  current track's courses, where **tapping a course applies it to your session**
+  (the active course is highlighted).
+- **Faster course creation.** Two fewer-clicks tweaks to the course editor: new
+  sector lines now default to **Major** until the three traditional sectors are
+  filled (so a standard 3-sector course is valid right after adding two lines, no
+  toggling needed), and creating a new course with a session already loaded now
+  **auto-generates the track outline** from your fastest lap — the drawing is
+  there before you start, instead of having to open the Generate picker yourself.
+- **Sample data is now just a normal log.** The bundled sample session lives in
+  your file browser as an ordinary file named **"SAMPLE - Tillotson 225rs"**, and
+  the home-screen **Load sample data** button simply opens it like any other log —
+  no more special-case sample handling and its rough edges. A new **Show sample
+  files** toggle in Settings (on by default) hides it from the browser — and the
+  home-screen sample tile — if you'd rather not see it. The sample always shows as
+  cloud-synced and can't be uploaded, so it never eats into your cloud storage.
+  When the sample is your *only* file, the toggle stays locked on so you can never
+  hide your only way back into the app.
+- **Weather is cached per session.** Once a session's weather has been looked up,
+  it's saved on your device — a session's date never changes, so its weather is
+  fixed. Reopening that session shows the saved conditions instantly and no longer
+  re-queries the weather station / service every time. The cache stays on your
+  device (it isn't cloud-synced — there's no point re-uploading data the next
+  device can look up for free), and the home-screen **Local Weather** check still
+  fetches live, current conditions as before.
+
+### Removed
+- **Labs tab removed.** The experimental Labs tab (and its hidden settings
+  toggle) has been retired — it carried no active features.
+
+### Fixed
+- **Fonts now work fully offline.** The Inter and JetBrains Mono typefaces were
+  loaded from Google's font CDN at runtime, which had no offline cache rule — so a
+  fresh load with no signal (e.g. at the track) fell back to system fonts. The
+  fonts are now self-hosted (via Fontsource) and bundled into the offline
+  precache like the rest of the app, so they render correctly from the first paint
+  with no network. This also removes a third-party request on every page load.
+
+## [2.6.0] - 2026-06-15
 
 ### Added
 - **Tools on the home screen.** A new **Tools** tile on the landing page opens the

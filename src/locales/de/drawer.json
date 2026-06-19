@@ -1,9 +1,21 @@
 {
   "_machine": true,
   "shell": {
-    "tabs": { "garage": "Garage", "profile": "Profil", "device": "Gerät" },
-    "garageTabs": { "files": "Dateien", "vehicles": "Fahrzeuge", "setups": "Setups", "notes": "Notizen" },
-    "deviceTabs": { "settings": "Einstellungen", "tracks": "Strecken" },
+    "tabs": {
+      "garage": "Garage",
+      "profile": "Profil",
+      "device": "Gerät"
+    },
+    "garageTabs": {
+      "files": "Dateien",
+      "vehicles": "Fahrzeuge",
+      "setups": "Setups",
+      "notes": "Notizen"
+    },
+    "deviceTabs": {
+      "settings": "Einstellungen",
+      "tracks": "Strecken"
+    },
     "disconnect": "Trennen",
     "batteryTitle": "{{voltage}} V — zum Aktualisieren klicken",
     "btNotAvailable": "Bluetooth nicht verfügbar",
@@ -51,6 +63,7 @@
     "unknownType": "Unbekannter Typ",
     "edit": "Bearbeiten",
     "vehicleType": "Fahrzeugtyp",
+    "newType": "Neuer Typ",
     "selectType": "Typ auswählen…",
     "name": "Name",
     "namePlaceholder": "Fahrzeugname",
@@ -81,6 +94,7 @@
     "confirm": "Bestätigen",
     "cancel": "Abbrechen",
     "newVehicleType": "Neuer Fahrzeugtyp",
+    "manageVehicleTypes": "Fahrzeugtypen verwalten",
     "addNewSetup": "Neues Setup hinzufügen",
     "editSetup": "Setup bearbeiten",
     "newSetup": "Neues Setup",
@@ -108,7 +122,46 @@
     "halves": "Hälften",
     "quarters": "Viertel",
     "update": "Aktualisieren",
-    "save": "Speichern"
+    "save": "Speichern",
+    "copyFrom": "Setup kopieren von…",
+    "setup": "Setup",
+    "selectSetup": "Setup auswählen…",
+    "copy": "Kopieren",
+    "firstCreateVehicle": "Zuerst ein Fahrzeug erstellen"
+  },
+  "setupHistory": {
+    "title": "Setup-Verlauf",
+    "openTitle": "Setup-Verlauf anzeigen",
+    "loading": "Verlauf wird geladen…",
+    "empty": "Noch kein Verlauf",
+    "emptyHint": "Weise dieses Setup einer Sitzung zu, um den Verlauf aufzubauen.",
+    "allKarts": "Alle Karts",
+    "allCourses": "Alle Strecken",
+    "original": "Original",
+    "revision": "Revision",
+    "fastestTag": "Schnellste Runde",
+    "noLap": "—",
+    "noChanges": "Keine Änderungen gegenüber der vorherigen Revision",
+    "noSetupData": "Keine Setup-Daten",
+    "showFull": "Vollständiges Setup anzeigen",
+    "showChanges": "Nur Änderungen anzeigen",
+    "lapsHeader": "Schnellste Runden",
+    "openSession": "Diese Sitzung öffnen"
+  },
+  "vehicleHistory": {
+    "title": "Fahrzeugverlauf",
+    "openTitle": "Fahrzeugverlauf anzeigen",
+    "loading": "Verlauf wird geladen…",
+    "empty": "Noch kein Verlauf",
+    "emptyHint": "Fahre eine Sitzung mit diesem Fahrzeug und weise ein Setup zu, um den Verlauf aufzubauen.",
+    "allCourses": "Alle Strecken",
+    "fastestTag": "Schnellste Runde",
+    "noLap": "—",
+    "noSetupData": "Keine Setup-Daten",
+    "showFull": "Setup anzeigen",
+    "hideFull": "Setup ausblenden",
+    "lapsHeader": "Schnellste Runden",
+    "openSession": "Diese Sitzung öffnen"
   },
   "notes": {
     "loadSession": "Lade eine Session, um Notizen hinzuzufügen",
@@ -133,7 +186,18 @@
     "edit": "Bearbeiten",
     "writeNote": "Notiz schreiben…",
     "updateNote": "Notiz aktualisieren",
-    "addNote": "Notiz hinzufügen"
+    "addNote": "Notiz hinzufügen",
+    "clearSession": "Sitzungsdaten löschen",
+    "clearConfirm": "Dies löscht das für diese Sitzung gespeicherte Fahrzeug und Setup. Dies kann nicht rückgängig gemacht werden.",
+    "clearConfirmAction": "Löschen"
+  },
+  "postSession": {
+    "title": "Nach der Session",
+    "tirePressure": "Reifendruck",
+    "weight": "Gewicht",
+    "weightPlaceholder": "z. B. 380",
+    "save": "Speichern",
+    "update": "Aktualisieren"
   },
   "templateCreator": {
     "title": "Neuer Fahrzeugtyp",
@@ -189,6 +253,7 @@
     "readingSettings": "Einstellungen werden gelesen…",
     "retry": "Erneut versuchen",
     "noSettings": "Keine Einstellungen auf dem Gerät gefunden.",
+    "useProfileName": "Profilnamen verwenden",
     "reset": "Einstellungen auf Standard zurücksetzen",
     "resetConfirm": "Zurücksetzen bestätigen — Gerät startet neu",
     "cancel": "Abbrechen",
@@ -291,5 +356,23 @@
     "startLineDistance": "Abstand der Startlinie:",
     "sendToDevice": "An das Gerät senden",
     "downloadToApp": "In die App herunterladen"
+  },
+  "vehicleTypeEditor": {
+    "title": "Fahrzeugtypen verwalten",
+    "selectType": "Fahrzeugtyp",
+    "selectTypePlaceholder": "Fahrzeugtyp auswählen…",
+    "pickPrompt": "Wähle oben einen Fahrzeugtyp aus, um mit der Bearbeitung zu beginnen.",
+    "update": "Aktualisieren",
+    "warningTitle": "Betrifft vorhandene Setups",
+    "warningBody": "Diese Felder enthalten Daten in vorhandenen Setups. Beim Anwenden gehen sie verloren:",
+    "warningRemoved": "entfernt – gespeicherte Werte ausgeblendet",
+    "warningTypeChanged": "Typ geändert – gespeicherte Werte gelöscht",
+    "warningConfirm": "Trotzdem anwenden",
+    "warningCancel": "Abbrechen",
+    "delete": "Diesen Fahrzeugtyp löschen",
+    "deleteConfirm": "Diesen Fahrzeugtyp löschen? Das kann nicht rückgängig gemacht werden.",
+    "deleteConfirmBtn": "Löschen",
+    "deleteHasSetups": "Dieser Typ hat gespeicherte Setups – lösche diese zuerst.",
+    "deleteDefault": "Der integrierte Standardtyp kann nicht gelöscht werden."
   }
 }

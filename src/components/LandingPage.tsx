@@ -1,4 +1,4 @@
-import { lazy, Suspense } from "react";
+import { Fragment, lazy, Suspense } from "react";
 import {
   Gauge,
   Github,
@@ -12,6 +12,7 @@ import {
   FolderOpen,
   Map,
   Bluetooth,
+  Route,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useTranslation, Trans } from "react-i18next";
@@ -45,6 +46,8 @@ interface LandingPageProps {
   autoSaveFile: (name: string, blob: Blob) => Promise<void>;
   onLoadSample: () => void;
   isLoadingSample: boolean;
+  /** When false, the sample log is hidden everywhere — including this tile. */
+  showSampleFiles: boolean;
   enableAdmin: boolean;
   enableCloud: boolean;
 }
@@ -75,12 +78,23 @@ export function LandingPage({
   autoSaveFile,
   onLoadSample,
   isLoadingSample,
+  showSampleFiles,
   enableAdmin,
   enableCloud,
 }: LandingPageProps) {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logout, isAdmin } = useAuth();
   const { t } = useTranslation(["landing", "common"]);
+
+  const roadmapItems = t("landing:roadmap.items", { returnObjects: true }) as string[];
+
+  // Group roadmap items by their trailing month/quarter parenthetical (works
+  // across locales — handles both ASCII "()" and full-width "（）") so we can
+  // draw a divider whenever the timeframe changes.
+  const roadmapTimeframe = (item: string): string => {
+    const match = item.match(/[（(]([^（()）]*)[）)]\s*$/);
+    return match ? match[1].trim() : "";
+  };
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -140,15 +154,17 @@ export function LandingPage({
 
           {/* Secondary actions — big, single-purpose tiles */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <ActionTile
-              icon={Play}
-              title={t("landing:tiles.sample.title")}
-              description={isLoadingSample ? t("common:actions.loading") : t("landing:tiles.sample.description")}
-              onClick={onLoadSample}
-              disabled={isLoadingSample}
-              spinning={isLoadingSample}
-              featured
-            />
+            {showSampleFiles && (
+              <ActionTile
+                icon={Play}
+                title={t("landing:tiles.sample.title")}
+                description={isLoadingSample ? t("common:actions.loading") : t("landing:tiles.sample.description")}
+                onClick={onLoadSample}
+                disabled={isLoadingSample}
+                spinning={isLoadingSample}
+                featured
+              />
+            )}
 
             <ActionTile
               icon={FolderOpen}
@@ -190,12 +206,12 @@ export function LandingPage({
 
             {/* Track manager — create/draw tracks & courses without a datalog. */}
             <TrackEditor
-              startInManage
               triggerButton={
                 <ActionTile
                   icon={Map}
                   title={t("landing:tiles.tracks.title")}
                   description={t("landing:tiles.tracks.description")}
+                  badge={enableCloud ? t("landing:tiles.tracks.badge") : undefined}
                 />
               }
             />
@@ -211,6 +227,42 @@ export function LandingPage({
                 nothing when no plugin targets the slot, so the grid is unchanged
                 in a plugin-absent build. */}
             <PluginMount slot={MountSlot.Landing} ctx={{}} />
+          </div>
+
+          {/* Roadmap — what's still coming, with rough timing estimates. */}
+          <div className="rounded-xl border border-border bg-card/50 p-5">
+            <div className="flex items-center gap-2">
+              <Route className="h-5 w-5 text-primary" />
+              <h3 className="text-base font-semibold text-foreground">
+                {t("landing:roadmap.title")}
+              </h3>
+              <span className="text-xs text-muted-foreground">
+                ({t("landing:roadmap.estimated")})
+              </span>
+            </div>
+            <p className="mt-3 text-sm text-muted-foreground">
+              {t("landing:roadmap.blurb")}
+            </p>
+            <ul className="mt-3 space-y-2">
+              {roadmapItems.map((item, i) => {
+                const showDivider =
+                  i > 0 && roadmapTimeframe(item) !== roadmapTimeframe(roadmapItems[i - 1]);
+                return (
+                  <Fragment key={item}>
+                    {showDivider && (
+                      <li aria-hidden="true" className="my-1 border-t border-border/60" />
+                    )}
+                    <li className="flex items-start gap-2 text-sm text-muted-foreground">
+                      <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary/60" />
+                      <span>{item}</span>
+                    </li>
+                  </Fragment>
+                );
+              })}
+            </ul>
+            <p className="mt-3 text-sm font-medium text-foreground">
+              {t("landing:roadmap.contact")}
+            </p>
           </div>
 
           {/* Reference dialogs */}
@@ -248,13 +300,13 @@ export function LandingPage({
               {t("landing:links.terms")}
             </Link>
             <CreditsDialog />
-            {enableAdmin && (
+            {enableAdmin && isAdmin && (
               <button
                 onClick={() => navigate('/admin')}
                 className="inline-flex items-center gap-1 text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors"
               >
                 <Shield className="w-3 h-3" />
-                {t("landing:links.trackManagement")}
+                {t("landing:links.admin")}
               </button>
             )}
           </div>

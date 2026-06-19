@@ -33,11 +33,16 @@
     "title": "Plano",
     "renews": "Renova em {{date}}",
     "cancels": "Cancela em {{date}}",
-    "grace": "Assinatura encerrada. Os registros na nuvem serão reduzidos ao nível gratuito em {{date}} — assine novamente para mantê-los.",
     "upgrade": "Faça upgrade pelos cartões de Planos e preços.",
     "changePlan": "Mudar de plano",
     "manageSubscription": "Gerenciar assinatura",
-    "portalFailed": "Não foi possível abrir o portal de cobrança."
+    "portalFailed": "Não foi possível abrir o portal de cobrança.",
+    "compBadge": "Cortesia",
+    "comp": "Plano cortesia — um presente da equipe.",
+    "compUntil": "Plano cortesia — grátis até {{date}}.",
+    "trimWarning_one": "Acesso gratuito encerrado — os logs na nuvem serão reduzidos ao plano grátis em {{count}} dia (em {{date}}). Assine para mantê-los.",
+    "trimWarning_other": "Acesso gratuito encerrado — os logs na nuvem serão reduzidos ao plano grátis em {{count}} dias (em {{date}}). Assine para mantê-los.",
+    "trimmed": "Os logs na nuvem acima do plano grátis foram reduzidos. Assine para restaurar o limite maior."
   },
   "storage": {
     "title": "Armazenamento",
@@ -137,7 +142,8 @@
   "fileSync": {
     "off": "Sincronizar este arquivo com a nuvem",
     "pending": "Selecionado — será enviado assim que você entrar e estiver online",
-    "synced": "Sincronizado — clique para parar de sincronizar (a cópia na nuvem é mantida)"
+    "synced": "Sincronizado — clique para parar de sincronizar (a cópia na nuvem é mantida)",
+    "sample": "Registro de exemplo — presente em todos os dispositivos, sem necessidade de envio"
   },
   "fileDelete": {
     "alsoCloud": "Excluir também a cópia sincronizada do backup na nuvem"

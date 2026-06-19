@@ -3,6 +3,9 @@ import {
   isActiveStatus,
   effectiveTier,
   isPaidTier,
+  isComped,
+  hasCompGrant,
+  daysUntilTrim,
   pricingCta,
   lookupKey,
   tiersWithPrices,
@@ -56,6 +59,56 @@ describe("isPaidTier", () => {
     expect(isPaidTier("free")).toBe(false);
     expect(isPaidTier("plus")).toBe(true);
     expect(isPaidTier("pro")).toBe(true);
+  });
+});
+
+describe("isComped", () => {
+  const NOW = Date.UTC(2026, 5, 17); // fixed clock for the date-window checks
+  const future = new Date(NOW + 86_400_000).toISOString();
+  const past = new Date(NOW - 86_400_000).toISOString();
+
+  it("is true for an active paid tier with no Stripe id, still in window", () => {
+    expect(isComped({ tier: "premium", status: "active", stripe_subscription_id: null, current_period_end: future }, NOW)).toBe(true);
+  });
+  it("treats a no-end-date comp as open-ended", () => {
+    expect(isComped({ tier: "premium", status: "active", stripe_subscription_id: null, current_period_end: null }, NOW)).toBe(true);
+  });
+  it("is false once the comp window has passed", () => {
+    expect(isComped({ tier: "premium", status: "active", stripe_subscription_id: null, current_period_end: past }, NOW)).toBe(false);
+  });
+  it("is false for a Stripe-managed subscription (not a comp)", () => {
+    expect(isComped({ tier: "premium", status: "active", stripe_subscription_id: "sub_123", current_period_end: future }, NOW)).toBe(false);
+  });
+  it("is false for free, inactive, or missing rows", () => {
+    expect(isComped({ tier: "free", status: "active", stripe_subscription_id: null, current_period_end: future }, NOW)).toBe(false);
+    expect(isComped({ tier: "premium", status: "canceled", stripe_subscription_id: null, current_period_end: future }, NOW)).toBe(false);
+    expect(isComped(null, NOW)).toBe(false);
+    expect(isComped(undefined, NOW)).toBe(false);
+  });
+});
+
+describe("hasCompGrant", () => {
+  it("is true for a paid-tier row with no Stripe id — active or lapsed", () => {
+    expect(hasCompGrant({ tier: "premium", stripe_subscription_id: null })).toBe(true);
+  });
+  it("is false for a Stripe-backed row or a free/empty row", () => {
+    expect(hasCompGrant({ tier: "premium", stripe_subscription_id: "sub_1" })).toBe(false);
+    expect(hasCompGrant({ tier: "free", stripe_subscription_id: null })).toBe(false);
+    expect(hasCompGrant(null)).toBe(false);
+    expect(hasCompGrant(undefined)).toBe(false);
+  });
+});
+
+describe("daysUntilTrim", () => {
+  const NOW = Date.UTC(2026, 5, 17);
+  it("rounds up whole days remaining", () => {
+    expect(daysUntilTrim(new Date(NOW + 5 * 86_400_000 + 1000).toISOString(), NOW)).toBe(6);
+    expect(daysUntilTrim(new Date(NOW + 86_400_000).toISOString(), NOW)).toBe(1);
+  });
+  it("clamps to 0 once the date has passed, and is null without a date", () => {
+    expect(daysUntilTrim(new Date(NOW - 86_400_000).toISOString(), NOW)).toBe(0);
+    expect(daysUntilTrim(null, NOW)).toBeNull();
+    expect(daysUntilTrim(undefined, NOW)).toBeNull();
   });
 });
 
