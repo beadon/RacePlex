@@ -27,6 +27,10 @@ interface SetupsTabProps {
   onGetLatestForVehicle: (vehicleId: string) => Promise<VehicleSetup | null>;
   onAddVehicleType: (name: string, wheelCount: 2 | 4, includeTires: boolean, sections: TemplateSection[]) => Promise<unknown>;
   onRemoveVehicleType: (vehicleTypeId: string, templateId: string) => Promise<void>;
+  /** When toggled true, jump straight into the vehicle-type creator (e.g. from
+   *  the Vehicles tab's "New type" shortcut). Cleared via onRequestNewTypeHandled. */
+  requestNewType?: boolean;
+  onRequestNewTypeHandled?: () => void;
 }
 
 type FormMode = "list" | "new" | "edit" | "new-type" | "history";
@@ -59,6 +63,7 @@ export function SetupsTab({
   vehicles, setups, vehicleTypes, templates,
   onAdd, onUpdate, onRemove, onGetLatestForVehicle,
   onAddVehicleType, onRemoveVehicleType,
+  requestNewType, onRequestNewTypeHandled,
 }: SetupsTabProps) {
   const { t } = useTranslation("drawer");
   const [mode, setMode] = useState<FormMode>("list");
@@ -239,16 +244,28 @@ export function SetupsTab({
     }
   }, [vehicleTypes, templates]);
 
-  // When the chosen type leaves exactly one candidate vehicle there's nothing to
-  // pick — auto-select it (which also preloads its latest setup) so the redundant
-  // vehicle dropdown can be hidden.
+  // New-setup defaults: with a single vehicle type, pre-select it; with a single
+  // candidate vehicle, pre-select that too (which also preloads its latest
+  // setup). Both pickers stay visible — these are convenience defaults, not locks.
   useEffect(() => {
-    if (mode !== "new" || !selectedTypeId) return;
-    if (filteredVehicles.length !== 1) return;
-    const only = filteredVehicles[0];
-    if (form.vehicleId === only.id) return;
-    handleVehicleChange(only.id);
-  }, [mode, selectedTypeId, filteredVehicles, form.vehicleId, handleVehicleChange]);
+    if (mode !== "new") return;
+    if (!selectedTypeId && vehicleTypes.length === 1) {
+      handleTypeChange(vehicleTypes[0].id);
+      return;
+    }
+    if (selectedTypeId && filteredVehicles.length === 1 && form.vehicleId !== filteredVehicles[0].id) {
+      handleVehicleChange(filteredVehicles[0].id);
+    }
+  }, [mode, selectedTypeId, vehicleTypes, filteredVehicles, form.vehicleId, handleTypeChange, handleVehicleChange]);
+
+  // External shortcut (the Vehicles tab's "New type" button) drops the user
+  // straight into the vehicle-type creator. The parent clears the request once
+  // handled so it fires once per click.
+  useEffect(() => {
+    if (!requestNewType) return;
+    setMode("new-type");
+    onRequestNewTypeHandled?.();
+  }, [requestNewType, onRequestNewTypeHandled]);
 
   const handleSave = useCallback(async () => {
     let finalForm = { ...form };
@@ -416,20 +433,16 @@ export function SetupsTab({
               </Select>
             </Field>
           )}
-          {/* One candidate vehicle is auto-selected (see effect above), so only
-              surface the picker when there's an actual choice to make. */}
-          {filteredVehicles.length !== 1 && (
-            <Field label={t("setups.vehicle")}>
-              <Select value={form.vehicleId} onValueChange={handleVehicleChange}>
-                <SelectTrigger className="h-9"><SelectValue placeholder={t("setups.selectVehicle")} /></SelectTrigger>
-                <SelectContent>
-                  {filteredVehicles.map(v => (
-                    <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
-          )}
+          <Field label={t("setups.vehicle")}>
+            <Select value={form.vehicleId} onValueChange={handleVehicleChange}>
+              <SelectTrigger className="h-9"><SelectValue placeholder={t("setups.selectVehicle")} /></SelectTrigger>
+              <SelectContent>
+                {filteredVehicles.map(v => (
+                  <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
           <Field label={t("setups.setupName")}>
             <Input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} placeholder={t("setups.setupNamePlaceholder")} className="h-9" />
           </Field>

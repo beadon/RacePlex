@@ -43,6 +43,9 @@ interface FileManagerDrawerProps {
   onAddVehicle: (vehicle: Omit<Vehicle, "id">) => Promise<void>;
   onUpdateVehicle: (vehicle: Vehicle) => Promise<void>;
   onRemoveVehicle: (id: string) => Promise<void>;
+  // Jump to the vehicle-type creator (closes the drawer, opens the Setups tab).
+  // Omitted off-session, where the Setups tab isn't reachable.
+  onCreateVehicleType?: () => void;
   // Current session context (the browser opens at this track/course)
   currentTrackName: string | null;
   currentCourseName: string | null;
@@ -55,7 +58,7 @@ export function FileManagerDrawer({
   initialGarageTab = "files",
   showProfile,
   vehicles, vehicleTypes,
-  onAddVehicle, onUpdateVehicle, onRemoveVehicle,
+  onAddVehicle, onUpdateVehicle, onRemoveVehicle, onCreateVehicleType,
   currentTrackName, currentCourseName,
 }: FileManagerDrawerProps) {
   const { t } = useTranslation("drawer");
@@ -172,7 +175,7 @@ export function FileManagerDrawer({
               <FilesTab files={files} fileMetadataMap={fileMetadataMap} vehicles={vehicles} currentTrackName={currentTrackName} currentCourseName={currentCourseName} isOpen={isOpen} storageUsed={storageUsed} storageQuota={storageQuota} onLoadFile={onLoadFile} onDeleteFile={onDeleteFile} onExportFile={onExportFile} onSaveFile={onSaveFile} onDataLoaded={onDataLoaded} onClose={onClose} autoSave={autoSave} showSampleFiles={showSampleFiles} />
             )}
             {garageTab === "vehicles" && (
-              <VehiclesTab vehicles={vehicles} vehicleTypes={vehicleTypes} onAdd={onAddVehicle} onUpdate={onUpdateVehicle} onRemove={onRemoveVehicle} />
+              <VehiclesTab vehicles={vehicles} vehicleTypes={vehicleTypes} onAdd={onAddVehicle} onUpdate={onUpdateVehicle} onRemove={onRemoveVehicle} onCreateVehicleType={onCreateVehicleType} />
             )}
           </>
         )}

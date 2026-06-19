@@ -187,6 +187,17 @@ export default function Index() {
     else fileManager.open(target);
   }, [fileManager]);
 
+  // "New type" shortcut on the Vehicles tab: close the garage, jump to the Setups
+  // tab, and ask it to open the vehicle-type creator (one-shot, cleared once the
+  // tab consumes it — see SetupsTab's requestNewType).
+  const [requestNewVehicleType, setRequestNewVehicleType] = useState(false);
+  const handleCreateVehicleType = useCallback(() => {
+    fileManager.close();
+    setTopPanelView("setups");
+    setRequestNewVehicleType(true);
+  }, [fileManager]);
+  const handleNewVehicleTypeHandled = useCallback(() => setRequestNewVehicleType(false), []);
+
   // Video sync for the video player
   const videoSync = useVideoSync({
     samples: visibleSamples,
@@ -506,6 +517,9 @@ export default function Index() {
     onAddVehicle: vehicleManager.addVehicle,
     onUpdateVehicle: vehicleManager.updateVehicle,
     onRemoveVehicle: vehicleManager.removeVehicle,
+    // The "New type" shortcut targets the Setups tab, which only exists once a
+    // session is loaded — omit it (hiding the button) on the landing page.
+    onCreateVehicleType: data ? handleCreateVehicleType : undefined,
     currentTrackName: lapMgmt.selection?.trackName ?? null,
     currentCourseName: lapMgmt.selection?.courseName ?? null,
   }), [
@@ -514,6 +528,7 @@ export default function Index() {
     fileManager.initialGarageTab,
     handleDataLoaded, settings.autoSaveFiles, effectiveShowSampleFiles, showProfile,
     vehicleManager.vehicles, vehicleManager.addVehicle, vehicleManager.updateVehicle, vehicleManager.removeVehicle,
+    data, handleCreateVehicleType,
     templateManager.vehicleTypes,
     lapMgmt.selection,
   ]);
@@ -655,6 +670,8 @@ export default function Index() {
                       onGetLatestForVehicle={setupManager.getLatestForVehicle}
                       onAddVehicleType={templateManager.addVehicleType}
                       onRemoveVehicleType={templateManager.removeVehicleType}
+                      requestNewType={requestNewVehicleType}
+                      onRequestNewTypeHandled={handleNewVehicleTypeHandled}
                     />
                   </Suspense>
                 }
