@@ -144,7 +144,23 @@
     "noSetupData": "Nessun dato dell'assetto",
     "showFull": "Mostra assetto completo",
     "showChanges": "Mostra solo le modifiche",
-    "lapsHeader": "Giri più veloci"
+    "lapsHeader": "Giri più veloci",
+    "openSession": "Apri questa sessione"
+  },
+  "vehicleHistory": {
+    "title": "Cronologia veicolo",
+    "openTitle": "Visualizza cronologia veicolo",
+    "loading": "Caricamento cronologia…",
+    "empty": "Nessuna cronologia",
+    "emptyHint": "Esegui una sessione con questo veicolo e assegna un assetto per iniziare a creare la sua cronologia.",
+    "allCourses": "Tutti i circuiti",
+    "fastestTag": "Giro più veloce",
+    "noLap": "—",
+    "noSetupData": "Nessun dato dell'assetto",
+    "showFull": "Mostra assetto",
+    "hideFull": "Nascondi assetto",
+    "lapsHeader": "Giri più veloci",
+    "openSession": "Apri questa sessione"
   },
   "notes": {
     "loadSession": "Carica una sessione per aggiungere note",

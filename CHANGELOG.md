@@ -14,6 +14,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [2.7.0] - unreleased
 
 ### Added
+- **Vehicle history cards.** Vehicles in the Garage now have a little **history**
+  button, just like setups. It opens a panel that gathers every setup you've run
+  on that vehicle — one card per frozen setup revision — showing the setup name,
+  its content hash, and the fastest lap turned on it. Cards are ordered fastest
+  lap first (so your quickest setup is on top), the fastest overall is
+  highlighted, and each card is collapsed by default — expand it to see the full
+  frozen setup (no diff). A course filter narrows the view to a single track and
+  course. Built on a shared history-card module reused by both the setup- and
+  vehicle-history panels.
+- **Jump to a history card's session.** In both the setup- and vehicle-history
+  panels, the fastest-lap time and each session in a card's "Fastest laps" list
+  are now tappable — they load that session straight into the viewer (closing the
+  garage drawer), so you can go from "which setup was quickest" to the actual
+  telemetry in one tap. The fastest-lap value is read from each session's own
+  cached best lap, so it always points back to a real, openable log.
 - **Collapsible Pro panel + relocatable Video/Mini-Map on mobile.** The Pro
   view's left column (info/vehicle/video + mini-map) is roomy on tablet and
   desktop but cramped on a phone. On mobile a small flag tab now sits at the top

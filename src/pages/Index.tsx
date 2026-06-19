@@ -41,6 +41,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ParsedData } from "@/types/racing";
+import { parseDatalogFile } from "@/lib/datalogParser";
 import { calculateDistanceArray } from "@/lib/referenceUtils";
 import { formatAxisDistance } from "@/lib/chartAxis";
 import { cn } from "@/lib/utils";
@@ -218,6 +219,24 @@ export default function Index() {
     trackPromptOpen, setTrackPromptOpen, detectedTrack, detectionResult,
     allTracks, gpsCenter,
   } = dataLoader;
+
+  // Open a saved session by file name — used by the setup/vehicle history cards to
+  // jump straight to the session that holds a card's fastest lap. Loads + parses
+  // the blob like FilesTab does, closes the garage drawer, and (when sitting on a
+  // doc-style tab that shows no telemetry) drops back to the race line so the
+  // freshly-loaded session is actually visible.
+  const handleOpenFile = useCallback(async (fileName: string) => {
+    try {
+      const blob = await fileManager.loadFile(fileName);
+      if (!blob) return;
+      const parsed = await parseDatalogFile(new File([blob], fileName));
+      handleDataLoaded(parsed, fileName);
+      fileManager.close();
+      setTopPanelView((v) => (v === "setups" || v === "notes" ? "raceline" : v));
+    } catch (e) {
+      console.error("Failed to open session:", e);
+    }
+  }, [fileManager, handleDataLoaded]);
 
   // Lap snapshots: frozen "course fastest lap" captures, loaded as a comparison
   // overlay through the same external-reference slot (so they never auto-play or
@@ -519,6 +538,7 @@ export default function Index() {
     onAddVehicle: vehicleManager.addVehicle,
     onUpdateVehicle: vehicleManager.updateVehicle,
     onRemoveVehicle: vehicleManager.removeVehicle,
+    onOpenFile: handleOpenFile,
     // The "New type" shortcut targets the Setups tab, which only exists once a
     // session is loaded — omit it (hiding the button) on the landing page.
     onCreateVehicleType: data ? handleCreateVehicleType : undefined,
@@ -532,6 +552,7 @@ export default function Index() {
     vehicleManager.vehicles, vehicleManager.addVehicle, vehicleManager.updateVehicle, vehicleManager.removeVehicle,
     data, handleCreateVehicleType,
     templateManager.vehicleTypes,
+    handleOpenFile,
     lapMgmt.selection,
   ]);
 
@@ -549,10 +570,11 @@ export default function Index() {
     onAddVehicleType: templateManager.addVehicleType,
     onRemoveVehicleType: templateManager.removeVehicleType,
     onCreateVehicle: openVehiclesGarage,
+    onOpenFile: handleOpenFile,
   }), [
     vehicleManager.vehicles, setupManager.setups, templateManager.vehicleTypes, templateManager.templates,
     setupManager.addSetup, setupManager.updateSetup, setupManager.removeSetup, setupManager.getLatestForVehicle,
-    templateManager.addVehicleType, templateManager.removeVehicleType, openVehiclesGarage,
+    templateManager.addVehicleType, templateManager.removeVehicleType, openVehiclesGarage, handleOpenFile,
   ]);
 
   // No data loaded - show import UI

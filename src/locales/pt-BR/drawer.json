@@ -144,7 +144,23 @@
     "noSetupData": "Sem dados de configuração",
     "showFull": "Mostrar configuração completa",
     "showChanges": "Mostrar apenas alterações",
-    "lapsHeader": "Voltas mais rápidas"
+    "lapsHeader": "Voltas mais rápidas",
+    "openSession": "Abrir esta sessão"
+  },
+  "vehicleHistory": {
+    "title": "Histórico do veículo",
+    "openTitle": "Ver histórico do veículo",
+    "loading": "Carregando histórico…",
+    "empty": "Ainda não há histórico",
+    "emptyHint": "Faça uma sessão com este veículo e atribua uma configuração para começar a criar o histórico.",
+    "allCourses": "Todas as pistas",
+    "fastestTag": "Volta mais rápida",
+    "noLap": "—",
+    "noSetupData": "Sem dados de configuração",
+    "showFull": "Mostrar configuração",
+    "hideFull": "Ocultar configuração",
+    "lapsHeader": "Voltas mais rápidas",
+    "openSession": "Abrir esta sessão"
   },
   "notes": {
     "loadSession": "Carregue uma sessão para adicionar notas",
