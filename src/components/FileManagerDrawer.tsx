@@ -4,12 +4,10 @@ import { X, Gauge, Cpu, User, Bluetooth, BluetoothOff, Loader2, Settings, MapPin
 import { Button } from "@/components/ui/button";
 import { FileEntry, FileMetadata } from "@/lib/fileStorage";
 import { Vehicle } from "@/lib/vehicleStorage";
-import { VehicleSetup } from "@/lib/setupStorage";
-import { VehicleType, SetupTemplate, TemplateSection } from "@/lib/templateStorage";
+import { VehicleType } from "@/lib/templateStorage";
 import { ParsedData } from "@/types/racing";
 import { FilesTab } from "./drawer/FilesTab";
 import { VehiclesTab } from "./drawer/VehiclesTab";
-import { SetupsTab } from "./drawer/SetupsTab";
 import { DeviceSettingsTab } from "./drawer/DeviceSettingsTab";
 import { DeviceTracksTab } from "./drawer/DeviceTracksTab";
 import { ProfileTab } from "./tabs/ProfileTab";
@@ -17,7 +15,7 @@ import { useDeviceContext } from "@/contexts/DeviceContext";
 import { isBleSupported, requestBatteryLevel, type BatteryInfo } from "@/lib/bleDatalogger";
 
 type TopTab = "garage" | "profile" | "device";
-type GarageTab = "files" | "vehicles" | "setups";
+type GarageTab = "files" | "vehicles";
 type DeviceTab = "settings" | "tracks";
 
 interface FileManagerDrawerProps {
@@ -42,21 +40,12 @@ interface FileManagerDrawerProps {
   // Vehicle props
   vehicles: Vehicle[];
   vehicleTypes: VehicleType[];
-  templates: SetupTemplate[];
   onAddVehicle: (vehicle: Omit<Vehicle, "id">) => Promise<void>;
   onUpdateVehicle: (vehicle: Vehicle) => Promise<void>;
   onRemoveVehicle: (id: string) => Promise<void>;
   // Current session context (the browser opens at this track/course)
   currentTrackName: string | null;
   currentCourseName: string | null;
-  // Setup props
-  setups: VehicleSetup[];
-  onAddSetup: (setup: Omit<VehicleSetup, "id" | "createdAt" | "updatedAt">) => Promise<void>;
-  onUpdateSetup: (setup: VehicleSetup) => Promise<void>;
-  onRemoveSetup: (id: string) => Promise<void>;
-  onGetLatestSetupForVehicle: (vehicleId: string) => Promise<VehicleSetup | null>;
-  onAddVehicleType: (name: string, wheelCount: 2 | 4, includeTires: boolean, sections: TemplateSection[]) => Promise<unknown>;
-  onRemoveVehicleType: (vehicleTypeId: string, templateId: string) => Promise<void>;
 }
 
 export function FileManagerDrawer({
@@ -65,11 +54,9 @@ export function FileManagerDrawer({
   showSampleFiles,
   initialGarageTab = "files",
   showProfile,
-  vehicles, vehicleTypes, templates,
+  vehicles, vehicleTypes,
   onAddVehicle, onUpdateVehicle, onRemoveVehicle,
   currentTrackName, currentCourseName,
-  setups, onAddSetup, onUpdateSetup, onRemoveSetup, onGetLatestSetupForVehicle,
-  onAddVehicleType, onRemoveVehicleType,
 }: FileManagerDrawerProps) {
   const { t } = useTranslation("drawer");
   const [topTab, setTopTab] = useState<TopTab>("garage");
@@ -79,7 +66,6 @@ export function FileManagerDrawer({
   const garageTabs: { key: GarageTab; label: string }[] = [
     { key: "files", label: t("shell.garageTabs.files") },
     { key: "vehicles", label: t("shell.garageTabs.vehicles") },
-    { key: "setups", label: t("shell.garageTabs.setups") },
   ];
 
   const deviceTabs: { key: DeviceTab; label: string; icon: React.ReactNode }[] = [
@@ -187,20 +173,6 @@ export function FileManagerDrawer({
             )}
             {garageTab === "vehicles" && (
               <VehiclesTab vehicles={vehicles} vehicleTypes={vehicleTypes} onAdd={onAddVehicle} onUpdate={onUpdateVehicle} onRemove={onRemoveVehicle} />
-            )}
-            {garageTab === "setups" && (
-              <SetupsTab
-                vehicles={vehicles}
-                setups={setups}
-                vehicleTypes={vehicleTypes}
-                templates={templates}
-                onAdd={onAddSetup}
-                onUpdate={onUpdateSetup}
-                onRemove={onRemoveSetup}
-                onGetLatestForVehicle={onGetLatestSetupForVehicle}
-                onAddVehicleType={onAddVehicleType}
-                onRemoveVehicleType={onRemoveVehicleType}
-              />
             )}
           </>
         )}

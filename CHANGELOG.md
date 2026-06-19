@@ -123,10 +123,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   cloud rows and in the Profile → Cloud logs list.
 
 ### Changed
-- **Notes moved to the main toolbar.** Session notes (and the session-setup +
-  post-session measurement panel) are now their own tab in the main view bar —
-  to the right of Tools — instead of living inside the Garage drawer. The
-  setup-status nag now jumps straight there.
+- **Notes and Setups moved to the main toolbar.** Session notes (with the
+  session-setup + post-session measurement panel) and your vehicle setups are now
+  their own tabs in the main view bar — **Setups** then **Notes**, to the right of
+  Tools — instead of living inside the Garage drawer. They update often, so this
+  keeps them a single tap away. **Vehicles** stay in the Garage (you set those up
+  once). The setup-status nag jumps straight to the right place.
 - **Admin link tidied up.** The home-screen "Track Management" link is now
   labelled **Admin** and only appears when an admin is actually signed in (it was
   previously shown to anyone on an admin-enabled build).

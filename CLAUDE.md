@@ -78,9 +78,9 @@ src/
 ├── components/
 │   ├── ui/                # shadcn/ui primitives
 │   ├── admin/             # Admin tabs (Tracks, Courses, Submissions, Users, BannedIps, Tools, Messages)
-│   ├── tabs/              # View tabs (GraphView, RaceLine, LapTimes, Coach, Tools; Notes lives in drawer/ but is a main-view tab)
+│   ├── tabs/              # View tabs (GraphView, RaceLine, LapTimes, Coach, Tools; Setups + Notes live in drawer/ but are main-view tabs)
 │   ├── graphview/         # Pro mode: GraphPanel, GraphViewPanel, MiniMap, SingleSeriesChart, GGDiagram, InfoBox
-│   ├── drawer/            # File-manager drawer tabs (Files, Vehicles/Karts, Setups, Device*); NotesTab also here but mounted as a main-view tab
+│   ├── drawer/            # File-manager drawer tabs (Files, Vehicles/Karts, Device*); SetupsTab + NotesTab also here but mounted as main-view tabs
 │   ├── track-editor/      # Track editor: VisualEditor, SectorListEditor, CourseSectorEditor, Add*Dialog
 │   ├── video-overlays/    # Video-export overlay system: registry + themes + per-widget *Overlay
 │   ├── RaceLineView.tsx   # Leaflet map: race line, speed heatmap, braking zones
@@ -419,7 +419,7 @@ splitting in `vite.config.ts`. Pulling a lazy module into an eagerly-imported fi
 re-merges it into the main chunk — watch for this.
 
 **Lazy (off the initial path):** routes (`Login`, `Admin`, `Register`, `Privacy`);
-view tabs (`RaceLineTab`, `GraphViewTab`, `CoachTab`, `ToolsTab`); `FileManagerDrawer`;
+view tabs (`RaceLineTab`, `GraphViewTab`, `CoachTab`, `ToolsTab`, `SetupsTab`); `FileManagerDrawer`;
 `DataloggerDownload` (keeps `lib/ble/*` out); `CourseSectorEditor` (carries
 `@dnd-kit/*`). Lazy components must render inside `<Suspense>`; use
 `lazy(() => import('…').then((m) => ({ default: m.Named })))` for named exports.
