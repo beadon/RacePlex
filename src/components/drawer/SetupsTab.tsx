@@ -12,6 +12,7 @@ import { Vehicle } from "@/lib/vehicleStorage";
 import { VehicleSetup } from "@/lib/setupStorage";
 import { VehicleType, SetupTemplate, TemplateSection, TemplateFieldDef } from "@/lib/templateStorage";
 import { TemplateCreator } from "@/components/drawer/TemplateCreator";
+import { VehicleTypeEditor } from "@/components/drawer/VehicleTypeEditor";
 import { ModeToggle } from "@/components/drawer/ModeToggle";
 import { computeSetupHash, shortRevHash } from "@/lib/setupRevision";
 import { SetupHistoryPanel } from "@/components/drawer/SetupHistoryPanel";
@@ -28,6 +29,7 @@ interface SetupsTabProps {
   onGetLatestForVehicle: (vehicleId: string) => Promise<VehicleSetup | null>;
   onAddVehicleType: (name: string, wheelCount: 2 | 4, includeTires: boolean, sections: TemplateSection[]) => Promise<unknown>;
   onRemoveVehicleType: (vehicleTypeId: string, templateId: string) => Promise<void>;
+  onUpdateVehicleType: (vehicleType: VehicleType, template: SetupTemplate) => Promise<void>;
   /** Open a saved session by file name (history card → fastest-lap session). */
   onOpenFile?: (fileName: string) => void | Promise<void>;
   /** When toggled true, jump straight into the vehicle-type creator (e.g. from
@@ -38,7 +40,7 @@ interface SetupsTabProps {
   onCreateVehicle?: () => void;
 }
 
-type FormMode = "list" | "new" | "edit" | "new-type" | "history";
+type FormMode = "list" | "new" | "edit" | "new-type" | "manage-type" | "history";
 
 const emptyForm = (): Omit<VehicleSetup, "id" | "createdAt" | "updatedAt"> => ({
   vehicleId: "",
@@ -67,7 +69,7 @@ const emptyForm = (): Omit<VehicleSetup, "id" | "createdAt" | "updatedAt"> => ({
 export function SetupsTab({
   vehicles, setups, vehicleTypes, templates,
   onAdd, onUpdate, onRemove, onGetLatestForVehicle,
-  onAddVehicleType, onRemoveVehicleType, onOpenFile,
+  onAddVehicleType, onRemoveVehicleType, onUpdateVehicleType, onOpenFile,
   requestNewType, onRequestNewTypeHandled,
   onCreateVehicle,
 }: SetupsTabProps) {
@@ -364,6 +366,20 @@ export function SetupsTab({
     );
   }
 
+  // ── Vehicle Type Editor ──
+  if (mode === "manage-type") {
+    return (
+      <VehicleTypeEditor
+        vehicleTypes={vehicleTypes}
+        templates={templates}
+        setups={setups}
+        onUpdate={onUpdateVehicleType}
+        onRemove={onRemoveVehicleType}
+        onDone={() => setMode("list")}
+      />
+    );
+  }
+
   // ── List View ──
   if (mode === "list") {
     return (
@@ -428,6 +444,9 @@ export function SetupsTab({
         <div className="shrink-0 px-3 py-3 border-t border-border space-y-2">
           <Button variant="secondary" className="w-full gap-2" onClick={() => setMode("new-type")}>
             <Car className="w-4 h-4" /> {t("setups.newVehicleType")}
+          </Button>
+          <Button variant="outline" className="w-full gap-2" onClick={() => setMode("manage-type")}>
+            <Pencil className="w-4 h-4" /> {t("setups.manageVehicleTypes")}
           </Button>
           {/* A setup must attach to a vehicle — block new setups until one exists
               and point the user at the Vehicles tab. */}
