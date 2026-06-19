@@ -5,6 +5,7 @@ import { LandingPage } from "@/components/LandingPage";
 import { TrackEditor } from "@/components/TrackEditor"; // still used in compact header
 import { LapTimesTab } from "@/components/tabs/LapTimesTab";
 import { NotesTab } from "@/components/drawer/NotesTab";
+import { SetupsNotesPanel } from "@/components/tabs/SetupsNotesPanel";
 // Heavy tabs lazy-loaded so the initial bundle doesn't carry their deps.
 // RaceLine pulls in Leaflet (vendor-leaflet, ~150 kB) + the telemetry chart —
 // lazy keeps the whole mapping stack off the landing page; it loads the moment
@@ -42,6 +43,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { ParsedData } from "@/types/racing";
 import { calculateDistanceArray } from "@/lib/referenceUtils";
 import { formatAxisDistance } from "@/lib/chartAxis";
+import { cn } from "@/lib/utils";
 import { usePanelsForSlot, PanelSlot } from "@/plugins/panels";
 import { TrackPromptDialog } from "@/components/TrackPromptDialog";
 import { useSettings } from "@/hooks/useSettings";
@@ -184,6 +186,19 @@ export default function Index() {
     if (target === "setups" || target === "notes") setTopPanelView(target);
     else fileManager.open(target);
   }, [fileManager]);
+  // Open the garage on the Vehicles tab — setups need a vehicle to attach to.
+  const openVehiclesGarage = useCallback(() => fileManager.open("vehicles"), [fileManager]);
+
+  // "New type" shortcut on the Vehicles tab: close the garage, jump to the Setups
+  // tab, and ask it to open the vehicle-type creator (one-shot, cleared once the
+  // tab consumes it — see SetupsTab's requestNewType).
+  const [requestNewVehicleType, setRequestNewVehicleType] = useState(false);
+  const handleCreateVehicleType = useCallback(() => {
+    fileManager.close();
+    setTopPanelView("setups");
+    setRequestNewVehicleType(true);
+  }, [fileManager]);
+  const handleNewVehicleTypeHandled = useCallback(() => setRequestNewVehicleType(false), []);
 
   // Video sync for the video player
   const videoSync = useVideoSync({
@@ -504,6 +519,9 @@ export default function Index() {
     onAddVehicle: vehicleManager.addVehicle,
     onUpdateVehicle: vehicleManager.updateVehicle,
     onRemoveVehicle: vehicleManager.removeVehicle,
+    // The "New type" shortcut targets the Setups tab, which only exists once a
+    // session is loaded — omit it (hiding the button) on the landing page.
+    onCreateVehicleType: data ? handleCreateVehicleType : undefined,
     currentTrackName: lapMgmt.selection?.trackName ?? null,
     currentCourseName: lapMgmt.selection?.courseName ?? null,
   }), [
@@ -512,8 +530,29 @@ export default function Index() {
     fileManager.initialGarageTab,
     handleDataLoaded, settings.autoSaveFiles, effectiveShowSampleFiles, showProfile,
     vehicleManager.vehicles, vehicleManager.addVehicle, vehicleManager.updateVehicle, vehicleManager.removeVehicle,
+    data, handleCreateVehicleType,
     templateManager.vehicleTypes,
     lapMgmt.selection,
+  ]);
+
+  // Shared SetupsTab wiring — used by the main-view Setups tab and (off-session)
+  // by the Setups garage sub-tab on the landing page.
+  const setupsTabProps = useMemo(() => ({
+    vehicles: vehicleManager.vehicles,
+    setups: setupManager.setups,
+    vehicleTypes: templateManager.vehicleTypes,
+    templates: templateManager.templates,
+    onAdd: setupManager.addSetup,
+    onUpdate: setupManager.updateSetup,
+    onRemove: setupManager.removeSetup,
+    onGetLatestForVehicle: setupManager.getLatestForVehicle,
+    onAddVehicleType: templateManager.addVehicleType,
+    onRemoveVehicleType: templateManager.removeVehicleType,
+    onCreateVehicle: openVehiclesGarage,
+  }), [
+    vehicleManager.vehicles, setupManager.setups, templateManager.vehicleTypes, templateManager.templates,
+    setupManager.addSetup, setupManager.updateSetup, setupManager.removeSetup, setupManager.getLatestForVehicle,
+    templateManager.addVehicleType, templateManager.removeVehicleType, openVehiclesGarage,
   ]);
 
   // No data loaded - show import UI
@@ -534,7 +573,10 @@ export default function Index() {
             enableCloud={enableCloud}
           />
           <Suspense fallback={null}>
-            <FileManagerDrawer {...fileManagerProps} />
+            {/* Off-session stopgap: Setups normally lives in the main toolbar
+                (session-only), so host it inside the garage here on the landing
+                page. A planned UI overhaul will revisit this relocation. */}
+            <FileManagerDrawer {...fileManagerProps} setupsTab={<SetupsTab {...setupsTabProps} />} />
           </Suspense>
         </>
       </DeviceProvider>
@@ -628,45 +670,45 @@ export default function Index() {
 
         <div className="flex-1 min-h-0 overflow-hidden">
           {topPanelView === "laptable" && <LapTimesTab />}
-          {topPanelView === "notes" && (
-            <div className="h-full flex flex-col max-w-2xl mx-auto w-full">
-              <NotesTab
-                fileName={currentFileName}
-                notes={noteManager.notes}
-                onAdd={noteManager.addNote}
-                onUpdate={noteManager.updateNote}
-                onRemove={noteManager.removeNote}
-                vehicles={vehicleManager.vehicles}
-                setups={setupManager.setups}
-                sessionKartId={sessionKartId}
-                sessionSetupId={sessionSetupId}
-                sessionSetupRev={sessionSetupRev}
-                onSaveSessionSetup={handleSaveSessionSetupWithSnapshot}
-                postSession={postSession}
-                onSavePostSession={sessionMeta.handleSavePostSession}
-              />
-            </div>
-          )}
           <Suspense fallback={null}>
             {topPanelView === "raceline" && <RaceLineTab showOverlays={showOverlays} />}
             {topPanelView === "graphview" && <GraphViewTab />}
             {topPanelView === "coach" && showCoach && <CoachTab />}
             {topPanelView === "tools" && showTools && <ToolsTab />}
-            {topPanelView === "setups" && (
-              <div className="h-full flex flex-col max-w-2xl mx-auto w-full">
-                <SetupsTab
-                  vehicles={vehicleManager.vehicles}
-                  setups={setupManager.setups}
-                  vehicleTypes={templateManager.vehicleTypes}
-                  templates={templateManager.templates}
-                  onAdd={setupManager.addSetup}
-                  onUpdate={setupManager.updateSetup}
-                  onRemove={setupManager.removeSetup}
-                  onGetLatestForVehicle={setupManager.getLatestForVehicle}
-                  onAddVehicleType={templateManager.addVehicleType}
-                  onRemoveVehicleType={templateManager.removeVehicleType}
-                />
-              </div>
+            {/* Setups + Notes share one surface: a 50/50 split on tablet/desktop,
+                separate full-width tabs on phones (see SetupsNotesPanel). */}
+            {(topPanelView === "setups" || topPanelView === "notes") && (
+              <SetupsNotesPanel
+                active={topPanelView}
+                setups={
+                  // Own Suspense: the lazy SetupsTab chunk loading must not blank
+                  // out the (eager) Notes half rendered beside it in the split.
+                  <Suspense fallback={null}>
+                    <SetupsTab
+                      {...setupsTabProps}
+                      requestNewType={requestNewVehicleType}
+                      onRequestNewTypeHandled={handleNewVehicleTypeHandled}
+                    />
+                  </Suspense>
+                }
+                notes={
+                  <NotesTab
+                    fileName={currentFileName}
+                    notes={noteManager.notes}
+                    onAdd={noteManager.addNote}
+                    onUpdate={noteManager.updateNote}
+                    onRemove={noteManager.removeNote}
+                    vehicles={vehicleManager.vehicles}
+                    setups={setupManager.setups}
+                    sessionKartId={sessionKartId}
+                    sessionSetupId={sessionSetupId}
+                    sessionSetupRev={sessionSetupRev}
+                    onSaveSessionSetup={handleSaveSessionSetupWithSnapshot}
+                    postSession={postSession}
+                    onSavePostSession={sessionMeta.handleSavePostSession}
+                  />
+                }
+              />
             )}
           </Suspense>
         </div>
@@ -712,12 +754,15 @@ function TabBar({ topPanelView, setTopPanelView, laps, showOverlays, onToggleOve
   onSetupIndicatorClick: () => void;
 }) {
   const { t } = useTranslation("session");
-  const tabClass = (view: TopPanelView) =>
-    `flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors ${
-      topPanelView === view
-        ? "text-primary border-b-2 border-primary bg-primary/5"
-        : "text-muted-foreground hover:text-foreground"
-    }`;
+  const tabBase = "flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors";
+  const tabState = (active: boolean) =>
+    active
+      ? "text-primary border-b-2 border-primary bg-primary/5"
+      : "text-muted-foreground hover:text-foreground";
+  const tabClass = (view: TopPanelView) => cn(tabBase, tabState(topPanelView === view));
+  // Setups and Notes live on one combined surface; either being active lights
+  // up the small-screen tabs and the merged tablet/desktop tab alike.
+  const setupsNotesActive = topPanelView === "setups" || topPanelView === "notes";
 
   return (
     <div className="flex items-center border-b border-border shrink-0">
@@ -743,11 +788,23 @@ function TabBar({ topPanelView, setTopPanelView, laps, showOverlays, onToggleOve
           <Wrench className="w-4 h-4" /> <span className="hidden sm:inline">{t("tabs.tools")}</span>
         </button>
       )}
-      <button onClick={() => setTopPanelView("setups")} className={tabClass("setups")}>
+      {/* Phones: Setups and Notes are separate tabs. Tablet/desktop: one merged
+          tab opens the 50/50 split (SetupsNotesPanel handles the layout). */}
+      <button onClick={() => setTopPanelView("setups")} className={cn(tabClass("setups"), "md:hidden")}>
         <SlidersHorizontal className="w-4 h-4" /> <span className="hidden sm:inline">{t("tabs.setups")}</span>
       </button>
-      <button onClick={() => setTopPanelView("notes")} className={tabClass("notes")}>
+      <button onClick={() => setTopPanelView("notes")} className={cn(tabClass("notes"), "md:hidden")}>
         <NotebookPen className="w-4 h-4" /> <span className="hidden sm:inline">{t("tabs.notes")}</span>
+      </button>
+      <button
+        onClick={() => setTopPanelView("setups")}
+        className={cn(tabBase, tabState(setupsNotesActive), "hidden md:flex")}
+      >
+        <span className="flex items-center gap-1">
+          <SlidersHorizontal className="w-4 h-4" />
+          <NotebookPen className="w-4 h-4" />
+        </span>
+        {t("tabs.setupsNotes")}
       </button>
       {setupIndicator && (
         <TooltipProvider>

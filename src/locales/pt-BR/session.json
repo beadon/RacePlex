@@ -7,7 +7,8 @@
     "coach": "Coach",
     "tools": "Ferramentas",
     "setups": "Acertos",
-    "notes": "Notas"
+    "notes": "Notas",
+    "setupsNotes": "Acertos e notas"
   },
   "header": {
     "play": "Reproduzir",

@@ -63,6 +63,7 @@
     "unknownType": "Tipo sconosciuto",
     "edit": "Modifica",
     "vehicleType": "Tipo di veicolo",
+    "newType": "Nuovo tipo",
     "selectType": "Seleziona tipo…",
     "name": "Nome",
     "namePlaceholder": "Nome del veicolo",
@@ -120,7 +121,12 @@
     "halves": "Metà",
     "quarters": "Quarti",
     "update": "Aggiorna",
-    "save": "Salva"
+    "save": "Salva",
+    "copyFrom": "Copia assetto da…",
+    "setup": "Assetto",
+    "selectSetup": "Seleziona assetto…",
+    "copy": "Copia",
+    "firstCreateVehicle": "Crea prima un veicolo"
   },
   "setupHistory": {
     "title": "Cronologia assetto",
@@ -163,7 +169,10 @@
     "edit": "Modifica",
     "writeNote": "Scrivi una nota…",
     "updateNote": "Aggiorna nota",
-    "addNote": "Aggiungi nota"
+    "addNote": "Aggiungi nota",
+    "clearSession": "Cancella dati sessione",
+    "clearConfirm": "Questo cancella il veicolo e l'assetto salvati per questa sessione. Operazione irreversibile.",
+    "clearConfirmAction": "Cancella"
   },
   "postSession": {
     "title": "Post-sessione",

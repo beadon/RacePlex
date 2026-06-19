@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { X, Gauge, Cpu, User, Bluetooth, BluetoothOff, Loader2, Settings, MapPin, Battery, BatteryLow, BatteryMedium, BatteryFull, BatteryWarning } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,7 @@ import { useDeviceContext } from "@/contexts/DeviceContext";
 import { isBleSupported, requestBatteryLevel, type BatteryInfo } from "@/lib/bleDatalogger";
 
 type TopTab = "garage" | "profile" | "device";
-type GarageTab = "files" | "vehicles";
+type GarageTab = "files" | "vehicles" | "setups";
 type DeviceTab = "settings" | "tracks";
 
 interface FileManagerDrawerProps {
@@ -43,6 +43,14 @@ interface FileManagerDrawerProps {
   onAddVehicle: (vehicle: Omit<Vehicle, "id">) => Promise<void>;
   onUpdateVehicle: (vehicle: Vehicle) => Promise<void>;
   onRemoveVehicle: (id: string) => Promise<void>;
+  // Jump to the vehicle-type creator (closes the drawer, opens the Setups tab).
+  // Omitted off-session, where the Setups tab isn't reachable.
+  onCreateVehicleType?: () => void;
+  // Off-session fallback: Setups normally lives in the main toolbar, but that
+  // tab only exists once a session is loaded. When provided (landing page only),
+  // host it as a garage sub-tab so setups/vehicle-types stay reachable. Passed as
+  // a ready-made node so the drawer needn't know about setup props.
+  setupsTab?: ReactNode;
   // Current session context (the browser opens at this track/course)
   currentTrackName: string | null;
   currentCourseName: string | null;
@@ -55,7 +63,8 @@ export function FileManagerDrawer({
   initialGarageTab = "files",
   showProfile,
   vehicles, vehicleTypes,
-  onAddVehicle, onUpdateVehicle, onRemoveVehicle,
+  onAddVehicle, onUpdateVehicle, onRemoveVehicle, onCreateVehicleType,
+  setupsTab,
   currentTrackName, currentCourseName,
 }: FileManagerDrawerProps) {
   const { t } = useTranslation("drawer");
@@ -66,6 +75,7 @@ export function FileManagerDrawer({
   const garageTabs: { key: GarageTab; label: string }[] = [
     { key: "files", label: t("shell.garageTabs.files") },
     { key: "vehicles", label: t("shell.garageTabs.vehicles") },
+    ...(setupsTab ? [{ key: "setups" as const, label: t("shell.garageTabs.setups") }] : []),
   ];
 
   const deviceTabs: { key: DeviceTab; label: string; icon: React.ReactNode }[] = [
@@ -172,8 +182,9 @@ export function FileManagerDrawer({
               <FilesTab files={files} fileMetadataMap={fileMetadataMap} vehicles={vehicles} currentTrackName={currentTrackName} currentCourseName={currentCourseName} isOpen={isOpen} storageUsed={storageUsed} storageQuota={storageQuota} onLoadFile={onLoadFile} onDeleteFile={onDeleteFile} onExportFile={onExportFile} onSaveFile={onSaveFile} onDataLoaded={onDataLoaded} onClose={onClose} autoSave={autoSave} showSampleFiles={showSampleFiles} />
             )}
             {garageTab === "vehicles" && (
-              <VehiclesTab vehicles={vehicles} vehicleTypes={vehicleTypes} onAdd={onAddVehicle} onUpdate={onUpdateVehicle} onRemove={onRemoveVehicle} />
+              <VehiclesTab vehicles={vehicles} vehicleTypes={vehicleTypes} onAdd={onAddVehicle} onUpdate={onUpdateVehicle} onRemove={onRemoveVehicle} onCreateVehicleType={onCreateVehicleType} />
             )}
+            {garageTab === "setups" && setupsTab}
           </>
         )}
 
