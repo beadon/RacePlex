@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { Pencil, Trash2, Car, History } from "lucide-react";
+import { Pencil, Trash2, Car, History, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,6 +20,8 @@ interface VehiclesTabProps {
   onRemove: (id: string) => Promise<void>;
   /** Open a saved session by file name (history card → fastest-lap session). */
   onOpenFile?: (fileName: string) => void | Promise<void>;
+  /** Jump to the vehicle-type creator (closes the garage, opens the Setups tab). */
+  onCreateVehicleType?: () => void;
 }
 
 const emptyForm = (defaultTypeId: string): Omit<Vehicle, "id"> => ({
@@ -31,7 +33,7 @@ const emptyForm = (defaultTypeId: string): Omit<Vehicle, "id"> => ({
   weightUnit: "lb",
 });
 
-export function VehiclesTab({ vehicles, vehicleTypes, onAdd, onUpdate, onRemove, onOpenFile }: VehiclesTabProps) {
+export function VehiclesTab({ vehicles, vehicleTypes, onAdd, onUpdate, onRemove, onOpenFile, onCreateVehicleType }: VehiclesTabProps) {
   const { t } = useTranslation("drawer");
   const defaultTypeId = vehicleTypes[0]?.id ?? "";
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -154,8 +156,16 @@ export function VehiclesTab({ vehicles, vehicleTypes, onAdd, onUpdate, onRemove,
 
       <div className="border-t border-border p-4 space-y-3 shrink-0">
         <div className="space-y-1">
-          <Label className="text-xs">{t("vehicles.vehicleType")}</Label>
-          <Select value={form.vehicleTypeId} onValueChange={v => setForm(f => ({ ...f, vehicleTypeId: v }))}>
+          <div className="flex items-center justify-between">
+            <Label className="text-xs">{t("vehicles.vehicleType")}</Label>
+            {onCreateVehicleType && (
+              <Button variant="ghost" size="sm" className="h-6 px-2 text-xs gap-1" onClick={onCreateVehicleType}>
+                <Plus className="w-3 h-3" /> {t("vehicles.newType")}
+              </Button>
+            )}
+          </div>
+          {/* A single type leaves nothing to choose — populate and lock it. */}
+          <Select value={form.vehicleTypeId} onValueChange={v => setForm(f => ({ ...f, vehicleTypeId: v }))} disabled={vehicleTypes.length <= 1}>
             <SelectTrigger className="h-8 text-sm"><SelectValue placeholder={t("vehicles.selectType")} /></SelectTrigger>
             <SelectContent>
               {vehicleTypes.map(vt => (

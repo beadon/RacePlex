@@ -63,6 +63,7 @@
     "unknownType": "不明な種類",
     "edit": "編集",
     "vehicleType": "車両の種類",
+    "newType": "新しいタイプ",
     "selectType": "種類を選択…",
     "name": "名前",
     "namePlaceholder": "車両名",
@@ -120,7 +121,12 @@
     "halves": "前後",
     "quarters": "4輪別",
     "update": "更新",
-    "save": "保存"
+    "save": "保存",
+    "copyFrom": "セットアップをコピー…",
+    "setup": "セットアップ",
+    "selectSetup": "セットアップを選択…",
+    "copy": "コピー",
+    "firstCreateVehicle": "まず車両を作成"
   },
   "setupHistory": {
     "title": "セットアップ履歴",
@@ -179,7 +185,10 @@
     "edit": "編集",
     "writeNote": "メモを入力…",
     "updateNote": "メモを更新",
-    "addNote": "メモを追加"
+    "addNote": "メモを追加",
+    "clearSession": "セッションデータを消去",
+    "clearConfirm": "このセッションに保存された車両とセットアップを消去します。この操作は元に戻せません。",
+    "clearConfirmAction": "消去"
   },
   "postSession": {
     "title": "走行後",

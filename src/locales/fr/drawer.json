@@ -63,6 +63,7 @@
     "unknownType": "Type inconnu",
     "edit": "Modifier",
     "vehicleType": "Type de véhicule",
+    "newType": "Nouveau type",
     "selectType": "Sélectionner un type…",
     "name": "Nom",
     "namePlaceholder": "Nom du véhicule",
@@ -120,7 +121,12 @@
     "halves": "Moitiés",
     "quarters": "Quarts",
     "update": "Mettre à jour",
-    "save": "Enregistrer"
+    "save": "Enregistrer",
+    "copyFrom": "Copier le réglage de…",
+    "setup": "Réglage",
+    "selectSetup": "Sélectionner un réglage…",
+    "copy": "Copier",
+    "firstCreateVehicle": "Créez d'abord un véhicule"
   },
   "setupHistory": {
     "title": "Historique des réglages",
@@ -179,7 +185,10 @@
     "edit": "Modifier",
     "writeNote": "Écrire une note…",
     "updateNote": "Mettre à jour la note",
-    "addNote": "Ajouter une note"
+    "addNote": "Ajouter une note",
+    "clearSession": "Effacer les données de session",
+    "clearConfirm": "Ceci efface le véhicule et le réglage enregistrés pour cette session. Cette action est irréversible.",
+    "clearConfirmAction": "Effacer"
   },
   "postSession": {
     "title": "Après-session",

@@ -161,7 +161,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   their own tabs in the main view bar — **Setups** then **Notes**, to the right of
   Tools — instead of living inside the Garage drawer. They update often, so this
   keeps them a single tap away. **Vehicles** stay in the Garage (you set those up
-  once). The setup-status nag jumps straight to the right place.
+  once). The setup-status nag jumps straight to the right place. On **tablets and
+  desktop** the two share one **Setups & Notes** tab shown as a 50/50 split, so
+  the extra width isn't wasted; phones keep them as separate full-width tabs.
+- **Fewer taps for single-vehicle garages.** The new-setup form now pre-fills
+  (and locks) the vehicle type when you only have one, and the vehicle when only
+  one fits — the pickers stay visible, just filled in for you. The session-setup
+  selector on Notes likewise pre-fills your only vehicle (and its only setup).
+  Nothing is auto-saved — you still tap Save. And if you linked the wrong setup to
+  a session, a **Clear session data** button (with an "are you sure" confirm)
+  unlinks it so you can re-assign; your notes and measurements are kept.
+- **Easier vehicle types.** Adding a vehicle now locks the type when there's only
+  one (nothing to choose), and a **New type** button on the Vehicles tab jumps you
+  straight to the vehicle-type creator on the Setups tab so it's clear where types
+  come from. On the landing page (no session loaded) the Setups tab is hosted
+  inside the Garage so vehicles, setups and types stay reachable before you open a
+  log.
+- **Setups guide you to a vehicle first.** With no vehicles yet, the **Add setup**
+  button is disabled and a **First create a vehicle** button takes you to the
+  Vehicles tab — no more dead-end where a setup has nothing to attach to.
+- **Copy setup from another vehicle.** When a same-type vehicle already has a
+  setup, the new-setup form shows a **Copy setup from…** button: pick a vehicle
+  (filtered to the current type) and one of its setups, and the form is pre-filled
+  so you can tweak and save — a big time-saver across similar karts/cars.
 - **Tighter lap selector.** The lap dropdown in the session header now sizes to
   its label instead of a fixed width, freeing up room so the toolbar controls
   (snapshots, overlays) don't get squeezed off-screen on mobile.

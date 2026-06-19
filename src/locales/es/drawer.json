@@ -63,6 +63,7 @@
     "unknownType": "Tipo desconocido",
     "edit": "Editar",
     "vehicleType": "Tipo de vehículo",
+    "newType": "Nuevo tipo",
     "selectType": "Seleccionar tipo…",
     "name": "Nombre",
     "namePlaceholder": "Nombre del vehículo",
@@ -120,7 +121,12 @@
     "halves": "Mitades",
     "quarters": "Cuartos",
     "update": "Actualizar",
-    "save": "Guardar"
+    "save": "Guardar",
+    "copyFrom": "Copiar reglaje de…",
+    "setup": "Reglaje",
+    "selectSetup": "Seleccionar reglaje…",
+    "copy": "Copiar",
+    "firstCreateVehicle": "Primero crea un vehículo"
   },
   "setupHistory": {
     "title": "Historial de configuración",
@@ -179,7 +185,10 @@
     "edit": "Editar",
     "writeNote": "Escribe una nota…",
     "updateNote": "Actualizar nota",
-    "addNote": "Añadir nota"
+    "addNote": "Añadir nota",
+    "clearSession": "Borrar datos de sesión",
+    "clearConfirm": "Esto borra el vehículo y el reglaje guardados en esta sesión. No se puede deshacer.",
+    "clearConfirmAction": "Borrar"
   },
   "postSession": {
     "title": "Post-sesión",

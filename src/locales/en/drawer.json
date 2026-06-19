@@ -62,6 +62,7 @@
     "unknownType": "Unknown type",
     "edit": "Edit",
     "vehicleType": "Vehicle Type",
+    "newType": "New type",
     "selectType": "Select type…",
     "name": "Name",
     "namePlaceholder": "Vehicle name",
@@ -119,7 +120,12 @@
     "halves": "Halves",
     "quarters": "Quarters",
     "update": "Update",
-    "save": "Save"
+    "save": "Save",
+    "copyFrom": "Copy setup from…",
+    "setup": "Setup",
+    "selectSetup": "Select setup…",
+    "copy": "Copy",
+    "firstCreateVehicle": "First create a vehicle"
   },
   "setupHistory": {
     "title": "Setup History",
@@ -178,7 +184,10 @@
     "edit": "Edit",
     "writeNote": "Write a note…",
     "updateNote": "Update Note",
-    "addNote": "Add Note"
+    "addNote": "Add Note",
+    "clearSession": "Clear session data",
+    "clearConfirm": "This clears the vehicle and setup saved to this session. This cannot be undone.",
+    "clearConfirmAction": "Clear"
   },
   "postSession": {
     "title": "Post-Session",
