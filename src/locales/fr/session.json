@@ -4,9 +4,10 @@
     "simple": "Simple",
     "pro": "Pro",
     "lapTimes": "Temps au tour",
-    "labs": "Labs",
     "coach": "Coach",
-    "tools": "Outils"
+    "tools": "Outils",
+    "setups": "Réglages",
+    "notes": "Notes"
   },
   "header": {
     "play": "Lecture",

@@ -3,9 +3,10 @@
     "simple": "Simple",
     "pro": "Pro",
     "lapTimes": "Lap Times",
-    "labs": "Labs",
     "coach": "Coach",
-    "tools": "Tools"
+    "tools": "Tools",
+    "setups": "Setups",
+    "notes": "Notes"
   },
   "header": {
     "play": "Play",

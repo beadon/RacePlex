@@ -4,9 +4,10 @@
     "simple": "Semplice",
     "pro": "Pro",
     "lapTimes": "Tempi sul giro",
-    "labs": "Labs",
     "coach": "Coach",
-    "tools": "Strumenti"
+    "tools": "Strumenti",
+    "setups": "Assetti",
+    "notes": "Note"
   },
   "header": {
     "play": "Riproduci",

@@ -127,6 +127,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   cloud rows and in the Profile → Cloud logs list.
 
 ### Changed
+- **Notes and Setups moved to the main toolbar.** Session notes (with the
+  session-setup + post-session measurement panel) and your vehicle setups are now
+  their own tabs in the main view bar — **Setups** then **Notes**, to the right of
+  Tools — instead of living inside the Garage drawer. They update often, so this
+  keeps them a single tap away. **Vehicles** stay in the Garage (you set those up
+  once). The setup-status nag jumps straight to the right place.
+- **Tighter lap selector.** The lap dropdown in the session header now sizes to
+  its label instead of a fixed width, freeing up room so the toolbar controls
+  (snapshots, overlays) don't get squeezed off-screen on mobile.
 - **Admin link tidied up.** The home-screen "Track Management" link is now
   labelled **Admin** and only appears when an admin is actually signed in (it was
   previously shown to anyone on an admin-enabled build).
@@ -178,6 +187,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and edit button are consolidated into a single course control — now using a
   route icon (at every screen size) with the current track : course as its label
   from tablet up.
+
+### Removed
+- **Labs tab removed.** The experimental Labs tab (and its hidden settings
+  toggle) has been retired — it carried no active features.
 
 ### Fixed
 - **Fonts now work fully offline.** The Inter and JetBrains Mono typefaces were

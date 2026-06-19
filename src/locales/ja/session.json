@@ -4,9 +4,10 @@
     "simple": "シンプル",
     "pro": "プロ",
     "lapTimes": "ラップタイム",
-    "labs": "ラボ",
     "coach": "コーチ",
-    "tools": "ツール"
+    "tools": "ツール",
+    "setups": "セットアップ",
+    "notes": "メモ"
   },
   "header": {
     "play": "再生",
