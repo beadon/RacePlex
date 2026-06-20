@@ -8,10 +8,10 @@ const enableCloud = import.meta.env.VITE_ENABLE_CLOUD === "true";
 
 // NOTE FOR THE OPERATOR: this policy adapts to the build flags. With cloud
 // features off it describes the offline-only app; with VITE_ENABLE_CLOUD on it
-// also covers accounts, payments and AI. Placeholders to confirm before relying
-// on this for the hosted service: the operating entity's legal name, a contact
-// email, and the specific AI provider used by the coaching plugin. This is a
-// drafted policy, not legal advice — have it reviewed for your jurisdiction.
+// also covers accounts, payments and AI. The official hosted service is operated
+// by PERCHWERKS LLC (Windermere, Florida, USA); AI coaching uses Anthropic;
+// interim contact champagne@perchwerks.com. This is a drafted policy, not legal
+// advice — have it reviewed for your jurisdiction.
 
 const Privacy = () => {
   useDocumentHead({
@@ -157,11 +157,9 @@ const Privacy = () => {
               <p>
                 If you use the optional AI coaching feature, the telemetry needed
                 to generate feedback (such as GPS traces and lap data, and any
-                driver name attached to the session) is sent to a{" "}
-                <strong className="text-foreground">
-                  third-party AI provider
-                </strong>{" "}
-                to be processed. We send this only when you choose to run the
+                driver name attached to the session) is sent to{" "}
+                <strong className="text-foreground">Anthropic</strong>, our
+                third-party AI provider, to be processed. We send this only when you choose to run the
                 coach. AI output is generated automatically and may be inaccurate
                 — it is informational only and must not be relied on for safety
                 decisions (see our{" "}
@@ -230,10 +228,8 @@ const Privacy = () => {
                 — bot/abuse protection on sign-up.
               </li>
               <li>
-                <strong className="text-foreground">
-                  The AI coaching provider
-                </strong>{" "}
-                — only if you use AI coaching.
+                <strong className="text-foreground">Anthropic</strong> — powers AI
+                coaching, only if you use it.
               </li>
             </ul>
             <p className="mt-2">
@@ -412,9 +408,12 @@ const Privacy = () => {
             Changes &amp; Contact
           </h2>
           <p>
-            We may update this policy as the app evolves; material changes will be
-            reflected by the “Last updated” date below. Questions or requests can
-            be sent through the in-app contact form.
+            The official hosted service is operated by{" "}
+            <strong className="text-foreground">PERCHWERKS LLC</strong> (Windermere,
+            Florida, USA). We may update this policy as the app evolves; material
+            changes will be reflected by the “Last updated” date below. Questions
+            or requests can be sent through the in-app contact form or to
+            champagne@perchwerks.com.
           </p>
         </section>
       </div>

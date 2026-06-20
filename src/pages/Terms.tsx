@@ -4,10 +4,10 @@ import { useDocumentHead } from "@/hooks/useDocumentHead";
 
 const enableCloud = import.meta.env.VITE_ENABLE_CLOUD === "true";
 
-// NOTE FOR THE OPERATOR: drafted Terms, not legal advice. Before relying on
-// these for the hosted service, confirm: the operating entity's legal name, a
-// contact email, and the governing-law jurisdiction (left as a placeholder
-// below). Have them reviewed by a lawyer for your jurisdiction.
+// NOTE FOR THE OPERATOR: drafted Terms, not legal advice — have them reviewed by
+// a lawyer for your jurisdiction. The official hosted service is operated by
+// PERCHWERKS LLC, based in Windermere, Florida, USA; contact
+// champagne@perchwerks.com (interim) until dedicated support addresses exist.
 
 const Terms = () => {
   useDocumentHead({
@@ -237,9 +237,12 @@ const Terms = () => {
             14. Governing Law &amp; Contact
           </h2>
           <p>
-            These Terms are governed by the laws of [JURISDICTION TO BE
-            CONFIRMED], without regard to conflict-of-laws rules. Questions about
-            these Terms can be sent through the in-app contact form.
+            The official hosted Service is operated by{" "}
+            <strong className="text-foreground">PERCHWERKS LLC</strong>, based in
+            Windermere, Florida, USA. These Terms are governed by the laws of the
+            State of Florida, United States, without regard to conflict-of-laws
+            rules. Questions about these Terms can be sent through the in-app
+            contact form or to champagne@perchwerks.com.
           </p>
         </section>
       </div>
