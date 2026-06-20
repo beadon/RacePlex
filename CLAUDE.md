@@ -8,7 +8,7 @@
 
 ## Project Identity
 
-**Dove's DataViewer / HackTheTrack** — Open-source, offline-first motorsport
+**Dove's DataViewer / LapWing** — Open-source, offline-first motorsport
 telemetry viewer.
 - Live: [hackthetrack.net](https://hackthetrack.net) | Beta: [beta.perchwerks.com](https://beta.perchwerks.com)
 - Companion hardware: [DovesDataLogger](https://github.com/TheAngryRaven/DovesDataLogger) (nRF52840 GPS logger with BLE — Seeed XIAO nRF52840, `sense`/`nonsense` IMU variants)

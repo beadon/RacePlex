@@ -109,7 +109,7 @@ export default function Register() {
     <div className="min-h-screen bg-background flex flex-col items-center p-8 gap-12">
       <div className="flex items-center gap-3 justify-center mt-4">
         <Gauge className="w-8 h-8 text-primary" />
-        <h1 className="text-xl font-semibold text-foreground">HackTheTrack.net</h1>
+        <h1 className="text-xl font-semibold text-foreground">LapWing</h1>
       </div>
 
       <PricingCards className="w-full max-w-3xl" variant="register" />

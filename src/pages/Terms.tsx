@@ -11,9 +11,9 @@ const enableCloud = import.meta.env.VITE_ENABLE_CLOUD === "true";
 
 const Terms = () => {
   useDocumentHead({
-    title: "Terms of Service — HackTheTrack",
+    title: "Terms of Service — LapWing",
     description:
-      "The terms for using HackTheTrack: offline-first telemetry app with optional cloud sync, paid storage plans, and AI coaching.",
+      "The terms for using LapWing: offline-first telemetry app with optional cloud sync, paid storage plans, and AI coaching.",
     canonical: "https://hackthetrack.net/terms",
   });
   return (
@@ -34,7 +34,7 @@ const Terms = () => {
             1. Acceptance
           </h2>
           <p>
-            By using HackTheTrack (“the Service”), you agree to these Terms and to
+            By using LapWing (“the Service”), you agree to these Terms and to
             our{" "}
             <Link to="/privacy" className="text-foreground underline hover:no-underline">
               Privacy Policy
@@ -48,7 +48,7 @@ const Terms = () => {
             2. The Service
           </h2>
           <p>
-            HackTheTrack is an offline-first motorsport telemetry viewer. The core
+            LapWing is an offline-first motorsport telemetry viewer. The core
             app runs entirely in your browser and stores your data on your device.
             {enableCloud
               ? " Optional online features — creating an account, cloud sync, paid storage plans, and AI coaching — are available but are not required to use the core app."
@@ -173,7 +173,7 @@ const Terms = () => {
             9. Open Source &amp; Self-Hosting
           </h2>
           <p>
-            HackTheTrack’s source code is open source and licensed separately
+            LapWing’s source code is open source and licensed separately
             under its repository license; these Terms govern your use of the{" "}
             <em>official hosted Service</em>, not the code itself. If you run your
             own instance, you are responsible for it and for any data your
@@ -201,7 +201,7 @@ const Terms = () => {
             11. Limitation of Liability
           </h2>
           <p>
-            To the maximum extent permitted by law, HackTheTrack and its operators
+            To the maximum extent permitted by law, LapWing and its operators
             are not liable for any indirect, incidental, or consequential damages,
             or for loss of data, arising from your use of the Service. Nothing in
             these Terms limits liability that cannot be limited by law. Keep your

@@ -15,9 +15,9 @@ const enableCloud = import.meta.env.VITE_ENABLE_CLOUD === "true";
 
 const Privacy = () => {
   useDocumentHead({
-    title: "Privacy Policy — HackTheTrack",
+    title: "Privacy Policy — LapWing",
     description:
-      "How HackTheTrack handles your data: offline-first telemetry stored in your browser, with optional cloud sync and AI features when you create an account.",
+      "How LapWing handles your data: offline-first telemetry stored in your browser, with optional cloud sync and AI features when you create an account.",
     canonical: "https://hackthetrack.net/privacy",
   });
   return (
@@ -38,7 +38,7 @@ const Privacy = () => {
             The short version
           </h2>
           <p>
-            HackTheTrack is offline-first. By default, everything you do —
+            LapWing is offline-first. By default, everything you do —
             importing telemetry, taking notes, building kart profiles and setup
             sheets — stays in your browser and{" "}
             <strong className="text-foreground">never leaves your device</strong>.
@@ -382,7 +382,7 @@ const Privacy = () => {
             Self-Hosting
           </h2>
           <p>
-            HackTheTrack is open source. If someone else runs their own instance,
+            LapWing is open source. If someone else runs their own instance,
             they — not us — control any data collected by that instance, and this
             policy describes only the official hosted service.
           </p>

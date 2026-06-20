@@ -9,7 +9,7 @@
 [![Build](https://github.com/TheAngryRaven/DovesDataViewer/actions/workflows/build.yml/badge.svg)](https://github.com/TheAngryRaven/DovesDataViewer/actions/workflows/build.yml)
 [![Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/TheAngryRaven/9c0c31f9c333c565804b26643a2e3aec/raw/coverage-badge.json)](https://github.com/TheAngryRaven/DovesDataViewer/actions/workflows/coverage.yml)
 
-🌐 **Live Demo:** [HackTheTrack.net](https://hackthetrack.net)  
+🌐 **Live Demo:** [LapWing](https://hackthetrack.net)  
 🔧 **Hardware Project:** [DovesDataLogger on GitHub](https://github.com/TheAngryRaven/DovesDataLogger)
 
 **Now officially in BETA status**
@@ -59,7 +59,7 @@ This project is **100% open source**. The entire codebase—every feature, every
 
 ## Free Forever
 
-- **Single file processing on HackTheTrack.net is always free**—no download or account required
+- **Single file processing on LapWing is always free**—no download or account required
 - **Self-hosting is always an option**—clone this repo and run it yourself
 - The only potential future paid feature: optional cloud storage for users who *want* hosted data retention on *my* infrastructure
 
