@@ -104,7 +104,7 @@ export function LandingPage({
           <div className="flex items-center gap-3">
             <Gauge className="w-8 h-8 text-primary" />
             <div>
-              <h1 className="text-xl font-semibold text-foreground">HackTheTrack.net</h1>
+              <h1 className="text-xl font-semibold text-foreground">LapWing</h1>
               <p className="text-sm text-muted-foreground">{t("landing:tagline")}</p>
             </div>
           </div>

@@ -203,8 +203,8 @@ export default defineConfig(({ mode }) => {
         },
         includeAssets: ["favicon.png", "favicon.ico", "robots.txt", "tracks.json", "samples/**/*"],
         manifest: {
-          name: "HackTheTrack - Motorsport Data Viewer",
-          short_name: "HackTheTrack",
+          name: "LapWing - Motorsport Data Viewer",
+          short_name: "LapWing",
           description: "Open source motorsport data acquisition and analytics",
           theme_color: "#1a1a2e",
           background_color: "#0f0f1a",
