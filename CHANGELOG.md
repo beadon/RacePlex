@@ -11,6 +11,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > from git history and grouped by theme rather than exhaustive per-commit
 > detail.
 
+## [2.8.0] - unreleased
+
+### Added
+- **Android app groundwork.** The same frontend can now also serve a native
+  Android app (built with Tauri in a separate repo) while the web app is
+  unchanged. A new platform layer (`isNativeApp()`) gates native-only behaviour:
+  the service worker is skipped inside the native WebView, external links open in
+  the system browser, and — to comply with Google Play's billing policy — paid
+  plans are not sold or managed in-app (cloud **sync still works**; subscriptions
+  are purchased and managed on the web). Set `VITE_IS_NATIVE=true` for the native
+  build. See `docs/android.md`.
+- **Public account-deletion page.** A no-login page at **/delete-account** lets
+  you request permanent deletion of your cloud account from the web (Google Play
+  requires a public deletion URL), in addition to the existing in-app flow under
+  Profile → Data & privacy.
+
+### Changed
+- **Privacy Policy & Terms** now describe the Android app's web-only billing, the
+  public deletion URL, and the app's foreground-only location use.
+
 ## [2.7.1] - 2026-06-19
 
 ### Changed

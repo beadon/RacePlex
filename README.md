@@ -160,6 +160,7 @@ view. Older JSON with only `sector_2_*`/`sector_3_*` is read as the two majors.
 | `VITE_ENABLE_ADMIN` | No | Set to `true` to enable admin UI and `/admin` route. `/login` mounts when admin OR cloud is enabled. Default `false` — a fresh clone ships the public, offline-first app, not admin UI pointed at an upstream backend. |
 | `VITE_ENABLE_CLOUD` | No | Set to `true` to enable public user accounts: Cloud Sync panels, email sign-in/registration, `/register`, `/forgot-password`, `/reset-password`, `/auth/callback`. Default `false` — flag-off builds ship zero cloud auth code (offline-first invariant). |
 | `VITE_ENABLE_GOOGLE_AUTH` | No | Set to `true` to show the "Continue with Google" buttons (login, register, Profile). Requires `VITE_ENABLE_CLOUD`. Default `false`: Google sign-in currently routes through Lovable's hosted OAuth broker, so it stays hidden until native Supabase Google OAuth is configured (Google Cloud OAuth client + Supabase provider). |
+| `VITE_IS_NATIVE` | No | Set to `true` **only** for the native (Tauri/Android) shell build. Skips the service worker, hides in-app purchases (paid plans are web-only — Google Play billing policy; cloud sync still works), and opens external links in the system browser. The web app leaves this unset/`false`. See [`docs/android.md`](docs/android.md). |
 | `VITE_TURNSTILE_SITE_KEY` | No | Cloudflare Turnstile site key for track submission CAPTCHA |
 | `VITE_FIRMWARE_MANIFEST_URL` | No | Override the DovesDataLogger firmware OTA manifest URL used by the in-app firmware updater. When unset: `main` builds use the production manifest (`https://theangryraven.github.io/DovesDataLogger/manifest.json`); non-`main`/preview builds use the **beta channel** (`https://theangryraven.github.io/DovesDataLogger/beta/manifest.json`). Set this to force a specific channel on any branch. |
 | `TURNSTILE_SECRET_KEY` | No | Cloudflare Turnstile secret key (edge function secret — `???`) |
@@ -454,6 +455,16 @@ whenever that branch isn't `main`, and ignores them on `main` and in local dev.
    Any key works the same way (e.g. `HTT_ENABLE_CLOUD_PREVIEW`). `VITE_*_PREVIEW`
    is also accepted. Add the Cloudflare preview URL to the preview branch's
    **Auth → Redirect URLs** so cloud sign-in works there.
+
+### Android app (Tauri)
+
+The same frontend also serves a native **Android** app built with Tauri (in a
+separate repo) — the web app is unchanged. Build the bundle with
+`VITE_IS_NATIVE=true` and the app skips the service worker, hides in-app purchases
+(paid plans stay web-only per Google Play's billing policy; cloud sync still
+works), and opens external links in the system browser. See
+[`docs/android.md`](docs/android.md) for the platform layer, the native bridge
+contract, the Data Safety form, and the Android permission set.
 
 ---
 

@@ -123,6 +123,11 @@ const Terms = () => {
                 If a payment fails or a subscription lapses, online storage limits
                 revert to the free tier; your data on your device is unaffected.
               </li>
+              <li>
+                The Android app does not sell or manage subscriptions in-app: paid
+                plans are purchased and managed on the web at hackthetrack.net. The
+                app uses cloud sync on whatever plan your account already has.
+              </li>
             </ul>
           </section>
         )}
@@ -240,7 +245,7 @@ const Terms = () => {
       </div>
 
       <p className="mt-10 text-xs text-muted-foreground/60">
-        Last updated: May 2026
+        Last updated: June 2026
       </p>
     </div>
   );

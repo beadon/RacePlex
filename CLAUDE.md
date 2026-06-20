@@ -308,6 +308,12 @@ unless noted.
 - **Cloud sync, subscriptions, GDPR**: Supabase-backed, touch nothing in the core
   app per Rule 1 → `docs/backend.md`. Documents, logs, and lap snapshots draw from
   **one pooled per-tier byte budget** (`subscription_tiers.total_bytes`).
+- **Android / Tauri shell** (`lib/platform.ts`): the same bundle serves the web app
+  and a native Android app (separate Tauri repo). `isNativeApp()` is the single
+  gate — on native: **no service worker** (`main.tsx`), **no in-app purchases**
+  (paid plans are web-only per Google Play policy; cloud sync still works), and
+  external links open in the system browser (`openExternal`/`interceptExternal`).
+  Public deletion URL at `/delete-account`. → `docs/android.md`.
 
 ---
 
@@ -360,6 +366,7 @@ and the seeder: **→ `docs/i18n.md`**.
 | `VITE_ENABLE_ADMIN` | Client | `"true"` enables admin UI + `/admin`. `/login` is mounted when this OR `VITE_ENABLE_CLOUD` is on. |
 | `VITE_ENABLE_CLOUD` | Client | `"true"` enables public accounts (Cloud Sync + email sign-in + `/register` etc.). Default `"false"`. |
 | `VITE_ENABLE_GOOGLE_AUTH` | Client | `"true"` shows "Continue with Google". Requires `VITE_ENABLE_CLOUD`. Default `"false"`. |
+| `VITE_IS_NATIVE` | Client/Build | `"true"` ONLY for the native (Tauri/Android) shell build. Gates `isNativeApp()` (`lib/platform.ts`): no service worker, no in-app purchases (web-only billing — Google Play policy), external links via the system browser. Default `"false"`. → `docs/android.md`. |
 | `VITE_TURNSTILE_SITE_KEY` | Client | Cloudflare Turnstile site key (optional CAPTCHA) |
 | `TURNSTILE_SECRET_KEY` | Server (edge fn) | Turnstile secret — `???` |
 | `VITE_FIRMWARE_MANIFEST_URL` | Client | Override the logger firmware OTA manifest URL. Unset: `main` → production manifest, non-`main`/preview → beta channel (same `isPreviewBuild()` switch). |

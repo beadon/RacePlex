@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { useDocumentHead } from "@/hooks/useDocumentHead";
+import { interceptExternal } from "@/lib/platform";
 
 const enableAdmin = import.meta.env.VITE_ENABLE_ADMIN === "true";
 const enableCloud = import.meta.env.VITE_ENABLE_CLOUD === "true";
@@ -132,11 +133,20 @@ const Privacy = () => {
                   href="https://stripe.com/privacy"
                   target="_blank"
                   rel="noopener noreferrer"
+                  onClick={(e) => interceptExternal(e, "https://stripe.com/privacy")}
                   className="text-foreground underline hover:no-underline"
                 >
                   Stripe’s Privacy Policy
                 </a>
                 .
+              </p>
+              <p className="mt-2">
+                <strong className="text-foreground">On the Android app</strong>,
+                paid plans are not sold or managed in-app: subscriptions are
+                purchased and managed on the web at{" "}
+                <strong className="text-foreground">hackthetrack.net</strong>. The
+                Android app simply uses cloud sync on whatever plan your account
+                already has.
               </p>
             </section>
 
@@ -280,7 +290,12 @@ const Privacy = () => {
                 deletion is confirmed by an emailed code and then scheduled{" "}
                 <strong className="text-foreground">7 days</strong> out — you can
                 cancel any time before then, after which all your data is
-                permanently erased.
+                permanently erased. You can also request account deletion from a
+                public page without opening the app, at{" "}
+                <Link to="/delete-account" className="text-foreground underline hover:no-underline">
+                  hackthetrack.net/delete-account
+                </Link>
+                .
               </li>
               <li>
                 <strong className="text-foreground">Objection / restriction:</strong>{" "}
@@ -349,6 +364,25 @@ const Privacy = () => {
 
         <section>
           <h2 className="text-base font-semibold text-foreground mb-2">
+            Mobile App Permissions
+          </h2>
+          <p>
+            The Android app may ask for a few device permissions, each only for a
+            specific feature:{" "}
+            <strong className="text-foreground">Location</strong> is used to record
+            GPS while you are actively timing or logging a session — it is{" "}
+            <strong className="text-foreground">foreground-only</strong> (we do not
+            collect location in the background or while the app is closed);{" "}
+            <strong className="text-foreground">Bluetooth</strong> is used to
+            connect to a Dove’s Data Logger device to download laps and update its
+            firmware; and network access is used only for the optional online
+            features described above. GPS traces stay on your device unless you
+            choose to sync a session to your account.
+          </p>
+        </section>
+
+        <section>
+          <h2 className="text-base font-semibold text-foreground mb-2">
             Self-Hosting
           </h2>
           <p>
@@ -386,7 +420,7 @@ const Privacy = () => {
       </div>
 
       <p className="mt-10 text-xs text-muted-foreground/60">
-        Last updated: May 2026
+        Last updated: June 2026
       </p>
     </div>
   );
