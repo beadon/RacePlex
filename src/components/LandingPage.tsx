@@ -1,4 +1,4 @@
-import { Fragment, lazy, Suspense } from "react";
+import { Fragment } from "react";
 import {
   Github,
   Heart,
@@ -34,11 +34,10 @@ import { interceptExternal } from "@/lib/platform";
 import { cn } from "@/lib/utils";
 import type { ParsedData } from "@/types/racing";
 
-// Lazy so the BLE module (Web Bluetooth protocol) stays out of the initial
-// bundle — it only loads when this tile mounts on the landing page.
-const DataloggerDownload = lazy(() =>
-  import("./DataloggerDownload").then((m) => ({ default: m.DataloggerDownload })),
-);
+// Eager: the logger picker is lightweight and must open instantly. The heavy
+// BLE flow it launches stays lazy (loaded only when the Fledgling is picked),
+// so the protocol bundle is still kept off the initial landing payload.
+import { LoggerDownload } from "@/components/LoggerDownload";
 
 interface LandingPageProps {
   onDataLoaded: (data: ParsedData, fileName?: string) => void;
@@ -175,30 +174,19 @@ export function LandingPage({
               onClick={onOpenFileManager}
             />
 
-            <Suspense
-              fallback={
+            <LoggerDownload
+              onDataLoaded={onDataLoaded}
+              autoSave={autoSave}
+              autoSaveFile={autoSaveFile}
+              renderTrigger={({ onOpen }) => (
                 <ActionTile
                   icon={Bluetooth}
                   title={t("landing:tiles.logger.title")}
-                  description={t("common:actions.loading")}
-                  disabled
+                  description={t("landing:tiles.logger.description")}
+                  onClick={onOpen}
                 />
-              }
-            >
-              <DataloggerDownload
-                onDataLoaded={onDataLoaded}
-                autoSave={autoSave}
-                autoSaveFile={autoSaveFile}
-                renderTrigger={({ onOpen }) => (
-                  <ActionTile
-                    icon={Bluetooth}
-                    title={t("landing:tiles.logger.title")}
-                    description={t("landing:tiles.logger.description")}
-                    onClick={onOpen}
-                  />
-                )}
-              />
-            </Suspense>
+              )}
+            />
 
             {/* Track manager — create/draw tracks & courses without a datalog. */}
             <TrackEditor

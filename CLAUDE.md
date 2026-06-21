@@ -86,7 +86,7 @@ src/
 │   ├── RaceLineView.tsx   # Leaflet map: race line, speed heatmap, braking zones
 │   ├── TelemetryChart.tsx # Canvas speed/telemetry chart (simple mode)
 │   ├── VideoPlayer.tsx    # Synced video playback + overlay system (multi-chunk GoPro playlists via lib/videoPlaylist)
-│   └── …                  # FileImport, LoggerPicker (image-based logger chooser), DataloggerDownload (BLE entry, lazy), LapSnapshot*, …
+│   └── …                  # FileImport, LoggerDownload (eager picker host) + LoggerPicker (image chooser) + DataloggerDownload (lazy Fledgling BLE flow), LapSnapshot*, …
 ├── hooks/                 # One concern each; Index.tsx orchestrates.
 │   ├── useSessionData     # Parses imported file → ParsedData
 │   ├── useLapManagement   # Lap calc, selection, visible range
@@ -116,6 +116,7 @@ src/
 │   ├── fileLoadingState.ts # ★ Host pub/sub for the global file-load overlay
 │   ├── *Storage.ts        # IDB/localStorage store modules (file, vehicle, engine, template, note, setup, …)
 │   ├── gps/               # ★ Phone-as-datalogger layer: gpsFix, customGps, sessionGate, realtimeTimer, dovepWriter
+│   ├── loggers/           # ★ Generic LoggerConnection (listLogs/downloadLog/disconnect) + per-logger adapters — Fledgling=BLE today; MyChron (Tauri)/Alfano later satisfy the same interface
 │   ├── speedHeatmap.ts / mapMarker.ts / brakingZones / gforceCalculation / …  # racing math
 │   ├── chartUtils / canvas2d / chartAxis / chartColors / videoExport / overlayCanvasRenderer  # charts/video
 │   ├── videoPlaylist.ts   # ★ Pure GoPro chunked-video model: parse/order GH/GX/GP/GOPR chunk names, build a virtual timeline (cumulative offsets) + virtual↔local time mapping + planAudioSegments (export audio stitch). useVideoSync swaps the <video> src per chunk; a single file is a 1-chunk playlist
@@ -433,7 +434,9 @@ re-merges it into the main chunk — watch for this.
 
 **Lazy (off the initial path):** routes (`Login`, `Admin`, `Register`, `Privacy`);
 view tabs (`RaceLineTab`, `GraphViewTab`, `CoachTab`, `ToolsTab`, `SetupsTab`); `FileManagerDrawer`;
-`DataloggerDownload` (keeps `lib/ble/*` out); `CourseSectorEditor` (carries
+`DataloggerDownload` — the Fledgling BLE flow, mounted on demand by the eager
+`LoggerDownload` picker host so `lib/ble/*` stays off the landing payload while the
+menu still opens instantly; `CourseSectorEditor` (carries
 `@dnd-kit/*`). Lazy components must render inside `<Suspense>`; use
 `lazy(() => import('…').then((m) => ({ default: m.Named })))` for named exports.
 

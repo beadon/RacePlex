@@ -5,11 +5,19 @@ transfer, settings, track sync, battery, and the SD-staged firmware OTA. Kept ou
 of `CLAUDE.md` so it loads only when working on device code. Global BLE connection
 state lives in `DeviceContext.tsx` (wraps the app tree in `Index.tsx`). Source:
 `src/lib/ble/` (split per-concern; `bleDatalogger.ts` is the legacy barrel).
-Everything here is lazy-loaded — `DataloggerDownload` is the BLE entry point so
-`lib/ble/*` stays out of the initial bundle. The user reaches it through
-`LoggerPicker` (an image-based chooser of supported loggers); selecting the
-PerchWerks Fledgling tile starts this Bluetooth flow, while the other loggers
-(MyChron, Alfano) open explanatory dialogs and don't touch `lib/ble/*` yet.
+The user reaches the BLE flow through `LoggerDownload` → `LoggerPicker` (an eager,
+lightweight image chooser of supported loggers). Picking the PerchWerks Fledgling
+tile mounts `DataloggerDownload` — the lazy BLE flow — on demand, so `lib/ble/*`
+stays out of the initial bundle while the menu still opens instantly. The other
+loggers (MyChron, Alfano) open explanatory dialogs and don't touch `lib/ble/*` yet.
+
+`DataloggerDownload` talks to the device only through the generic
+`LoggerConnection` interface (`src/lib/loggers/`): `listLogs` / `downloadLog` /
+`disconnect`, with `createFledglingConnection()` adapting a `BleConnection`. New
+transports (MyChron over the native shell, Alfano over BLE) add sibling adapters
+that satisfy the same interface, and `DeviceContext.loggerKind` records which
+logger is connected so Fledgling-only surfaces (settings / tracks / firmware) can
+gate themselves.
 
 ---
 
