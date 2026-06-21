@@ -43,10 +43,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   existing Bluetooth download flow; MyChron and Alfano open explanatory dialogs for
   now (MyChron's copy differs between the native app and the web). Placeholder
   artwork lives in `public/loggers/` for easy swap-out. New `logger` i18n namespace.
-- **Safe-area padding on native / installed PWA.** The app shell now respects the
-  device's safe-area insets (status bar / notch) via `env(safe-area-inset-*)` and
-  `viewport-fit=cover`, so header content no longer sits under the phone's status
-  bar. A no-op on browsers and desktops without a safe area.
+- **Safe-area padding on native / installed PWA.** Every full-screen surface now
+  respects the device's safe-area insets (status bar / notch) via
+  `env(safe-area-inset-*)` and `viewport-fit=cover`, so chrome no longer sits under
+  the phone's status bar — the app shell + landing, the full-page routes
+  (login/register/admin/legal), and the file-manager drawer (its garage/profile/
+  device header). A no-op on browsers and desktops without a safe area.
 - **Privacy / Terms links on the sign-in page.** The login screen now links to the
   Privacy Policy and Terms of Service.
 - **"Back to app" returns you where you were.** The back button on the Privacy and
