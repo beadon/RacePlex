@@ -2,7 +2,15 @@
 
 Web Bluetooth integration with the **DovesLapTimer** (nRF52840) hardware: file
 transfer, settings, track sync, battery, and the SD-staged firmware OTA. Kept out
-of `CLAUDE.md` so it loads only when working on device code. Global BLE connection
+of `CLAUDE.md` so it loads only when working on device code.
+
+> **Wire spec vs. app integration.** This file documents how the **app** wires the
+> BLE stack into the UI (DeviceContext, drawer tabs, the `LoggerConnection`
+> abstraction). The **transport-agnostic protocol contract** — every GATT
+> characteristic, command, and packet, written so anyone can replicate the
+> connection in any stack (Tauri/native, Python, firmware tests) — lives in
+> [`ble-protocol.md`](ble-protocol.md). Keep that file in sync with any wire-format
+> change. Global BLE connection
 state lives in `DeviceContext.tsx` (wraps the app tree in `Index.tsx`). Source:
 `src/lib/ble/` (split per-concern; `bleDatalogger.ts` is the legacy barrel).
 The user reaches the BLE flow through `LoggerDownload` → `LoggerPicker` (an eager,
