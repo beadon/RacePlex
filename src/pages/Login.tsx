@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Shield, FileText } from 'lucide-react';
 import { BrandLogo } from "@/components/BrandLogo";
 import { useDocumentHead } from '@/hooks/useDocumentHead';
 
@@ -17,7 +17,7 @@ const enableCloud = import.meta.env.VITE_ENABLE_CLOUD === 'true';
 const enableGoogleAuth = import.meta.env.VITE_ENABLE_GOOGLE_AUTH === 'true';
 
 export default function Login() {
-  const { t } = useTranslation('auth');
+  const { t } = useTranslation(['auth', 'landing']);
   useDocumentHead({
     title: t('login.metaTitle'),
     description: t('login.metaDescription'),
@@ -119,6 +119,17 @@ export default function Login() {
         <Button variant="ghost" className="w-full gap-2" onClick={() => navigate('/')}>
           <ArrowLeft className="w-4 h-4" /> {t('backToHome')}
         </Button>
+
+        <div className="flex items-center justify-center gap-6">
+          <Link to="/privacy" className="inline-flex items-center gap-1 text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors">
+            <Shield className="w-3 h-3" />
+            {t('landing:links.privacy')}
+          </Link>
+          <Link to="/terms" className="inline-flex items-center gap-1 text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors">
+            <FileText className="w-3 h-3" />
+            {t('landing:links.terms')}
+          </Link>
+        </div>
       </div>
     </div>
   );
