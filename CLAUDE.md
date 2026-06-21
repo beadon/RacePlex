@@ -305,7 +305,12 @@ unless noted.
   hierarchy; display name = the session's date/time (or `FileMetadata.displayName`
   override); smart collapse; cloud rows merged inline. The bundled **sample log**
   (`sampleData.ts`) is an ordinary row, hidden when `showSampleFiles` is off.
-- **BLE / device + firmware OTA**: → `docs/ble.md`.
+- **BLE / device + firmware OTA**: app integration → `docs/ble.md`; the full
+  transport-agnostic **wire spec** (every GATT characteristic, command, and packet,
+  for replicating the connection in any stack — Tauri/native included) →
+  [`docs/ble-protocol.md`](docs/ble-protocol.md). **Keep `docs/ble-protocol.md` in
+  sync with every BLE wire-format change** (new command/response token, changed
+  characteristic, chunking, or service) alongside the firmware + `src/lib/ble/`.
 - **Cloud sync, subscriptions, GDPR**: Supabase-backed, touch nothing in the core
   app per Rule 1 → `docs/backend.md`. Documents, logs, and lap snapshots draw from
   **one pooled per-tier byte budget** (`subscription_tiers.total_bytes`).
