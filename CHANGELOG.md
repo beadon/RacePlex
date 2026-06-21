@@ -13,7 +13,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [2.8.1] - unreleased
 
+### Added
+- **Safe-area padding on native / installed PWA.** The app shell now respects the
+  device's safe-area insets (status bar / notch) via `env(safe-area-inset-*)` and
+  `viewport-fit=cover`, so header content no longer sits under the phone's status
+  bar. A no-op on browsers and desktops without a safe area.
+
 ### Changed
+- **Header logo returns to the home screen.** Tapping the LapWing logo (top-left)
+  in an open session now closes the session and returns to the landing page.
 - **Purple theme + new logo.** The brand accent moved from teal to **purple**
   (`--primary` and its mirrors `--ring`/`--sidebar-primary`/`--sidebar-ring`, in
   both light and dark), and the gauge glyph in the app/page headers is replaced

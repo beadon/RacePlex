@@ -98,7 +98,7 @@ export function LandingPage({
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col safe-area-inset">
       <header className="border-b border-border px-6 py-4">
         <div className="mx-auto flex w-full max-w-4xl items-center justify-between gap-3">
           <div className="flex items-center gap-3">

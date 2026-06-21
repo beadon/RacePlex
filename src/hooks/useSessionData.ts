@@ -47,6 +47,13 @@ export function useSessionData(
     [applyFieldMappings]
   );
 
+  // Drop the loaded session and return to the landing page (no data).
+  const clearSession = useCallback(() => {
+    setData(null);
+    setCurrentFileName(null);
+    setFieldMappings([]);
+  }, []);
+
   const handleFieldToggle = useCallback((fieldName: string) => {
     setFieldMappings((prev) =>
       prev.map((f) => (f.name === fieldName ? { ...f, enabled: !f.enabled } : f))
@@ -67,6 +74,7 @@ export function useSessionData(
     currentFileName,
     fieldMappings,
     loadParsedData,
+    clearSession,
     handleFieldToggle,
     sessionGpsPoint,
   };
