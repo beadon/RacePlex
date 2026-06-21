@@ -1,0 +1,66 @@
+name: Deploy beta-proxy
+
+# beta-proxy/ is the reverse-proxy Worker that serves beta.lapwingdata.com (it
+# forwards to the lapwing `beta` branch preview). It is a SEPARATE Worker from
+# the main app — Cloudflare's connected-repo CI builds the app but nothing
+# deploys this proxy. This workflow does:
+#   • validate it on PRs that touch it (dry-run, no secrets — runs on forks too)
+#   • deploy it on BETA pushes that change it, or on demand (workflow_dispatch)
+#
+# Required repo secrets for the deploy job:
+#   • CLOUDFLARE_API_TOKEN   — token with "Edit Cloudflare Workers" on the account
+#   • CLOUDFLARE_ACCOUNT_ID  — the account that owns the lapwingdata.com zone
+
+on:
+  push:
+    branches: [BETA]
+    paths:
+      - "beta-proxy/**"
+      - ".github/workflows/deploy-beta-proxy.yml"
+  pull_request:
+    paths:
+      - "beta-proxy/**"
+      - ".github/workflows/deploy-beta-proxy.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Pin the wrangler version used to both validate and deploy so runs are
+# reproducible (beta-proxy has no committed lockfile).
+env:
+  WRANGLER_VERSION: "4.103.0"
+
+# Never let two deploys of the same ref overlap; queue rather than cancel so an
+# in-flight deploy always finishes.
+concurrency:
+  group: deploy-beta-proxy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # Bundle + config check for PRs. Needs no Cloudflare secrets, so it catches a
+  # broken wrangler.toml before it can reach BETA (and works for fork PRs).
+  validate:
+    if: github.event_name == 'pull_request'
+    name: Dry-run
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: beta-proxy
+    steps:
+      - uses: actions/checkout@v4
+      - run: npx --yes wrangler@${{ env.WRANGLER_VERSION }} deploy --dry-run --config ./wrangler.toml
+
+  deploy:
+    if: github.event_name != 'pull_request'
+    name: Deploy Worker
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: beta-proxy
+          wranglerVersion: ${{ env.WRANGLER_VERSION }}
+          command: deploy --config ./wrangler.toml
