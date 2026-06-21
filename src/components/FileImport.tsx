@@ -11,10 +11,11 @@ interface FileImportProps {
 }
 
 /**
- * The landing page's primary action: a large drag-and-drop / click-to-browse
- * zone. The whole card is the upload target — secondary actions (browse saved
- * files, download from the logger, sample data, track manager) live as their
- * own tiles in LandingPage rather than bundled inside this dropzone.
+ * The drag-and-drop / click-to-browse half of the landing page's primary
+ * action. The whole card is the upload target; LandingPage pairs it 50/50 with
+ * a "Download from logger" panel (`h-full` so the two halves match height).
+ * Other entry points (browse saved files, sample data, track manager) live as
+ * their own tiles below.
  */
 export function FileImport({ onDataLoaded, autoSave, autoSaveFile }: FileImportProps) {
   const { t } = useTranslation("landing");
@@ -83,13 +84,13 @@ export function FileImport({ onDataLoaded, autoSave, autoSaveFile }: FileImportP
   }, []);
 
   return (
-    <div className="space-y-3">
+    <div className="flex h-full flex-col gap-3">
       <label
         onDrop={handleDrop}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         className={[
-          "flex cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed p-10 text-center transition-colors",
+          "flex h-full flex-1 cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed p-10 text-center transition-colors",
           isDragging ? "border-primary bg-primary/10" : "border-border bg-card/50 hover:border-primary/50 hover:bg-card",
         ].join(" ")}
       >
