@@ -11,6 +11,7 @@
     "setupsNotes": "Réglages et notes"
   },
   "header": {
+    "home": "Accueil",
     "play": "Lecture",
     "pause": "Pause",
     "allLaps": "Tous les tours",
