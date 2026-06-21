@@ -31,6 +31,23 @@ doesn't change.)
 
 ## Deploy
 
+### Automatic (CI)
+
+The `.github/workflows/deploy-beta-proxy.yml` workflow deploys this Worker
+automatically on every push to **`BETA`** that touches `beta-proxy/**` (and can
+be run on demand via *workflow_dispatch*). PRs that touch it get a `wrangler
+deploy --dry-run` validation instead. The deploy job needs two repo secrets:
+
+| Secret | What |
+|--------|------|
+| `CLOUDFLARE_API_TOKEN` | A token with **Edit Cloudflare Workers** on the account |
+| `CLOUDFLARE_ACCOUNT_ID` | The account that owns the `lapwingdata.com` zone |
+
+The wrangler version is pinned in the workflow (`WRANGLER_VERSION`) so CI runs
+are reproducible — there is no committed lockfile here.
+
+### Manual
+
 ```bash
 cd beta-proxy
 npm install
