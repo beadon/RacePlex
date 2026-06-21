@@ -31,6 +31,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   device's safe-area insets (status bar / notch) via `env(safe-area-inset-*)` and
   `viewport-fit=cover`, so header content no longer sits under the phone's status
   bar. A no-op on browsers and desktops without a safe area.
+- **Privacy / Terms links on the sign-in page.** The login screen now links to the
+  Privacy Policy and Terms of Service.
 
 ### Changed
 - **"Download from logger" relabel.** The file-manager button previously labelled
@@ -45,6 +47,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   firmware) now shows a "Fledgling only" notice when the connected logger isn't a
   Fledgling, groundwork for MyChron/Alfano connections that don't expose those
   surfaces.
+- **Landing page upload is now a 50/50 split.** The big drag-and-drop dropzone now
+  shares the top of the home screen with an equal-billing "Download from logger"
+  panel, since most users pull logs straight off a logger rather than dragging files
+  in. The separate "Download from logger" tile was removed (its action moved into the
+  split).
+- **Landing footer / link cleanup.** Privacy Policy and Terms of Service moved out of
+  the mid-page link row: on the stable build they now flank the operated-by / version
+  block in the footer (Privacy left, Terms right). Credits moved up next to the
+  Browser Compatibility button.
+- **Leaner native landing page.** On the native (Android/Tauri) shell the landing
+  page now hides the marketing hero, the feature roadmap, the GitHub repo links and
+  the sponsor button — the user has already installed the app. The "Build your own
+  logger" tile stays.
 - **Header logo returns to the home screen.** Tapping the LapWing logo (top-left)
   in an open session now closes the session and returns to the landing page.
 - **Purple theme + new logo.** The brand accent moved from teal to **purple**
