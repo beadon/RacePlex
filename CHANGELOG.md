@@ -14,6 +14,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [2.8.1] - unreleased
 
 ### Added
+- **Generic logger-connection layer.** Downloads now go through one
+  `LoggerConnection` interface (`listLogs` / `downloadLog` / `disconnect`) in
+  `src/lib/loggers/`, with `createFledglingConnection()` adapting the Web Bluetooth
+  transport. This is the seam future loggers plug into — MyChron over the native
+  (Tauri) shell, Alfano over BLE — without the download UI having to branch on
+  transport. `DeviceContext` now tracks the connected `loggerKind`.
 - **Logger picker.** "Download from logger" now opens an image-based chooser of
   supported loggers instead of jumping straight to Bluetooth: **PerchWerks
   Fledgling** (DIY, Bluetooth), **AiM MyChron 5 / 5S / 2T** (Wi-Fi, native app
@@ -30,6 +36,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **"Download from logger" relabel.** The file-manager button previously labelled
   "Download from DovesDataLogger" is now "Download from logger" and opens the new
   logger picker.
+- **Logger picker is now eager.** The picker menu was split out of the lazy
+  Bluetooth chunk into a lightweight host (`LoggerDownload`), so the home-screen
+  "Download from logger" button opens the menu instantly instead of waiting on (and
+  silently failing when) the BLE chunk stalls. The heavy BLE flow still loads lazily
+  — only once the Fledgling is picked.
+- **Device tab is Fledgling-gated.** The drawer's Device tab (settings / tracks /
+  firmware) now shows a "Fledgling only" notice when the connected logger isn't a
+  Fledgling, groundwork for MyChron/Alfano connections that don't expose those
+  surfaces.
 - **Header logo returns to the home screen.** Tapping the LapWing logo (top-left)
   in an open session now closes the session and returns to the landing page.
 - **Purple theme + new logo.** The brand accent moved from teal to **purple**

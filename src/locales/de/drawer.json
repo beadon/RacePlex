@@ -23,7 +23,9 @@
     "connectTitle": "Mit Logger verbinden",
     "connectDesc": "Verbinde deinen DovesDataLogger, um Geräteeinstellungen und Strecken zu verwalten.",
     "connecting": "Verbinden…",
-    "connect": "Verbinden"
+    "connect": "Verbinden",
+    "deviceFledglingOnlyTitle": "Nur Fledgling",
+    "deviceFledglingOnlyDesc": "Gerätedetails sind nur für den PerchWerks Fledgling verfügbar. Der verbundene Logger bietet hier keine Einstellungen, Strecken oder Firmware."
   },
   "files": {
     "cloudRowTitle": "{{name}} — in der Cloud, zum Herunterladen tippen",

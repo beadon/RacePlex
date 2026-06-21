@@ -5,10 +5,17 @@ import {
   disconnect,
   isBleSupported,
 } from "@/lib/bleDatalogger";
+import type { LoggerKind } from "@/lib/loggers";
 
 interface DeviceContextValue {
   /** Current BLE connection (null when disconnected) */
   connection: BleConnection | null;
+  /**
+   * Which logger the current connection talks to (null when disconnected). Only
+   * the Fledgling connects today; this lets surfaces like the Device tab gate
+   * logger-specific features as other transports (MyChron, Alfano) land.
+   */
+  loggerKind: LoggerKind | null;
   /** Friendly device name from BluetoothDevice */
   deviceName: string | null;
   /** True while the browser BLE picker is open */
@@ -33,6 +40,7 @@ const DeviceContext = createContext<DeviceContextValue | null>(null);
 
 export function DeviceProvider({ children }: { children: ReactNode }) {
   const [connection, setConnection] = useState<BleConnection | null>(null);
+  const [loggerKind, setLoggerKind] = useState<LoggerKind | null>(null);
   const [deviceName, setDeviceName] = useState<string | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
   const [isFlashing, setIsFlashing] = useState(false);
@@ -55,6 +63,7 @@ export function DeviceProvider({ children }: { children: ReactNode }) {
     // drop is expected, so keep the UI mounted instead of tearing it down.
     if (flashingRef.current) return;
     setConnection(null);
+    setLoggerKind(null);
     setDeviceName(null);
   }, []);
 
@@ -67,6 +76,8 @@ export function DeviceProvider({ children }: { children: ReactNode }) {
       // Listen for unexpected disconnects
       conn.device.addEventListener("gattserverdisconnected", handleDisconnect);
       setConnection(conn);
+      // Web Bluetooth only ever reaches the Fledgling today.
+      setLoggerKind("fledgling");
       setDeviceName(conn.device.name ?? "Unknown Device");
       return conn;
     } catch (err) {
@@ -97,7 +108,7 @@ export function DeviceProvider({ children }: { children: ReactNode }) {
 
   return (
     <DeviceContext.Provider
-      value={{ connection, deviceName, isConnecting, bleSupported, connect: connectFn, disconnectDevice, isFlashing, setFlashing }}
+      value={{ connection, loggerKind, deviceName, isConnecting, bleSupported, connect: connectFn, disconnectDevice, isFlashing, setFlashing }}
     >
       {children}
     </DeviceContext.Provider>

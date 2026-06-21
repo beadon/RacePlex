@@ -216,6 +216,14 @@ export function FileManagerDrawer({
                   {device.isConnecting ? (<><Loader2 className="w-4 h-4 animate-spin" /> {t("shell.connecting")}</>) : (<><Bluetooth className="w-4 h-4" /> {t("shell.connect")}</>)}
                 </Button>
               </div>
+            ) : device.loggerKind && device.loggerKind !== "fledgling" ? (
+              // Settings/tracks/firmware are Fledgling-only. Other loggers (MyChron,
+              // Alfano) can connect for downloads but have no device-detail surface yet.
+              <div className="flex-1 flex flex-col items-center justify-center p-8 gap-4 text-center">
+                <Cpu className="w-12 h-12 text-muted-foreground" />
+                <h3 className="font-semibold text-foreground">{t("shell.deviceFledglingOnlyTitle")}</h3>
+                <p className="text-sm text-muted-foreground max-w-[260px]">{t("shell.deviceFledglingOnlyDesc")}</p>
+              </div>
             ) : (
               <>
                 <div className="flex gap-1 px-3 py-2 border-b border-border shrink-0">

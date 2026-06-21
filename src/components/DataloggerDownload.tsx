@@ -1,17 +1,9 @@
-import { useState, useCallback, useEffect, type ReactNode } from "react";
-import { useTranslation } from "react-i18next";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { Bluetooth, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { LoggerPicker } from "@/components/LoggerPicker";
-import {
-  FileInfo,
-  DownloadProgress,
-  isBleSupported,
-  requestFileList,
-  downloadFile,
-  formatBytes,
-} from "@/lib/bleDatalogger";
+import { formatBytes } from "@/lib/bleDatalogger";
+import { createFledglingConnection, type LoggerConnection, type LoggerFile, type LoggerDownloadProgress } from "@/lib/loggers";
 import { useDeviceContext } from "@/contexts/DeviceContext";
 import { parseDatalogContent } from "@/lib/datalogParser";
 import { ParsedData } from "@/types/racing";
@@ -28,55 +20,29 @@ interface DataloggerDownloadProps {
   onDataLoaded: (data: ParsedData, fileName?: string) => void;
   autoSave?: boolean;
   autoSaveFile?: (name: string, blob: Blob) => Promise<void>;
-  /**
-   * Optional custom trigger (e.g. a big landing-page ActionTile). Receives the
-   * handler that opens the logger picker. When omitted, the default outline
-   * button is rendered.
-   */
-  renderTrigger?: (args: { onOpen: () => void }) => ReactNode;
+  /** Begin connecting as soon as the flow mounts (it's mounted on demand). */
+  autoStart?: boolean;
+  /** Called when the flow finishes or is dismissed so the host can unmount it. */
+  onClose: () => void;
 }
 
-export function DataloggerDownload({ onDataLoaded, autoSave, autoSaveFile, renderTrigger }: DataloggerDownloadProps) {
-  const { t } = useTranslation("logger");
+/**
+ * The PerchWerks Fledgling download flow: connect over Web Bluetooth, list logs,
+ * download + parse the chosen one. Mounted on demand by `LoggerDownload` once the
+ * user picks the Fledgling in the logger picker, so the BLE protocol bundle
+ * (`lib/ble/*`) stays off the initial/landing payload. Talks to the device only
+ * through the generic `LoggerConnection` surface.
+ */
+export function DataloggerDownload({ onDataLoaded, autoSave, autoSaveFile, autoStart, onClose }: DataloggerDownloadProps) {
   const device = useDeviceContext();
   const connection = device.connection;
-  const [pickerOpen, setPickerOpen] = useState(false);
   const [state, setState] = useState<DownloadState>("idle");
-  const [files, setFiles] = useState<FileInfo[]>([]);
-  const [progress, setProgress] = useState<DownloadProgress | null>(null);
+  const [files, setFiles] = useState<LoggerFile[]>([]);
+  const [progress, setProgress] = useState<LoggerDownloadProgress | null>(null);
   const [currentFile, setCurrentFile] = useState<string>("");
   const [error, setError] = useState<string>("");
   const [statusMessage, setStatusMessage] = useState<string>("");
-
-  const bleSupported = isBleSupported();
-
-  const handleConnect = useCallback(async () => {
-    setState("connecting");
-    setError("");
-    setStatusMessage("Scanning for DovesLapTimer...");
-
-    try {
-      // Reuse existing context connection if available; otherwise connect via context.
-      const conn = device.connection ?? (await device.connect(setStatusMessage));
-      if (!conn) {
-        // User cancelled the picker
-        setState("idle");
-        return;
-      }
-
-      setState("fetching-files");
-      setStatusMessage("Fetching file list...");
-
-      const fileList = await requestFileList(conn, setStatusMessage);
-      setFiles(fileList);
-      setState("file-list");
-      setStatusMessage(`Found ${fileList.length} files`);
-    } catch (err) {
-      console.error("Connection/file list error:", err);
-      setError(err instanceof Error ? err.message : "Failed to connect");
-      setState("error");
-    }
-  }, [device]);
+  const loggerRef = useRef<LoggerConnection | null>(null);
 
   const handleClose = useCallback(() => {
     // Do NOT disconnect — connection lifecycle is owned by DeviceContext.
@@ -87,11 +53,54 @@ export function DataloggerDownload({ onDataLoaded, autoSave, autoSaveFile, rende
     setCurrentFile("");
     setError("");
     setStatusMessage("");
-  }, []);
+    loggerRef.current = null;
+    onClose();
+  }, [onClose]);
+
+  const handleConnect = useCallback(async () => {
+    setState("connecting");
+    setError("");
+    setStatusMessage("Scanning for DovesLapTimer...");
+
+    try {
+      // Reuse existing context connection if available; otherwise connect via context.
+      const conn = device.connection ?? (await device.connect(setStatusMessage));
+      if (!conn) {
+        // User cancelled the picker — close the flow.
+        handleClose();
+        return;
+      }
+
+      const logger = createFledglingConnection(conn);
+      loggerRef.current = logger;
+
+      setState("fetching-files");
+      setStatusMessage("Fetching file list...");
+
+      const fileList = await logger.listLogs(setStatusMessage);
+      setFiles(fileList);
+      setState("file-list");
+      setStatusMessage(`Found ${fileList.length} files`);
+    } catch (err) {
+      console.error("Connection/file list error:", err);
+      setError(err instanceof Error ? err.message : "Failed to connect");
+      setState("error");
+    }
+  }, [device, handleClose]);
+
+  // Kick off the connection as soon as the flow is mounted (once).
+  const startedRef = useRef(false);
+  useEffect(() => {
+    if (autoStart && !startedRef.current) {
+      startedRef.current = true;
+      void handleConnect();
+    }
+  }, [autoStart, handleConnect]);
 
   const handleFileSelect = useCallback(
-    async (file: FileInfo) => {
-      if (!connection) {
+    async (file: LoggerFile) => {
+      const logger = loggerRef.current;
+      if (!connection || !logger) {
         setError("Device disconnected. Please reconnect.");
         setState("error");
         return;
@@ -109,12 +118,7 @@ export function DataloggerDownload({ onDataLoaded, autoSave, autoSaveFile, rende
       setError("");
 
       try {
-        const fileData = await downloadFile(
-          connection,
-          file.name,
-          setProgress,
-          setStatusMessage
-        );
+        const fileData = await logger.downloadLog(file.name, setProgress, setStatusMessage);
 
         // Always save the raw file first so it's never lost
         if (autoSave && autoSaveFile) {
@@ -157,13 +161,12 @@ export function DataloggerDownload({ onDataLoaded, autoSave, autoSaveFile, rende
 
   const handleRetry = useCallback(() => {
     setError("");
-    setState("idle");
-  }, []);
+    void handleConnect();
+  }, [handleConnect]);
 
   const isModalOpen = state !== "idle";
 
-  // The transfer modal — shared by every trigger variant below.
-  const downloadDialog = (
+  return (
     <Dialog open={isModalOpen} onOpenChange={(open) => !open && handleClose()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
@@ -272,46 +275,5 @@ export function DataloggerDownload({ onDataLoaded, autoSave, autoSaveFile, rende
         )}
       </DialogContent>
     </Dialog>
-  );
-
-  // The logger chooser — shown for every trigger variant before any download
-  // starts. Selecting the Fledgling kicks off the Bluetooth flow; the other
-  // loggers open their own explanatory dialogs from inside the picker.
-  const loggerPicker = (
-    <LoggerPicker
-      open={pickerOpen}
-      onOpenChange={setPickerOpen}
-      bleSupported={bleSupported}
-      onSelectFledgling={() => {
-        setPickerOpen(false);
-        void handleConnect();
-      }}
-    />
-  );
-
-  const openPicker = useCallback(() => setPickerOpen(true), []);
-
-  // Custom-trigger mode (e.g. the landing-page ActionTile): caller owns the
-  // presentation; we just wire up the handler that opens the picker.
-  if (renderTrigger) {
-    return (
-      <>
-        {renderTrigger({ onOpen: openPicker })}
-        {loggerPicker}
-        {downloadDialog}
-      </>
-    );
-  }
-
-  return (
-    <>
-      <Button variant="outline" onClick={openPicker}>
-        <Bluetooth className="w-4 h-4 mr-2" />
-        {t("title")}
-      </Button>
-
-      {loggerPicker}
-      {downloadDialog}
-    </>
   );
 }
