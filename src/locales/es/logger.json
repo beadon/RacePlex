@@ -15,18 +15,18 @@
     "webTitle": "Se necesita app nativa",
     "webBody": "Los registradores MyChron transfieren por Wi-Fi, a lo que los navegadores web no pueden acceder directamente. Hay una app nativa específica para descargar de MyChron en pleno desarrollo, con lanzamiento previsto en torno a julio de 2026.",
     "flow": {
-      "connecting": "Connecting to your MyChron…",
-      "wifiSelecting": "Waiting for you to pick your MyChron in the Wi-Fi list…",
-      "wifiHint": "Approve the connection in the system dialog to continue.",
-      "fetching": "Fetching sessions…",
-      "selectFile": "Select a session to download",
-      "downloading": "Downloading…",
-      "errorTitle": "Connection error",
-      "instructions": "Tap a session to download and load it:",
-      "empty": "No sessions on this device",
-      "savedHint": " — the file was saved and can be found in Browse Files.",
-      "retry": "Try again",
-      "cancel": "Cancel"
+      "connecting": "Conectando con tu MyChron…",
+      "wifiSelecting": "Esperando a que elijas tu MyChron en la lista de Wi-Fi…",
+      "wifiHint": "Aprueba la conexión en el cuadro de diálogo del sistema para continuar.",
+      "fetching": "Obteniendo sesiones…",
+      "selectFile": "Selecciona una sesión para descargar",
+      "downloading": "Descargando…",
+      "errorTitle": "Error de conexión",
+      "instructions": "Toca una sesión para descargarla y cargarla:",
+      "empty": "No hay sesiones en este dispositivo",
+      "savedHint": " — el archivo se guardó y puedes encontrarlo en Explorar archivos.",
+      "retry": "Reintentar",
+      "cancel": "Cancelar"
     }
   },
   "alfano": {

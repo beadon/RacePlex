@@ -15,18 +15,18 @@
     "webTitle": "App nativa richiesta",
     "webBody": "I logger MyChron trasferiscono via Wi-Fi, a cui i browser web non possono accedere direttamente. Un'app nativa dedicata al download da MyChron è in fase di sviluppo e il lancio è previsto intorno a luglio 2026.",
     "flow": {
-      "connecting": "Connecting to your MyChron…",
-      "wifiSelecting": "Waiting for you to pick your MyChron in the Wi-Fi list…",
-      "wifiHint": "Approve the connection in the system dialog to continue.",
-      "fetching": "Fetching sessions…",
-      "selectFile": "Select a session to download",
-      "downloading": "Downloading…",
-      "errorTitle": "Connection error",
-      "instructions": "Tap a session to download and load it:",
-      "empty": "No sessions on this device",
-      "savedHint": " — the file was saved and can be found in Browse Files.",
-      "retry": "Try again",
-      "cancel": "Cancel"
+      "connecting": "Connessione al tuo MyChron…",
+      "wifiSelecting": "In attesa che tu selezioni il tuo MyChron nell'elenco Wi-Fi…",
+      "wifiHint": "Approva la connessione nella finestra di dialogo di sistema per continuare.",
+      "fetching": "Recupero delle sessioni…",
+      "selectFile": "Seleziona una sessione da scaricare",
+      "downloading": "Download in corso…",
+      "errorTitle": "Errore di connessione",
+      "instructions": "Tocca una sessione per scaricarla e caricarla:",
+      "empty": "Nessuna sessione su questo dispositivo",
+      "savedHint": " — il file è stato salvato e si trova in Sfoglia file.",
+      "retry": "Riprova",
+      "cancel": "Annulla"
     }
   },
   "alfano": {
