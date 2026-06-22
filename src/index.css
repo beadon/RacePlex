@@ -245,6 +245,16 @@
     padding-top: env(safe-area-inset-top);
   }
 
+  /* Modal/dialog padding that also clears device notches: never less than the
+     base 1.5rem (so it doesn't collapse to 0 on un-notched devices the way a
+     bare `env()` inset would), growing to the safe-area inset where present. */
+  .safe-area-modal {
+    padding-top: max(1.5rem, env(safe-area-inset-top));
+    padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
+    padding-left: max(1.5rem, env(safe-area-inset-left));
+    padding-right: max(1.5rem, env(safe-area-inset-right));
+  }
+
   .scrollbar-thin {
     scrollbar-width: thin;
     scrollbar-color: hsl(var(--muted)) transparent;

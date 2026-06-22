@@ -95,8 +95,10 @@ export function LoggerPicker({ open, onOpenChange, bleSupported, onSelectFledgli
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         {/* Cap the height + scroll so a tall list never pushes the close (X) off
-            the top of the screen on mobile, and clear native status-bar insets. */}
-        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto safe-area-inset">
+            the top of the screen on mobile; a side gutter keeps the panel off the
+            screen edges on mobile, and safe-area-modal padding restores the inner
+            padding (which a bare env() inset would zero out) while clearing notches. */}
+        <DialogContent className="w-[calc(100%-2rem)] sm:max-w-2xl max-h-[90vh] overflow-y-auto safe-area-modal">
           <DialogHeader>
             <DialogTitle>{t("title")}</DialogTitle>
             <DialogDescription>{t("subtitle")}</DialogDescription>
