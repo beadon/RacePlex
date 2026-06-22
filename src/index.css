@@ -231,6 +231,30 @@
     padding-right: env(safe-area-inset-right);
   }
 
+  /* The horizontal (left/right) inset on its own — for surfaces whose top inset
+     is owned by a sticky header (which carries `.safe-area-top`), so we don't
+     double-pad the top. */
+  .safe-area-x {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+
+  /* The top inset on its own — for a sticky/fixed header so its background fills
+     behind the status bar while its content stays clear of the notch. */
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  /* Modal/dialog padding that also clears device notches: never less than the
+     base 1.5rem (so it doesn't collapse to 0 on un-notched devices the way a
+     bare `env()` inset would), growing to the safe-area inset where present. */
+  .safe-area-modal {
+    padding-top: max(1.5rem, env(safe-area-inset-top));
+    padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
+    padding-left: max(1.5rem, env(safe-area-inset-left));
+    padding-right: max(1.5rem, env(safe-area-inset-right));
+  }
+
   .scrollbar-thin {
     scrollbar-width: thin;
     scrollbar-color: hsl(var(--muted)) transparent;

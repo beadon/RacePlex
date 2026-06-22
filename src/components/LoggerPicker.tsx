@@ -2,19 +2,20 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { isNativeApp } from "@/lib/platform";
 import { cn } from "@/lib/utils";
 
-// Placeholder product art — swap these files for real photos when available.
-// Kept in /public so they can be replaced without a code change.
-const FLEDGLING_IMAGE = "/loggers/fledgling.svg";
-const MYCHRON_IMAGE = "/loggers/mychron.svg";
-const ALFANO_IMAGE = "/loggers/alfano.svg";
+// Product art lives in /public so it can be swapped without a code change.
+const FLEDGLING_IMAGE = "/loggers/fledgling.png";
+const MYCHRON_IMAGE = "/loggers/mychron.png";
+const ALFANO_IMAGE = "/loggers/alfano.png";
 
 // Brand display names are proper nouns — intentionally not translated.
 const FLEDGLING_NAME = "PerchWerks Fledgling";
@@ -53,7 +54,10 @@ function LoggerCard({ image, name, tag, onClick, disabled, badge, hint }: Logger
       disabled={disabled}
       title={hint}
       className={cn(
-        "group relative flex flex-col overflow-hidden rounded-xl border bg-card text-left transition-colors",
+        // Compact horizontal row on phones (keeps the picker short), full image
+        // card from sm+ where there's room.
+        "group relative flex flex-row items-center overflow-hidden rounded-xl border bg-card text-left transition-colors",
+        "sm:flex-col sm:items-stretch",
         "hover:border-primary/50 hover:bg-accent disabled:pointer-events-none disabled:opacity-50",
       )}
     >
@@ -62,7 +66,12 @@ function LoggerCard({ image, name, tag, onClick, disabled, badge, hint }: Logger
           {badge}
         </span>
       )}
-      <img src={image} alt={name} loading="lazy" className="aspect-[4/3] w-full object-cover" />
+      <img
+        src={image}
+        alt={name}
+        loading="lazy"
+        className="h-16 w-24 shrink-0 object-cover sm:h-auto sm:w-full sm:aspect-[4/3]"
+      />
       <span className="space-y-0.5 p-3">
         <span className="block font-semibold text-foreground">{name}</span>
         <span className="block text-xs text-muted-foreground">{tag}</span>
@@ -85,7 +94,11 @@ export function LoggerPicker({ open, onOpenChange, bleSupported, onSelectFledgli
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-2xl">
+        {/* Cap the height + scroll so a tall list never pushes the close (X) off
+            the top of the screen on mobile; a side gutter keeps the panel off the
+            screen edges on mobile, and safe-area-modal padding restores the inner
+            padding (which a bare env() inset would zero out) while clearing notches. */}
+        <DialogContent className="w-[calc(100%-2rem)] sm:max-w-2xl max-h-[90vh] overflow-y-auto safe-area-modal">
           <DialogHeader>
             <DialogTitle>{t("title")}</DialogTitle>
             <DialogDescription>{t("subtitle")}</DialogDescription>
@@ -104,6 +117,9 @@ export function LoggerPicker({ open, onOpenChange, bleSupported, onSelectFledgli
               image={MYCHRON_IMAGE}
               name={MYCHRON_NAME}
               tag={t("tags.mychron")}
+              // The download only works in the (not-yet-public) native app, so
+              // flag it "coming soon" to web users; on native it actually works.
+              badge={native ? undefined : t("comingSoon")}
               onClick={() => (native && onSelectMychron ? onSelectMychron() : setInfo("mychron"))}
             />
             <LoggerCard
@@ -114,6 +130,17 @@ export function LoggerPicker({ open, onOpenChange, bleSupported, onSelectFledgli
               onClick={() => setInfo("alfano")}
             />
           </div>
+
+          <p className="text-[11px] leading-relaxed text-muted-foreground/70">
+            {t("trademarks")}
+          </p>
+
+          {/* Phones: an explicit way back out (desktop keeps the corner X). */}
+          <DialogClose asChild>
+            <Button variant="outline" className="w-full sm:hidden">
+              {t("close")}
+            </Button>
+          </DialogClose>
         </DialogContent>
       </Dialog>
 
