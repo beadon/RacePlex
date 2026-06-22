@@ -117,6 +117,9 @@ export function LoggerPicker({ open, onOpenChange, bleSupported, onSelectFledgli
               image={MYCHRON_IMAGE}
               name={MYCHRON_NAME}
               tag={t("tags.mychron")}
+              // The download only works in the (not-yet-public) native app, so
+              // flag it "coming soon" to web users; on native it actually works.
+              badge={native ? undefined : t("comingSoon")}
               onClick={() => (native && onSelectMychron ? onSelectMychron() : setInfo("mychron"))}
             />
             <LoggerCard
