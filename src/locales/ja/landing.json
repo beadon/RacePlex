@@ -214,6 +214,7 @@
       "videoExport": "動画書き出し（MP4）",
       "audioInExport": "書き出し時の音声",
       "bleDatalogger": "BLE データロガー",
+      "wifiDatalogger": "Wi-Fi データロガー（MyChron）",
       "filePicker": "ファイル選択",
       "pwaOffline": "PWA / オフライン"
     },
@@ -227,7 +228,10 @@
       "silentExports": "音声なしの書き出し",
       "native": "ネイティブ",
       "fileInputFallback": "ファイル入力フォールバック"
-    }
+    },
+    "triggerNative": "デバイス互換性",
+    "titleNative": "デバイス互換性",
+    "descriptionNative": "このデバイスでの機能対応状況。"
   },
   "fileImport": {
     "title": "データログを開く",

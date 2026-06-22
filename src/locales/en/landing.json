@@ -169,6 +169,7 @@
       "videoExport": "Video Export (MP4)",
       "audioInExport": "Audio in Export",
       "bleDatalogger": "BLE Datalogger",
+      "wifiDatalogger": "Wi-Fi Datalogger (MyChron)",
       "filePicker": "File Picker",
       "pwaOffline": "PWA / Offline"
     },
@@ -182,7 +183,10 @@
       "silentExports": "Silent exports",
       "native": "Native",
       "fileInputFallback": "File input fallback"
-    }
+    },
+    "triggerNative": "Device Compatibility",
+    "titleNative": "Device Compatibility",
+    "descriptionNative": "Feature support on this device."
   },
   "supportedFiles": {
     "trigger": "Supported Files",

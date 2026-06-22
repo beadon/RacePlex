@@ -17,6 +17,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Landing hero wording.** Dropped "Online" from the main heading (it's an
   offline-first app), and added a line making the point directly: "Works entirely
   offline now that you've visited it!"
+- **Compatibility dialog is device-aware.** On the native app the "Browser
+  Compatibility" button/title now reads **"Device Compatibility"**, and the list
+  gained a **Wi-Fi Datalogger (MyChron)** row — shown as unavailable in the browser
+  (it needs the native app) and supported on native.
 
 ## [2.9.0] - 2026-06-22
 

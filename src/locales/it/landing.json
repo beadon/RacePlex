@@ -214,6 +214,7 @@
       "videoExport": "Esportazione video (MP4)",
       "audioInExport": "Audio nell'esportazione",
       "bleDatalogger": "Datalogger BLE",
+      "wifiDatalogger": "Datalogger Wi-Fi (MyChron)",
       "filePicker": "Selettore di file",
       "pwaOffline": "PWA / Offline"
     },
@@ -227,7 +228,10 @@
       "silentExports": "Esportazioni mute",
       "native": "Nativo",
       "fileInputFallback": "Ripiego su campo file"
-    }
+    },
+    "triggerNative": "Compatibilità del dispositivo",
+    "titleNative": "Compatibilità del dispositivo",
+    "descriptionNative": "Supporto delle funzioni su questo dispositivo."
   },
   "fileImport": {
     "title": "Apri un datalog",
