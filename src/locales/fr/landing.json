@@ -16,9 +16,7 @@
     },
     "logger": {
       "title": "Télécharger depuis l'enregistreur",
-      "description": "Récupérez les enregistrements par Bluetooth depuis votre DovesDataLogger",
-      "unsupportedDescription": "Nécessite Chrome, Edge ou Opera sur ordinateur",
-      "unsupportedHint": "Web Bluetooth n'est pas pris en charge par ce navigateur"
+      "description": "Téléchargez les enregistrements directement depuis votre enregistreur de données"
     },
     "tracks": {
       "title": "Gérer les circuits",
@@ -108,7 +106,12 @@
       "Éditeur de circuits et de parcours personnalisés avec soumissions communautaires",
       "Consultation de la météo locale",
       "Mode sombre et clair",
-      "PWA — installable et entièrement hors ligne"
+      "PWA — installable et entièrement hors ligne",
+      "Disponible en 7 langues",
+      "App Android native — téléchargement Wi-Fi depuis AiM MyChron",
+      "Téléphone comme enregistreur — chronométrage GPS sans matériel supplémentaire",
+      "Synchronisation cloud optionnelle entre vos appareils (offre gratuite)",
+      "Coach de pilotage IA (option payante)"
     ]
   },
   "supportedFiles": {

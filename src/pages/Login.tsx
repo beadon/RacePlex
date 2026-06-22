@@ -7,7 +7,8 @@ import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Gauge, ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Shield, FileText } from 'lucide-react';
+import { BrandHeader } from "@/components/BrandHeader";
 import { useDocumentHead } from '@/hooks/useDocumentHead';
 
 const enableCloud = import.meta.env.VITE_ENABLE_CLOUD === 'true';
@@ -16,7 +17,7 @@ const enableCloud = import.meta.env.VITE_ENABLE_CLOUD === 'true';
 const enableGoogleAuth = import.meta.env.VITE_ENABLE_GOOGLE_AUTH === 'true';
 
 export default function Login() {
-  const { t } = useTranslation('auth');
+  const { t } = useTranslation(['auth', 'landing']);
   useDocumentHead({
     title: t('login.metaTitle'),
     description: t('login.metaDescription'),
@@ -34,7 +35,9 @@ export default function Login() {
     e.preventDefault();
     setIsLoading(true);
     try {
-      const { data: rateCheck } = await supabase.functions.invoke('check-login-rate', { body: {} });
+      // Pre-check only reports whether this IP is locked — it never counts an
+      // attempt. The failure/success is recorded after the login resolves below.
+      const { data: rateCheck } = await supabase.functions.invoke('check-login-rate', { body: { action: 'check' } });
       if (rateCheck && !rateCheck.allowed) {
         toast({ title: t('login.tooManyAttempts'), description: rateCheck.message || t('login.tooManyAttemptsDesc'), variant: 'destructive' });
         setIsLoading(false);
@@ -42,8 +45,12 @@ export default function Login() {
       }
       const { error } = await login(email, password);
       if (error) {
+        // Record the failed attempt (best-effort) so brute force still trips the lock.
+        void supabase.functions.invoke('check-login-rate', { body: { action: 'fail' } });
         toast({ title: t('login.failed'), description: error.message, variant: 'destructive' });
       } else {
+        // Success clears this IP's failure counter.
+        void supabase.functions.invoke('check-login-rate', { body: { action: 'reset' } });
         toast({ title: t('login.signedIn') });
         navigate(next);
       }
@@ -64,13 +71,10 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-8">
+    <div className="min-h-screen bg-background flex flex-col safe-area-x">
+      <BrandHeader />
+      <div className="flex flex-1 flex-col items-center justify-center p-8">
       <div className="w-full max-w-sm space-y-6">
-        <div className="flex items-center gap-3 justify-center">
-          <Gauge className="w-8 h-8 text-primary" />
-          <h1 className="text-xl font-semibold text-foreground">LapWing</h1>
-        </div>
-
         <div className="racing-card p-6 space-y-4">
           <h2 className="text-lg font-semibold text-foreground">{t('login.heading')}</h2>
 
@@ -118,6 +122,18 @@ export default function Login() {
         <Button variant="ghost" className="w-full gap-2" onClick={() => navigate('/')}>
           <ArrowLeft className="w-4 h-4" /> {t('backToHome')}
         </Button>
+
+        <div className="flex items-center justify-center gap-6">
+          <Link to="/privacy" className="inline-flex items-center gap-1 text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors">
+            <Shield className="w-3 h-3" />
+            {t('landing:links.privacy')}
+          </Link>
+          <Link to="/terms" className="inline-flex items-center gap-1 text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors">
+            <FileText className="w-3 h-3" />
+            {t('landing:links.terms')}
+          </Link>
+        </div>
+      </div>
       </div>
     </div>
   );

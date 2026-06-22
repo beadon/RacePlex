@@ -26,7 +26,7 @@
     --popover: 0 0% 100%;
     --popover-foreground: 220 20% 12%;
 
-    --primary: 180 70% 35%;
+    --primary: 276 44% 49%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 220 15% 92%;
@@ -51,7 +51,7 @@
 
     --border: 220 15% 85%;
     --input: 220 15% 88%;
-    --ring: 180 70% 35%;
+    --ring: 276 44% 49%;
 
     --radius: 0.5rem;
 
@@ -73,12 +73,12 @@
 
     --sidebar-background: 0 0% 100%;
     --sidebar-foreground: 220 20% 12%;
-    --sidebar-primary: 180 70% 35%;
+    --sidebar-primary: 276 44% 49%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 220 15% 92%;
     --sidebar-accent-foreground: 220 15% 25%;
     --sidebar-border: 220 15% 85%;
-    --sidebar-ring: 180 70% 35%;
+    --sidebar-ring: 276 44% 49%;
   }
 
   .dark {
@@ -91,7 +91,7 @@
     --popover: 220 18% 8%;
     --popover-foreground: 210 20% 92%;
 
-    --primary: 180 70% 45%;
+    --primary: 276 44% 59%;
     --primary-foreground: 220 20% 6%;
 
     --secondary: 220 15% 18%;
@@ -116,7 +116,7 @@
 
     --border: 220 15% 20%;
     --input: 220 15% 18%;
-    --ring: 180 70% 45%;
+    --ring: 276 44% 59%;
 
     /* Racing-specific colors */
     --speed-slow: 120 60% 45%;
@@ -136,12 +136,12 @@
 
     --sidebar-background: 220 18% 10%;
     --sidebar-foreground: 210 20% 92%;
-    --sidebar-primary: 180 70% 45%;
+    --sidebar-primary: 276 44% 59%;
     --sidebar-primary-foreground: 220 20% 6%;
     --sidebar-accent: 220 15% 18%;
     --sidebar-accent-foreground: 210 20% 85%;
     --sidebar-border: 220 15% 20%;
-    --sidebar-ring: 180 70% 45%;
+    --sidebar-ring: 276 44% 59%;
   }
 }
 
@@ -216,6 +216,45 @@
 }
 
 @layer utilities {
+  /* Keep app chrome clear of device notches / status bars on native (Android
+     WebView / iOS) and installed PWAs, which draw edge-to-edge. Requires
+     `viewport-fit=cover` (set in index.html). Insets resolve to 0 on browsers
+     and desktops without a safe area, so this is a no-op everywhere else.
+     Applied to every full-screen surface — the app shell + landing, full-page
+     routes (login/register/admin/legal), and portal overlays like the file-
+     manager drawer — whose `border-box` sizing keeps the padding inside
+     `h-screen`/`min-h-screen` (no overflow) while the surface's background
+     fills the inset region behind the status bar. */
+  .safe-area-inset {
+    padding-top: env(safe-area-inset-top);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+
+  /* The horizontal (left/right) inset on its own — for surfaces whose top inset
+     is owned by a sticky header (which carries `.safe-area-top`), so we don't
+     double-pad the top. */
+  .safe-area-x {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+
+  /* The top inset on its own — for a sticky/fixed header so its background fills
+     behind the status bar while its content stays clear of the notch. */
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  /* Modal/dialog padding that also clears device notches: never less than the
+     base 1.5rem (so it doesn't collapse to 0 on un-notched devices the way a
+     bare `env()` inset would), growing to the safe-area inset where present. */
+  .safe-area-modal {
+    padding-top: max(1.5rem, env(safe-area-inset-top));
+    padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
+    padding-left: max(1.5rem, env(safe-area-inset-left));
+    padding-right: max(1.5rem, env(safe-area-inset-right));
+  }
+
   .scrollbar-thin {
     scrollbar-width: thin;
     scrollbar-color: hsl(var(--muted)) transparent;

@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState, useEffect, useMemo, lazy, Suspense } from "react";
+import { useCallback, useRef, useState, useEffect, useMemo } from "react";
 import { useTranslation, Trans } from "react-i18next";
 import { toast } from "sonner";
 import { Trash2, Download, Upload, FolderOpen, Loader2, Video, Cloud, CloudDownload } from "lucide-react";
@@ -14,10 +14,8 @@ import {
 import { SessionBrowser } from "@/components/SessionBrowser";
 import { FileTypeBadge } from "@/components/FileTypeBadge";
 import { useFileSources, type FileSource, type RemoteFile } from "@/plugins/fileSources";
-// Lazy — keeps the BLE module in its own chunk, loaded only on device use.
-const DataloggerDownload = lazy(() =>
-  import("@/components/DataloggerDownload").then((m) => ({ default: m.DataloggerDownload })),
-);
+// The picker host is light; the BLE flow it launches stays in its own lazy chunk.
+import { LoggerDownload } from "@/components/LoggerDownload";
 import { listSessionVideos, StoredVideoMeta } from "@/lib/videoFileStorage";
 import { PluginMount } from "@/plugins/PluginMount";
 import { MountSlot } from "@/plugins/mounts";
@@ -426,13 +424,11 @@ export function FilesTab({
           {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
           {t("files.uploadFiles")}
         </Button>
-        <Suspense fallback={null}>
-          <DataloggerDownload
-            onDataLoaded={handleBleDataLoaded}
-            autoSave={autoSave}
-            autoSaveFile={onSaveFile}
-          />
-        </Suspense>
+        <LoggerDownload
+          onDataLoaded={handleBleDataLoaded}
+          autoSave={autoSave}
+          autoSaveFile={onSaveFile}
+        />
       </div>
     </div>
   );

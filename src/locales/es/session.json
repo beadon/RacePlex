@@ -11,6 +11,7 @@
     "setupsNotes": "Reglajes y notas"
   },
   "header": {
+    "home": "Inicio",
     "play": "Reproducir",
     "pause": "Pausar",
     "allLaps": "Todas las vueltas",

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, lazy, Suspense } from "react";
 import { useTranslation } from "react-i18next";
 import { Gauge, Map, ListOrdered, BarChart3, FolderOpen, Play, Pause, Eye, EyeOff, AlertCircle, Wrench, NotebookPen, SlidersHorizontal } from "lucide-react";
+import { BrandLogo } from "@/components/BrandLogo";
 import { LandingPage } from "@/components/LandingPage";
 import { TrackEditor } from "@/components/TrackEditor"; // still used in compact header
 import { LapTimesTab } from "@/components/tabs/LapTimesTab";
@@ -109,7 +110,7 @@ export default function Index() {
 
   // Core session data
   const sessionData = useSessionData(isFieldHiddenByDefault, settings.defaultHiddenFields);
-  const { data, currentFileName, fieldMappings, sessionGpsPoint } = sessionData;
+  const { data, currentFileName, fieldMappings, sessionGpsPoint, clearSession } = sessionData;
 
   const noteManager = useNoteManager(currentFileName);
 
@@ -614,12 +615,17 @@ export default function Index() {
     <SettingsProvider value={settingsContextValue}>
     <SessionProvider value={sessionContextValue}>
     <PlaybackProvider value={playbackContextValue}>
-    <div className="h-screen bg-background flex flex-col overflow-hidden">
+    <div className="h-screen bg-background flex flex-col overflow-hidden safe-area-inset">
       <header className="border-b border-border px-4 py-2 flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-3">
-          <Gauge className="w-6 h-6 text-primary" />
+        <button
+          type="button"
+          onClick={clearSession}
+          aria-label={t("header.home")}
+          className="flex items-center gap-3 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <BrandLogo className="w-6 h-6" />
           <span className="font-semibold text-foreground hidden sm:inline">LapWing</span>
-        </div>
+        </button>
 
         <div className="flex items-center gap-2">
           <TooltipProvider>

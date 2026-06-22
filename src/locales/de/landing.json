@@ -16,9 +16,7 @@
     },
     "logger": {
       "title": "Vom Logger herunterladen",
-      "description": "Logs per Bluetooth von deinem DovesDataLogger abrufen",
-      "unsupportedDescription": "Erfordert Chrome, Edge oder Opera auf dem Desktop",
-      "unsupportedHint": "Web Bluetooth wird von diesem Browser nicht unterstützt"
+      "description": "Logs direkt von deinem Datenlogger herunterladen"
     },
     "tracks": {
       "title": "Strecken verwalten",
@@ -108,7 +106,12 @@
       "Editor für eigene Strecken & Kurse mit Community-Einsendungen",
       "Lokale Wetterabfrage",
       "Dunkel- & Hell-Modus",
-      "PWA — installierbar & vollständig offline"
+      "PWA — installierbar & vollständig offline",
+      "In 7 Sprachen verfügbar",
+      "Native Android-App – WLAN-Download vom AiM MyChron",
+      "Smartphone als Logger – GPS-Rundenzeiten ohne Zusatzhardware",
+      "Optionale Cloud-Synchronisierung über deine Geräte (kostenlose Stufe)",
+      "KI-Fahrcoach (optionales Add-on)"
     ]
   },
   "supportedFiles": {

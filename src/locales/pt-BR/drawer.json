@@ -23,7 +23,9 @@
     "connectTitle": "Conectar ao registrador",
     "connectDesc": "Conecte seu DovesDataLogger para gerenciar as configurações e as pistas do dispositivo.",
     "connecting": "Conectando…",
-    "connect": "Conectar"
+    "connect": "Conectar",
+    "deviceFledglingOnlyTitle": "Apenas Fledgling",
+    "deviceFledglingOnlyDesc": "Os detalhes do dispositivo estão disponíveis apenas para o PerchWerks Fledgling. O registrador conectado não oferece configurações, pistas ou firmware aqui."
   },
   "files": {
     "cloudRowTitle": "{{name}} — na nuvem, toque para baixar",

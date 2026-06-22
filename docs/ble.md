@@ -2,11 +2,37 @@
 
 Web Bluetooth integration with the **DovesLapTimer** (nRF52840) hardware: file
 transfer, settings, track sync, battery, and the SD-staged firmware OTA. Kept out
-of `CLAUDE.md` so it loads only when working on device code. Global BLE connection
+of `CLAUDE.md` so it loads only when working on device code.
+
+> **Wire spec vs. app integration.** This file documents how the **app** wires the
+> BLE stack into the UI (DeviceContext, drawer tabs, the `LoggerConnection`
+> abstraction). The **transport-agnostic protocol contract** — every GATT
+> characteristic, command, and packet, written so anyone can replicate the
+> connection in any stack (Tauri/native, Python, firmware tests) — lives in
+> [`ble-protocol.md`](ble-protocol.md). Keep that file in sync with any wire-format
+> change. Global BLE connection
 state lives in `DeviceContext.tsx` (wraps the app tree in `Index.tsx`). Source:
 `src/lib/ble/` (split per-concern; `bleDatalogger.ts` is the legacy barrel).
-Everything here is lazy-loaded — `DataloggerDownload` is the BLE entry point so
-`lib/ble/*` stays out of the initial bundle.
+The user reaches the BLE flow through `LoggerDownload` → `LoggerPicker` (an eager,
+lightweight image chooser of supported loggers). Picking the PerchWerks Fledgling
+tile mounts `DataloggerDownload` — the lazy BLE flow — on demand, so `lib/ble/*`
+stays out of the initial bundle while the menu still opens instantly. On the native
+(Tauri) shell the MyChron tile mounts the lazy `MyChronDownload` flow (Wi-Fi over
+native IPC — see `docs/android.md`); on the web it (and Alfano) still open
+explanatory dialogs.
+
+`DataloggerDownload` talks to the device only through the generic
+`LoggerConnection` interface (`src/lib/loggers/`): `listLogs` / `downloadLog` /
+`disconnect`, with `createFledglingConnection()` adapting a `BleConnection`. MyChron
+is the second adapter — `createMychronConnection()` (`src/lib/loggers/mychron/`),
+native-only, over the Tauri shell — and Alfano (BLE) will be a third. All satisfy
+the same interface, and `DeviceContext.loggerKind` records which logger is connected
+so Fledgling-only surfaces (settings / tracks / firmware) can gate themselves
+(`supportsDeviceDetails` is `false` for MyChron). The pure progress formatters
+(`formatBytes` / `formatSpeed` / `formatTime`) and the `computeProgress()` helper now
+live transport-neutrally in `src/lib/loggers/progress.ts` (re-exported from
+`src/lib/ble/format.ts` for existing BLE callers) so both flows share them without
+either pulling the other's protocol bundle.
 
 ---
 

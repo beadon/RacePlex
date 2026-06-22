@@ -23,7 +23,9 @@
     "connectTitle": "ロガーに接続",
     "connectDesc": "DovesDataLogger に接続して、デバイスの設定とコースを管理します。",
     "connecting": "接続中…",
-    "connect": "接続"
+    "connect": "接続",
+    "deviceFledglingOnlyTitle": "Fledgling のみ",
+    "deviceFledglingOnlyDesc": "デバイスの詳細は PerchWerks Fledgling でのみ利用できます。接続中のロガーでは設定・コース・ファームウェアは利用できません。"
   },
   "files": {
     "cloudRowTitle": "{{name}} — クラウド上。タップしてダウンロード",

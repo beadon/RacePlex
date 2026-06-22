@@ -1,0 +1,38 @@
+{
+  "_machine": true,
+  "title": "Scarica dal logger",
+  "subtitle": "Scegli il tuo logger per avviare un download.",
+  "comingSoon": "Prossimamente",
+  "close": "Chiudi",
+  "trademarks": "MyChron è un marchio di AiM Tech S.r.l. e Alfano è un marchio di Alfano S.A. LapWing è indipendente e non è affiliata né approvata da loro; tutti i nomi di prodotti, loghi e marchi sono di proprietà dei rispettivi titolari.",
+  "tags": {
+    "fledgling": "Logger DIY · Bluetooth",
+    "mychron": "Wi-Fi · richiede app nativa",
+    "alfano": "Bluetooth · prossimamente"
+  },
+  "fledglingUnsupported": "Web Bluetooth non è supportato qui: usa Chrome, Edge o Opera su computer.",
+  "mychron": {
+    "nativeTitle": "Download MyChron",
+    "nativeBody": "Da definire",
+    "webTitle": "App nativa richiesta",
+    "webBody": "I logger MyChron trasferiscono via Wi-Fi, a cui i browser web non possono accedere direttamente. Un'app nativa dedicata al download da MyChron è in fase di sviluppo e il lancio è previsto intorno a luglio 2026.",
+    "flow": {
+      "connecting": "Connessione al tuo MyChron…",
+      "wifiSelecting": "In attesa che tu selezioni il tuo MyChron nell'elenco Wi-Fi…",
+      "wifiHint": "Approva la connessione nella finestra di dialogo di sistema per continuare.",
+      "fetching": "Recupero delle sessioni…",
+      "selectFile": "Seleziona una sessione da scaricare",
+      "downloading": "Download in corso…",
+      "errorTitle": "Errore di connessione",
+      "instructions": "Tocca una sessione per scaricarla e caricarla:",
+      "empty": "Nessuna sessione su questo dispositivo",
+      "savedHint": " — il file è stato salvato e si trova in Sfoglia file.",
+      "retry": "Riprova",
+      "cancel": "Annulla"
+    }
+  },
+  "alfano": {
+    "title": "Download Alfano",
+    "body": "I download Alfano saranno disponibili senza un'app nativa grazie alla connettività Bluetooth del logger. Stiamo facendo progressi: resta sintonizzato per gli aggiornamenti (stimato inizio luglio 2026)."
+  }
+}

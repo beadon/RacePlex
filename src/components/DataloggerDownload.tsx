@@ -1,16 +1,9 @@
-import { useState, useCallback, useEffect, type ReactNode } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { Bluetooth, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import {
-  FileInfo,
-  DownloadProgress,
-  isBleSupported,
-  requestFileList,
-  downloadFile,
-  formatBytes,
-} from "@/lib/bleDatalogger";
+import { createFledglingConnection, type LoggerConnection, type LoggerFile, type LoggerDownloadProgress } from "@/lib/loggers";
+import { FileListPanel, ProgressPanel } from "@/components/loggers/DownloadPanels";
 import { useDeviceContext } from "@/contexts/DeviceContext";
 import { parseDatalogContent } from "@/lib/datalogParser";
 import { ParsedData } from "@/types/racing";
@@ -27,54 +20,29 @@ interface DataloggerDownloadProps {
   onDataLoaded: (data: ParsedData, fileName?: string) => void;
   autoSave?: boolean;
   autoSaveFile?: (name: string, blob: Blob) => Promise<void>;
-  /**
-   * Optional custom trigger (e.g. a big landing-page ActionTile). Receives the
-   * connect handler and whether Web Bluetooth is supported so the caller can
-   * render its own disabled/hint state. When omitted, the default outline
-   * button is rendered.
-   */
-  renderTrigger?: (args: { onConnect: () => void; bleSupported: boolean }) => ReactNode;
+  /** Begin connecting as soon as the flow mounts (it's mounted on demand). */
+  autoStart?: boolean;
+  /** Called when the flow finishes or is dismissed so the host can unmount it. */
+  onClose: () => void;
 }
 
-export function DataloggerDownload({ onDataLoaded, autoSave, autoSaveFile, renderTrigger }: DataloggerDownloadProps) {
+/**
+ * The PerchWerks Fledgling download flow: connect over Web Bluetooth, list logs,
+ * download + parse the chosen one. Mounted on demand by `LoggerDownload` once the
+ * user picks the Fledgling in the logger picker, so the BLE protocol bundle
+ * (`lib/ble/*`) stays off the initial/landing payload. Talks to the device only
+ * through the generic `LoggerConnection` surface.
+ */
+export function DataloggerDownload({ onDataLoaded, autoSave, autoSaveFile, autoStart, onClose }: DataloggerDownloadProps) {
   const device = useDeviceContext();
   const connection = device.connection;
   const [state, setState] = useState<DownloadState>("idle");
-  const [files, setFiles] = useState<FileInfo[]>([]);
-  const [progress, setProgress] = useState<DownloadProgress | null>(null);
+  const [files, setFiles] = useState<LoggerFile[]>([]);
+  const [progress, setProgress] = useState<LoggerDownloadProgress | null>(null);
   const [currentFile, setCurrentFile] = useState<string>("");
   const [error, setError] = useState<string>("");
   const [statusMessage, setStatusMessage] = useState<string>("");
-
-  const bleSupported = isBleSupported();
-
-  const handleConnect = useCallback(async () => {
-    setState("connecting");
-    setError("");
-    setStatusMessage("Scanning for DovesLapTimer...");
-
-    try {
-      // Reuse existing context connection if available; otherwise connect via context.
-      const conn = device.connection ?? (await device.connect(setStatusMessage));
-      if (!conn) {
-        // User cancelled the picker
-        setState("idle");
-        return;
-      }
-
-      setState("fetching-files");
-      setStatusMessage("Fetching file list...");
-
-      const fileList = await requestFileList(conn, setStatusMessage);
-      setFiles(fileList);
-      setState("file-list");
-      setStatusMessage(`Found ${fileList.length} files`);
-    } catch (err) {
-      console.error("Connection/file list error:", err);
-      setError(err instanceof Error ? err.message : "Failed to connect");
-      setState("error");
-    }
-  }, [device]);
+  const loggerRef = useRef<LoggerConnection | null>(null);
 
   const handleClose = useCallback(() => {
     // Do NOT disconnect — connection lifecycle is owned by DeviceContext.
@@ -85,11 +53,54 @@ export function DataloggerDownload({ onDataLoaded, autoSave, autoSaveFile, rende
     setCurrentFile("");
     setError("");
     setStatusMessage("");
-  }, []);
+    loggerRef.current = null;
+    onClose();
+  }, [onClose]);
+
+  const handleConnect = useCallback(async () => {
+    setState("connecting");
+    setError("");
+    setStatusMessage("Scanning for DovesLapTimer...");
+
+    try {
+      // Reuse existing context connection if available; otherwise connect via context.
+      const conn = device.connection ?? (await device.connect(setStatusMessage));
+      if (!conn) {
+        // User cancelled the picker — close the flow.
+        handleClose();
+        return;
+      }
+
+      const logger = createFledglingConnection(conn);
+      loggerRef.current = logger;
+
+      setState("fetching-files");
+      setStatusMessage("Fetching file list...");
+
+      const fileList = await logger.listLogs(setStatusMessage);
+      setFiles(fileList);
+      setState("file-list");
+      setStatusMessage(`Found ${fileList.length} files`);
+    } catch (err) {
+      console.error("Connection/file list error:", err);
+      setError(err instanceof Error ? err.message : "Failed to connect");
+      setState("error");
+    }
+  }, [device, handleClose]);
+
+  // Kick off the connection as soon as the flow is mounted (once).
+  const startedRef = useRef(false);
+  useEffect(() => {
+    if (autoStart && !startedRef.current) {
+      startedRef.current = true;
+      void handleConnect();
+    }
+  }, [autoStart, handleConnect]);
 
   const handleFileSelect = useCallback(
-    async (file: FileInfo) => {
-      if (!connection) {
+    async (file: LoggerFile) => {
+      const logger = loggerRef.current;
+      if (!connection || !logger) {
         setError("Device disconnected. Please reconnect.");
         setState("error");
         return;
@@ -107,12 +118,7 @@ export function DataloggerDownload({ onDataLoaded, autoSave, autoSaveFile, rende
       setError("");
 
       try {
-        const fileData = await downloadFile(
-          connection,
-          file.name,
-          setProgress,
-          setStatusMessage
-        );
+        const fileData = await logger.downloadLog(file.name, setProgress, setStatusMessage);
 
         // Always save the raw file first so it's never lost
         if (autoSave && autoSaveFile) {
@@ -155,13 +161,12 @@ export function DataloggerDownload({ onDataLoaded, autoSave, autoSaveFile, rende
 
   const handleRetry = useCallback(() => {
     setError("");
-    setState("idle");
-  }, []);
+    void handleConnect();
+  }, [handleConnect]);
 
   const isModalOpen = state !== "idle";
 
-  // The transfer modal — shared by every trigger variant below.
-  const downloadDialog = (
+  return (
     <Dialog open={isModalOpen} onOpenChange={(open) => !open && handleClose()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
@@ -196,64 +201,12 @@ export function DataloggerDownload({ onDataLoaded, autoSave, autoSaveFile, rende
 
         {/* File List State */}
         {state === "file-list" && (
-          <div className="flex flex-col gap-2">
-            <p className="text-sm text-muted-foreground mb-2">
-              Click a file to download and load it:
-            </p>
-            <div className="max-h-80 overflow-y-auto space-y-1">
-              {files.length === 0 ? (
-                <p className="text-center text-muted-foreground py-4">
-                  No files found on device
-                </p>
-              ) : (
-                files.map((file) => (
-                  <button
-                    key={file.name}
-                    onClick={() => handleFileSelect(file)}
-                    className="w-full text-left px-3 py-2 rounded-md bg-muted/50 hover:bg-muted transition-colors flex justify-between items-center"
-                  >
-                    <span className="font-mono text-sm">{file.name}</span>
-                    <span className="text-xs text-muted-foreground">
-                      {formatBytes(file.size)}
-                    </span>
-                  </button>
-                ))
-              )}
-            </div>
-          </div>
+          <FileListPanel files={files} onSelect={handleFileSelect} />
         )}
 
         {/* Downloading State */}
         {state === "downloading" && progress && (
-          <div className="flex flex-col gap-4 py-4">
-            <p className="font-mono text-sm text-center">{currentFile}</p>
-
-            {/* Progress Bar */}
-            <div className="w-full bg-muted rounded-full h-3 overflow-hidden">
-              <div
-                className="h-full bg-primary transition-all duration-150"
-                style={{ width: `${progress.percent}%` }}
-              />
-            </div>
-
-            {/* Stats */}
-            <div className="grid grid-cols-2 gap-2 text-sm">
-              <div className="text-muted-foreground">Received:</div>
-              <div className="text-right font-mono">
-                {formatBytes(progress.received)} / {formatBytes(progress.total)}
-              </div>
-
-              <div className="text-muted-foreground">Speed:</div>
-              <div className="text-right font-mono">{progress.speed}</div>
-
-              <div className="text-muted-foreground">ETA:</div>
-              <div className="text-right font-mono">{progress.eta}</div>
-            </div>
-
-            <p className="text-xs text-center text-muted-foreground">
-              {progress.percent.toFixed(1)}% complete
-            </p>
-          </div>
+          <ProgressPanel currentFile={currentFile} progress={progress} />
         )}
 
         {/* Error State */}
@@ -270,51 +223,5 @@ export function DataloggerDownload({ onDataLoaded, autoSave, autoSaveFile, rende
         )}
       </DialogContent>
     </Dialog>
-  );
-
-  // Custom-trigger mode (e.g. the landing-page ActionTile): caller owns the
-  // disabled/hint presentation; we just wire up the connect handler.
-  if (renderTrigger) {
-    return (
-      <>
-        {renderTrigger({ onConnect: handleConnect, bleSupported })}
-        {downloadDialog}
-      </>
-    );
-  }
-
-  // Button disabled if BLE not supported
-  if (!bleSupported) {
-    return (
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <span>
-              <Button variant="outline" disabled className="opacity-50">
-                <Bluetooth className="w-4 h-4 mr-2" />
-                Download from DovesDataLogger
-              </Button>
-            </span>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Web Bluetooth not supported in this browser</p>
-            <p className="text-xs text-muted-foreground">
-              Use Chrome, Edge, or Opera on desktop
-            </p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-    );
-  }
-
-  return (
-    <>
-      <Button variant="outline" onClick={handleConnect}>
-        <Bluetooth className="w-4 h-4 mr-2" />
-        Download from DovesDataLogger
-      </Button>
-
-      {downloadDialog}
-    </>
   );
 }

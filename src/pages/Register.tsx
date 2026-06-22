@@ -6,13 +6,16 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
-import { Gauge, ArrowLeft } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
+import { BrandHeader } from "@/components/BrandHeader";
 import { useDocumentHead } from '@/hooks/useDocumentHead';
 import { Turnstile, turnstileEnabled } from '@/components/Turnstile';
 import { PricingCards } from '@/components/PricingCards';
 import { PlanCheckout, PlanCheckoutSummary, type PlanSelection } from '@/components/PlanCheckout';
 import { useStripePrices } from '@/hooks/useStripePrices';
 import { isDisposableEmail, looksLikeEmail } from '@/lib/emailValidation';
+import { evaluatePassword } from '@/lib/passwordStrength';
+import { PasswordStrengthMeter } from '@/components/PasswordStrengthMeter';
 import { isPaidTier } from '@/lib/billing';
 import { setPendingCheckout } from '@/lib/pendingCheckout';
 import { isNativeApp } from '@/lib/platform';
@@ -56,8 +59,8 @@ export default function Register() {
       toast({ title: t('register.passwordsNoMatch'), variant: 'destructive' });
       return;
     }
-    if (password.length < 6) {
-      toast({ title: t('register.passwordTooShort'), variant: 'destructive' });
+    if (!evaluatePassword(password).meetsRequirements) {
+      toast({ title: t('register.passwordTooWeak'), description: t('register.passwordTooWeakDesc'), variant: 'destructive' });
       return;
     }
     if (turnstileEnabled && !captchaToken) {
@@ -106,15 +109,15 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center p-8 gap-12">
-      <div className="flex items-center gap-3 justify-center mt-4">
-        <Gauge className="w-8 h-8 text-primary" />
-        <h1 className="text-xl font-semibold text-foreground">LapWing</h1>
-      </div>
+    <div className="min-h-screen bg-background flex flex-col safe-area-x">
+      <BrandHeader />
 
-      <PricingCards className="w-full max-w-3xl" variant="register" />
+      <div className="flex flex-1 flex-col items-center p-8 gap-12">
+        {/* Paid plans aren't sold in-app (Google Play policy), so the whole
+            pricing section is hidden on native — just the sign-up form shows. */}
+        {!native && <PricingCards className="w-full max-w-3xl" variant="register" />}
 
-      <div className="w-full max-w-sm space-y-6">
+        <div className="w-full max-w-sm space-y-6">
         <div className="racing-card p-6 space-y-4">
           <h2 className="text-lg font-semibold text-foreground">{t('register.heading')}</h2>
 
@@ -126,6 +129,7 @@ export default function Register() {
             <div className="space-y-2">
               <Label htmlFor="password">{t('password')}</Label>
               <Input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} required />
+              <PasswordStrengthMeter password={password} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="confirmPassword">{t('register.confirmPassword')}</Label>
@@ -182,6 +186,7 @@ export default function Register() {
         <Button variant="ghost" className="w-full gap-2" onClick={() => navigate('/')}>
           <ArrowLeft className="w-4 h-4" /> {t('backToHome')}
         </Button>
+        </div>
       </div>
     </div>
   );

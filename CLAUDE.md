@@ -86,7 +86,7 @@ src/
 │   ├── RaceLineView.tsx   # Leaflet map: race line, speed heatmap, braking zones
 │   ├── TelemetryChart.tsx # Canvas speed/telemetry chart (simple mode)
 │   ├── VideoPlayer.tsx    # Synced video playback + overlay system (multi-chunk GoPro playlists via lib/videoPlaylist)
-│   └── …                  # FileImport, DataloggerDownload (BLE entry, lazy), LapSnapshot*, …
+│   └── …                  # FileImport, LoggerDownload (eager picker host) + LoggerPicker (image chooser) + DataloggerDownload (lazy Fledgling BLE flow), LapSnapshot*, …
 ├── hooks/                 # One concern each; Index.tsx orchestrates.
 │   ├── useSessionData     # Parses imported file → ParsedData
 │   ├── useLapManagement   # Lap calc, selection, visible range
@@ -116,6 +116,7 @@ src/
 │   ├── fileLoadingState.ts # ★ Host pub/sub for the global file-load overlay
 │   ├── *Storage.ts        # IDB/localStorage store modules (file, vehicle, engine, template, note, setup, …)
 │   ├── gps/               # ★ Phone-as-datalogger layer: gpsFix, customGps, sessionGate, realtimeTimer, dovepWriter
+│   ├── loggers/           # ★ Generic LoggerConnection (listLogs/downloadLog/disconnect) + per-logger adapters — Fledgling=BLE, mychron/=MyChron over native (Tauri) Wi-Fi IPC (lazy; @tauri-apps/api dynamic-imported, native-only); Alfano later. progress.ts = transport-neutral formatters + computeProgress (→ docs/ble.md)
 │   ├── speedHeatmap.ts / mapMarker.ts / brakingZones / gforceCalculation / …  # racing math
 │   ├── chartUtils / canvas2d / chartAxis / chartColors / videoExport / overlayCanvasRenderer  # charts/video
 │   ├── videoPlaylist.ts   # ★ Pure GoPro chunked-video model: parse/order GH/GX/GP/GOPR chunk names, build a virtual timeline (cumulative offsets) + virtual↔local time mapping + planAudioSegments (export audio stitch). useVideoSync swaps the <video> src per chunk; a single file is a 1-chunk playlist
@@ -126,6 +127,7 @@ src/
 │   ├── weatherService.ts  # Historical weather (online-only): NWS/IEM METAR → Open-Meteo fallback
 │   ├── weatherCacheStorage.ts # Per-session historical-weather cache (IndexedDB, local-only/never cloud-synced): a session's date is fixed so its weather is immutable — cache it once, stop re-pinging the station/API on reopen
 │   ├── buildInfo.ts       # Build version/hash/branch stamp + isPreviewBuild()
+│   ├── versionCheck.ts    # ★ "Update available" signal: compares buildInfo vs the build-emitted, uncached /version.json (independent of the SW's own update detection) → main.tsx update toast
 │   ├── debugConsole.ts    # ★ On-screen debug console (`?dbg=true`) — mobile/PWA has no dev tools
 │   ├── units.ts           # ★ Pure unit conversions for the 3 imperial/metric toggles
 │   ├── i18n/              # ★ i18next config/init/format (→ docs/i18n.md)
@@ -304,7 +306,12 @@ unless noted.
   hierarchy; display name = the session's date/time (or `FileMetadata.displayName`
   override); smart collapse; cloud rows merged inline. The bundled **sample log**
   (`sampleData.ts`) is an ordinary row, hidden when `showSampleFiles` is off.
-- **BLE / device + firmware OTA**: → `docs/ble.md`.
+- **BLE / device + firmware OTA**: app integration → `docs/ble.md`; the full
+  transport-agnostic **wire spec** (every GATT characteristic, command, and packet,
+  for replicating the connection in any stack — Tauri/native included) →
+  [`docs/ble-protocol.md`](docs/ble-protocol.md). **Keep `docs/ble-protocol.md` in
+  sync with every BLE wire-format change** (new command/response token, changed
+  characteristic, chunking, or service) alongside the firmware + `src/lib/ble/`.
 - **Cloud sync, subscriptions, GDPR**: Supabase-backed, touch nothing in the core
   app per Rule 1 → `docs/backend.md`. Documents, logs, and lap snapshots draw from
   **one pooled per-tier byte budget** (`subscription_tiers.total_bytes`).
@@ -375,14 +382,17 @@ and the seeder: **→ `docs/i18n.md`**.
 | `VITE_APP_VERSION` / `VITE_GIT_HASH` / `VITE_BUILD_DATE` / `VITE_GIT_BRANCH` / `VITE_GIT_COMMIT_DATE` | Build (auto) | Footer version stamp — **not hand-set**; baked from `package.json` + git in `vite.config.ts`. |
 
 **PWA/deploy detail:** the active offline worker is `/service-worker.js` (registered
-outside preview/iframe contexts); `public/sw.js` is a legacy kill-switch. Static
+outside preview/iframe contexts); `public/sw.js` is a legacy kill-switch. `vite.config.ts`
+also emits `/version.json` per build (the freshness signal for `versionCheck.ts`); it's
+excluded from the Workbox precache (`globIgnores`) and fetched uncached. Static
 hosting is Cloudflare Workers (static-assets-only, `wrangler.jsonc`,
 `bun run build` then `wrangler deploy`). Production `lapwingdata.com` attaches via
 a `custom_domain` route in `wrangler.jsonc` (auto DNS+TLS — don't also attach it in
 the dashboard). The beta domain `beta.lapwingdata.com` can't bind to a Branch
 Preview URL, so a separate thin reverse-proxy Worker in `beta-proxy/` owns it and
-forwards to `beta-lapwing.perchwerks.workers.dev` (deployed on its own; see
-`beta-proxy/README.md`). Per-branch preview backend: `vite.config.ts` `pick()`
+forwards to `beta-lapwing.perchwerks.workers.dev` (auto-deployed by the
+`deploy-beta-proxy.yml` workflow on `BETA` pushes that touch `beta-proxy/**`;
+see `beta-proxy/README.md`). Per-branch preview backend: `vite.config.ts` `pick()`
 prefers `*_PREVIEW` Supabase creds on any non-`main` branch
 (`WORKERS_CI_BRANCH`/`CF_PAGES_BRANCH`), so beta deployments bake in a preview DB.
 `main` and local dev never read `_PREVIEW`. See README "Deployment".
@@ -433,7 +443,9 @@ re-merges it into the main chunk — watch for this.
 
 **Lazy (off the initial path):** routes (`Login`, `Admin`, `Register`, `Privacy`);
 view tabs (`RaceLineTab`, `GraphViewTab`, `CoachTab`, `ToolsTab`, `SetupsTab`); `FileManagerDrawer`;
-`DataloggerDownload` (keeps `lib/ble/*` out); `CourseSectorEditor` (carries
+`DataloggerDownload` — the Fledgling BLE flow, mounted on demand by the eager
+`LoggerDownload` picker host so `lib/ble/*` stays off the landing payload while the
+menu still opens instantly; `CourseSectorEditor` (carries
 `@dnd-kit/*`). Lazy components must render inside `<Suspense>`; use
 `lazy(() => import('…').then((m) => ({ default: m.Named })))` for named exports.
 

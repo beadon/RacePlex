@@ -38,8 +38,14 @@ Lovable-secret parallel `HTT_IS_NATIVE=true`).
   Stripe portal buttons are hidden in `StoragePanel.tsx` (the plan still shows,
   read-only), and `createCheckout`/`createPortal` throw as a backstop
   (`billingClient.ts`).
-- **External links** open in the system browser via the native bridge
-  (`openExternal` / `interceptExternal` in `platform.ts`), not the app WebView.
+- **External links** open in the system browser, not the app WebView, via
+  `openExternal` / `interceptExternal` in `platform.ts`. Resolution order under
+  native: the `__HTT_NATIVE__` bridge if the shell wired it; otherwise Tauri's
+  **opener plugin** (`@tauri-apps/plugin-opener`, dynamically imported so it stays
+  off the web bundle); otherwise a new tab. **For the opener-plugin path to work
+  the Tauri shell must register `tauri-plugin-opener`** (+ an `opener:default`
+  capability) — without it (and without the bridge) external links fall back to a
+  new tab, which a WebView opens in-app.
 
 ## Native bridge contract
 
@@ -54,6 +60,45 @@ window.__HTT_NATIVE__ = {
 
 If the bridge is absent, `openExternal` falls back to `window.open(..., "_blank")`.
 The TypeScript contract is `NativeBridge` in `src/lib/platform.ts`.
+
+## MyChron Wi-Fi download (native-only)
+
+Browsers can't open raw TCP sockets, so pulling a session off an **AiM MyChron**
+over Wi-Fi is native-only. The MyChron tile in the logger picker
+(`LoggerPicker.tsx`) starts the real flow only when `isNativeApp()`; on the web it
+keeps its explanatory dialog. The flow lives in `MyChronDownload.tsx` (lazy) and
+drives the Tauri backend through app-defined IPC commands (no capabilities to
+configure — allowed by `core:default`). The client is
+`src/lib/loggers/mychron/ipc.ts`, which reaches Tauri via a **dynamic**
+`import("@tauri-apps/api/core")` so `@tauri-apps/api` code-splits into the lazy
+MyChron chunk and never enters the web/eager bundle.
+
+IPC contract (args camelCase; all reject with a plain string whose prefix encodes
+the category — `device unreachable:`, `device hung:`, `protocol error:`,
+`unsupported:`, `Wi-Fi join was declined…`, `no logger connected …`):
+
+| Command | Args | Resolves to |
+|---------|------|-------------|
+| `logger_connect` | `{ kind:"mychron", host?, wifi? }` | device info |
+| `logger_list_files` | – | file entries |
+| `logger_download_file` | `{ name, onProgress: Channel }` | `ArrayBuffer` (already-inflated XRK) |
+| `logger_disconnect` | – | `void` |
+
+On **Android** the flow passes `wifi: { ssidPrefix }`; the OS shows a system Wi-Fi
+picker that **only lists networks whose SSID starts with that prefix** (the backend
+joins + binds the process to the AP via `WifiNetworkSpecifier`, a case-sensitive
+`PatternMatcher` prefix), and the UI shows a "waiting for you to pick your MyChron…"
+state while it's up. The prefix is **user-configurable** — Settings → MyChron
+(`AppSettings.mychronSsidPrefix`, read in `MyChronDownload.tsx`), defaulting to
+`MYCHRON_SSID_PREFIX` (`ipc.ts`); the field is native-gated in `SettingsModal.tsx`.
+On **desktop** the `wifi` hint is omitted (the user joins the AP via the OS). The
+default prefix value and whether the AP is open or WPA2 are **open hardware items**
+— confirm from a real device. The download returns
+decompressed XRK bytes, which go straight into the existing async importer
+(`parseDatalogFile`, wasm worker) named `<name>.xrk`. The flow **owns its
+connection** and calls `logger_disconnect` on every exit (close/cancel/error/
+unmount). MyChron's `LoggerConnection.supportsDeviceDetails` is `false` — no in-app
+settings/tracks/firmware tab.
 
 ## Account deletion (Google Play requirement)
 

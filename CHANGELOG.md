@@ -11,6 +11,131 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > from git history and grouped by theme rather than exhaustive per-commit
 > detail.
 
+## [2.9.0] - 2026-06-22
+
+### Added
+- **Password strength rules + a realtime checker on sign-up.** The registration
+  form now enforces stronger passwords (at least 8 characters, with a lowercase
+  letter, an uppercase letter, a number, and a symbol) and shows a live strength
+  meter with a per-rule checklist that updates as you type. The check is fully
+  offline (`lib/passwordStrength.ts`).
+- **"Update available" check that doesn't rely on the service worker.** The app
+  now also compares the running build against a build-emitted `version.json`
+  fetched fresh from the server, so a stale tab reliably surfaces the "Update
+  ready" prompt even when the service worker's own update detection stalls behind
+  HTTP/CDN caching. The Refresh button hard-reboots onto the new build.
+- **Separate cloud + local storage bars in the profile.** When signed in, the
+  profile now shows two storage meters — one for cloud quota and one for on-device
+  (local) storage — instead of just the cloud one. The local bar carries an (i)
+  bubble explaining that the device's real free space isn't visible to the app, so
+  the bar is marked against an arbitrary 10 GB and can be safely ignored (local
+  storage has no limit).
+- **Generic logger-connection layer.** Downloads now go through one
+  `LoggerConnection` interface (`listLogs` / `downloadLog` / `disconnect`) in
+  `src/lib/loggers/`, with `createFledglingConnection()` adapting the Web Bluetooth
+  transport. This is the seam future loggers plug into — MyChron over the native
+  (Tauri) shell, Alfano over BLE — without the download UI having to branch on
+  transport. `DeviceContext` now tracks the connected `loggerKind`.
+- **Logger picker.** "Download from logger" now opens an image-based chooser of
+  supported loggers instead of jumping straight to Bluetooth: **PerchWerks
+  Fledgling** (DIY, Bluetooth), **AiM MyChron 5 / 5S / 2T** (Wi-Fi, native app
+  required), and **Alfano 6 / 7** (Bluetooth, coming soon). The Fledgling runs the
+  existing Bluetooth download flow; MyChron and Alfano open explanatory dialogs for
+  now (MyChron's copy differs between the native app and the web). Placeholder
+  artwork lives in `public/loggers/` for easy swap-out. New `logger` i18n namespace.
+- **Download from a MyChron over Wi-Fi (native app).** In the native (Tauri) app,
+  the MyChron tile in the logger picker now runs a real download: it connects to the
+  logger over Wi-Fi (on Android it prompts you to pick the MyChron in the system
+  Wi-Fi dialog), lists the sessions on the device, and downloads + opens the one you
+  choose — mirroring the existing Bluetooth flow. The web app is unchanged (browsers
+  can't reach the logger's Wi-Fi) and still shows the explanatory dialog. Built on a
+  new `createMychronConnection()` adapter behind the existing `LoggerConnection`
+  interface; the native Tauri IPC (`@tauri-apps/api`) is lazy-loaded so it never
+  enters the web bundle. A native-only **Settings → MyChron** field lets you set the
+  Wi-Fi name prefix the system picker filters on, in case your logger broadcasts a
+  different name.
+- **Safe-area padding on native / installed PWA.** Every full-screen surface now
+  respects the device's safe-area insets (status bar / notch) via
+  `env(safe-area-inset-*)` and `viewport-fit=cover`, so chrome no longer sits under
+  the phone's status bar — the app shell + landing, the full-page routes
+  (login/register/admin/legal), and the file-manager drawer (its garage/profile/
+  device header). A no-op on browsers and desktops without a safe area.
+- **Privacy / Terms links on the sign-in page.** The login screen now links to the
+  Privacy Policy and Terms of Service.
+- **"Back to app" returns you where you were.** The back button on the Privacy and
+  Terms pages now steps back to the page you came from (e.g. the sign-in or register
+  screen) instead of always jumping to the home screen.
+
+### Changed
+- **Picker/landing polish.** Logger names shortened to "AiM MyChron 5+" and
+  "Alfano 6+" (single-line, and future-proof for newer models); the account-
+  deletion page picked up the shared sticky brand header; and the landing
+  "Telemetry Data Viewer" tagline was removed for now.
+- **Open-source links moved into About.** The GitHub repository links left the
+  landing page and now live in the About dialog under "Free & Open Source", above
+  the feature list. The About feature list was also refreshed with the headline
+  additions from the last month (7 languages, native Android app + MyChron Wi-Fi
+  download, phone-as-logger GPS timing, optional cloud sync, AI driving coach).
+- **Logger picker polish.** Real product photos replace the placeholder art, and
+  the picker is now mobile-friendly: compact horizontal cards on phones (instead of
+  full-height ones that filled the screen), a height cap so it scrolls within the
+  viewport, native safe-area padding, an explicit Close button on mobile, and a
+  trademark/ownership note for the MyChron and Alfano brands.
+- **Sticky headers across the landing and auth/legal pages.** The landing banner
+  is now pinned to the top of the screen, so the Login button is always reachable
+  and content scrolls cleanly under the status bar on mobile. The login, register,
+  privacy, and terms pages share one sticky, clickable brand header (`BrandHeader`)
+  that returns you home — and the privacy/terms pages now carry the mobile
+  safe-area padding the rest of the app has.
+- **Native build hides paid-plan UI.** On the native app (where paid plans aren't
+  sold per Google Play policy), the registration page no longer shows the pricing
+  cards at all — just the free sign-up form. (Profile billing buttons were already
+  hidden on native.)
+- **"Download from logger" relabel.** The file-manager button previously labelled
+  "Download from DovesDataLogger" is now "Download from logger" and opens the new
+  logger picker.
+- **Logger picker is now eager.** The picker menu was split out of the lazy
+  Bluetooth chunk into a lightweight host (`LoggerDownload`), so the home-screen
+  "Download from logger" button opens the menu instantly instead of waiting on (and
+  silently failing when) the BLE chunk stalls. The heavy BLE flow still loads lazily
+  — only once the Fledgling is picked.
+- **Device tab is Fledgling-gated.** The drawer's Device tab (settings / tracks /
+  firmware) now shows a "Fledgling only" notice when the connected logger isn't a
+  Fledgling, groundwork for MyChron/Alfano connections that don't expose those
+  surfaces.
+- **Landing page upload is now a 50/50 split.** The big drag-and-drop dropzone now
+  shares the top of the home screen with an equal-billing "Download from logger"
+  panel, since most users pull logs straight off a logger rather than dragging files
+  in. The separate "Download from logger" tile was removed (its action moved into the
+  split).
+- **Landing footer / link cleanup.** Privacy Policy and Terms of Service moved out of
+  the mid-page link row: on the stable build they now flank the operated-by / version
+  block in the footer (Privacy left, Terms right). Credits moved up next to the
+  Browser Compatibility button.
+- **Leaner native landing page.** On the native (Android/Tauri) shell the landing
+  page now hides the marketing hero, the feature roadmap, the GitHub repo links and
+  the sponsor button — the user has already installed the app. The "Build your own
+  logger" tile stays.
+- **Header logo returns to the home screen.** Tapping the LapWing logo (top-left)
+  in an open session now closes the session and returns to the landing page.
+- **Purple theme + new logo.** The brand accent moved from teal to **purple**
+  (`--primary` and its mirrors `--ring`/`--sidebar-primary`/`--sidebar-ring`, in
+  both light and dark), and the gauge glyph in the app/page headers is replaced
+  with the new **LapWing logo** (`web-logo.png`, via a shared `BrandLogo`
+  component). Pairs with the refreshed app icons and favicon. Data-viz colors
+  (speed/telemetry scales) are unchanged.
+
+### Fixed
+- **External links opened inside the native app.** Links like "Build your own
+  logger" now reliably open in the system browser on the native (Tauri) app
+  instead of navigating the in-app WebView, by routing through Tauri's opener
+  plugin when the shell hasn't wired the `__HTT_NATIVE__` bridge (`platform.ts`).
+- **Login rate limiter locked out valid sign-ins.** The limiter counted *every*
+  sign-in attempt — successes included — as a failure on a pre-login check, so
+  after five tries an IP was locked for an hour even with the correct password.
+  It now only counts genuine failures, clears the counter on a successful login,
+  and ages failures out over a 15-minute sliding window.
+
 ## [2.8.0] - 2026-06-20
 
 ### Added

@@ -1,5 +1,6 @@
 import { BookOpen, ExternalLink } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { Button } from "@/components/ui/button";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
@@ -8,6 +9,7 @@ import { interceptExternal } from "@/lib/platform";
 const CREDITS: ReadonlyArray<readonly [name: string, url: string]> = [
   ["React", "https://react.dev"],
   ["Vite", "https://vite.dev"],
+  ["Tauri", "https://tauri.app"],
   ["TypeScript", "https://www.typescriptlang.org"],
   ["Tailwind CSS", "https://tailwindcss.com"],
   ["shadcn/ui", "https://ui.shadcn.com"],
@@ -41,10 +43,14 @@ export function CreditsDialog() {
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <button className="inline-flex items-center gap-1 text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors">
-          <BookOpen className="w-3 h-3" />
+        <Button
+          variant="outline"
+          size="sm"
+          className="text-muted-foreground border-border/50 opacity-60 hover:opacity-100"
+        >
+          <BookOpen className="w-3.5 h-3.5 mr-1.5" />
           {t("credits.trigger")}
-        </button>
+        </Button>
       </DialogTrigger>
       <DialogContent className="max-h-[80vh] overflow-y-auto">
         <DialogHeader>
