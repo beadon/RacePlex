@@ -2,8 +2,9 @@
   "_machine": true,
   "tagline": "Telemetrie-Datenbetrachter",
   "hero": {
-    "title": "Kostenloser Online-Telemetrie-Viewer für VBO, MoTeC, AiM & NMEA",
-    "subtitle": "Lade ein Datalog und erkunde deine Runden – Karten, Diagramme, Sektoren und Videosynchronisation. Alles läuft lokal in deinem Browser. Kein Upload, kein Konto erforderlich."
+    "title": "Kostenloser Telemetrie-Viewer für VBO, MoTeC, AiM & NMEA",
+    "subtitle": "Lade ein Datalog und erkunde deine Runden – Karten, Diagramme, Sektoren und Videosynchronisation. Alles läuft lokal in deinem Browser. Kein Upload, kein Konto erforderlich.",
+    "offlineNote": "Funktioniert jetzt, wo du es besucht hast, komplett offline!"
   },
   "tiles": {
     "sample": {

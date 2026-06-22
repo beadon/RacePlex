@@ -2,8 +2,9 @@
   "_machine": true,
   "tagline": "Visor de datos de telemetría",
   "hero": {
-    "title": "Visor de telemetría VBO, MoTeC, AiM y NMEA gratis en línea",
-    "subtitle": "Carga un registro de datos y explora tus vueltas: mapas, gráficos, sectores y sincronización de vídeo. Todo funciona localmente en tu navegador. Sin subir nada, sin necesidad de cuenta."
+    "title": "Visor de telemetría VBO, MoTeC, AiM y NMEA gratis",
+    "subtitle": "Carga un registro de datos y explora tus vueltas: mapas, gráficos, sectores y sincronización de vídeo. Todo funciona localmente en tu navegador. Sin subir nada, sin necesidad de cuenta.",
+    "offlineNote": "¡Funciona completamente sin conexión ahora que lo has visitado!"
   },
   "tiles": {
     "sample": {

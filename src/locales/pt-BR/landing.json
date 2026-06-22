@@ -2,8 +2,9 @@
   "_machine": true,
   "tagline": "Visualizador de dados de telemetria",
   "hero": {
-    "title": "Visualizador de telemetria VBO, MoTeC, AiM e NMEA grátis online",
-    "subtitle": "Carregue um datalog e explore suas voltas: mapas, gráficos, setores e sincronização de vídeo. Tudo funciona localmente no seu navegador. Sem upload, sem necessidade de conta."
+    "title": "Visualizador de telemetria VBO, MoTeC, AiM e NMEA grátis",
+    "subtitle": "Carregue um datalog e explore suas voltas: mapas, gráficos, setores e sincronização de vídeo. Tudo funciona localmente no seu navegador. Sem upload, sem necessidade de conta.",
+    "offlineNote": "Funciona totalmente offline agora que você o visitou!"
   },
   "tiles": {
     "sample": {

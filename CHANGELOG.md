@@ -11,6 +11,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > from git history and grouped by theme rather than exhaustive per-commit
 > detail.
 
+## [2.9.1] - unreleased
+
+### Changed
+- **Landing hero wording.** Dropped "Online" from the main heading (it's an
+  offline-first app), and added a line making the point directly: "Works entirely
+  offline now that you've visited it!"
+
 ## [2.9.0] - 2026-06-22
 
 ### Added
