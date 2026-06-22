@@ -67,6 +67,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   screen) instead of always jumping to the home screen.
 
 ### Changed
+- **Logger picker polish.** Real product photos replace the placeholder art, and
+  the picker is now mobile-friendly: compact horizontal cards on phones (instead of
+  full-height ones that filled the screen), a height cap so it scrolls within the
+  viewport, native safe-area padding, an explicit Close button on mobile, and a
+  trademark/ownership note for the MyChron and Alfano brands.
 - **Sticky headers across the landing and auth/legal pages.** The landing banner
   is now pinned to the top of the screen, so the Login button is always reachable
   and content scrolls cleanly under the status bar on mobile. The login, register,
