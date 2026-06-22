@@ -13,7 +13,21 @@
     "nativeTitle": "MyChron-Download",
     "nativeBody": "Noch offen",
     "webTitle": "Native App erforderlich",
-    "webBody": "MyChron-Logger übertragen per WLAN, worauf Webbrowser nicht direkt zugreifen können. Eine eigene native App zum Herunterladen von MyChron ist in aktiver Entwicklung und soll um Juli 2026 erscheinen."
+    "webBody": "MyChron-Logger übertragen per WLAN, worauf Webbrowser nicht direkt zugreifen können. Eine eigene native App zum Herunterladen von MyChron ist in aktiver Entwicklung und soll um Juli 2026 erscheinen.",
+    "flow": {
+      "connecting": "Verbindung mit deinem MyChron…",
+      "wifiSelecting": "Warten, bis du deinen MyChron in der WLAN-Liste auswählst…",
+      "wifiHint": "Bestätige die Verbindung im Systemdialog, um fortzufahren.",
+      "fetching": "Sitzungen werden abgerufen…",
+      "selectFile": "Wähle eine Sitzung zum Herunterladen",
+      "downloading": "Wird heruntergeladen…",
+      "errorTitle": "Verbindungsfehler",
+      "instructions": "Tippe auf eine Sitzung, um sie herunterzuladen und zu laden:",
+      "empty": "Keine Sitzungen auf diesem Gerät",
+      "savedHint": " — die Datei wurde gespeichert und ist unter „Dateien durchsuchen“ zu finden.",
+      "retry": "Erneut versuchen",
+      "cancel": "Abbrechen"
+    }
   },
   "alfano": {
     "title": "Alfano-Downloads",

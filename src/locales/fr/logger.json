@@ -13,7 +13,21 @@
     "nativeTitle": "Téléchargement MyChron",
     "nativeBody": "À définir",
     "webTitle": "App native requise",
-    "webBody": "Les enregistreurs MyChron transfèrent en Wi-Fi, auquel les navigateurs web ne peuvent pas accéder directement. Une app native dédiée au téléchargement depuis MyChron est en cours de développement et son lancement est prévu vers juillet 2026."
+    "webBody": "Les enregistreurs MyChron transfèrent en Wi-Fi, auquel les navigateurs web ne peuvent pas accéder directement. Une app native dédiée au téléchargement depuis MyChron est en cours de développement et son lancement est prévu vers juillet 2026.",
+    "flow": {
+      "connecting": "Connexion à votre MyChron…",
+      "wifiSelecting": "En attente de la sélection de votre MyChron dans la liste Wi-Fi…",
+      "wifiHint": "Approuvez la connexion dans la boîte de dialogue du système pour continuer.",
+      "fetching": "Récupération des sessions…",
+      "selectFile": "Sélectionnez une session à télécharger",
+      "downloading": "Téléchargement…",
+      "errorTitle": "Erreur de connexion",
+      "instructions": "Touchez une session pour la télécharger et la charger :",
+      "empty": "Aucune session sur cet appareil",
+      "savedHint": " — le fichier a été enregistré et se trouve dans Parcourir les fichiers.",
+      "retry": "Réessayer",
+      "cancel": "Annuler"
+    }
   },
   "alfano": {
     "title": "Téléchargements Alfano",

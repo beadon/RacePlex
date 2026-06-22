@@ -13,7 +13,21 @@
     "nativeTitle": "Download MyChron",
     "nativeBody": "Da definire",
     "webTitle": "App nativa richiesta",
-    "webBody": "I logger MyChron trasferiscono via Wi-Fi, a cui i browser web non possono accedere direttamente. Un'app nativa dedicata al download da MyChron è in fase di sviluppo e il lancio è previsto intorno a luglio 2026."
+    "webBody": "I logger MyChron trasferiscono via Wi-Fi, a cui i browser web non possono accedere direttamente. Un'app nativa dedicata al download da MyChron è in fase di sviluppo e il lancio è previsto intorno a luglio 2026.",
+    "flow": {
+      "connecting": "Connessione al tuo MyChron…",
+      "wifiSelecting": "In attesa che tu selezioni il tuo MyChron nell'elenco Wi-Fi…",
+      "wifiHint": "Approva la connessione nella finestra di dialogo di sistema per continuare.",
+      "fetching": "Recupero delle sessioni…",
+      "selectFile": "Seleziona una sessione da scaricare",
+      "downloading": "Download in corso…",
+      "errorTitle": "Errore di connessione",
+      "instructions": "Tocca una sessione per scaricarla e caricarla:",
+      "empty": "Nessuna sessione su questo dispositivo",
+      "savedHint": " — il file è stato salvato e si trova in Sfoglia file.",
+      "retry": "Riprova",
+      "cancel": "Annulla"
+    }
   },
   "alfano": {
     "title": "Download Alfano",
