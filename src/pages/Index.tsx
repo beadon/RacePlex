@@ -604,6 +604,7 @@ export default function Index() {
                 onSettingsChange={setSettings}
                 onToggleFieldDefault={toggleFieldDefault}
                 canHideSampleFiles={fileManager.hasOtherFiles}
+                triggerLabelBreakpoint="sm"
               />
             }
           />
