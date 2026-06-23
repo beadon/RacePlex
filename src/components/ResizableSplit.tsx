@@ -215,12 +215,15 @@ export function ResizableSplit({
         </div>
       </div>
 
-      {/* Bottom Panel - absolute positioned, anchored to bottom */}
+      {/* Bottom Panel - absolute positioned, anchored to bottom. When collapsed,
+          a plain grey panel covers the cramped content so it reads cleanly; the
+          content stays mounted underneath to preserve its state. */}
       <div
         className="absolute left-0 right-0 bottom-0 overflow-hidden"
         style={{ height: bottomPx > 0 ? `${bottomPx}px` : '30%' }}
       >
         {bottomPanel}
+        {isCollapsed && <div className="absolute inset-0 bg-muted" aria-hidden />}
       </div>
     </div>
   );

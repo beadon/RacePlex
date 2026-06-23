@@ -30,8 +30,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   new **legend toggle** in a single floating control flag — clear of the map's
   weather/info buttons on the right that it used to crowd. The legend toggle hides
   the chart's legend bar to reclaim vertical space (handy for logs with many
-  channels). The "data crop" sector dropdown keeps a minimum width so it no longer
-  squishes on mobile in the Simple or Pro views.
+  channels), and collapsing the graph now shows a clean grey panel instead of a
+  cramped chart. The "data crop" sector dropdown keeps a minimum width so it no
+  longer squishes on mobile in the Simple or Pro views.
 
 ### Fixed
 - **Simple-graph legend no longer lists g-force lines it doesn't draw.** With the

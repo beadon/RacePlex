@@ -489,6 +489,9 @@ export function TelemetryChart({
       {/* Legend */}
       {showLegend && (
       <div className="flex items-center gap-4 px-4 py-2 border-b border-border flex-wrap">
+        {/* Reserve space on the first row for the divider's floating control
+            flag (collapse + legend toggle) so it never overlaps the first item. */}
+        <div className="w-16 shrink-0" aria-hidden />
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[0] }} />
           <span className="text-xs font-mono">{t('graphs.speed', { unit: speedUnit })}</span>
