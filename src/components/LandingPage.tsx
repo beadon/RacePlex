@@ -130,12 +130,12 @@ export function LandingPage({
                 drawer's Profile tab), otherwise Sign in. */}
             {enableCloud && (
               user ? (
-                <Button variant="ghost" size="sm" className="gap-2" onClick={onOpenProfile} title={user.email ?? undefined}>
+                <Button size="sm" className="gap-2" onClick={onOpenProfile} title={user.email ?? undefined}>
                   <User className="w-4 h-4" />
                   <span className="hidden sm:inline">{t("common:actions.profile")}</span>
                 </Button>
               ) : (
-                <Button variant="ghost" size="sm" className="gap-2" onClick={() => navigate('/login')}>
+                <Button size="sm" className="gap-2" onClick={() => navigate('/login')}>
                   <LogIn className="w-4 h-4" />
                   <span className="hidden sm:inline">{t("common:actions.signIn")}</span>
                 </Button>
