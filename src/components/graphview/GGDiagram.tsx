@@ -26,6 +26,8 @@ interface GGDiagramProps {
   height?: number;
   /** Persist a new card height (fired on resize-drag release). */
   onHeightChange?: (height: number) => void;
+  /** Mirrored secondary card: hide the remove button + resize handle. */
+  readOnly?: boolean;
 }
 
 type CompareMode = 'ref' | 'overlays';
@@ -34,7 +36,7 @@ type BoxAxis = 'lat' | 'lon';
 const SESSION_COLOR = 'hsl(180, 70%, 55%)'; // cyan cloud (matches speed series)
 const CURRENT_COLOR = 'hsl(0, 75%, 55%)';   // red current point
 
-export function GGDiagram({ samples, referenceSamples, overlayLines = [], label, onDelete, height, onHeightChange }: GGDiagramProps) {
+export function GGDiagram({ samples, referenceSamples, overlayLines = [], label, onDelete, height, onHeightChange, readOnly = false }: GGDiagramProps) {
   const { t } = useTranslation('session');
   const { gForceSmoothing, gForceSmoothingStrength, gForceSource, darkMode } = useSettingsContext();
   const { currentIndex } = usePlaybackContext();
@@ -273,13 +275,15 @@ export function GGDiagram({ samples, referenceSamples, overlayLines = [], label,
         <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: SESSION_COLOR }} />
         <span className="text-xs font-mono text-muted-foreground">{label}</span>
       </div>
-      <button
-        onClick={onDelete}
-        className="absolute top-1 right-1 z-10 p-1 rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors"
-        title={t('graphs.removeGraph')}
-      >
-        <X className="w-3.5 h-3.5" />
-      </button>
+      {!readOnly && (
+        <button
+          onClick={onDelete}
+          className="absolute top-1 right-1 z-10 p-1 rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors"
+          title={t('graphs.removeGraph')}
+        >
+          <X className="w-3.5 h-3.5" />
+        </button>
+      )}
       <div ref={containerRef} className="relative flex-1 w-full min-h-0 overflow-hidden">
         <canvas ref={canvasRef} className="absolute inset-0 block w-full h-full" />
         <canvas ref={cursorCanvasRef} className="absolute inset-0 block w-full h-full pointer-events-none" />
@@ -322,11 +326,13 @@ export function GGDiagram({ samples, referenceSamples, overlayLines = [], label,
           </div>
         </div>
       )}
-      <GraphResizeHandle
-        height={cardHeight}
-        onResize={setCardHeight}
-        onCommit={(h) => { setCardHeight(h); onHeightChange?.(h); }}
-      />
+      {!readOnly && (
+        <GraphResizeHandle
+          height={cardHeight}
+          onResize={setCardHeight}
+          onCommit={(h) => { setCardHeight(h); onHeightChange?.(h); }}
+        />
+      )}
     </div>
   );
 }

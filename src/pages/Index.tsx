@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, lazy, Suspense } from "react";
 import { useTranslation } from "react-i18next";
-import { Gauge, Map, ListOrdered, BarChart3, FolderOpen, Play, Pause, Eye, EyeOff, AlertCircle, Wrench, NotebookPen, SlidersHorizontal } from "lucide-react";
+import { Gauge, Map, ListOrdered, BarChart3, FolderOpen, Play, Pause, Eye, EyeOff, AlertCircle, Wrench, NotebookPen, SlidersHorizontal, Columns2 } from "lucide-react";
 import { BrandLogo } from "@/components/BrandLogo";
 import { LandingPage } from "@/components/LandingPage";
 import { TrackEditor } from "@/components/TrackEditor"; // still used in compact header
@@ -49,6 +49,7 @@ import { cn } from "@/lib/utils";
 import { usePanelsForSlot, PanelSlot } from "@/plugins/panels";
 import { TrackPromptDialog } from "@/components/TrackPromptDialog";
 import { useSettings } from "@/hooks/useSettings";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { usePlayback } from "@/hooks/usePlayback";
 import { useFileManager } from "@/hooks/useFileManager";
 import { getSetupIndicator, type SetupIndicator } from "@/lib/setupStatus";
@@ -276,6 +277,20 @@ export default function Index() {
     currentLapSamples: filteredSamples,
   });
 
+  // Split graphs (Pro tab): a second stack bound to one enabled overlay lap.
+  const [splitActive, setSplitActive] = useState(false);
+  const [splitOverlayId, setSplitOverlayId] = useState<string | null>(null);
+  const startSplit = useCallback((overlayId: string) => {
+    setSplitOverlayId(overlayId);
+    setSplitActive(true);
+  }, []);
+  const combineSplit = useCallback(() => setSplitActive(false), []);
+  // Auto-combine when the chosen overlay is toggled off (or none remain).
+  useEffect(() => {
+    if (!splitActive) return;
+    if (!overlayLines.some((o) => o.id === splitOverlayId)) setSplitActive(false);
+  }, [splitActive, splitOverlayId, overlayLines]);
+
   // Reference-lap handlers: clear the other side when one is set.
   const handleSetReferenceWithClear = useCallback((lapNumber: number) => {
     handleSetReference(lapNumber);
@@ -467,6 +482,9 @@ export default function Index() {
     onToggleOverlayLegend: toggleOverlayLegend,
     onLoadOverlayFile: loadOverlayFile,
     onAddExternalOverlay: addExternalOverlay,
+    splitActive,
+    splitOverlayId,
+    onCombineSplit: combineSplit,
     sessionGpsPoint,
     sessionStartDate: data?.startDate,
     sessionFileName: currentFileName,
@@ -506,6 +524,7 @@ export default function Index() {
     overlaySelections, overlayLines, toggleOverlay,
     alignOverlays, toggleAlignOverlays, showOverlayLegend, toggleOverlayLegend,
     loadOverlayFile, addExternalOverlay,
+    splitActive, splitOverlayId, combineSplit,
     activeSnapshot, sessionSetup,
     sessionGpsPoint, currentFileName, sessionKartId, sessionSetupId, cachedWeatherStation,
     vehicleManager.vehicles, setupManager.setups, templateManager.templates,
@@ -695,7 +714,7 @@ export default function Index() {
       </header>
 
       <main className="flex-1 min-h-0 overflow-hidden flex flex-col">
-        <TabBar topPanelView={topPanelView} setTopPanelView={setTopPanelView} laps={laps} showOverlays={showOverlays} onToggleOverlays={() => setShowOverlays(v => !v)} showCoach={showCoach} showTools={showTools} setupIndicator={setupIndicator} onSetupIndicatorClick={() => setupIndicator && navigateToManage(setupIndicator.target)} />
+        <TabBar topPanelView={topPanelView} setTopPanelView={setTopPanelView} laps={laps} showOverlays={showOverlays} onToggleOverlays={() => setShowOverlays(v => !v)} showCoach={showCoach} showTools={showTools} setupIndicator={setupIndicator} onSetupIndicatorClick={() => setupIndicator && navigateToManage(setupIndicator.target)} overlayLines={overlayLines} splitActive={splitActive} onStartSplit={startSplit} onCombineSplit={combineSplit} />
 
 
         <div className="flex-1 min-h-0 overflow-hidden">
@@ -772,7 +791,7 @@ export default function Index() {
 }
 
 /** Tab navigation bar for the main data view */
-function TabBar({ topPanelView, setTopPanelView, laps, showOverlays, onToggleOverlays, showCoach, showTools, setupIndicator, onSetupIndicatorClick }: {
+function TabBar({ topPanelView, setTopPanelView, laps, showOverlays, onToggleOverlays, showCoach, showTools, setupIndicator, onSetupIndicatorClick, overlayLines, splitActive, onStartSplit, onCombineSplit }: {
   topPanelView: TopPanelView;
   setTopPanelView: (view: TopPanelView) => void;
   laps: { lapNumber: number }[];
@@ -782,8 +801,13 @@ function TabBar({ topPanelView, setTopPanelView, laps, showOverlays, onToggleOve
   showTools: boolean;
   setupIndicator: SetupIndicator | null;
   onSetupIndicatorClick: () => void;
+  overlayLines: OverlayLine[];
+  splitActive: boolean;
+  onStartSplit: (overlayId: string) => void;
+  onCombineSplit: () => void;
 }) {
   const { t } = useTranslation("session");
+  const isMobile = useIsMobile();
   const tabBase = "flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors";
   const tabState = (active: boolean) =>
     active
@@ -868,6 +892,41 @@ function TabBar({ topPanelView, setTopPanelView, laps, showOverlays, onToggleOve
             {showOverlays ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
             <span className="text-xs hidden sm:inline">{t("header.overlay")}</span>
           </Button>
+        </div>
+      )}
+      {/* Split graphs: side-by-side lap comparison (tablet+, never phones). */}
+      {topPanelView === "graphview" && !isMobile && (
+        <div className="ml-auto mr-3">
+          {splitActive ? (
+            <Button variant="ghost" size="sm" onClick={onCombineSplit} className="h-7 px-2 gap-1.5">
+              <Columns2 className="w-4 h-4" />
+              <span className="text-xs hidden sm:inline">{t("graphs.combineGraphs")}</span>
+            </Button>
+          ) : overlayLines.length > 0 ? (
+            <Select value="" onValueChange={onStartSplit}>
+              <SelectTrigger className="h-7 w-auto gap-1.5 px-2 border-0 bg-transparent hover:bg-muted/50 [&>svg:last-child]:hidden">
+                <span className="flex items-center gap-1.5">
+                  <Columns2 className="w-4 h-4" />
+                  <span className="text-xs hidden sm:inline">{t("graphs.splitGraphs")}</span>
+                </span>
+              </SelectTrigger>
+              <SelectContent>
+                {overlayLines.map((o) => (
+                  <SelectItem key={o.id} value={o.id}>
+                    <span className="flex items-center gap-2">
+                      <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: o.color }} />
+                      {o.label}
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <Button variant="ghost" size="sm" disabled className="h-7 px-2 gap-1.5" title={t("graphs.splitNeedsOverlay")}>
+              <Columns2 className="w-4 h-4" />
+              <span className="text-xs hidden sm:inline">{t("graphs.splitGraphs")}</span>
+            </Button>
+          )}
         </div>
       )}
     </div>

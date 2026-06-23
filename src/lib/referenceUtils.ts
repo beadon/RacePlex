@@ -221,6 +221,38 @@ export function alignValuesByDistance(
 }
 
 /**
+ * Map a sample index from one lap onto another by matching cumulative track
+ * distance. Given the index of a point on `fromDistances`, returns the index of
+ * the nearest point on `toDistances` at the same distance along the lap. Used to
+ * keep a single playback cursor pointing at the same track position across two
+ * laps of different length/duration (split-graphs side-by-side comparison).
+ *
+ * Both inputs are cumulative-distance arrays (see `calculateDistanceArray`), so
+ * the per-tick cost is just a binary search — callers memoize the arrays.
+ */
+export function mapIndexByDistance(
+  fromDistances: number[],
+  toDistances: number[],
+  idx: number,
+): number {
+  if (fromDistances.length === 0 || toDistances.length === 0) return 0;
+  const i = Math.max(0, Math.min(idx, fromDistances.length - 1));
+  const target = fromDistances[i];
+  const maxTo = toDistances[toDistances.length - 1];
+  if (target <= 0) return 0;
+  if (target >= maxTo) return toDistances.length - 1;
+
+  let lo = 0;
+  let hi = toDistances.length - 1;
+  while (lo < hi - 1) {
+    const mid = (lo + hi) >> 1;
+    if (toDistances[mid] <= target) lo = mid; else hi = mid;
+  }
+  // Snap to whichever bracketing sample is closer in distance.
+  return target - toDistances[lo] <= toDistances[hi] - target ? lo : hi;
+}
+
+/**
  * Precompute reference data for a lap.
  */
 export interface ReferenceData {

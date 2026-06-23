@@ -162,7 +162,12 @@
     "removeGraph": "グラフを削除",
     "miniMap": "ミニマップ",
     "collapsePanel": "パネルを折りたたむ",
-    "expandPanel": "パネルを展開"
+    "expandPanel": "パネルを展開",
+    "splitGraphs": "グラフを分割",
+    "combineGraphs": "グラフを結合",
+    "splitNeedsOverlay": "比較するには先にオーバーレイのラップを有効にしてください",
+    "splitMirrorEmpty": "比較するにはメインパネルにグラフを追加してください",
+    "splitVideoOutOfRange": "ラップのこの部分の映像はありません"
   },
   "gg": {
     "noData": "G フォースのデータなし",

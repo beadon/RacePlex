@@ -50,6 +50,9 @@ export const GraphViewTab = memo(function GraphViewTab() {
       onToggleAlignOverlays={s.onToggleAlignOverlays}
       showOverlayLegend={s.showOverlayLegend}
       onToggleOverlayLegend={s.onToggleOverlayLegend}
+      splitActive={s.splitActive}
+      splitOverlayId={s.splitOverlayId}
+      onCombineSplit={s.onCombineSplit}
     />
   );
 });

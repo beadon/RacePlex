@@ -13,6 +13,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [2.9.2] - unreleased
 
+### Added
+- **Split graphs — side-by-side lap comparison (Pro tab).** On tablet and larger,
+  a new **Split graphs** button (top-right of the Pro tab, where the Simple tab's
+  Overlay toggle sits) splits the graph area into a draggable two-up view. Pick one
+  of your enabled overlay laps and the right panel mirrors the main panel's graphs
+  for that lap; a single playback control drives both, kept on the same point on
+  track. If a synced video is relocated into the graph stack and the chosen lap is
+  from the current session, a second, lap-synced video plays alongside it (an
+  out-of-session lap shows graphs only, leaving the main video untouched). Opening
+  the side panel — or pressing **Combine graphs** — returns to the single view.
+  Not available on phones.
+
+### Changed
+- **The Pro tab's side panel can now be collapsed on any screen size** (previously
+  phone-only), giving the graphs the full width when you want it.
+
 ### Fixed
 - **Approving a track/course submission now adds it to the database.** In the admin
   **Submissions** tab, approving a submission previously only flipped its status —

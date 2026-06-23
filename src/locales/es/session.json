@@ -162,7 +162,12 @@
     "removeGraph": "Quitar gráfico",
     "miniMap": "Minimapa",
     "collapsePanel": "Contraer panel",
-    "expandPanel": "Expandir panel"
+    "expandPanel": "Expandir panel",
+    "splitGraphs": "Dividir gráficos",
+    "combineGraphs": "Combinar gráficos",
+    "splitNeedsOverlay": "Activa primero una vuelta superpuesta para comparar",
+    "splitMirrorEmpty": "Añade un gráfico en el panel principal para comparar",
+    "splitVideoOutOfRange": "No hay vídeo para esta parte de la vuelta"
   },
   "gg": {
     "noData": "Sin datos de fuerza G",

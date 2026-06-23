@@ -14,6 +14,8 @@ interface PanelCardProps {
   defaultHeight: number;
   /** Persist a new card height (fired on resize-drag release). */
   onHeightChange?: (height: number) => void;
+  /** Mirrored secondary card: hide the remove button + resize handle. */
+  readOnly?: boolean;
   children: React.ReactNode;
 }
 
@@ -23,7 +25,7 @@ interface PanelCardProps {
  * (Leaflet controls, video toolbar) with corner widgets, so the title + remove
  * live in a slim non-overlapping header bar instead of floating on the content.
  */
-export function PanelCard({ label, onDelete, height, defaultHeight, onHeightChange, children }: PanelCardProps) {
+export function PanelCard({ label, onDelete, height, defaultHeight, onHeightChange, readOnly = false, children }: PanelCardProps) {
   const { t } = useTranslation('session');
   const committedHeight = height ?? defaultHeight;
   const [cardHeight, setCardHeight] = useState(committedHeight);
@@ -33,22 +35,26 @@ export function PanelCard({ label, onDelete, height, defaultHeight, onHeightChan
     <div className="relative border-b border-border flex flex-col" style={{ height: `${cardHeight}px` }}>
       <div className="shrink-0 flex items-center justify-between px-2 py-1 border-b border-border bg-muted/30">
         <span className="text-xs font-mono text-muted-foreground">{label}</span>
-        <button
-          onClick={onDelete}
-          className="p-1 rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors"
-          title={t('graphs.removeGraph')}
-        >
-          <X className="w-3.5 h-3.5" />
-        </button>
+        {!readOnly && (
+          <button
+            onClick={onDelete}
+            className="p-1 rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors"
+            title={t('graphs.removeGraph')}
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        )}
       </div>
       <div className="relative flex-1 w-full min-h-0 overflow-hidden">
         {children}
       </div>
-      <GraphResizeHandle
-        height={cardHeight}
-        onResize={setCardHeight}
-        onCommit={(h) => { setCardHeight(h); onHeightChange?.(h); }}
-      />
+      {!readOnly && (
+        <GraphResizeHandle
+          height={cardHeight}
+          onResize={setCardHeight}
+          onCommit={(h) => { setCardHeight(h); onHeightChange?.(h); }}
+        />
+      )}
     </div>
   );
 }

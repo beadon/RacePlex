@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { GpsSample, Course, FieldMapping, Lap } from '@/types/racing';
 import type { OverlayLine } from '@/lib/lapOverlays';
@@ -10,6 +10,7 @@ import type { VideoSyncState, VideoSyncActions } from '@/hooks/useVideoSync';
 import { InfoBox } from './InfoBox';
 import { MiniMap } from './MiniMap';
 import { GraphPanel } from './GraphPanel';
+import { SecondaryGraphStack } from './SecondaryGraphStack';
 import { VideoPlayer } from '@/components/VideoPlayer';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 import { Map as MapIcon, EyeOff, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -72,6 +73,11 @@ export interface GraphViewPanelProps {
   onToggleAlignOverlays?: () => void;
   showOverlayLegend?: boolean;
   onToggleOverlayLegend?: () => void;
+  // Split graphs: a second stack bound to one enabled overlay lap (tablet+).
+  splitActive?: boolean;
+  splitOverlayId?: string | null;
+  /** Turn split off (re-opening the side panel == Combine graphs). */
+  onCombineSplit?: () => void;
 }
 
 export function GraphViewPanel(props: GraphViewPanelProps) {
@@ -81,13 +87,26 @@ export function GraphViewPanel(props: GraphViewPanelProps) {
   const mapPanelRef = useRef<ImperativePanelHandle>(null);
   const savedSizeRef = useRef(30);
 
-  // Mobile: the left InfoBox/MiniMap column can be collapsed so the graphs get
-  // the full screen width. Video + mini-map are then reachable as graph panels.
+  // The left InfoBox/MiniMap column can be collapsed (any screen size) so the
+  // graphs get the full width. Video + mini-map are then reachable as graph
+  // panels. Split-graphs also collapses it (the comparison needs the width).
   const leftPanelRef = useRef<ImperativePanelHandle>(null);
   const [leftCollapsed, setLeftCollapsed] = useState(false);
   // Relocated panels active in the graph stack (reported by GraphPanel) — used
   // to avoid mounting a duplicate VideoPlayer (it binds a single shared ref).
   const [relocated, setRelocated] = useState({ video: false, miniMap: false });
+  // Main panel's active graph set, mirrored onto the split secondary stack.
+  const [mirror, setMirror] = useState<{ activeGraphs: string[]; graphHeights: Record<string, number> }>({ activeGraphs: [], graphHeights: {} });
+
+  const { splitActive = false, splitOverlayId = null, onCombineSplit } = props;
+  const selectedOverlay = useMemo(
+    () => (splitActive ? props.overlayLines?.find((o) => o.id === splitOverlayId) ?? null : null),
+    [splitActive, splitOverlayId, props.overlayLines],
+  );
+  const showSplit = splitActive && !!selectedOverlay;
+  // The mirror video is a literal second player: only for an in-session lap, with
+  // a synced video that the user has relocated into the (main) graph stack.
+  const splitVideoEnabled = !!splitOverlayId?.startsWith('lap:') && !!props.videoState?.videoUrl && relocated.video;
 
   const toggleMap = () => {
     const panel = mapPanelRef.current;
@@ -110,10 +129,22 @@ export function GraphViewPanel(props: GraphViewPanelProps) {
     else panel.collapse();
   };
 
-  // Never leave the left panel collapsed once we're back on a wide layout.
+  // Split mode hides the side panel (the comparison needs the width); leaving it
+  // restores the panel. Kept in a ref so the onExpand handler reads live state.
+  const splitActiveRef = useRef(showSplit);
+  splitActiveRef.current = showSplit;
   useEffect(() => {
-    if (!isMobile) leftPanelRef.current?.expand();
-  }, [isMobile]);
+    const panel = leftPanelRef.current;
+    if (!panel) return;
+    if (showSplit) panel.collapse();
+    else panel.expand();
+  }, [showSplit]);
+
+  // Re-opening the side panel is the same as clicking "Combine graphs".
+  const handleLeftExpand = useCallback(() => {
+    setLeftCollapsed(false);
+    if (splitActiveRef.current) onCombineSplit?.();
+  }, [onCombineSplit]);
 
   const { videoState, videoActions, onVideoLoadedMetadata } = props;
   const canRenderVideo = !!(videoState && videoActions && onVideoLoadedMetadata);
@@ -152,6 +183,38 @@ export function GraphViewPanel(props: GraphViewPanelProps) {
     />
   ), [props.visibleSamples, props.filteredSamples, props.referenceSamples, props.course, props.bounds, props.isAllLaps, props.overlayLines, props.visibleRange, props.onRemoveOverlay, props.alignOverlays, props.onToggleAlignOverlays, props.showOverlayLegend, props.onToggleOverlayLegend]);
 
+  const handleMirrorChange = useCallback(
+    (activeGraphs: string[], graphHeights: Record<string, number>) => setMirror({ activeGraphs, graphHeights }),
+    [],
+  );
+
+  // The main (left) graph stack. Split mode also lets it relocate the video /
+  // mini-map into the stack (the side panel is hidden), so the user can sync a
+  // video and have it mirror onto the comparison panel.
+  const mainGraphPanel = (
+    <GraphPanel
+      samples={props.visibleSamples}
+      filteredSamples={props.filteredSamples}
+      referenceSamples={props.referenceSamples}
+      fieldMappings={props.fieldMappings}
+      onScrub={props.onScrub}
+      visibleRange={props.visibleRange}
+      onRangeChange={props.onRangeChange}
+      minRange={props.minRange}
+      formatRangeLabel={props.formatRangeLabel}
+      sessionFileName={props.sessionFileName}
+      overlayLines={props.overlayLines}
+      course={props.course}
+      laps={props.laps}
+      selectedLapNumber={props.selectedLapNumber}
+      enableMobilePanels={isMobile || showSplit}
+      renderVideo={canRenderVideo ? renderVideo : undefined}
+      renderMiniMap={renderMiniMap}
+      onMobilePanelsChange={setRelocated}
+      onActiveGraphsChange={handleMirrorChange}
+    />
+  );
+
   return (
     <ResizablePanelGroup direction="horizontal" className="h-full">
       <ResizablePanel
@@ -162,7 +225,7 @@ export function GraphViewPanel(props: GraphViewPanelProps) {
         collapsible
         collapsedSize={0}
         onCollapse={() => setLeftCollapsed(true)}
-        onExpand={() => setLeftCollapsed(false)}
+        onExpand={handleLeftExpand}
       >
         <div className="h-full relative">
           <ResizablePanelGroup direction="vertical" className="h-full">
@@ -247,36 +310,46 @@ export function GraphViewPanel(props: GraphViewPanelProps) {
 
       <ResizablePanel defaultSize={70} minSize={40}>
         <div className="relative h-full">
-          {isMobile && (
-            <button
-              onClick={toggleLeftPanel}
-              className="absolute top-2 left-0 z-[1100] flex items-center py-3 pl-0.5 pr-1 rounded-r-md bg-primary text-primary-foreground shadow-md hover:bg-primary/90"
-              title={leftCollapsed ? t('graphs.expandPanel') : t('graphs.collapsePanel')}
-              aria-label={leftCollapsed ? t('graphs.expandPanel') : t('graphs.collapsePanel')}
-            >
-              {leftCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
-            </button>
-          )}
-          <GraphPanel
-            samples={props.visibleSamples}
-            filteredSamples={props.filteredSamples}
-            referenceSamples={props.referenceSamples}
-            fieldMappings={props.fieldMappings}
-            onScrub={props.onScrub}
-            visibleRange={props.visibleRange}
-            onRangeChange={props.onRangeChange}
-            minRange={props.minRange}
-            formatRangeLabel={props.formatRangeLabel}
-            sessionFileName={props.sessionFileName}
-            overlayLines={props.overlayLines}
-            course={props.course}
-            laps={props.laps}
-            selectedLapNumber={props.selectedLapNumber}
-            enableMobilePanels={isMobile}
-            renderVideo={canRenderVideo ? renderVideo : undefined}
-            renderMiniMap={renderMiniMap}
-            onMobilePanelsChange={setRelocated}
-          />
+          <button
+            onClick={toggleLeftPanel}
+            className="absolute top-2 left-0 z-[1100] flex items-center py-3 pl-0.5 pr-1 rounded-r-md bg-primary text-primary-foreground shadow-md hover:bg-primary/90"
+            title={leftCollapsed ? t('graphs.expandPanel') : t('graphs.collapsePanel')}
+            aria-label={leftCollapsed ? t('graphs.expandPanel') : t('graphs.collapsePanel')}
+          >
+            {leftCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+          </button>
+          {/* Always a horizontal group with a stable main panel id, so toggling
+              split only mounts/unmounts the secondary — the main stack (and its
+              graph state) stays put. */}
+          <ResizablePanelGroup direction="horizontal" className="h-full">
+            <ResizablePanel id="graph-main" order={1} defaultSize={showSplit ? 50 : 100} minSize={25}>
+              {mainGraphPanel}
+            </ResizablePanel>
+            {showSplit && (
+              <>
+                <ResizableHandle />
+                <ResizablePanel id="graph-secondary" order={2} defaultSize={50} minSize={25}>
+                  <SecondaryGraphStack
+                    overlay={selectedOverlay!}
+                    activeGraphs={mirror.activeGraphs}
+                    graphHeights={mirror.graphHeights}
+                    mainFilteredSamples={props.filteredSamples}
+                    visibleRange={props.visibleRange}
+                    referenceSamples={props.referenceSamples}
+                    fieldMappings={props.fieldMappings}
+                    course={props.course}
+                    laps={props.laps ?? []}
+                    selectedLapNumber={props.selectedLapNumber ?? null}
+                    bounds={props.bounds}
+                    sessionFileName={props.sessionFileName}
+                    onScrub={props.onScrub}
+                    videoState={props.videoState}
+                    videoEnabled={splitVideoEnabled}
+                  />
+                </ResizablePanel>
+              </>
+            )}
+          </ResizablePanelGroup>
         </div>
       </ResizablePanel>
     </ResizablePanelGroup>

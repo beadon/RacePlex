@@ -162,7 +162,12 @@
     "removeGraph": "Diagramm entfernen",
     "miniMap": "Minikarte",
     "collapsePanel": "Bereich einklappen",
-    "expandPanel": "Bereich ausklappen"
+    "expandPanel": "Bereich ausklappen",
+    "splitGraphs": "Diagramme teilen",
+    "combineGraphs": "Diagramme zusammenführen",
+    "splitNeedsOverlay": "Aktiviere zuerst eine Overlay-Runde für den Vergleich",
+    "splitMirrorEmpty": "Füge im Hauptbereich ein Diagramm zum Vergleich hinzu",
+    "splitVideoOutOfRange": "Kein Video für diesen Teil der Runde"
   },
   "gg": {
     "noData": "Keine G-Kraft-Daten",

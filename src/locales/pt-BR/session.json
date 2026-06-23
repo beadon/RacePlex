@@ -162,7 +162,12 @@
     "removeGraph": "Remover gráfico",
     "miniMap": "Minimapa",
     "collapsePanel": "Recolher painel",
-    "expandPanel": "Expandir painel"
+    "expandPanel": "Expandir painel",
+    "splitGraphs": "Dividir gráficos",
+    "combineGraphs": "Combinar gráficos",
+    "splitNeedsOverlay": "Ative primeiro uma volta sobreposta para comparar",
+    "splitMirrorEmpty": "Adicione um gráfico no painel principal para comparar",
+    "splitVideoOutOfRange": "Sem vídeo para esta parte da volta"
   },
   "gg": {
     "noData": "Sem dados de força G",
