@@ -89,13 +89,16 @@ export function LandingPage({
   // add noise — hide them. The DIY-logger tile stays (it's genuinely useful).
   const native = isNativeApp();
 
-  const roadmapItems = t("landing:roadmap.items", { returnObjects: true }) as string[];
+  const roadmapItems = t("landing:roadmap.items", { returnObjects: true }) as {
+    text: string;
+    sub?: string[];
+  }[];
 
   // Group roadmap items by their trailing month/quarter parenthetical (works
   // across locales — handles both ASCII "()" and full-width "（）") so we can
   // draw a divider whenever the timeframe changes.
-  const roadmapTimeframe = (item: string): string => {
-    const match = item.match(/[（(]([^（()）]*)[）)]\s*$/);
+  const roadmapTimeframe = (text: string): string => {
+    const match = text.match(/[（(]([^（()）]*)[）)]\s*$/);
     return match ? match[1].trim() : "";
   };
 
@@ -256,15 +259,27 @@ export function LandingPage({
             <ul className="mt-3 space-y-2">
               {roadmapItems.map((item, i) => {
                 const showDivider =
-                  i > 0 && roadmapTimeframe(item) !== roadmapTimeframe(roadmapItems[i - 1]);
+                  i > 0 && roadmapTimeframe(item.text) !== roadmapTimeframe(roadmapItems[i - 1].text);
                 return (
-                  <Fragment key={item}>
+                  <Fragment key={item.text}>
                     {showDivider && (
                       <li aria-hidden="true" className="my-1 border-t border-border/60" />
                     )}
-                    <li className="flex items-start gap-2 text-sm text-muted-foreground">
-                      <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary/60" />
-                      <span>{item}</span>
+                    <li className="text-sm text-muted-foreground">
+                      <div className="flex items-start gap-2">
+                        <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary/60" />
+                        <span>{item.text}</span>
+                      </div>
+                      {item.sub && item.sub.length > 0 && (
+                        <ul className="mt-1.5 space-y-1 pl-5">
+                          {item.sub.map((sub) => (
+                            <li key={sub} className="flex items-start gap-2">
+                              <span className="mt-[7px] h-1 w-1 shrink-0 rounded-full bg-primary/40" />
+                              <span>{sub}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
                     </li>
                   </Fragment>
                 );
