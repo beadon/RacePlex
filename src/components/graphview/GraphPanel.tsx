@@ -2,8 +2,7 @@ import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Plus } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { RangeSlider } from '@/components/RangeSlider';
-import { SectorCropSelect } from '@/components/SectorCropSelect';
+import { GraphRangeControl } from './GraphRangeControl';
 import { SingleSeriesChart } from './SingleSeriesChart';
 import { GGDiagram } from './GGDiagram';
 import { PanelCard } from './PanelCard';
@@ -58,6 +57,12 @@ interface GraphPanelProps {
   /** Main stack → host: report the active graph set + heights so a mirrored
    *  secondary stack can match it. */
   onActiveGraphsChange?: (activeGraphs: string[], graphHeights: Record<string, number>) => void;
+  /** Slim header bar content (split-graphs: per-panel lap label/legend). When
+   *  set, both stacks share a fixed-height bar so their graph rows line up. */
+  header?: React.ReactNode;
+  /** Hide the bottom range/crop control (split-graphs renders one shared control
+   *  spanning both panels instead). */
+  hideRangeControl?: boolean;
 }
 
 export function GraphPanel({
@@ -66,6 +71,7 @@ export function GraphPanel({
   course = null, laps = [], selectedLapNumber = null,
   enableMobilePanels = false, renderVideo, renderMiniMap, onMobilePanelsChange,
   controlledActiveGraphs, controlledGraphHeights, secondary = false, onActiveGraphsChange,
+  header, hideRangeControl = false,
 }: GraphPanelProps) {
   const { t } = useTranslation('session');
   const { useKph, useMetricDistance, brakingZoneSettings } = useSettingsContext();
@@ -280,6 +286,11 @@ export function GraphPanel({
 
   return (
     <div className="flex flex-col h-full min-h-0">
+      {header && (
+        <div className="shrink-0 flex items-center border-b border-border bg-muted/30 px-2 py-1 h-7">
+          {header}
+        </div>
+      )}
       {/* Scrollable graph area */}
       <div className="flex-1 min-h-0 overflow-y-auto">
         {activeGraphs.length === 0 ? (
@@ -386,31 +397,20 @@ export function GraphPanel({
         )}
       </div>
 
-      {/* Range slider (80%) + crop-to-sector select (20%) - fixed at bottom.
-          The mirrored secondary stack has no own control — it follows the main. */}
-      {!secondary && filteredSamples.length > 0 && (
-        <div className="shrink-0 flex items-center gap-3 px-4 py-2 border-t border-border bg-muted/30">
-          <div className="flex-[4] min-w-0">
-            <RangeSlider
-              min={0}
-              max={filteredSamples.length - 1}
-              value={visibleRange}
-              onChange={onRangeChange}
-              minRange={minRange}
-              formatLabel={formatRangeLabel}
-            />
-          </div>
-          <div className="flex-1 min-w-0">
-            <SectorCropSelect
-              course={course}
-              laps={laps}
-              selectedLapNumber={selectedLapNumber}
-              filteredLength={filteredSamples.length}
-              visibleRange={visibleRange}
-              onRangeChange={onRangeChange}
-            />
-          </div>
-        </div>
+      {/* Range slider + crop-to-sector select. The mirrored secondary stack has
+          no own control, and split mode renders one shared control spanning both
+          panels (hideRangeControl) — both follow the single main cursor. */}
+      {!secondary && !hideRangeControl && (
+        <GraphRangeControl
+          filteredSamples={filteredSamples}
+          visibleRange={visibleRange}
+          onRangeChange={onRangeChange}
+          minRange={minRange}
+          formatRangeLabel={formatRangeLabel}
+          course={course}
+          laps={laps}
+          selectedLapNumber={selectedLapNumber}
+        />
       )}
     </div>
   );

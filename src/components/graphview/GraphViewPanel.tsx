@@ -10,7 +10,9 @@ import type { VideoSyncState, VideoSyncActions } from '@/hooks/useVideoSync';
 import { InfoBox } from './InfoBox';
 import { MiniMap } from './MiniMap';
 import { GraphPanel } from './GraphPanel';
+import { GraphRangeControl } from './GraphRangeControl';
 import { SecondaryGraphStack } from './SecondaryGraphStack';
+import { formatLapTime } from '@/lib/lapCalculation';
 import { VideoPlayer } from '@/components/VideoPlayer';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 import { Map as MapIcon, EyeOff, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -188,6 +190,35 @@ export function GraphViewPanel(props: GraphViewPanelProps) {
     [],
   );
 
+  // In split mode the main panel drops the right-selected overlay (it lives on
+  // the right) and draws only the remaining overlays — which the left header then
+  // legends, after the main lap.
+  const mainOverlayLines = showSplit
+    ? (props.overlayLines ?? []).filter((o) => o.id !== splitOverlayId)
+    : props.overlayLines;
+
+  const mainLapLabel = props.selectedLapNumber != null
+    ? (props.lapTimeMs != null
+        ? `${t('header.lap', { number: props.selectedLapNumber })} · ${formatLapTime(props.lapTimeMs)}`
+        : t('header.lap', { number: props.selectedLapNumber }))
+    : t('header.allLaps');
+
+  // Single-line legend (CSS ellipsis on overflow): main lap, then the overlays
+  // still drawn on the left. Matches the right panel's header height so the
+  // graph rows line up across both stacks.
+  const mainHeader = (
+    <span className="block min-w-0 flex-1 truncate font-mono text-xs text-muted-foreground">
+      <span className="text-foreground">{mainLapLabel}</span>
+      {(mainOverlayLines ?? []).map((o) => (
+        <span key={o.id}>
+          <span className="text-muted-foreground/50"> · </span>
+          <span className="inline-block h-2 w-2 rounded-full align-middle" style={{ backgroundColor: o.color }} />
+          <span className="align-middle"> {o.label}</span>
+        </span>
+      ))}
+    </span>
+  );
+
   // The main (left) graph stack. Split mode also lets it relocate the video /
   // mini-map into the stack (the side panel is hidden), so the user can sync a
   // video and have it mirror onto the comparison panel.
@@ -203,15 +234,17 @@ export function GraphViewPanel(props: GraphViewPanelProps) {
       minRange={props.minRange}
       formatRangeLabel={props.formatRangeLabel}
       sessionFileName={props.sessionFileName}
-      overlayLines={props.overlayLines}
+      overlayLines={mainOverlayLines}
       course={props.course}
       laps={props.laps}
       selectedLapNumber={props.selectedLapNumber}
-      enableMobilePanels={isMobile || showSplit}
+      enableMobilePanels={isMobile || leftCollapsed || showSplit}
       renderVideo={canRenderVideo ? renderVideo : undefined}
       renderMiniMap={renderMiniMap}
       onMobilePanelsChange={setRelocated}
       onActiveGraphsChange={handleMirrorChange}
+      header={showSplit ? mainHeader : undefined}
+      hideRangeControl={showSplit}
     />
   );
 
@@ -309,7 +342,7 @@ export function GraphViewPanel(props: GraphViewPanelProps) {
       <ResizableHandle />
 
       <ResizablePanel defaultSize={70} minSize={40}>
-        <div className="relative h-full">
+        <div className="relative h-full flex flex-col">
           <button
             onClick={toggleLeftPanel}
             className="absolute top-2 left-0 z-[1100] flex items-center py-3 pl-0.5 pr-1 rounded-r-md bg-primary text-primary-foreground shadow-md hover:bg-primary/90"
@@ -321,35 +354,50 @@ export function GraphViewPanel(props: GraphViewPanelProps) {
           {/* Always a horizontal group with a stable main panel id, so toggling
               split only mounts/unmounts the secondary — the main stack (and its
               graph state) stays put. */}
-          <ResizablePanelGroup direction="horizontal" className="h-full">
-            <ResizablePanel id="graph-main" order={1} defaultSize={showSplit ? 50 : 100} minSize={25}>
-              {mainGraphPanel}
-            </ResizablePanel>
-            {showSplit && (
-              <>
-                <ResizableHandle />
-                <ResizablePanel id="graph-secondary" order={2} defaultSize={50} minSize={25}>
-                  <SecondaryGraphStack
-                    overlay={selectedOverlay!}
-                    activeGraphs={mirror.activeGraphs}
-                    graphHeights={mirror.graphHeights}
-                    mainFilteredSamples={props.filteredSamples}
-                    visibleRange={props.visibleRange}
-                    referenceSamples={props.referenceSamples}
-                    fieldMappings={props.fieldMappings}
-                    course={props.course}
-                    laps={props.laps ?? []}
-                    selectedLapNumber={props.selectedLapNumber ?? null}
-                    bounds={props.bounds}
-                    sessionFileName={props.sessionFileName}
-                    onScrub={props.onScrub}
-                    videoState={props.videoState}
-                    videoEnabled={splitVideoEnabled}
-                  />
-                </ResizablePanel>
-              </>
-            )}
-          </ResizablePanelGroup>
+          <div className="flex-1 min-h-0">
+            <ResizablePanelGroup direction="horizontal" className="h-full">
+              <ResizablePanel id="graph-main" order={1} defaultSize={showSplit ? 50 : 100} minSize={25}>
+                {mainGraphPanel}
+              </ResizablePanel>
+              {showSplit && (
+                <>
+                  <ResizableHandle />
+                  <ResizablePanel id="graph-secondary" order={2} defaultSize={50} minSize={25}>
+                    <SecondaryGraphStack
+                      overlay={selectedOverlay!}
+                      activeGraphs={mirror.activeGraphs}
+                      graphHeights={mirror.graphHeights}
+                      mainFilteredSamples={props.filteredSamples}
+                      visibleRange={props.visibleRange}
+                      referenceSamples={props.referenceSamples}
+                      fieldMappings={props.fieldMappings}
+                      course={props.course}
+                      laps={props.laps ?? []}
+                      selectedLapNumber={props.selectedLapNumber ?? null}
+                      bounds={props.bounds}
+                      sessionFileName={props.sessionFileName}
+                      onScrub={props.onScrub}
+                      videoState={props.videoState}
+                      videoEnabled={splitVideoEnabled}
+                    />
+                  </ResizablePanel>
+                </>
+              )}
+            </ResizablePanelGroup>
+          </div>
+          {/* Single shared range/crop control spanning both panels in split. */}
+          {showSplit && (
+            <GraphRangeControl
+              filteredSamples={props.filteredSamples}
+              visibleRange={props.visibleRange}
+              onRangeChange={props.onRangeChange}
+              minRange={props.minRange}
+              formatRangeLabel={props.formatRangeLabel}
+              course={props.course}
+              laps={props.laps}
+              selectedLapNumber={props.selectedLapNumber}
+            />
+          )}
         </div>
       </ResizablePanel>
     </ResizablePanelGroup>

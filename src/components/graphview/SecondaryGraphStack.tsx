@@ -101,6 +101,12 @@ export function SecondaryGraphStack(props: SecondaryGraphStackProps) {
   const panel = (
     <GraphPanel
       secondary
+      header={(
+        <span className="flex min-w-0 items-center gap-1.5">
+          <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: overlay.color }} />
+          <span className="truncate font-mono text-xs text-muted-foreground">{overlay.label}</span>
+        </span>
+      )}
       controlledActiveGraphs={activeGraphs}
       controlledGraphHeights={graphHeights}
       samples={secSamples}
@@ -122,17 +128,7 @@ export function SecondaryGraphStack(props: SecondaryGraphStackProps) {
     />
   );
 
-  return (
-    <div className="flex h-full flex-col">
-      <div className="flex shrink-0 items-center gap-1.5 border-b border-border bg-muted/30 px-2 py-1">
-        <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: overlay.color }} />
-        <span className="truncate font-mono text-xs text-muted-foreground">{overlay.label}</span>
-      </div>
-      <div className="min-h-0 flex-1">
-        <CursorBridge mapToInner={mapToInner}>{panel}</CursorBridge>
-      </div>
-    </div>
-  );
+  return <CursorBridge mapToInner={mapToInner}>{panel}</CursorBridge>;
 }
 
 /**
