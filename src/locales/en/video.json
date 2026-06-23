@@ -24,7 +24,9 @@
     "replaceVideo": "Replace video",
     "pickRecordingTitle": "Which video?",
     "pickRecordingDesc": "You selected more than one recording. Pick the one to load — the rest are discarded.",
-    "pickRecordingCount": "{{count}} chapters"
+    "pickRecordingCount": "{{count}} chapters",
+    "videoStartsLater": "Video starts later",
+    "videoEnded": "Video ended"
   },
   "export": {
     "title": "Export Video",

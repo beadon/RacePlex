@@ -25,7 +25,9 @@
     "replaceVideo": "Video ersetzen",
     "pickRecordingTitle": "Welches Video?",
     "pickRecordingDesc": "Du hast mehr als eine Aufnahme ausgewählt. Wähle die zu ladende aus – die anderen werden verworfen.",
-    "pickRecordingCount": "{{count}} Kapitel"
+    "pickRecordingCount": "{{count}} Kapitel",
+    "videoStartsLater": "Video beginnt später",
+    "videoEnded": "Video beendet"
   },
   "export": {
     "title": "Video exportieren",

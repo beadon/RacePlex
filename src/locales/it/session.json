@@ -167,7 +167,8 @@
     "combineGraphs": "Combina grafici",
     "splitNeedsOverlay": "Attiva prima un giro sovrapposto per confrontare",
     "splitMirrorEmpty": "Aggiungi un grafico nel pannello principale per confrontare",
-    "splitVideoOutOfRange": "Nessun video per questa parte del giro"
+    "splitVideoStartsLater": "Il video inizia più tardi",
+    "splitVideoEnded": "Video terminato"
   },
   "gg": {
     "noData": "Nessun dato di forza G",

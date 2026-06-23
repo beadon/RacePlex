@@ -167,7 +167,8 @@
     "combineGraphs": "Diagramme zusammenführen",
     "splitNeedsOverlay": "Aktiviere zuerst eine Overlay-Runde für den Vergleich",
     "splitMirrorEmpty": "Füge im Hauptbereich ein Diagramm zum Vergleich hinzu",
-    "splitVideoOutOfRange": "Kein Video für diesen Teil der Runde"
+    "splitVideoStartsLater": "Video beginnt später",
+    "splitVideoEnded": "Video beendet"
   },
   "gg": {
     "noData": "Keine G-Kraft-Daten",

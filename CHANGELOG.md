@@ -20,14 +20,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   of your enabled overlay laps and the right panel mirrors the main panel's graphs
   for that lap; a single playback control drives both, kept on the same point on
   track. If a synced video is relocated into the graph stack and the chosen lap is
-  from the current session, a second, lap-synced video plays alongside it (an
-  out-of-session lap shows graphs only, leaving the main video untouched). Opening
-  the side panel — or pressing **Combine graphs** — returns to the single view.
-  Not available on phones.
+  from the current session, a second video plays alongside it — **frame-locked to
+  the main player** and showing the same point on track in the comparison lap's own
+  footage (an out-of-session lap shows graphs only, leaving the main video
+  untouched). Opening the side panel — or pressing **Combine graphs** — returns to
+  the single view. Not available on phones.
 
 ### Changed
 - **The Pro tab's side panel can now be collapsed on any screen size** (previously
   phone-only), giving the graphs the full width when you want it.
+- **Video sync is now anchored to absolute session time.** Sync a video once and it
+  stays put — switching laps (or cropping the range) never needs a re-sync. The app
+  understands where the footage sits on the session timeline, so **partial videos**
+  are handled cleanly: when the camera started after the logger or stopped before
+  the session ended, the out-of-footage stretches show "Video starts later" /
+  "Video ended" while the charts keep playing, instead of a generic message.
 
 ### Fixed
 - **Approving a track/course submission now adds it to the database.** In the admin

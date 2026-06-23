@@ -611,10 +611,16 @@ export const VideoPlayer = memo(function VideoPlayer({
           />
         )}
 
-        {/* Out of range overlay */}
+        {/* Out of range overlay — coverage-aware for partial videos. */}
         {state.isOutOfRange && (
           <div className="absolute inset-0 bg-black/80 flex items-center justify-center">
-            <p className="text-white/70 text-sm font-medium">{t("player.noVideoForPortion")}</p>
+            <p className="text-white/70 text-sm font-medium">
+              {state.coverage === "before"
+                ? t("player.videoStartsLater")
+                : state.coverage === "after"
+                  ? t("player.videoEnded")
+                  : t("player.noVideoForPortion")}
+            </p>
           </div>
         )}
 

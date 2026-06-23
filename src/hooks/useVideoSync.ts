@@ -5,6 +5,7 @@ import { loadSessionVideo, hasSessionVideo, deleteSessionVideo, getSessionVideoM
 import type { OverlaySettings } from "@/components/video-overlays/types";
 import { DEFAULT_OVERLAY_SETTINGS } from "@/components/video-overlays/types";
 import { findNearestIndex } from "@/components/video-overlays/overlayUtils";
+import { coverageOf, sessionMsToVideoSec, videoSecToSessionMs, type VideoCoverage } from "@/lib/videoTimeline";
 import { buildPlaylist, groupVideoRecordings, virtualToLocal, localToVirtual, type Playlist, type VideoRecording } from "@/lib/videoPlaylist";
 
 interface UseVideoSyncOptions {
@@ -35,6 +36,9 @@ export interface VideoSyncState {
   /** Chunk descriptors (url + virtual offsets) for video export across chunks. */
   exportChunks: { url: string; startOffsetSec: number; durationSec: number }[];
   isOutOfRange: boolean;
+  /** Where the cursor sits relative to the footage: 'before' it starts,
+   *  'covered', or 'after' it ends (partial-video aware). */
+  coverage: VideoCoverage;
   overlaySettings: OverlaySettings;
   hasStoredVideo: boolean;
   storedVideoMeta: StoredVideoMeta | null;
@@ -128,6 +132,7 @@ export function useVideoSync({ samples, allSamples, currentIndex, onScrub, sessi
   const [currentChunkIndex, setCurrentChunkIndex] = useState(0);
   const [exportChunks, setExportChunks] = useState<{ url: string; startOffsetSec: number; durationSec: number }[]>([]);
   const [isOutOfRange, setIsOutOfRange] = useState(false);
+  const [coverage, setCoverage] = useState<VideoCoverage>('covered');
   const [fileHandle, setFileHandle] = useState<FileSystemFileHandle | null>(null);
   const [overlaySettings, setOverlaySettings] = useState<OverlaySettings>(DEFAULT_OVERLAY_SETTINGS);
   const [storedVideoAvailable, setStoredVideoAvailable] = useState(false);
@@ -478,14 +483,23 @@ export function useVideoSync({ samples, allSamples, currentIndex, onScrub, sessi
       const v = videoRef.current;
       if (!v) return;
       const pl = playlistRef.current;
+      const total = pl ? pl.totalDuration : v.duration;
       const virtualSec = pl ? localToVirtual(pl, currentChunkIndexRef.current, v.currentTime) : v.currentTime;
-      const telemetryMs = virtualSec * 1000 + syncOffsetMs;
+      const telemetryMs = videoSecToSessionMs(virtualSec, syncOffsetMs);
       const s = samplesRef.current;
       const idx = findNearestIndex(s, telemetryMs);
-      const outOfRange = s.length === 0 || telemetryMs < s[0].t || telemetryMs > s[s.length - 1].t;
       onScrubRef.current(idx);
       setVideoCurrentTime(virtualSec);
-      setIsOutOfRange(outOfRange);
+      setCoverage(coverageOf(telemetryMs, syncOffsetMs, total));
+      // The footage may run past the end of the session (camera stopped after
+      // the logger). We don't play video past the session — pause at the last
+      // sample instead of rolling on into uncaptured time.
+      if (s.length > 0 && telemetryMs > s[s.length - 1].t) {
+        setIsOutOfRange(true);
+        if (!v.paused) { v.pause(); setIsPlaying(false); }
+      } else {
+        setIsOutOfRange(false);
+      }
     };
     if ("requestVideoFrameCallback" in video) {
       const callback = () => {
@@ -520,9 +534,13 @@ export function useVideoSync({ samples, allSamples, currentIndex, onScrub, sessi
     lastSeekTimeRef.current = now;
     const sample = samples[currentIndex];
     if (!sample) return;
-    const virtualSec = (sample.t - syncOffsetMs) / 1000;
+    const virtualSec = sessionMsToVideoSec(sample.t, syncOffsetMs);
     const clampedSec = Math.max(0, virtualSec);
-    if (virtualSec < 0 || virtualSec > total) {
+    const cov = coverageOf(sample.t, syncOffsetMs, total);
+    setCoverage(cov);
+    if (cov !== 'covered') {
+      // No footage for this session position — blank it, but the cursor/charts
+      // stay free to scrub or play through the gap.
       setIsOutOfRange(true);
       if (!video.paused) video.pause();
     } else {
@@ -692,13 +710,13 @@ export function useVideoSync({ samples, allSamples, currentIndex, onScrub, sessi
   // playback rate.
   const state: VideoSyncState = useMemo(() => ({
     videoUrl, preloadUrl, videoFileName, isLocked, isPlaying, syncOffsetMs, fps,
-    videoDuration, videoCurrentTime, chunkCount, currentChunkIndex, exportChunks, isOutOfRange, overlaySettings,
+    videoDuration, videoCurrentTime, chunkCount, currentChunkIndex, exportChunks, isOutOfRange, coverage, overlaySettings,
     hasStoredVideo: storedVideoAvailable,
     storedVideoMeta,
     pendingRecordings,
   }), [
     videoUrl, preloadUrl, videoFileName, isLocked, isPlaying, syncOffsetMs, fps,
-    videoDuration, videoCurrentTime, chunkCount, currentChunkIndex, exportChunks, isOutOfRange, overlaySettings,
+    videoDuration, videoCurrentTime, chunkCount, currentChunkIndex, exportChunks, isOutOfRange, coverage, overlaySettings,
     storedVideoAvailable, storedVideoMeta, pendingRecordings,
   ]);
 

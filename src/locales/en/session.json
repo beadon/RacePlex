@@ -166,7 +166,8 @@
     "combineGraphs": "Combine graphs",
     "splitNeedsOverlay": "Enable an overlay lap first to compare side by side",
     "splitMirrorEmpty": "Add a graph on the main panel to compare",
-    "splitVideoOutOfRange": "No video for this part of the lap"
+    "splitVideoStartsLater": "Video starts later",
+    "splitVideoEnded": "Video ended"
   },
   "gg": {
     "noData": "No G-force data",
