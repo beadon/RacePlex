@@ -253,6 +253,78 @@ export function mapIndexByDistance(
 }
 
 /**
+ * Interpolate a synthetic sample at an exact cumulative distance along a lap.
+ *
+ * Unlike `mapIndexByDistance` (which snaps to the nearest real sample), this
+ * linearly interpolates between the two bracketing samples, so the returned `t`
+ * is sub-sample-accurate. Used to drive the split-graphs comparison video, whose
+ * frame is derived from `currentSample.t` — snapping there quantizes the seek and
+ * (combined with per-lap boundary error) produces a visible per-lap drift.
+ *
+ * `toDistances` must be `calculateDistanceArray(toSamples)`. `targetDistance` is
+ * clamped to `[0, maxDistance]`; at/below 0 it returns the first sample and
+ * at/above the max the last, so a boundary-anchored array (see `anchorSampleTimes`)
+ * yields its exact endpoint times at the lap edges.
+ */
+export function interpolateSampleByDistance(
+  toSamples: GpsSample[],
+  toDistances: number[],
+  targetDistance: number,
+): GpsSample {
+  const n = toSamples.length;
+  if (n === 0) {
+    return { t: 0, lat: 0, lon: 0, speedMps: 0, speedMph: 0, speedKph: 0, extraFields: {} };
+  }
+  const target = Math.max(0, Math.min(targetDistance, toDistances[n - 1] ?? 0));
+  if (target <= 0) return toSamples[0];
+  if (target >= (toDistances[n - 1] ?? 0)) return toSamples[n - 1];
+
+  let lo = 0;
+  let hi = n - 1;
+  while (lo < hi - 1) {
+    const mid = (lo + hi) >> 1;
+    if (toDistances[mid] <= target) lo = mid; else hi = mid;
+  }
+
+  const d1 = toDistances[lo];
+  const d2 = toDistances[hi];
+  const s1 = toSamples[lo];
+  const s2 = toSamples[hi];
+  const f = d2 === d1 ? 0 : (target - d1) / (d2 - d1);
+  const near = f < 0.5 ? s1 : s2;
+  return {
+    ...near,
+    t: s1.t + f * (s2.t - s1.t),
+    lat: s1.lat + f * (s2.lat - s1.lat),
+    lon: s1.lon + f * (s2.lon - s1.lon),
+    speedMps: s1.speedMps + f * (s2.speedMps - s1.speedMps),
+    speedMph: s1.speedMph + f * (s2.speedMph - s1.speedMph),
+    speedKph: s1.speedKph + f * (s2.speedKph - s1.speedKph),
+  };
+}
+
+/**
+ * Return a copy of a lap's samples with the first/last sample's `t` replaced by
+ * the lap's true (interpolated) start/finish crossing times. A lap is sliced on
+ * integer sample indices, so its first sample sits a sub-sample fraction *before*
+ * the real start-finish crossing — and that fraction varies per lap, which is the
+ * source of the split-graphs per-lap video drift. Anchoring the endpoints to the
+ * crossing times the lap already stores fixes distance-0 to the finish line for
+ * every lap. Only the two endpoints are cloned; the shared input is never mutated.
+ */
+export function anchorSampleTimes(
+  samples: GpsSample[],
+  startMs: number,
+  endMs: number,
+): GpsSample[] {
+  if (samples.length === 0) return samples;
+  const out = samples.slice();
+  out[0] = { ...out[0], t: startMs };
+  out[out.length - 1] = { ...out[out.length - 1], t: endMs };
+  return out;
+}
+
+/**
  * Precompute reference data for a lap.
  */
 export interface ReferenceData {

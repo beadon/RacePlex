@@ -168,7 +168,10 @@
     "splitNeedsOverlay": "Ative primeiro uma volta sobreposta para comparar",
     "splitMirrorEmpty": "Adicione um gráfico no painel principal para comparar",
     "splitVideoStartsLater": "O vídeo começa mais tarde",
-    "splitVideoEnded": "O vídeo terminou"
+    "splitVideoEnded": "O vídeo terminou",
+    "splitVideoNudgeEarlier": "Adiantar o vídeo de comparação",
+    "splitVideoNudgeLater": "Atrasar o vídeo de comparação",
+    "splitVideoNudgeTooltip": "Deslocamento manual do vídeo (apenas esta comparação)"
   },
   "gg": {
     "noData": "Sem dados de força G",

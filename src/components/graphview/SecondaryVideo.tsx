@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { VideoOff } from 'lucide-react';
+import { VideoOff, Minus, Plus } from 'lucide-react';
 import type { VideoSyncState } from '@/hooks/useVideoSync';
 import { usePlaybackContext } from '@/contexts/PlaybackContext';
 import { coverageOf, sessionMsToVideoSec, type VideoCoverage } from '@/lib/videoTimeline';
@@ -23,26 +23,38 @@ import { coverageOf, sessionMsToVideoSec, type VideoCoverage } from '@/lib/video
  */
 interface SecondaryVideoProps {
   videoState: VideoSyncState;
+  /** The overlay lap this player follows; the manual nudge resets when it changes. */
+  overlayId: string;
 }
 
-export function SecondaryVideo({ videoState }: SecondaryVideoProps) {
+/** Fine-alignment step for the manual nudge, in milliseconds. */
+const NUDGE_STEP_MS = 50;
+
+export function SecondaryVideo({ videoState, overlayId }: SecondaryVideoProps) {
   const { t } = useTranslation('session');
   const { currentSample } = usePlaybackContext();
   const videoRef = useRef<HTMLVideoElement>(null);
   const currentSrcRef = useRef<string | null>(null);
   const pendingSeekRef = useRef<number | null>(null);
 
+  // Manual fine-alignment, local to this comparison only — never written back to
+  // the persisted main video sync. Reset whenever the overlay lap changes.
+  const [nudgeMs, setNudgeMs] = useState(0);
+  useEffect(() => setNudgeMs(0), [overlayId]);
+
   const { syncOffsetMs, exportChunks, videoDuration, isPlaying } = videoState;
 
   const coverage: VideoCoverage = currentSample
-    ? coverageOf(currentSample.t, syncOffsetMs, videoDuration)
+    ? coverageOf(currentSample.t + nudgeMs, syncOffsetMs, videoDuration)
     : 'before';
   const covered = coverage === 'covered' && exportChunks.length > 0;
 
   // Resolve the target footage position (virtual time + chunk) for the cursor.
+  // `nudgeMs` shifts the session time the frame is taken from (+ pushes the
+  // footage later) before the absolute-time → video-time conversion.
   const target = useMemo(() => {
     if (!covered || !currentSample) return null;
-    const virtualSec = sessionMsToVideoSec(currentSample.t, syncOffsetMs);
+    const virtualSec = sessionMsToVideoSec(currentSample.t + nudgeMs, syncOffsetMs);
     const chunk =
       exportChunks.find((c) => virtualSec >= c.startOffsetSec && virtualSec < c.startOffsetSec + c.durationSec) ??
       exportChunks[exportChunks.length - 1];
@@ -52,7 +64,7 @@ export function SecondaryVideo({ videoState }: SecondaryVideoProps) {
       chunkStart: chunk.startOffsetSec,
       localSec: Math.max(0, virtualSec - chunk.startOffsetSec),
     };
-  }, [covered, currentSample, syncOffsetMs, exportChunks]);
+  }, [covered, currentSample, syncOffsetMs, exportChunks, nudgeMs]);
 
   // The playback loop reads the latest target without re-subscribing per tick.
   const targetRef = useRef(target);
@@ -144,6 +156,36 @@ export function SecondaryVideo({ videoState }: SecondaryVideoProps) {
           <span className="text-xs">
             {coverage === 'after' ? t('graphs.splitVideoEnded') : t('graphs.splitVideoStartsLater')}
           </span>
+        </div>
+      )}
+      {covered && (
+        <div
+          className="absolute bottom-1.5 right-1.5 flex items-center gap-0.5 rounded-md bg-card/90 px-0.5 py-0.5 text-foreground backdrop-blur-sm"
+          title={t('graphs.splitVideoNudgeTooltip')}
+        >
+          <button
+            type="button"
+            aria-label={t('graphs.splitVideoNudgeEarlier')}
+            className="flex h-5 w-5 items-center justify-center rounded hover:bg-muted"
+            onClick={() => setNudgeMs((ms) => ms - NUDGE_STEP_MS)}
+          >
+            <Minus className="h-3 w-3" />
+          </button>
+          <button
+            type="button"
+            className="min-w-[3.25rem] px-1 text-center font-mono text-[11px] tabular-nums hover:text-primary"
+            onClick={() => setNudgeMs(0)}
+          >
+            {nudgeMs > 0 ? '+' : ''}{(nudgeMs / 1000).toFixed(2)}s
+          </button>
+          <button
+            type="button"
+            aria-label={t('graphs.splitVideoNudgeLater')}
+            className="flex h-5 w-5 items-center justify-center rounded hover:bg-muted"
+            onClick={() => setNudgeMs((ms) => ms + NUDGE_STEP_MS)}
+          >
+            <Plus className="h-3 w-3" />
+          </button>
         </div>
       )}
     </div>

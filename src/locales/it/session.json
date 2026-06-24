@@ -168,7 +168,10 @@
     "splitNeedsOverlay": "Attiva prima un giro sovrapposto per confrontare",
     "splitMirrorEmpty": "Aggiungi un grafico nel pannello principale per confrontare",
     "splitVideoStartsLater": "Il video inizia più tardi",
-    "splitVideoEnded": "Video terminato"
+    "splitVideoEnded": "Video terminato",
+    "splitVideoNudgeEarlier": "Anticipa il video di confronto",
+    "splitVideoNudgeLater": "Ritarda il video di confronto",
+    "splitVideoNudgeTooltip": "Offset video manuale (solo questo confronto)"
   },
   "gg": {
     "noData": "Nessun dato di forza G",

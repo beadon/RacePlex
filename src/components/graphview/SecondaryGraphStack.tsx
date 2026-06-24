@@ -3,7 +3,12 @@ import { GpsSample, Course, FieldMapping, Lap } from '@/types/racing';
 import type { OverlayLine } from '@/lib/lapOverlays';
 import type { VideoSyncState } from '@/hooks/useVideoSync';
 import { PlaybackProvider, usePlaybackContext, type PlaybackContextValue } from '@/contexts/PlaybackContext';
-import { calculateDistanceArray, mapIndexByDistance } from '@/lib/referenceUtils';
+import {
+  calculateDistanceArray,
+  mapIndexByDistance,
+  interpolateSampleByDistance,
+  anchorSampleTimes,
+} from '@/lib/referenceUtils';
 import { GraphPanel } from './GraphPanel';
 import { MiniMap } from './MiniMap';
 import { SecondaryVideo } from './SecondaryVideo';
@@ -62,14 +67,33 @@ export function SecondaryGraphStack(props: SecondaryGraphStackProps) {
     [overlay.samples, oStart, oEnd],
   );
 
+  // Anchor the overlay lap's time axis to its true (interpolated) start/finish
+  // crossings. The lap is sliced on integer indices, so its first sample sits a
+  // sub-sample fraction before the real crossing — a fraction that varies per lap,
+  // which is what made the comparison video drift later lap-by-lap. Distances are
+  // unchanged (only endpoint `t` differs), so `overlayFullD` stays valid here.
+  const overlayTimeSamples = useMemo(() => {
+    if (!overlay.id.startsWith('lap:')) return overlay.samples;
+    const lapNumber = Number(overlay.id.slice(4));
+    const lap = laps.find((l) => l.lapNumber === lapNumber);
+    if (!lap) return overlay.samples;
+    return anchorSampleTimes(overlay.samples, lap.startTime, lap.endTime);
+  }, [overlay.id, overlay.samples, laps]);
+
   // Override the playback cursor for the mirror subtree: the main cursor's track
-  // position, resolved into the overlay lap's own sample.
+  // position, resolved into the overlay lap. `currentIndex` is the snapped integer
+  // the charts/minimap draw on; `currentSample` is *interpolated* by distance (so
+  // its `t` — and thus the comparison video's seek — is sub-sample accurate and
+  // boundary-anchored). The two are intentionally not 1:1 in this subtree.
   const mapToInner = useCallback((mainIndex: number): PlaybackContextValue => {
-    const absMain = visibleRange[0] + mainIndex;
+    const absMain = Math.max(0, Math.min(visibleRange[0] + mainIndex, mainFullD.length - 1));
     const oIdx = mapIndexByDistance(mainFullD, overlayFullD, absMain);
     const secIdx = Math.max(0, Math.min(oIdx - oStart, secSamples.length - 1));
-    return { currentIndex: secIdx, currentSample: secSamples[secIdx] ?? null };
-  }, [visibleRange, mainFullD, overlayFullD, oStart, secSamples]);
+    const currentSample = interpolateSampleByDistance(
+      overlayTimeSamples, overlayFullD, mainFullD[absMain] ?? 0,
+    );
+    return { currentIndex: secIdx, currentSample };
+  }, [visibleRange, mainFullD, overlayFullD, oStart, secSamples, overlayTimeSamples]);
 
   // Scrubbing the mirror moves the shared cursor: map the overlay index back
   // onto the main lap's visible window (onScrub indexes into that window).
@@ -82,7 +106,7 @@ export function SecondaryGraphStack(props: SecondaryGraphStackProps) {
   }, [oStart, overlayFullD, mainFullD, visibleRange, onScrub]);
 
   const renderVideo = videoEnabled && videoState
-    ? () => <SecondaryVideo videoState={videoState} />
+    ? () => <SecondaryVideo videoState={videoState} overlayId={overlay.id} />
     : undefined;
 
   const renderMiniMap = useCallback(() => (

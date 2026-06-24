@@ -168,7 +168,10 @@
     "splitNeedsOverlay": "Aktiviere zuerst eine Overlay-Runde für den Vergleich",
     "splitMirrorEmpty": "Füge im Hauptbereich ein Diagramm zum Vergleich hinzu",
     "splitVideoStartsLater": "Video beginnt später",
-    "splitVideoEnded": "Video beendet"
+    "splitVideoEnded": "Video beendet",
+    "splitVideoNudgeEarlier": "Vergleichsvideo früher schieben",
+    "splitVideoNudgeLater": "Vergleichsvideo später schieben",
+    "splitVideoNudgeTooltip": "Manueller Video-Versatz (nur dieser Vergleich)"
   },
   "gg": {
     "noData": "Keine G-Kraft-Daten",
