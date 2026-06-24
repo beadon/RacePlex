@@ -24,6 +24,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   payload now errors and leaves the submission pending instead of being marked
   approved while landing nothing.
 
+### Removed
+- **"Continue with Google" sign-in.** Google OAuth routed through a third-party
+  hosted broker; it has been removed (along with its build-time scaffolding and the
+  `VITE_ENABLE_GOOGLE_AUTH` flag) pending a native Supabase Google OAuth setup.
+  Email sign-in/registration is unaffected. No public backend credentials ship in
+  the repo anymore — the Supabase fallbacks are blank, so a fresh clone runs fully
+  offline-first until you supply your own `VITE_SUPABASE_*` values.
+
 ### Changed
 - **Simple-view graph controls are easier to reach.** The collapse/expand button
   on the map/graph divider is now larger and lives on the **left**, grouped with a
