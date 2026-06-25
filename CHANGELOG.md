@@ -11,7 +11,125 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > from git history and grouped by theme rather than exhaustive per-commit
 > detail.
 
-## [2.9.1] - unreleased
+## [2.9.2] - 2026-06-25
+
+### Added
+- **Frame-by-frame stepping in the header.** Two new buttons flank the play button
+  to step the data cursor one sample back/forward. A synced video follows the step
+  (through the same sync path), landing on the exact frame — so drivers and coaches
+  can compare a lap literally frame by frame. Stepping pauses any running playback.
+- **Split graphs — side-by-side lap comparison (Pro tab).** On tablet and larger,
+  a new **Split graphs** button (top-right of the Pro tab, where the Simple tab's
+  Overlay toggle sits) splits the graph area into a draggable two-up view. Pick one
+  of your enabled overlay laps and the right panel mirrors the main panel's graphs
+  for that lap; a single playback control drives both, kept on the same point on
+  track. If a synced video is relocated into the graph stack and the chosen lap is
+  from the current session, a second video plays alongside it — **frame-locked to
+  the main player** and showing the same point on track in the comparison lap's own
+  footage (an out-of-session lap shows graphs only, leaving the main video
+  untouched). Opening the side panel — or pressing **Combine graphs** — returns to
+  the single view. Not available on phones.
+
+### Changed
+- **The Pro tab's side panel can now be collapsed on any screen size** (previously
+  phone-only), giving the graphs the full width when you want it.
+- **Video sync is now anchored to absolute session time.** Sync a video once and it
+  stays put — switching laps (or cropping the range) never needs a re-sync. The app
+  understands where the footage sits on the session timeline, so **partial videos**
+  are handled cleanly: when the camera started after the logger or stopped before
+  the session ended, the out-of-footage stretches show "Video starts later" /
+  "Video ended" while the charts keep playing, instead of a generic message.
+
+### Fixed
+- **Smoother playback with a video loaded.** Pressing play in Pro graph view with a
+  synced video stuttered: the video's playhead time lived inside the shared video
+  state, so every video frame re-created the whole session context and re-rendered
+  every tab and panel ~30–60×/sec. The per-frame playhead now lives in its own tiny
+  context (like the playback cursor already does), so only the video time readout
+  re-renders per frame and the rest of the view stays quiet.
+- **A synced video no longer stutters when you play or scrub the data.** Pressing
+  the top play button used to advance the data cursor on its own clock and *seek*
+  the locked video to chase it — every seek forces the decoder back to a keyframe,
+  so the picture juddered instead of playing. The top play button now drives the
+  **video itself** when it's locked over footage (the same smooth path as the
+  video's own play button), with the cursor derived from the video's playhead.
+- **Scrubbing a synced video is smoother and lands on the same frame every time.**
+  Dragging the data cursor fired a fresh video seek every frame regardless of whether
+  the previous one had finished, so the decoder thrashed (cancel/restart) and the
+  picture juddered; a fixed seek-throttle also dropped the final seek, parking the
+  video on a stale frame. Seeks are now **paced** on the video's own `seeked` event —
+  the next seek is issued only when the last completes, always to the latest cursor
+  position — using a fast approximate seek during the drag and one precise seek once
+  the cursor settles, so the parked frame is exact and repeatable. Scrub cursor
+  updates are also coalesced to one per animation frame, so a high-rate mouse or
+  trackpad no longer floods the main thread with graph redraws while the video seeks.
+- **Split-graphs comparison video no longer drifts lap-by-lap.** Two causes are
+  fixed. First, the comparison player seeked off the overlay lap's snapped first
+  sample (a sub-sample fraction before the true start/finish crossing); it now
+  anchors to each lap's true crossing times and interpolates the seek by track
+  distance. Second — the bigger one — a single sync offset can't absorb a
+  camera/datalogger **clock-rate** difference, so far-from-sync laps drifted by
+  seconds. Video sync is now **rate-aware**: a manual **± nudge** (50 ms steps) on
+  the comparison video fine-tunes one lap, and the **✓ Lock in** button turns that
+  into a calibration anchor — the clock rate is fit through it (refined as you lock
+  more laps) and applied to every lap automatically, keeping the lap you originally
+  synced pixel-exact. Nudges never touch the saved sync until you lock them.
+- **Approving a track/course submission now adds it to the database.** In the admin
+  **Submissions** tab, approving a submission previously only flipped its status —
+  it never created the track or course, so an approved new track/course silently
+  never appeared in the live tables. Approval now materializes the submission:
+  it upserts the track (creating it for a new track), upserts the course from the
+  submitted geometry/sectors, sets a new track's default course, and attaches any
+  drawn outline — covering new tracks, new courses, and course modifications. A bad
+  payload now errors and leaves the submission pending instead of being marked
+  approved while landing nothing.
+
+### Removed
+- **"Continue with Google" sign-in.** Google OAuth routed through a third-party
+  hosted broker; it has been removed (along with its build-time scaffolding and the
+  `VITE_ENABLE_GOOGLE_AUTH` flag) pending a native Supabase Google OAuth setup.
+  Email sign-in/registration is unaffected. No public backend credentials ship in
+  the repo anymore — the Supabase fallbacks are blank, so a fresh clone runs fully
+  offline-first until you supply your own `VITE_SUPABASE_*` values.
+
+### Changed
+- **Simple-view graph controls are easier to reach.** The collapse/expand button
+  on the map/graph divider is now larger and lives on the **left**, grouped with a
+  new **legend toggle** in a single floating control flag — clear of the map's
+  weather/info buttons on the right that it used to crowd. The legend toggle hides
+  the chart's legend bar to reclaim vertical space (handy for logs with many
+  channels), and collapsing the graph now shows a clean grey panel instead of a
+  cramped chart. The "data crop" sector dropdown keeps a minimum width so it no
+  longer squishes on mobile in the Simple or Pro views.
+
+### Fixed
+- **Simple-graph legend no longer lists g-force lines it doesn't draw.** With the
+  default "hardware" G-force source, the simple telemetry chart draws the hardware
+  accel channels and hides the GPS-derived Lat G/Lon G — but the legend still
+  listed them, so they appeared without ever drawing. The legend now matches what's
+  drawn; switch the G-force source to GPS in Settings to see Lat G/Lon G.
+- **Landing-page header layout.** The Sponsor button now sits at the far left next
+  to the LapWing brand, and the account control sits at the far right. A new
+  **Settings** button (opening the settings panel) sits just left of it. When signed
+  in, the account control is now a **Profile** button that opens the file-manager
+  drawer straight to the Profile tab, replacing the old Sign-out button.
+- **Support contact email.** The Terms of Service and Privacy Policy now point to
+  **support@perchwerks.com** for questions and requests (replacing the interim
+  address), and the Code of Conduct's enforcement contact was updated to match.
+
+### Added
+- **Download from a Fledgling over Bluetooth in the native app.** On the native
+  (Tauri) app the PerchWerks Fledgling tile in the logger picker now runs a real
+  Bluetooth download through the native shell (the native webview has no Web
+  Bluetooth). The flow scans for nearby loggers, lets you pick yours from an in-app
+  list, then connects, lists sessions and downloads + imports the chosen one — the
+  same device files (`.dove`/`.dovex`/`.csv`) and parser as the browser path. Built
+  on a new `createDovesloggerConnection()` adapter behind the existing
+  `LoggerConnection` interface, sharing the native IPC client with MyChron. Settings,
+  track sync and firmware update stay on the Web Bluetooth path for now. Web
+  downloads are unchanged.
+
+## [2.9.1] - 2026-06-22
 
 ### Changed
 - **Landing hero wording.** Dropped "Online" from the main heading (it's an
@@ -893,7 +1011,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   current lap so the racing lines actually sit on top of each other — same-session
   laps are left untouched (they already share a receiver). Alignment is map-only;
   the graphs compare by distance and were already drift-immune. This closes the
-  "align data from different loggers" gap. See `docs/plans/multi-lap-overlay.md`.
+  "align data from different loggers" gap. See `docs/plans/0000-multi-lap-overlay.md`.
 - **Build version + commit stamp in the home-page footer.** The landing page now
   shows the running app version and the short git commit hash (e.g.
   `v2.0.0 · 837b514`), baked in at build time. The hash links to that commit on
@@ -1016,7 +1134,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   The **current lap always renders on top** in every view. (Phase 1:
   current-session laps + snapshots, raw GPS. Cross-session drift-alignment and
   external-file/cross-logger overlays are planned follow-ups — see
-  `docs/plans/multi-lap-overlay.md`.)
+  `docs/plans/0000-multi-lap-overlay.md`.)
 - **G-G diagram (friction circle).** A new pro-mode graph plotting lateral vs.
   longitudinal G as a scatter, so you can see how much of the tyre's grip
   envelope you're using — the classic "are you driving the corners of the

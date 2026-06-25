@@ -14,6 +14,8 @@
     "home": "Inicio",
     "play": "Reproducir",
     "pause": "Pausar",
+    "prevFrame": "Fotograma anterior",
+    "nextFrame": "Fotograma siguiente",
     "allLaps": "Todas las vueltas",
     "lap": "Vuelta {{number}}",
     "garage": "Garaje",
@@ -94,6 +96,12 @@
     "fullLap": "Vuelta completa",
     "sector": "Sector {{label}}"
   },
+  "controls": {
+    "collapsePanel": "Contraer gráfico",
+    "expandPanel": "Expandir gráfico",
+    "showLegend": "Mostrar leyenda",
+    "hideLegend": "Ocultar leyenda"
+  },
   "map": {
     "mapPrefix": "Mapa",
     "styleDark": "Oscuro",
@@ -162,7 +170,18 @@
     "removeGraph": "Quitar gráfico",
     "miniMap": "Minimapa",
     "collapsePanel": "Contraer panel",
-    "expandPanel": "Expandir panel"
+    "expandPanel": "Expandir panel",
+    "splitGraphs": "Dividir gráficos",
+    "combineGraphs": "Combinar gráficos",
+    "splitNeedsOverlay": "Activa primero una vuelta superpuesta para comparar",
+    "splitMirrorEmpty": "Añade un gráfico en el panel principal para comparar",
+    "splitVideoStartsLater": "El vídeo empieza más tarde",
+    "splitVideoEnded": "El vídeo terminó",
+    "splitVideoNudgeEarlier": "Adelantar el vídeo de comparación",
+    "splitVideoNudgeLater": "Retrasar el vídeo de comparación",
+    "splitVideoNudgeTooltip": "Desfase manual del vídeo (solo esta comparación)",
+    "splitVideoCalibrate": "Fija esta alineación para corregir cada vuelta automáticamente",
+    "splitVideoRateTooltip": "Corrección calibrada del ritmo de reloj cámara/telemetría"
   },
   "gg": {
     "noData": "Sin datos de fuerza G",

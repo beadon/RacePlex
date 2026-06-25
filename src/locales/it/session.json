@@ -14,6 +14,8 @@
     "home": "Home",
     "play": "Riproduci",
     "pause": "Pausa",
+    "prevFrame": "Fotogramma precedente",
+    "nextFrame": "Fotogramma successivo",
     "allLaps": "Tutti i giri",
     "lap": "Giro {{number}}",
     "garage": "Garage",
@@ -94,6 +96,12 @@
     "fullLap": "Giro completo",
     "sector": "Settore {{label}}"
   },
+  "controls": {
+    "collapsePanel": "Comprimi grafico",
+    "expandPanel": "Espandi grafico",
+    "showLegend": "Mostra legenda",
+    "hideLegend": "Nascondi legenda"
+  },
   "map": {
     "mapPrefix": "Mappa",
     "styleDark": "Scuro",
@@ -162,7 +170,18 @@
     "removeGraph": "Rimuovi grafico",
     "miniMap": "Mini mappa",
     "collapsePanel": "Comprimi pannello",
-    "expandPanel": "Espandi pannello"
+    "expandPanel": "Espandi pannello",
+    "splitGraphs": "Dividi grafici",
+    "combineGraphs": "Combina grafici",
+    "splitNeedsOverlay": "Attiva prima un giro sovrapposto per confrontare",
+    "splitMirrorEmpty": "Aggiungi un grafico nel pannello principale per confrontare",
+    "splitVideoStartsLater": "Il video inizia più tardi",
+    "splitVideoEnded": "Video terminato",
+    "splitVideoNudgeEarlier": "Anticipa il video di confronto",
+    "splitVideoNudgeLater": "Ritarda il video di confronto",
+    "splitVideoNudgeTooltip": "Offset video manuale (solo questo confronto)",
+    "splitVideoCalibrate": "Blocca questo allineamento per correggere ogni giro automaticamente",
+    "splitVideoRateTooltip": "Correzione calibrata della frequenza di clock videocamera/telemetria"
   },
   "gg": {
     "noData": "Nessun dato di forza G",

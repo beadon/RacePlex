@@ -36,6 +36,8 @@ interface SingleSeriesChartProps {
   height?: number;
   /** Persist a new card height (fired on resize-drag release). */
   onHeightChange?: (height: number) => void;
+  /** Mirrored secondary card: hide the remove button + resize handle. */
+  readOnly?: boolean;
 }
 
 export function SingleSeriesChart({
@@ -43,7 +45,7 @@ export function SingleSeriesChart({
   color, label, onDelete,
   referenceValues = null, brakingGValues,
   allSamples, rangeStart, overlayLines = [],
-  height, onHeightChange,
+  height, onHeightChange, readOnly = false,
 }: SingleSeriesChartProps) {
   const { t } = useTranslation('session');
   const { useKph, useMetricDistance, gForceSmoothing, gForceSmoothingStrength, darkMode, chartXAxis, brakingZoneSettings } = useSettingsContext();
@@ -414,13 +416,15 @@ export function SingleSeriesChart({
         <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
         <span className="text-xs font-mono text-muted-foreground">{label}</span>
       </div>
-      <button
-        onClick={onDelete}
-        className="absolute top-1 right-1 z-10 p-1 rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors"
-        title={t('graphs.removeGraph')}
-      >
-        <X className="w-3.5 h-3.5" />
-      </button>
+      {!readOnly && (
+        <button
+          onClick={onDelete}
+          className="absolute top-1 right-1 z-10 p-1 rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors"
+          title={t('graphs.removeGraph')}
+        >
+          <X className="w-3.5 h-3.5" />
+        </button>
+      )}
       <div
         ref={containerRef}
         className="relative flex-1 w-full min-h-0 overflow-hidden cursor-crosshair"
@@ -435,11 +439,13 @@ export function SingleSeriesChart({
         <canvas ref={canvasRef} className="absolute inset-0 block w-full h-full" />
         <canvas ref={cursorCanvasRef} className="absolute inset-0 block w-full h-full pointer-events-none" />
       </div>
-      <GraphResizeHandle
-        height={cardHeight}
-        onResize={setCardHeight}
-        onCommit={(h) => { setCardHeight(h); onHeightChange?.(h); }}
-      />
+      {!readOnly && (
+        <GraphResizeHandle
+          height={cardHeight}
+          onResize={setCardHeight}
+          onCommit={(h) => { setCardHeight(h); onHeightChange?.(h); }}
+        />
+      )}
     </div>
   );
 }

@@ -14,6 +14,8 @@
     "home": "Startseite",
     "play": "Abspielen",
     "pause": "Pause",
+    "prevFrame": "Vorheriges Bild",
+    "nextFrame": "Nächstes Bild",
     "allLaps": "Alle Runden",
     "lap": "Runde {{number}}",
     "garage": "Garage",
@@ -94,6 +96,12 @@
     "fullLap": "Ganze Runde",
     "sector": "Sektor {{label}}"
   },
+  "controls": {
+    "collapsePanel": "Diagramm einklappen",
+    "expandPanel": "Diagramm ausklappen",
+    "showLegend": "Legende anzeigen",
+    "hideLegend": "Legende ausblenden"
+  },
   "map": {
     "mapPrefix": "Karte",
     "styleDark": "Dunkel",
@@ -162,7 +170,18 @@
     "removeGraph": "Diagramm entfernen",
     "miniMap": "Minikarte",
     "collapsePanel": "Bereich einklappen",
-    "expandPanel": "Bereich ausklappen"
+    "expandPanel": "Bereich ausklappen",
+    "splitGraphs": "Diagramme teilen",
+    "combineGraphs": "Diagramme zusammenführen",
+    "splitNeedsOverlay": "Aktiviere zuerst eine Overlay-Runde für den Vergleich",
+    "splitMirrorEmpty": "Füge im Hauptbereich ein Diagramm zum Vergleich hinzu",
+    "splitVideoStartsLater": "Video beginnt später",
+    "splitVideoEnded": "Video beendet",
+    "splitVideoNudgeEarlier": "Vergleichsvideo früher schieben",
+    "splitVideoNudgeLater": "Vergleichsvideo später schieben",
+    "splitVideoNudgeTooltip": "Manueller Video-Versatz (nur dieser Vergleich)",
+    "splitVideoCalibrate": "Diese Ausrichtung fixieren, um jede Runde automatisch zu korrigieren",
+    "splitVideoRateTooltip": "Kalibrierte Korrektur der Kamera-/Telemetrie-Taktrate"
   },
   "gg": {
     "noData": "Keine G-Kraft-Daten",

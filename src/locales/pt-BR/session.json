@@ -14,6 +14,8 @@
     "home": "Início",
     "play": "Reproduzir",
     "pause": "Pausar",
+    "prevFrame": "Quadro anterior",
+    "nextFrame": "Próximo quadro",
     "allLaps": "Todas as voltas",
     "lap": "Volta {{number}}",
     "garage": "Garagem",
@@ -94,6 +96,12 @@
     "fullLap": "Volta completa",
     "sector": "Setor {{label}}"
   },
+  "controls": {
+    "collapsePanel": "Recolher gráfico",
+    "expandPanel": "Expandir gráfico",
+    "showLegend": "Mostrar legenda",
+    "hideLegend": "Ocultar legenda"
+  },
   "map": {
     "mapPrefix": "Mapa",
     "styleDark": "Escuro",
@@ -162,7 +170,18 @@
     "removeGraph": "Remover gráfico",
     "miniMap": "Minimapa",
     "collapsePanel": "Recolher painel",
-    "expandPanel": "Expandir painel"
+    "expandPanel": "Expandir painel",
+    "splitGraphs": "Dividir gráficos",
+    "combineGraphs": "Combinar gráficos",
+    "splitNeedsOverlay": "Ative primeiro uma volta sobreposta para comparar",
+    "splitMirrorEmpty": "Adicione um gráfico no painel principal para comparar",
+    "splitVideoStartsLater": "O vídeo começa mais tarde",
+    "splitVideoEnded": "O vídeo terminou",
+    "splitVideoNudgeEarlier": "Adiantar o vídeo de comparação",
+    "splitVideoNudgeLater": "Atrasar o vídeo de comparação",
+    "splitVideoNudgeTooltip": "Deslocamento manual do vídeo (apenas esta comparação)",
+    "splitVideoCalibrate": "Fixar este alinhamento para corrigir cada volta automaticamente",
+    "splitVideoRateTooltip": "Correção calibrada da taxa de relógio câmera/telemetria"
   },
   "gg": {
     "noData": "Sem dados de força G",

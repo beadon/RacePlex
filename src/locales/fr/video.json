@@ -25,7 +25,9 @@
     "replaceVideo": "Remplacer la vidéo",
     "pickRecordingTitle": "Quelle vidéo ?",
     "pickRecordingDesc": "Vous avez sélectionné plusieurs enregistrements. Choisissez celui à charger — les autres sont ignorés.",
-    "pickRecordingCount": "{{count}} chapitres"
+    "pickRecordingCount": "{{count}} chapitres",
+    "videoStartsLater": "La vidéo commence plus tard",
+    "videoEnded": "Vidéo terminée"
   },
   "export": {
     "title": "Exporter la vidéo",

@@ -15,20 +15,27 @@ state lives in `DeviceContext.tsx` (wraps the app tree in `Index.tsx`). Source:
 `src/lib/ble/` (split per-concern; `bleDatalogger.ts` is the legacy barrel).
 The user reaches the BLE flow through `LoggerDownload` → `LoggerPicker` (an eager,
 lightweight image chooser of supported loggers). Picking the PerchWerks Fledgling
-tile mounts `DataloggerDownload` — the lazy BLE flow — on demand, so `lib/ble/*`
-stays out of the initial bundle while the menu still opens instantly. On the native
-(Tauri) shell the MyChron tile mounts the lazy `MyChronDownload` flow (Wi-Fi over
-native IPC — see `docs/android.md`); on the web it (and Alfano) still open
-explanatory dialogs.
+tile mounts `DataloggerDownload` — the lazy Web Bluetooth flow — on demand, so
+`lib/ble/*` stays out of the initial bundle while the menu still opens instantly.
+On the native (Tauri) shell the webview has no Web Bluetooth, so the Fledgling tile
+instead mounts the lazy `DovesloggerDownload` flow (BLE over native IPC: scan →
+pick device → connect → list → download), and the MyChron tile mounts the lazy
+`MyChronDownload` flow (Wi-Fi over native IPC — see `docs/android.md`); on the web
+the MyChron and Alfano tiles still open explanatory dialogs.
 
 `DataloggerDownload` talks to the device only through the generic
 `LoggerConnection` interface (`src/lib/loggers/`): `listLogs` / `downloadLog` /
 `disconnect`, with `createFledglingConnection()` adapting a `BleConnection`. MyChron
 is the second adapter — `createMychronConnection()` (`src/lib/loggers/mychron/`),
-native-only, over the Tauri shell — and Alfano (BLE) will be a third. All satisfy
-the same interface, and `DeviceContext.loggerKind` records which logger is connected
-so Fledgling-only surfaces (settings / tracks / firmware) can gate themselves
-(`supportsDeviceDetails` is `false` for MyChron). The pure progress formatters
+native-only, over the Tauri shell — and DovesLogger is the third —
+`createDovesloggerConnection()` (`src/lib/loggers/doveslogger/`), the native-BLE
+path for the same Fledgling hardware over the Tauri shell. Both native loggers share
+the kind-agnostic IPC client in `src/lib/loggers/native/ipc.ts` (only their
+`connect` / `scan` differ); Alfano (web BLE) will be a fourth. All satisfy the same
+interface, and `DeviceContext.loggerKind` records which logger is connected so
+Fledgling-only surfaces (settings / tracks / firmware) can gate themselves
+(`supportsDeviceDetails` is `false` for MyChron and for the native DovesLogger path,
+whose settings/tracks/firmware stay on the Web Bluetooth build for now). The pure progress formatters
 (`formatBytes` / `formatSpeed` / `formatTime`) and the `computeProgress()` helper now
 live transport-neutrally in `src/lib/loggers/progress.ts` (re-exported from
 `src/lib/ble/format.ts` for existing BLE callers) so both flows share them without
@@ -110,8 +117,8 @@ Bluetooth blocklist bans the Nordic legacy DFU service, and a Secure-DFU bootloa
 needs SWD pins (sealed units). So instead the image is **staged on the device's SD
 card over the existing `0x1820` file service** (not blocklisted), and the device
 verifies it by CRC and installs it itself. Full design + firmware contract:
-[`plans/firmware-sdcard-ota.md`](plans/firmware-sdcard-ota.md). The dead BLE-DFU
-investigation: [`plans/firmware-bluetooth-dfu.md`](plans/firmware-bluetooth-dfu.md).
+[`plans/0002-firmware-sdcard-ota.md`](plans/0002-firmware-sdcard-ota.md). The dead BLE-DFU
+investigation: [`plans/0001-firmware-bluetooth-dfu.md`](plans/0001-firmware-bluetooth-dfu.md).
 
 - **Check version** — read the standard **Device Information Service** (`0x180A`):
   Firmware Revision (`0x2A26`) → version, Model Number (`0x2A24`,

@@ -10,8 +10,6 @@
   },
   "account": {
     "signInBlurb": "Inicia sesión para respaldar y sincronizar tus archivos, garaje y notas entre dispositivos. Todo aquí sigue funcionando sin conexión en este dispositivo: Cloud Sync es opcional.",
-    "continueWithGoogle": "Continuar con Google",
-    "googleSignInFailed": "Error al iniciar sesión con Google",
     "signIn": "Iniciar sesión",
     "createAccount": "Crear cuenta",
     "offlineSignIn": "Estás sin conexión: iniciar sesión requiere conexión.",

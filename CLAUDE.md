@@ -43,6 +43,14 @@ telemetry viewer.
    explain *why*, not *what*, only where non-obvious. Small, focused PRs with clear
    commit messages explaining the *why* — prefer a topic branch + PR over committing
    to `main`. Respect the bundle budget and the conventions below.
+8. **Plans are numbered design records.** Plans live in `docs/plans/`, each prefixed
+   with a zero-padded sequence number (`0000-`, `0001-`, …). A **new plan takes the
+   next number after the highest existing one** — glance at the folder, increment.
+   Keep a plan updated *as you execute it*; only revisit an older plan later when
+   you're working in code that references it. **Every commit tied to a plan MUST cite
+   its plan number in the message** (e.g. `plan 0004:` prefix or `(plan 0004)`). The
+   point is to preserve how and *why* something was built so we don't re-research it
+   from scratch — see `docs/plans/README.md`.
 
 ---
 
@@ -79,14 +87,14 @@ src/
 │   ├── ui/                # shadcn/ui primitives
 │   ├── admin/             # Admin tabs (Tracks, Courses, Submissions, Users, BannedIps, Tools, Messages)
 │   ├── tabs/              # View tabs (GraphView, RaceLine, LapTimes, Coach, Tools; SetupsNotesPanel = Setups+Notes 50/50 split on md+, separate tabs on phones — bodies live in drawer/)
-│   ├── graphview/         # Pro mode: GraphPanel, GraphViewPanel, MiniMap, SingleSeriesChart, GGDiagram, InfoBox, PanelCard (resizable card chrome for relocated Video/Mini-Map panels). On mobile the left column collapses via a divider flag tab, and Video/Mini-Map can be relocated into the resizable graph stack from the top of the "Add Graph" picker (GraphPanel reports which are active so the host drops its duplicate VideoPlayer — single shared video ref).
+│   ├── graphview/         # Pro mode: GraphPanel, GraphViewPanel, MiniMap, SingleSeriesChart, GGDiagram, InfoBox, PanelCard (resizable card chrome for relocated Video/Mini-Map panels). The left column collapses via a divider flag tab (any screen size), and Video/Mini-Map can be relocated into the resizable graph stack from the top of the "Add Graph" picker (GraphPanel reports which are active so the host drops its duplicate VideoPlayer — single shared video ref). Split graphs (tablet+): SecondaryGraphStack mirrors the main panel's graph set for a chosen overlay lap in a draggable two-up view, overriding PlaybackContext for its subtree (nested PlaybackProvider) so one cursor lands on the same track position in both laps (distance-mapped via lib/referenceUtils mapIndexByDistance); SecondaryVideo is a literal second, lap-synced <video> for in-session overlay laps.
 │   ├── drawer/            # File-manager drawer tabs (Files, Vehicles/Karts, Device*); SetupsTab + NotesTab also here but mounted as main-view tabs
 │   ├── track-editor/      # Track editor: VisualEditor, SectorListEditor, CourseSectorEditor, Add*Dialog
 │   ├── video-overlays/    # Video-export overlay system: registry + themes + per-widget *Overlay
 │   ├── RaceLineView.tsx   # Leaflet map: race line, speed heatmap, braking zones
 │   ├── TelemetryChart.tsx # Canvas speed/telemetry chart (simple mode)
 │   ├── VideoPlayer.tsx    # Synced video playback + overlay system (multi-chunk GoPro playlists via lib/videoPlaylist)
-│   └── …                  # FileImport, LoggerDownload (eager picker host) + LoggerPicker (image chooser) + DataloggerDownload (lazy Fledgling BLE flow), LapSnapshot*, …
+│   └── …                  # FileImport, LoggerDownload (eager picker host) + LoggerPicker (image chooser) + DataloggerDownload (lazy web-BLE Fledgling flow) / DovesloggerDownload (lazy native-BLE Fledgling flow) / MyChronDownload (lazy native Wi-Fi flow), LapSnapshot*, …
 ├── hooks/                 # One concern each; Index.tsx orchestrates.
 │   ├── useSessionData     # Parses imported file → ParsedData
 │   ├── useLapManagement   # Lap calc, selection, visible range
@@ -116,7 +124,7 @@ src/
 │   ├── fileLoadingState.ts # ★ Host pub/sub for the global file-load overlay
 │   ├── *Storage.ts        # IDB/localStorage store modules (file, vehicle, engine, template, note, setup, …)
 │   ├── gps/               # ★ Phone-as-datalogger layer: gpsFix, customGps, sessionGate, realtimeTimer, dovepWriter
-│   ├── loggers/           # ★ Generic LoggerConnection (listLogs/downloadLog/disconnect) + per-logger adapters — Fledgling=BLE, mychron/=MyChron over native (Tauri) Wi-Fi IPC (lazy; @tauri-apps/api dynamic-imported, native-only); Alfano later. progress.ts = transport-neutral formatters + computeProgress (→ docs/ble.md)
+│   ├── loggers/           # ★ Generic LoggerConnection (listLogs/downloadLog/disconnect) + per-logger adapters — Fledgling=web BLE, mychron/=MyChron over native (Tauri) Wi-Fi IPC, doveslogger/=same Fledgling hardware over native (Tauri) BLE IPC (scan→connect→list→download); native/ipc.ts = shared kind-agnostic native IPC (both lazy; @tauri-apps/api dynamic-imported, native-only); Alfano later. progress.ts = transport-neutral formatters + computeProgress (→ docs/ble.md)
 │   ├── speedHeatmap.ts / mapMarker.ts / brakingZones / gforceCalculation / …  # racing math
 │   ├── chartUtils / canvas2d / chartAxis / chartColors / videoExport / overlayCanvasRenderer  # charts/video
 │   ├── videoPlaylist.ts   # ★ Pure GoPro chunked-video model: parse/order GH/GX/GP/GOPR chunk names, build a virtual timeline (cumulative offsets) + virtual↔local time mapping + planAudioSegments (export audio stitch). useVideoSync swaps the <video> src per chunk; a single file is a 1-chunk playlist
@@ -372,7 +380,6 @@ and the seeder: **→ `docs/i18n.md`**.
 | `VITE_SUPABASE_URL` / `VITE_SUPABASE_PUBLISHABLE_KEY` / `VITE_SUPABASE_PROJECT_ID` | Client | Backend creds (auto-set; `vite.config.ts` has public fallbacks) |
 | `VITE_ENABLE_ADMIN` | Client | `"true"` enables admin UI + `/admin`. `/login` is mounted when this OR `VITE_ENABLE_CLOUD` is on. |
 | `VITE_ENABLE_CLOUD` | Client | `"true"` enables public accounts (Cloud Sync + email sign-in + `/register` etc.). Default `"false"`. |
-| `VITE_ENABLE_GOOGLE_AUTH` | Client | `"true"` shows "Continue with Google". Requires `VITE_ENABLE_CLOUD`. Default `"false"`. |
 | `VITE_IS_NATIVE` | Client/Build | `"true"` ONLY for the native (Tauri/Android) shell build. Gates `isNativeApp()` (`lib/platform.ts`): no service worker, no in-app purchases (web-only billing — Google Play policy), external links via the system browser. Default `"false"`. → `docs/android.md`. |
 | `VITE_TURNSTILE_SITE_KEY` | Client | Cloudflare Turnstile site key (optional CAPTCHA) |
 | `TURNSTILE_SECRET_KEY` | Server (edge fn) | Turnstile secret — `???` |

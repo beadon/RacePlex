@@ -5,6 +5,7 @@ import { loadSessionVideo, hasSessionVideo, deleteSessionVideo, getSessionVideoM
 import type { OverlaySettings } from "@/components/video-overlays/types";
 import { DEFAULT_OVERLAY_SETTINGS } from "@/components/video-overlays/types";
 import { findNearestIndex } from "@/components/video-overlays/overlayUtils";
+import { coverageOf, sessionMsToVideoSec, videoSecToSessionMs, fitVideoTimeline, needsResync, type VideoCoverage } from "@/lib/videoTimeline";
 import { buildPlaylist, groupVideoRecordings, virtualToLocal, localToVirtual, type Playlist, type VideoRecording } from "@/lib/videoPlaylist";
 
 interface UseVideoSyncOptions {
@@ -13,6 +14,12 @@ interface UseVideoSyncOptions {
   currentIndex: number;
   onScrub: (index: number) => void;
   sessionFileName: string | null;
+  /**
+   * Whether the telemetry cursor is being PLAYED by the top play button. When
+   * true and the video is locked, the video plays natively as a drift-corrected
+   * slave instead of being seek-scrubbed once per cursor tick (which stutters).
+   */
+  dataIsPlaying: boolean;
 }
 
 export interface VideoSyncState {
@@ -23,11 +30,13 @@ export interface VideoSyncState {
   isLocked: boolean;
   isPlaying: boolean;
   syncOffsetMs: number;
+  /** Camera/datalogger clock-rate ratio (1 = clocks tick together). */
+  syncRate: number;
+  /** Number of per-lap calibration anchors currently feeding the rate fit. */
+  rateAnchorCount: number;
   fps: number;
   /** Virtual (whole-recording) duration in seconds — sum of all chunks. */
   videoDuration: number;
-  /** Virtual (whole-recording) current time in seconds. */
-  videoCurrentTime: number;
   /** Number of chunks in the playlist (1 for a single file). */
   chunkCount: number;
   /** Index of the currently-playing chunk. */
@@ -35,6 +44,9 @@ export interface VideoSyncState {
   /** Chunk descriptors (url + virtual offsets) for video export across chunks. */
   exportChunks: { url: string; startOffsetSec: number; durationSec: number }[];
   isOutOfRange: boolean;
+  /** Where the cursor sits relative to the footage: 'before' it starts,
+   *  'covered', or 'after' it ends (partial-video aware). */
+  coverage: VideoCoverage;
   overlaySettings: OverlaySettings;
   hasStoredVideo: boolean;
   storedVideoMeta: StoredVideoMeta | null;
@@ -56,6 +68,10 @@ export interface VideoSyncActions {
   togglePlay: () => void;
   stepFrame: (direction: 1 | -1) => void;
   setSyncPoint: () => void;
+  /** Add/update a per-lap rate-calibration anchor (from the comparison nudge). */
+  addRateAnchor: (lap: number, sessionMs: number, videoSec: number) => void;
+  /** Clear all per-lap rate calibration (back to pure offset). */
+  clearRateAnchors: () => void;
     seekVideo: (timeSec: number) => void;
     updateOverlaySettings: (settings: OverlaySettings) => void;
     deleteStoredVideo: () => Promise<void>;
@@ -78,6 +94,18 @@ interface ChunkEntry {
   handle?: FileSystemFileHandle;
   /** Known duration (from a restored record); read from the file when absent. */
   durationSec?: number;
+}
+
+/**
+ * Seek a video element, preferring `fastSeek` (approximate seek, no decode
+ * stall) when the browser supports it — smoother for scrub + drift correction.
+ */
+function seekVideoElement(video: HTMLVideoElement, timeSec: number): void {
+  const fast = (video as HTMLVideoElement & { fastSeek?: (t: number) => void }).fastSeek;
+  try {
+    if (typeof fast === "function") fast.call(video, timeSec);
+    else video.currentTime = timeSec;
+  } catch { /* out-of-range time is clamped by the browser */ }
 }
 
 /** Read a video file's duration via a throwaway metadata-only element. */
@@ -103,11 +131,10 @@ function readVideoDuration(url: string): Promise<number> {
   });
 }
 
-export function useVideoSync({ samples, allSamples, currentIndex, onScrub, sessionFileName }: UseVideoSyncOptions) {
+export function useVideoSync({ samples, allSamples, currentIndex, onScrub, sessionFileName, dataIsPlaying }: UseVideoSyncOptions) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const preloadVideoRef = useRef<HTMLVideoElement>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const lastSeekTimeRef = useRef(0);
 
   const onScrubRef = useRef(onScrub);
   onScrubRef.current = onScrub;
@@ -121,6 +148,14 @@ export function useVideoSync({ samples, allSamples, currentIndex, onScrub, sessi
   const [isPlaying, setIsPlaying] = useState(false);
   const [syncOffsetMs, setSyncOffsetMs] = useState(0);
   const syncOffsetMsRef = useRef(0);
+  // Camera/datalogger clock-rate ratio + the anchors it's fit from. The primary
+  // anchor is the user's sync point; extra anchors (one per fine-aligned lap)
+  // refine the rate via fitVideoTimeline. Rate 1 = legacy pure-offset behaviour.
+  const [syncRate, setSyncRate] = useState(1);
+  const syncRateRef = useRef(1);
+  const [rateAnchorCount, setRateAnchorCount] = useState(0);
+  const syncAnchorRef = useRef<{ sessionMs: number; videoSec: number } | null>(null);
+  const lapAnchorsRef = useRef<Map<number, { sessionMs: number; videoSec: number }>>(new Map());
   const [fps, setFps] = useState(30);
   const [videoDuration, setVideoDuration] = useState(0);
   const [videoCurrentTime, setVideoCurrentTime] = useState(0);
@@ -128,6 +163,7 @@ export function useVideoSync({ samples, allSamples, currentIndex, onScrub, sessi
   const [currentChunkIndex, setCurrentChunkIndex] = useState(0);
   const [exportChunks, setExportChunks] = useState<{ url: string; startOffsetSec: number; durationSec: number }[]>([]);
   const [isOutOfRange, setIsOutOfRange] = useState(false);
+  const [coverage, setCoverage] = useState<VideoCoverage>('covered');
   const [fileHandle, setFileHandle] = useState<FileSystemFileHandle | null>(null);
   const [overlaySettings, setOverlaySettings] = useState<OverlaySettings>(DEFAULT_OVERLAY_SETTINGS);
   const [storedVideoAvailable, setStoredVideoAvailable] = useState(false);
@@ -219,6 +255,15 @@ export function useVideoSync({ samples, allSamples, currentIndex, onScrub, sessi
       }
       syncOffsetMsRef.current = record.syncOffsetMs;
       setSyncOffsetMs(record.syncOffsetMs);
+      syncRateRef.current = record.syncRate ?? 1;
+      setSyncRate(record.syncRate ?? 1);
+      // Legacy records carry no anchor; pivot future calibration on footage start
+      // (a valid point on the rate-1 line: videoSec 0 ↔ sessionMs = offset).
+      syncAnchorRef.current = record.syncAnchor ?? { sessionMs: record.syncOffsetMs, videoSec: 0 };
+      lapAnchorsRef.current = new Map(
+        (record.rateAnchors ?? []).map((a) => [a.lap, { sessionMs: a.sessionMs, videoSec: a.videoSec }]),
+      );
+      setRateAnchorCount(lapAnchorsRef.current.size);
       setVideoFileName(record.videoFileName);
       if (record.isLocked !== undefined) setIsLocked(record.isLocked);
       if (record.overlaySettings) setOverlaySettings(record.overlaySettings);
@@ -302,6 +347,9 @@ export function useVideoSync({ samples, allSamples, currentIndex, onScrub, sessi
     const record: VideoSyncRecord = {
       sessionFileName,
       syncOffsetMs: offset,
+      syncRate: syncRateRef.current,
+      syncAnchor: syncAnchorRef.current ?? undefined,
+      rateAnchors: [...lapAnchorsRef.current.entries()].map(([lap, a]) => ({ lap, ...a })),
       videoFileName: fileName || videoFileName || "",
       fileHandle: handle || chunkHandlesRef.current[0] || fileHandle || undefined,
       isLocked: locked ?? isLocked,
@@ -310,6 +358,21 @@ export function useVideoSync({ samples, allSamples, currentIndex, onScrub, sessi
     };
     saveVideoSync(record);
   }, [sessionFileName, videoFileName, fileHandle, isLocked, overlaySettings]);
+
+  // Recompute the offset + rate from the current anchors and apply them to
+  // state/refs. Returns the new offset so callers can persist immediately.
+  const refitTimeline = useCallback(() => {
+    const { syncOffsetMs: off, syncRate: rate } = fitVideoTimeline(
+      syncAnchorRef.current,
+      [...lapAnchorsRef.current.values()],
+    );
+    syncOffsetMsRef.current = off;
+    syncRateRef.current = rate;
+    setSyncOffsetMs(off);
+    setSyncRate(rate);
+    setRateAnchorCount(lapAnchorsRef.current.size);
+    return off;
+  }, []);
 
   // Build the playlist from one chosen recording's files (creates the object
   // URLs only for these — the other recordings in a selection never get one).
@@ -468,8 +531,13 @@ export function useVideoSync({ samples, allSamples, currentIndex, onScrub, sessi
     }
   }, [videoUrl]);
 
-  // Video-drives-data (locked + playing): map the active chunk's local time to
-  // virtual time, then to telemetry.
+  // Video-drives-data (locked + playing): the VIDEO is the master clock — it
+  // plays natively (smooth decode, never seeked) and the telemetry cursor is
+  // DERIVED from its playhead each frame. Reached both from the video's own play
+  // button and from the top play button (which, when locked + over footage,
+  // routes to video.play() instead of running the rAF data clock — see
+  // Index.tsx). Playing the video natively is the only way to get smooth video;
+  // any approach that seeks the video to chase a separate clock stutters.
   useEffect(() => {
     const video = videoRef.current;
     if (!video || !videoUrl || !isLocked || !isPlaying) return;
@@ -478,14 +546,23 @@ export function useVideoSync({ samples, allSamples, currentIndex, onScrub, sessi
       const v = videoRef.current;
       if (!v) return;
       const pl = playlistRef.current;
+      const total = pl ? pl.totalDuration : v.duration;
       const virtualSec = pl ? localToVirtual(pl, currentChunkIndexRef.current, v.currentTime) : v.currentTime;
-      const telemetryMs = virtualSec * 1000 + syncOffsetMs;
+      const telemetryMs = videoSecToSessionMs(virtualSec, syncOffsetMs, syncRate);
       const s = samplesRef.current;
       const idx = findNearestIndex(s, telemetryMs);
-      const outOfRange = s.length === 0 || telemetryMs < s[0].t || telemetryMs > s[s.length - 1].t;
       onScrubRef.current(idx);
       setVideoCurrentTime(virtualSec);
-      setIsOutOfRange(outOfRange);
+      setCoverage(coverageOf(telemetryMs, syncOffsetMs, total, syncRate));
+      // The footage may run past the end of the session (camera stopped after
+      // the logger). We don't play video past the session — pause at the last
+      // sample instead of rolling on into uncaptured time.
+      if (s.length > 0 && telemetryMs > s[s.length - 1].t) {
+        setIsOutOfRange(true);
+        if (!v.paused) { v.pause(); setIsPlaying(false); }
+      } else {
+        setIsOutOfRange(false);
+      }
     };
     if ("requestVideoFrameCallback" in video) {
       const callback = () => {
@@ -506,40 +583,92 @@ export function useVideoSync({ samples, allSamples, currentIndex, onScrub, sessi
       requestAnimationFrame(loop);
     }
     return () => { active = false; };
-  }, [videoUrl, isLocked, isPlaying, syncOffsetMs]);
+  }, [videoUrl, isLocked, isPlaying, syncOffsetMs, syncRate]);
 
-  // Data-drives-video (locked + paused): seek the playlist to the selected sample.
+  // ── Data-drives-video SCRUB (locked + nothing playing) ─────────────────────
+  // Follow the cursor with the video while dragging or parked. Seeks are PACED
+  // on the <video>'s own `seeked` event: we keep only the latest desired
+  // position and issue the next seek when the previous one finishes, rather than
+  // firing a fresh seek every animation frame. Setting `currentTime` faster than
+  // the decoder can service it makes the browser cancel-and-restart in-flight
+  // seeks — that thrash is the scrub stutter. Pacing runs the decoder at its
+  // natural rate and always converges on where the cursor actually ended up.
+  //
+  // During the drag we use the fast (approximate, keyframe) seek for
+  // responsiveness; ~150ms after the cursor settles we land one PRECISE seek so
+  // the parked frame is exact — and deterministic (same cursor → same frame),
+  // which a fixed seek-throttle broke by dropping the trailing seek.
+  const scrubTargetSecRef = useRef<number | null>(null);
+  const scrubInFlightRef = useRef(false);
+  const scrubSettleRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const issueScrubSeek = useCallback((virtualSec: number, precise: boolean): boolean => {
+    const video = videoRef.current;
+    if (!video) return false;
+    const pl = playlistRef.current;
+    if (pl) {
+      const { index, localSec } = virtualToLocal(pl, virtualSec);
+      if (index !== currentChunkIndexRef.current) { loadChunk(index, localSec, false); return true; }
+      if (!needsResync(video.currentTime, localSec, 0.5 / fps)) return false;
+      if (precise) video.currentTime = localSec; else seekVideoElement(video, localSec);
+      return true;
+    }
+    if (!needsResync(video.currentTime, virtualSec, 0.5 / fps)) return false;
+    if (precise) video.currentTime = virtualSec; else seekVideoElement(video, virtualSec);
+    return true;
+  }, [loadChunk, fps]);
+
+  const pumpScrubSeek = useCallback(() => {
+    if (scrubInFlightRef.current) return;
+    const target = scrubTargetSecRef.current;
+    if (target == null) return;
+    scrubTargetSecRef.current = null;
+    if (issueScrubSeek(target, false)) scrubInFlightRef.current = true;
+  }, [issueScrubSeek]);
+
+  // Pace the next queued scrub seek off the previous one completing.
   useEffect(() => {
-    if (!isLocked || isPlaying) return;
+    const video = videoRef.current;
+    if (!video) return;
+    const onSeeked = () => { scrubInFlightRef.current = false; pumpScrubSeek(); };
+    video.addEventListener("seeked", onSeeked);
+    return () => video.removeEventListener("seeked", onSeeked);
+  }, [videoUrl, pumpScrubSeek]);
+
+  useEffect(() => () => { if (scrubSettleRef.current) clearTimeout(scrubSettleRef.current); }, []);
+
+  useEffect(() => {
+    if (!isLocked || isPlaying || dataIsPlaying) return;
     const video = videoRef.current;
     if (!video || !videoUrl || samples.length === 0) return;
-    const pl = playlistRef.current;
-    const total = pl ? pl.totalDuration : video.duration;
-    const now = performance.now();
-    if (now - lastSeekTimeRef.current < 50) return;
-    lastSeekTimeRef.current = now;
     const sample = samples[currentIndex];
     if (!sample) return;
-    const virtualSec = (sample.t - syncOffsetMs) / 1000;
+    const pl = playlistRef.current;
+    const total = pl ? pl.totalDuration : video.duration;
+    const virtualSec = sessionMsToVideoSec(sample.t, syncOffsetMs, syncRate);
     const clampedSec = Math.max(0, virtualSec);
-    if (virtualSec < 0 || virtualSec > total) {
+    const cov = coverageOf(sample.t, syncOffsetMs, total, syncRate);
+    setCoverage(cov);
+    setVideoCurrentTime(clampedSec);
+    if (cov !== 'covered') {
+      // No footage here — blank it; the cursor/charts still scrub through the gap.
       setIsOutOfRange(true);
       if (!video.paused) video.pause();
-    } else {
-      setIsOutOfRange(false);
-      if (pl) {
-        const { index, localSec } = virtualToLocal(pl, clampedSec);
-        if (index !== currentChunkIndexRef.current) {
-          loadChunk(index, localSec, false);
-        } else if (Math.abs(video.currentTime - localSec) > 0.5 / fps) {
-          video.currentTime = localSec;
-        }
-      } else if (Math.abs(video.currentTime - clampedSec) > 0.5 / fps) {
-        video.currentTime = clampedSec;
-      }
+      return;
     }
-    setVideoCurrentTime(clampedSec);
-  }, [currentIndex, isLocked, isPlaying, syncOffsetMs, samples, videoUrl, fps, loadChunk]);
+    setIsOutOfRange(false);
+    // Queue the latest position; the pacer issues it when the decoder is ready.
+    scrubTargetSecRef.current = clampedSec;
+    pumpScrubSeek();
+    // Land an exact-frame seek once the drag settles (also self-heals a stuck
+    // in-flight flag if a seek never reported back).
+    if (scrubSettleRef.current) clearTimeout(scrubSettleRef.current);
+    scrubSettleRef.current = setTimeout(() => {
+      scrubInFlightRef.current = false;
+      const v = videoRef.current;
+      if (v && v.paused) issueScrubSeek(clampedSec, true);
+    }, 150);
+  }, [currentIndex, isLocked, isPlaying, dataIsPlaying, syncOffsetMs, syncRate, samples, videoUrl, pumpScrubSeek, issueScrubSeek]);
 
   const togglePlay = useCallback(() => {
     const video = videoRef.current;
@@ -607,13 +736,29 @@ export function useVideoSync({ samples, allSamples, currentIndex, onScrub, sessi
   const setSyncPoint = useCallback(() => {
     const video = videoRef.current;
     if (!video || samples.length === 0) return;
-    const videoMs = currentVirtualTime() * 1000;
     const telemetryMs = samples[currentIndex]?.t ?? 0;
-    const offset = telemetryMs - videoMs;
-    syncOffsetMsRef.current = offset;
-    setSyncOffsetMs(offset);
-    persistSync(offset);
-  }, [samples, currentIndex, persistSync, currentVirtualTime]);
+    // A fresh manual sync becomes the primary anchor and invalidates any prior
+    // per-lap rate calibration (it was relative to the old anchor).
+    syncAnchorRef.current = { sessionMs: telemetryMs, videoSec: currentVirtualTime() };
+    lapAnchorsRef.current.clear();
+    persistSync(refitTimeline());
+  }, [samples, currentIndex, persistSync, currentVirtualTime, refitTimeline]);
+
+  // Fold a fine-alignment correspondence (from the comparison video's manual
+  // nudge on a given lap) into the rate fit. Keyed by lap so re-aligning the
+  // same lap updates rather than duplicates; the rate refines as more laps are
+  // added. No-op until a primary sync exists.
+  const addRateAnchor = useCallback((lap: number, sessionMs: number, videoSec: number) => {
+    if (!syncAnchorRef.current) return;
+    lapAnchorsRef.current.set(lap, { sessionMs, videoSec });
+    persistSync(refitTimeline());
+  }, [persistSync, refitTimeline]);
+
+  /** Drop all per-lap rate calibration, returning to a pure offset (rate 1). */
+  const clearRateAnchors = useCallback(() => {
+    lapAnchorsRef.current.clear();
+    persistSync(refitTimeline());
+  }, [persistSync, refitTimeline]);
 
   const seekVideo = useCallback((timeSec: number) => {
     const video = videoRef.current;
@@ -676,6 +821,9 @@ export function useVideoSync({ samples, allSamples, currentIndex, onScrub, sessi
       const record: VideoSyncRecord = {
         sessionFileName,
         syncOffsetMs,
+        syncRate: syncRateRef.current,
+        syncAnchor: syncAnchorRef.current ?? undefined,
+        rateAnchors: [...lapAnchorsRef.current.entries()].map(([lap, a]) => ({ lap, ...a })),
         videoFileName: videoFileName || "",
         fileHandle: chunkHandlesRef.current[0] || fileHandle || undefined,
         isLocked,
@@ -691,24 +839,29 @@ export function useVideoSync({ samples, allSamples, currentIndex, onScrub, sessi
   // and fresh references on every render would churn the whole context at
   // playback rate.
   const state: VideoSyncState = useMemo(() => ({
-    videoUrl, preloadUrl, videoFileName, isLocked, isPlaying, syncOffsetMs, fps,
-    videoDuration, videoCurrentTime, chunkCount, currentChunkIndex, exportChunks, isOutOfRange, overlaySettings,
+    videoUrl, preloadUrl, videoFileName, isLocked, isPlaying, syncOffsetMs, syncRate, rateAnchorCount, fps,
+    videoDuration, chunkCount, currentChunkIndex, exportChunks, isOutOfRange, coverage, overlaySettings,
     hasStoredVideo: storedVideoAvailable,
     storedVideoMeta,
     pendingRecordings,
   }), [
-    videoUrl, preloadUrl, videoFileName, isLocked, isPlaying, syncOffsetMs, fps,
-    videoDuration, videoCurrentTime, chunkCount, currentChunkIndex, exportChunks, isOutOfRange, overlaySettings,
+    videoUrl, preloadUrl, videoFileName, isLocked, isPlaying, syncOffsetMs, syncRate, rateAnchorCount, fps,
+    videoDuration, chunkCount, currentChunkIndex, exportChunks, isOutOfRange, coverage, overlaySettings,
     storedVideoAvailable, storedVideoMeta, pendingRecordings,
   ]);
 
   const actions: VideoSyncActions = useMemo(() => ({
     loadVideo, chooseRecording, cancelRecordingChoice, toggleLock, togglePlay, stepFrame, setSyncPoint,
+    addRateAnchor, clearRateAnchors,
     seekVideo, updateOverlaySettings, deleteStoredVideo: handleDeleteStoredVideo, refreshStoredMeta, videoRef, preloadVideoRef,
   }), [
     loadVideo, chooseRecording, cancelRecordingChoice, toggleLock, togglePlay, stepFrame, setSyncPoint,
+    addRateAnchor, clearRateAnchors,
     seekVideo, updateOverlaySettings, handleDeleteStoredVideo, refreshStoredMeta,
   ]);
 
-  return { state, actions, handleLoadedMetadata };
+  // videoCurrentTime is published separately from `state` (via VideoTimeContext in
+  // Index.tsx): it churns every video frame during playback and would otherwise
+  // re-create the whole VideoSyncState object — and through it the session context.
+  return { state, actions, handleLoadedMetadata, videoCurrentTime };
 }

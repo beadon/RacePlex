@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, lazy, Suspense } from "react";
 import { useTranslation } from "react-i18next";
-import { Gauge, Map, ListOrdered, BarChart3, FolderOpen, Play, Pause, Eye, EyeOff, AlertCircle, Wrench, NotebookPen, SlidersHorizontal } from "lucide-react";
+import { Gauge, Map, ListOrdered, BarChart3, FolderOpen, Play, Pause, StepBack, StepForward, Eye, EyeOff, AlertCircle, Wrench, NotebookPen, SlidersHorizontal, Columns2 } from "lucide-react";
 import { BrandLogo } from "@/components/BrandLogo";
 import { LandingPage } from "@/components/LandingPage";
 import { TrackEditor } from "@/components/TrackEditor"; // still used in compact header
@@ -49,6 +49,7 @@ import { cn } from "@/lib/utils";
 import { usePanelsForSlot, PanelSlot } from "@/plugins/panels";
 import { TrackPromptDialog } from "@/components/TrackPromptDialog";
 import { useSettings } from "@/hooks/useSettings";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { usePlayback } from "@/hooks/usePlayback";
 import { useFileManager } from "@/hooks/useFileManager";
 import { getSetupIndicator, type SetupIndicator } from "@/lib/setupStatus";
@@ -73,6 +74,7 @@ import { SettingsProvider } from "@/contexts/SettingsContext";
 import { DeviceProvider } from "@/contexts/DeviceContext";
 import { SessionProvider, type SessionContextValue } from "@/contexts/SessionContext";
 import { PlaybackProvider, type PlaybackContextValue } from "@/contexts/PlaybackContext";
+import { VideoTimeProvider, type VideoTimeContextValue } from "@/contexts/VideoTimeContext";
 import { snapshotLapSamples } from "@/lib/lapSnapshot";
 import type { PluginSnapshot } from "@/plugins/panels";
 
@@ -209,8 +211,43 @@ export default function Index() {
     currentIndex,
     onScrub: handleScrub,
     sessionFileName: currentFileName,
+    // When the top play button drives the cursor, the video plays natively as a
+    // drift-corrected slave instead of being seek-scrubbed per tick (stutter).
+    dataIsPlaying: isPlaying,
   });
   const currentSample = visibleSamples[currentIndex] ?? null;
+
+  // The top play button. When a video is locked AND the cursor sits over footage,
+  // drive the VIDEO natively (it plays smoothly and video-drives-data derives the
+  // cursor from it) instead of running the rAF data clock — a separate clock that
+  // seeks the video to keep up is what stutters. Otherwise (no video / unlocked /
+  // cursor in an uncovered gap) the data clock drives the cursor and the video
+  // stays put. The icon reflects whichever clock is running.
+  const anyPlaying = isPlaying || videoSync.state.isPlaying;
+  const handlePlaybackToggle = useCallback(() => {
+    const { isLocked, videoUrl, coverage, isPlaying: videoPlaying } = videoSync.state;
+    if (isPlaying || videoPlaying) {
+      if (videoPlaying) videoSync.actions.togglePlay();
+      if (isPlaying) togglePlayback();
+      return;
+    }
+    if (isLocked && videoUrl && coverage === "covered") {
+      videoSync.actions.togglePlay();
+    } else {
+      togglePlayback();
+    }
+  }, [isPlaying, videoSync.state, videoSync.actions, togglePlayback]);
+
+  // Frame-by-frame stepping: nudge the data cursor one sample, pausing any
+  // playback first. A synced video follows through the same scrub path (the
+  // transposer), so drivers/coaches can step a lap one frame at a time. Disabled
+  // with no data or at the respective end of the window.
+  const lastIndex = Math.max(0, visibleRange[1] - visibleRange[0]);
+  const stepDataFrame = useCallback((dir: 1 | -1) => {
+    if (isPlaying) togglePlayback();
+    if (videoSync.state.isPlaying) videoSync.actions.togglePlay();
+    setCurrentIndex((i) => Math.max(0, Math.min(lastIndex, i + dir)));
+  }, [isPlaying, togglePlayback, videoSync.state.isPlaying, videoSync.actions, setCurrentIndex, lastIndex]);
 
   // Data loading orchestration — owns the track-prompt UI state and the
   // sample-loader. Returns the three callbacks Index.tsx wires up to imports.
@@ -275,6 +312,20 @@ export default function Index() {
     selectedCourse,
     currentLapSamples: filteredSamples,
   });
+
+  // Split graphs (Pro tab): a second stack bound to one enabled overlay lap.
+  const [splitActive, setSplitActive] = useState(false);
+  const [splitOverlayId, setSplitOverlayId] = useState<string | null>(null);
+  const startSplit = useCallback((overlayId: string) => {
+    setSplitOverlayId(overlayId);
+    setSplitActive(true);
+  }, []);
+  const combineSplit = useCallback(() => setSplitActive(false), []);
+  // Auto-combine when the chosen overlay is toggled off (or none remain).
+  useEffect(() => {
+    if (!splitActive) return;
+    if (!overlayLines.some((o) => o.id === splitOverlayId)) setSplitActive(false);
+  }, [splitActive, splitOverlayId, overlayLines]);
 
   // Reference-lap handlers: clear the other side when one is set.
   const handleSetReferenceWithClear = useCallback((lapNumber: number) => {
@@ -418,6 +469,14 @@ export default function Index() {
     [currentIndex, currentSample],
   );
 
+  // The synced video's playhead also churns per frame during playback — kept in
+  // its own tiny context (only the VideoPlayer readout consumes it) so it never
+  // re-creates VideoSyncState / the session context.
+  const videoTimeContextValue = useMemo<VideoTimeContextValue>(
+    () => ({ videoCurrentTime: videoSync.videoCurrentTime }),
+    [videoSync.videoCurrentTime],
+  );
+
   // ── SessionContext: everything the three main view tabs need ────────────
   // Tabs read this via `useSessionContext()` instead of receiving 25+ props.
   // Must stay referentially stable during playback — the cursor lives in
@@ -467,6 +526,9 @@ export default function Index() {
     onToggleOverlayLegend: toggleOverlayLegend,
     onLoadOverlayFile: loadOverlayFile,
     onAddExternalOverlay: addExternalOverlay,
+    splitActive,
+    splitOverlayId,
+    onCombineSplit: combineSplit,
     sessionGpsPoint,
     sessionStartDate: data?.startDate,
     sessionFileName: currentFileName,
@@ -506,6 +568,7 @@ export default function Index() {
     overlaySelections, overlayLines, toggleOverlay,
     alignOverlays, toggleAlignOverlays, showOverlayLegend, toggleOverlayLegend,
     loadOverlayFile, addExternalOverlay,
+    splitActive, splitOverlayId, combineSplit,
     activeSnapshot, sessionSetup,
     sessionGpsPoint, currentFileName, sessionKartId, sessionSetupId, cachedWeatherStation,
     vehicleManager.vehicles, setupManager.setups, templateManager.templates,
@@ -533,6 +596,7 @@ export default function Index() {
     autoSave: settings.autoSaveFiles,
     showSampleFiles: effectiveShowSampleFiles,
     initialGarageTab: fileManager.initialGarageTab,
+    initialTopTab: fileManager.initialTopTab,
     showProfile,
     vehicles: vehicleManager.vehicles,
     vehicleTypes: templateManager.vehicleTypes,
@@ -548,7 +612,7 @@ export default function Index() {
   }), [
     fileManager.isOpen, fileManager.files, fileManager.fileMetadataMap, fileManager.storageUsed, fileManager.storageQuota,
     fileManager.close, fileManager.loadFile, fileManager.removeFile, fileManager.exportFile, fileManager.saveFile,
-    fileManager.initialGarageTab,
+    fileManager.initialGarageTab, fileManager.initialTopTab,
     handleDataLoaded, settings.autoSaveFiles, effectiveShowSampleFiles, showProfile,
     vehicleManager.vehicles, vehicleManager.addVehicle, vehicleManager.updateVehicle, vehicleManager.removeVehicle,
     data, handleCreateVehicleType,
@@ -589,6 +653,7 @@ export default function Index() {
           <LandingPage
             onDataLoaded={handleDataLoaded}
             onOpenFileManager={fileManager.open}
+            onOpenProfile={fileManager.openProfile}
             autoSave={settings.autoSaveFiles}
             autoSaveFile={fileManager.saveFile}
             onLoadSample={handleLoadSample}
@@ -596,6 +661,15 @@ export default function Index() {
             showSampleFiles={effectiveShowSampleFiles}
             enableAdmin={enableAdmin}
             enableCloud={enableCloud}
+            settingsButton={
+              <SettingsModal
+                settings={settings}
+                onSettingsChange={setSettings}
+                onToggleFieldDefault={toggleFieldDefault}
+                canHideSampleFiles={fileManager.hasOtherFiles}
+                triggerLabelBreakpoint="sm"
+              />
+            }
           />
           <Suspense fallback={null}>
             {/* Off-session stopgap: Setups normally lives in the main toolbar
@@ -615,6 +689,7 @@ export default function Index() {
     <SettingsProvider value={settingsContextValue}>
     <SessionProvider value={sessionContextValue}>
     <PlaybackProvider value={playbackContextValue}>
+    <VideoTimeProvider value={videoTimeContextValue}>
     <div className="h-screen bg-background flex flex-col overflow-hidden safe-area-inset">
       <header className="border-b border-border px-4 py-2 flex items-center justify-between shrink-0">
         <button
@@ -631,12 +706,32 @@ export default function Index() {
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="outline" size="icon" className="h-8 w-8" onClick={togglePlayback}>
-                  {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => stepDataFrame(-1)} disabled={visibleSamples.length === 0 || currentIndex <= 0} aria-label={t("header.prevFrame")}>
+                  <StepBack className="w-4 h-4" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>{isPlaying ? t("header.pause") : t("header.play")} ({averageFrameRate ? `${averageFrameRate.toFixed(0)} Hz` : "–"})</p>
+                <p>{t("header.prevFrame")}</p>
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="outline" size="icon" className="h-8 w-8" onClick={handlePlaybackToggle}>
+                  {anyPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{anyPlaying ? t("header.pause") : t("header.play")} ({averageFrameRate ? `${averageFrameRate.toFixed(0)} Hz` : "–"})</p>
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => stepDataFrame(1)} disabled={visibleSamples.length === 0 || currentIndex >= lastIndex} aria-label={t("header.nextFrame")}>
+                  <StepForward className="w-4 h-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{t("header.nextFrame")}</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -695,7 +790,7 @@ export default function Index() {
       </header>
 
       <main className="flex-1 min-h-0 overflow-hidden flex flex-col">
-        <TabBar topPanelView={topPanelView} setTopPanelView={setTopPanelView} laps={laps} showOverlays={showOverlays} onToggleOverlays={() => setShowOverlays(v => !v)} showCoach={showCoach} showTools={showTools} setupIndicator={setupIndicator} onSetupIndicatorClick={() => setupIndicator && navigateToManage(setupIndicator.target)} />
+        <TabBar topPanelView={topPanelView} setTopPanelView={setTopPanelView} laps={laps} showOverlays={showOverlays} onToggleOverlays={() => setShowOverlays(v => !v)} showCoach={showCoach} showTools={showTools} setupIndicator={setupIndicator} onSetupIndicatorClick={() => setupIndicator && navigateToManage(setupIndicator.target)} overlayLines={overlayLines} splitActive={splitActive} onStartSplit={startSplit} onCombineSplit={combineSplit} />
 
 
         <div className="flex-1 min-h-0 overflow-hidden">
@@ -764,6 +859,7 @@ export default function Index() {
         onDismiss={snapshots.dismissPrompt}
       />
     </div>
+    </VideoTimeProvider>
     </PlaybackProvider>
     </SessionProvider>
     </SettingsProvider>
@@ -772,7 +868,7 @@ export default function Index() {
 }
 
 /** Tab navigation bar for the main data view */
-function TabBar({ topPanelView, setTopPanelView, laps, showOverlays, onToggleOverlays, showCoach, showTools, setupIndicator, onSetupIndicatorClick }: {
+function TabBar({ topPanelView, setTopPanelView, laps, showOverlays, onToggleOverlays, showCoach, showTools, setupIndicator, onSetupIndicatorClick, overlayLines, splitActive, onStartSplit, onCombineSplit }: {
   topPanelView: TopPanelView;
   setTopPanelView: (view: TopPanelView) => void;
   laps: { lapNumber: number }[];
@@ -782,8 +878,13 @@ function TabBar({ topPanelView, setTopPanelView, laps, showOverlays, onToggleOve
   showTools: boolean;
   setupIndicator: SetupIndicator | null;
   onSetupIndicatorClick: () => void;
+  overlayLines: OverlayLine[];
+  splitActive: boolean;
+  onStartSplit: (overlayId: string) => void;
+  onCombineSplit: () => void;
 }) {
   const { t } = useTranslation("session");
+  const isMobile = useIsMobile();
   const tabBase = "flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors";
   const tabState = (active: boolean) =>
     active
@@ -868,6 +969,41 @@ function TabBar({ topPanelView, setTopPanelView, laps, showOverlays, onToggleOve
             {showOverlays ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
             <span className="text-xs hidden sm:inline">{t("header.overlay")}</span>
           </Button>
+        </div>
+      )}
+      {/* Split graphs: side-by-side lap comparison (tablet+, never phones). */}
+      {topPanelView === "graphview" && !isMobile && (
+        <div className="ml-auto mr-3">
+          {splitActive ? (
+            <Button variant="ghost" size="sm" onClick={onCombineSplit} className="h-7 px-2 gap-1.5">
+              <Columns2 className="w-4 h-4" />
+              <span className="text-xs hidden sm:inline">{t("graphs.combineGraphs")}</span>
+            </Button>
+          ) : overlayLines.length > 0 ? (
+            <Select value="" onValueChange={onStartSplit}>
+              <SelectTrigger className="h-7 w-auto gap-1.5 px-2 border-0 bg-transparent hover:bg-muted/50 [&>svg:last-child]:hidden">
+                <span className="flex items-center gap-1.5">
+                  <Columns2 className="w-4 h-4" />
+                  <span className="text-xs hidden sm:inline">{t("graphs.splitGraphs")}</span>
+                </span>
+              </SelectTrigger>
+              <SelectContent>
+                {overlayLines.map((o) => (
+                  <SelectItem key={o.id} value={o.id}>
+                    <span className="flex items-center gap-2">
+                      <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: o.color }} />
+                      {o.label}
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <Button variant="ghost" size="sm" disabled className="h-7 px-2 gap-1.5" title={t("graphs.splitNeedsOverlay")}>
+              <Columns2 className="w-4 h-4" />
+              <span className="text-xs hidden sm:inline">{t("graphs.splitGraphs")}</span>
+            </Button>
+          )}
         </div>
       )}
     </div>

@@ -10,8 +10,6 @@
   },
   "account": {
     "signInBlurb": "Melde dich an, um deine Dateien, deine Garage und Notizen geräteübergreifend zu sichern und zu synchronisieren. Alles hier funktioniert weiterhin offline auf diesem Gerät — Cloud Sync ist optional.",
-    "continueWithGoogle": "Mit Google fortfahren",
-    "googleSignInFailed": "Google-Anmeldung fehlgeschlagen",
     "signIn": "Anmelden",
     "createAccount": "Konto erstellen",
     "offlineSignIn": "Du bist offline — die Anmeldung benötigt eine Verbindung.",
