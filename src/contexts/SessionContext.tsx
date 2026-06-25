@@ -92,6 +92,13 @@ export interface SessionContextValue {
   /** Add a lap from a loaded external file as an overlay. */
   onAddExternalOverlay: (fileName: string, lapNumber: number) => void;
 
+  // ── Split graphs (Pro tab side-by-side comparison, tablet+) ───────────────
+  /** A second graph stack is bound to one enabled overlay lap. */
+  splitActive: boolean;
+  splitOverlayId: string | null;
+  /** Re-opening the side panel is the same as clicking "Combine graphs". */
+  onCombineSplit: () => void;
+
   // ── Session metadata ──────────────────────────────────────────────────────
   sessionGpsPoint?: { lat: number; lon: number };
   sessionStartDate?: Date;

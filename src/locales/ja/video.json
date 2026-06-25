@@ -25,7 +25,9 @@
     "replaceVideo": "動画を差し替える",
     "pickRecordingTitle": "どの動画ですか？",
     "pickRecordingDesc": "複数の録画が選択されました。読み込むものを選んでください（ほかは破棄されます）。",
-    "pickRecordingCount": "{{count}} チャプター"
+    "pickRecordingCount": "{{count}} チャプター",
+    "videoStartsLater": "映像はこの先から始まります",
+    "videoEnded": "映像は終了しました"
   },
   "export": {
     "title": "動画を書き出す",

@@ -2,8 +2,7 @@ import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Plus } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { RangeSlider } from '@/components/RangeSlider';
-import { SectorCropSelect } from '@/components/SectorCropSelect';
+import { GraphRangeControl } from './GraphRangeControl';
 import { SingleSeriesChart } from './SingleSeriesChart';
 import { GGDiagram } from './GGDiagram';
 import { PanelCard } from './PanelCard';
@@ -50,6 +49,20 @@ interface GraphPanelProps {
   /** Reports which relocated panels are active, so the host can avoid mounting
    *  a duplicate (the video player binds a single shared element ref). */
   onMobilePanelsChange?: (active: { video: boolean; miniMap: boolean }) => void;
+  /** Mirrored secondary stack (split-graphs): render this exact graph set
+   *  instead of the panel's own, read-only — no picker, slider, or persistence. */
+  controlledActiveGraphs?: string[];
+  controlledGraphHeights?: Record<string, number>;
+  secondary?: boolean;
+  /** Main stack → host: report the active graph set + heights so a mirrored
+   *  secondary stack can match it. */
+  onActiveGraphsChange?: (activeGraphs: string[], graphHeights: Record<string, number>) => void;
+  /** Slim header bar content (split-graphs: per-panel lap label/legend). When
+   *  set, both stacks share a fixed-height bar so their graph rows line up. */
+  header?: React.ReactNode;
+  /** Hide the bottom range/crop control (split-graphs renders one shared control
+   *  spanning both panels instead). */
+  hideRangeControl?: boolean;
 }
 
 export function GraphPanel({
@@ -57,29 +70,43 @@ export function GraphPanel({
   visibleRange, onRangeChange, minRange, formatRangeLabel, sessionFileName, overlayLines = [],
   course = null, laps = [], selectedLapNumber = null,
   enableMobilePanels = false, renderVideo, renderMiniMap, onMobilePanelsChange,
+  controlledActiveGraphs, controlledGraphHeights, secondary = false, onActiveGraphsChange,
+  header, hideRangeControl = false,
 }: GraphPanelProps) {
   const { t } = useTranslation('session');
   const { useKph, useMetricDistance, brakingZoneSettings } = useSettingsContext();
-  const [activeGraphs, setActiveGraphs] = useState<string[]>([]);
-  const [graphHeights, setGraphHeights] = useState<Record<string, number>>({});
+  const [internalActiveGraphs, setActiveGraphs] = useState<string[]>([]);
+  const [internalGraphHeights, setGraphHeights] = useState<Record<string, number>>({});
   const loadedFileRef = useRef<string | null>(null);
 
-  // Load saved graph prefs when session changes
+  // A mirrored secondary stack renders a controlled set (no own state/persistence).
+  const activeGraphs = controlledActiveGraphs ?? internalActiveGraphs;
+  const graphHeights = controlledGraphHeights ?? internalGraphHeights;
+
+  // Load saved graph prefs when session changes (main stack only)
   useEffect(() => {
+    if (secondary) return;
     if (!sessionFileName || sessionFileName === loadedFileRef.current) return;
     loadedFileRef.current = sessionFileName;
     loadGraphPrefs(sessionFileName).then(saved => {
       if (saved.activeGraphs.length > 0) setActiveGraphs(saved.activeGraphs);
       setGraphHeights(saved.graphHeights);
     }).catch(() => {});
-  }, [sessionFileName]);
+  }, [sessionFileName, secondary]);
 
   // Persist whenever active graphs or their heights change (skip initial empty
   // state before load).
   useEffect(() => {
+    if (secondary) return;
     if (!sessionFileName || loadedFileRef.current !== sessionFileName) return;
-    saveGraphPrefs(sessionFileName, activeGraphs, graphHeights).catch(() => {});
-  }, [activeGraphs, graphHeights, sessionFileName]);
+    saveGraphPrefs(sessionFileName, internalActiveGraphs, internalGraphHeights).catch(() => {});
+  }, [internalActiveGraphs, internalGraphHeights, sessionFileName, secondary]);
+
+  // Report the active graph set up so a mirrored secondary stack can match it.
+  useEffect(() => {
+    if (secondary) return;
+    onActiveGraphsChange?.(internalActiveGraphs, internalGraphHeights);
+  }, [internalActiveGraphs, internalGraphHeights, secondary, onActiveGraphsChange]);
 
   const setGraphHeight = useCallback((key: string, height: number) => {
     setGraphHeights(prev => ({ ...prev, [key]: height }));
@@ -178,8 +205,8 @@ export function GraphPanel({
 
   const hasBothSources = hasHwAccel && hasGpsG;
 
-  const hasVideoPanel = enableMobilePanels && !!renderVideo;
-  const hasMiniMapPanel = enableMobilePanels && !!renderMiniMap;
+  const hasVideoPanel = (enableMobilePanels || secondary) && !!renderVideo;
+  const hasMiniMapPanel = (enableMobilePanels || secondary) && !!renderMiniMap;
 
   // Available data sources
   const availableSources = useMemo(() => {
@@ -221,12 +248,14 @@ export function GraphPanel({
 
   // Report which relocated panels are live so the host can drop its own copy
   // (the video player binds a single shared element ref — two would collide).
+  // The mirrored secondary stack runs its own passive video, so it never reports.
   useEffect(() => {
+    if (secondary) return;
     onMobilePanelsChange?.({
       video: hasVideoPanel && activeGraphs.includes(VIDEO_KEY),
       miniMap: hasMiniMapPanel && activeGraphs.includes(MINIMAP_KEY),
     });
-  }, [activeGraphs, hasVideoPanel, hasMiniMapPanel, onMobilePanelsChange]);
+  }, [activeGraphs, hasVideoPanel, hasMiniMapPanel, onMobilePanelsChange, secondary]);
 
   const addGraph = useCallback((key: string) => {
     if (key && !activeGraphs.includes(key)) {
@@ -257,12 +286,17 @@ export function GraphPanel({
 
   return (
     <div className="flex flex-col h-full min-h-0">
+      {header && (
+        <div className="shrink-0 flex items-center border-b border-border bg-muted/30 px-2 py-1 h-7">
+          {header}
+        </div>
+      )}
       {/* Scrollable graph area */}
       <div className="flex-1 min-h-0 overflow-y-auto">
         {activeGraphs.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-muted-foreground gap-4">
-            <p className="text-sm">{t('graphs.addSourcePrompt')}</p>
-            {unusedSources.length > 0 && (
+            <p className="text-sm">{secondary ? t('graphs.splitMirrorEmpty') : t('graphs.addSourcePrompt')}</p>
+            {!secondary && unusedSources.length > 0 && (
               <Select onValueChange={addGraph}>
                 <SelectTrigger className="w-[200px] h-9">
                   <div className="flex items-center gap-2">
@@ -290,6 +324,7 @@ export function GraphPanel({
                     height={graphHeights[key]}
                     defaultHeight={VIDEO_DEFAULT_HEIGHT}
                     onHeightChange={(h) => setGraphHeight(key, h)}
+                    readOnly={secondary}
                   >
                     <div className="h-full">{renderVideo!()}</div>
                   </PanelCard>
@@ -303,6 +338,7 @@ export function GraphPanel({
                     height={graphHeights[key]}
                     defaultHeight={MINIMAP_DEFAULT_HEIGHT}
                     onHeightChange={(h) => setGraphHeight(key, h)}
+                    readOnly={secondary}
                   >
                     <div className="h-full">{renderMiniMap!()}</div>
                   </PanelCard>
@@ -317,6 +353,7 @@ export function GraphPanel({
                   onDelete={() => removeGraph(key)}
                   height={graphHeights[key]}
                   onHeightChange={(h) => setGraphHeight(key, h)}
+                  readOnly={secondary}
                 />
               ) : (
                 <SingleSeriesChart
@@ -334,11 +371,12 @@ export function GraphPanel({
                   overlayLines={overlayLines}
                   height={graphHeights[key]}
                   onHeightChange={(h) => setGraphHeight(key, h)}
+                  readOnly={secondary}
                 />
               )
             ))}
             {/* Add more button */}
-            {unusedSources.length > 0 && (
+            {!secondary && unusedSources.length > 0 && (
               <div className="flex justify-center py-3">
                 <Select onValueChange={addGraph}>
                   <SelectTrigger className="w-[180px] h-8 text-sm">
@@ -359,30 +397,20 @@ export function GraphPanel({
         )}
       </div>
 
-      {/* Range slider (80%) + crop-to-sector select (~20%, with a min-width floor so it stays readable on mobile) - fixed at bottom */}
-      {filteredSamples.length > 0 && (
-        <div className="shrink-0 flex items-center gap-3 px-4 py-2 border-t border-border bg-muted/30">
-          <div className="flex-[4] min-w-0">
-            <RangeSlider
-              min={0}
-              max={filteredSamples.length - 1}
-              value={visibleRange}
-              onChange={onRangeChange}
-              minRange={minRange}
-              formatLabel={formatRangeLabel}
-            />
-          </div>
-          <div className="flex-1 min-w-[88px]">
-            <SectorCropSelect
-              course={course}
-              laps={laps}
-              selectedLapNumber={selectedLapNumber}
-              filteredLength={filteredSamples.length}
-              visibleRange={visibleRange}
-              onRangeChange={onRangeChange}
-            />
-          </div>
-        </div>
+      {/* Range slider + crop-to-sector select. The mirrored secondary stack has
+          no own control, and split mode renders one shared control spanning both
+          panels (hideRangeControl) — both follow the single main cursor. */}
+      {!secondary && !hideRangeControl && (
+        <GraphRangeControl
+          filteredSamples={filteredSamples}
+          visibleRange={visibleRange}
+          onRangeChange={onRangeChange}
+          minRange={minRange}
+          formatRangeLabel={formatRangeLabel}
+          course={course}
+          laps={laps}
+          selectedLapNumber={selectedLapNumber}
+        />
       )}
     </div>
   );

@@ -168,7 +168,18 @@
     "removeGraph": "Supprimer le graphique",
     "miniMap": "Mini-carte",
     "collapsePanel": "Réduire le panneau",
-    "expandPanel": "Agrandir le panneau"
+    "expandPanel": "Agrandir le panneau",
+    "splitGraphs": "Diviser les graphiques",
+    "combineGraphs": "Combiner les graphiques",
+    "splitNeedsOverlay": "Activez d'abord un tour superposé pour comparer",
+    "splitMirrorEmpty": "Ajoutez un graphique sur le panneau principal pour comparer",
+    "splitVideoStartsLater": "La vidéo commence plus tard",
+    "splitVideoEnded": "Vidéo terminée",
+    "splitVideoNudgeEarlier": "Avancer la vidéo de comparaison",
+    "splitVideoNudgeLater": "Retarder la vidéo de comparaison",
+    "splitVideoNudgeTooltip": "Décalage vidéo manuel (cette comparaison uniquement)",
+    "splitVideoCalibrate": "Verrouiller cet alignement pour corriger chaque tour automatiquement",
+    "splitVideoRateTooltip": "Correction calibrée du débit d'horloge caméra/télémétrie"
   },
   "gg": {
     "noData": "Aucune donnée de force G",

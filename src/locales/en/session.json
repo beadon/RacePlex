@@ -167,7 +167,18 @@
     "removeGraph": "Remove graph",
     "miniMap": "Mini Map",
     "collapsePanel": "Collapse panel",
-    "expandPanel": "Expand panel"
+    "expandPanel": "Expand panel",
+    "splitGraphs": "Split graphs",
+    "combineGraphs": "Combine graphs",
+    "splitNeedsOverlay": "Enable an overlay lap first to compare side by side",
+    "splitMirrorEmpty": "Add a graph on the main panel to compare",
+    "splitVideoStartsLater": "Video starts later",
+    "splitVideoEnded": "Video ended",
+    "splitVideoNudgeEarlier": "Nudge comparison video earlier",
+    "splitVideoNudgeLater": "Nudge comparison video later",
+    "splitVideoNudgeTooltip": "Manual video offset (this comparison only)",
+    "splitVideoCalibrate": "Lock in this alignment to auto-correct every lap",
+    "splitVideoRateTooltip": "Calibrated camera/telemetry clock-rate correction"
   },
   "gg": {
     "noData": "No G-force data",

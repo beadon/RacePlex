@@ -7,6 +7,9 @@ import {
   computeReferenceData,
   alignByDistance,
   alignValuesByDistance,
+  mapIndexByDistance,
+  interpolateSampleByDistance,
+  anchorSampleTimes,
 } from "./referenceUtils";
 import { EARTH_RADIUS_M } from "./parserUtils";
 import type { GpsSample } from "@/types/racing";
@@ -345,5 +348,123 @@ describe("alignValuesByDistance", () => {
 
   it("returns [] for empty input", () => {
     expect(alignValuesByDistance([], lap(1), [1])).toEqual([]);
+  });
+});
+
+// ─── mapIndexByDistance ──────────────────────────────────────────────────────
+
+describe("mapIndexByDistance", () => {
+  it("returns 0 for empty arrays", () => {
+    expect(mapIndexByDistance([], [0, 1, 2], 1)).toBe(0);
+    expect(mapIndexByDistance([0, 1, 2], [], 1)).toBe(0);
+  });
+
+  it("maps endpoints to endpoints", () => {
+    const from = [0, 10, 20, 30];
+    const to = [0, 5, 10, 15, 20, 25, 30];
+    expect(mapIndexByDistance(from, to, 0)).toBe(0);
+    expect(mapIndexByDistance(from, to, from.length - 1)).toBe(to.length - 1);
+  });
+
+  it("snaps to the nearest sample at the same cumulative distance", () => {
+    const from = [0, 10, 20, 30];
+    const to = [0, 5, 10, 15, 20, 25, 30];
+    // distance 10 → exact match at to-index 2
+    expect(mapIndexByDistance(from, to, 1)).toBe(2);
+    // distance 20 → exact match at to-index 4
+    expect(mapIndexByDistance(from, to, 2)).toBe(4);
+  });
+
+  it("picks the closer bracket when the distance falls between samples", () => {
+    const from = [0, 12]; // target 12
+    const to = [0, 10, 20]; // 12 is closer to 10 (idx 1) than 20 (idx 2)
+    expect(mapIndexByDistance(from, to, 1)).toBe(1);
+    const from2 = [0, 18]; // 18 is closer to 20 (idx 2)
+    expect(mapIndexByDistance(from2, to, 1)).toBe(2);
+  });
+
+  it("clamps an out-of-bounds source index", () => {
+    const from = [0, 10, 20];
+    const to = [0, 10, 20];
+    expect(mapIndexByDistance(from, to, 99)).toBe(2);
+    expect(mapIndexByDistance(from, to, -5)).toBe(0);
+  });
+
+  it("clamps a target beyond the other lap's length to its last sample", () => {
+    const from = [0, 50]; // longer lap
+    const to = [0, 10, 20]; // shorter lap, max distance 20
+    expect(mapIndexByDistance(from, to, 1)).toBe(2);
+  });
+});
+
+// ─── interpolateSampleByDistance ────────────────────────────────────────────
+
+describe("interpolateSampleByDistance", () => {
+  // Two samples 100 m apart (1° lon ≈ 111195·cos(0) m at the equator is large, so
+  // use a tiny lon step) — distances are computed by calculateDistanceArray.
+  const samples = [
+    sample(1000, 0, 0, 10, 16),
+    sample(2000, 0, 0.001, 30, 48),
+  ];
+  const distances = calculateDistanceArray(samples);
+
+  it("returns the exact sample time at an on-sample distance", () => {
+    expect(interpolateSampleByDistance(samples, distances, 0).t).toBe(1000);
+    const max = distances[distances.length - 1];
+    expect(interpolateSampleByDistance(samples, distances, max).t).toBe(2000);
+  });
+
+  it("linearly interpolates t and coords at the midpoint", () => {
+    const mid = distances[distances.length - 1] / 2;
+    const s = interpolateSampleByDistance(samples, distances, mid);
+    expect(s.t).toBeCloseTo(1500, 6);
+    expect(s.lon).toBeCloseTo(0.0005, 9);
+    expect(s.speedMph).toBeCloseTo(20, 6);
+    expect(s.speedKph).toBeCloseTo(32, 6);
+  });
+
+  it("clamps below 0 to the first sample and above max to the last", () => {
+    expect(interpolateSampleByDistance(samples, distances, -100).t).toBe(1000);
+    expect(interpolateSampleByDistance(samples, distances, 1e9).t).toBe(2000);
+  });
+
+  it("guards empty input", () => {
+    expect(interpolateSampleByDistance([], [], 0).t).toBe(0);
+  });
+});
+
+// ─── anchorSampleTimes ──────────────────────────────────────────────────────
+
+describe("anchorSampleTimes", () => {
+  it("replaces only the endpoint times, leaving the interior untouched", () => {
+    const samples = [sample(950, 0, 0), sample(1050, 0, 0.0005), sample(1140, 0, 0.001)];
+    const out = anchorSampleTimes(samples, 1000, 1150);
+    expect(out[0].t).toBe(1000);
+    expect(out[1].t).toBe(1050); // interior unchanged
+    expect(out[2].t).toBe(1150);
+    expect(samples[0].t).toBe(950); // input not mutated
+  });
+
+  it("returns the input unchanged when empty", () => {
+    expect(anchorSampleTimes([], 0, 0)).toEqual([]);
+  });
+
+  // Regression for the split-graphs per-lap video drift: a lap sliced on integer
+  // indices starts a sub-sample fraction *before* the true crossing. After
+  // anchoring, interpolating at distance 0 lands exactly on the lap's true start
+  // time (and at full distance on its end time) — zero per-lap anchor drift.
+  it("anchors distance-0/end to the lap's true crossing times", () => {
+    const lapStartMs = 40000; // true interpolated start crossing
+    const lapEndMs = 80000; // true interpolated end crossing
+    // First/last raw samples sit before/within the crossing (the bug source).
+    const raw = [
+      sample(39950, 0, 0),
+      sample(40050, 0, 0.0005),
+      sample(79900, 0, 0.001),
+    ];
+    const anchored = anchorSampleTimes(raw, lapStartMs, lapEndMs);
+    const d = calculateDistanceArray(anchored);
+    expect(interpolateSampleByDistance(anchored, d, 0).t).toBe(lapStartMs);
+    expect(interpolateSampleByDistance(anchored, d, d[d.length - 1]).t).toBe(lapEndMs);
   });
 });

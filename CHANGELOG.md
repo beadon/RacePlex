@@ -13,7 +13,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [2.9.2] - unreleased
 
+### Added
+- **Split graphs — side-by-side lap comparison (Pro tab).** On tablet and larger,
+  a new **Split graphs** button (top-right of the Pro tab, where the Simple tab's
+  Overlay toggle sits) splits the graph area into a draggable two-up view. Pick one
+  of your enabled overlay laps and the right panel mirrors the main panel's graphs
+  for that lap; a single playback control drives both, kept on the same point on
+  track. If a synced video is relocated into the graph stack and the chosen lap is
+  from the current session, a second video plays alongside it — **frame-locked to
+  the main player** and showing the same point on track in the comparison lap's own
+  footage (an out-of-session lap shows graphs only, leaving the main video
+  untouched). Opening the side panel — or pressing **Combine graphs** — returns to
+  the single view. Not available on phones.
+
+### Changed
+- **The Pro tab's side panel can now be collapsed on any screen size** (previously
+  phone-only), giving the graphs the full width when you want it.
+- **Video sync is now anchored to absolute session time.** Sync a video once and it
+  stays put — switching laps (or cropping the range) never needs a re-sync. The app
+  understands where the footage sits on the session timeline, so **partial videos**
+  are handled cleanly: when the camera started after the logger or stopped before
+  the session ended, the out-of-footage stretches show "Video starts later" /
+  "Video ended" while the charts keep playing, instead of a generic message.
+
 ### Fixed
+- **Smoother playback with a video loaded.** Pressing play in Pro graph view with a
+  synced video stuttered: the video's playhead time lived inside the shared video
+  state, so every video frame re-created the whole session context and re-rendered
+  every tab and panel ~30–60×/sec. The per-frame playhead now lives in its own tiny
+  context (like the playback cursor already does), so only the video time readout
+  re-renders per frame and the rest of the view stays quiet.
+- **Split-graphs comparison video no longer drifts lap-by-lap.** Two causes are
+  fixed. First, the comparison player seeked off the overlay lap's snapped first
+  sample (a sub-sample fraction before the true start/finish crossing); it now
+  anchors to each lap's true crossing times and interpolates the seek by track
+  distance. Second — the bigger one — a single sync offset can't absorb a
+  camera/datalogger **clock-rate** difference, so far-from-sync laps drifted by
+  seconds. Video sync is now **rate-aware**: a manual **± nudge** (50 ms steps) on
+  the comparison video fine-tunes one lap, and the **✓ Lock in** button turns that
+  into a calibration anchor — the clock rate is fit through it (refined as you lock
+  more laps) and applied to every lap automatically, keeping the lap you originally
+  synced pixel-exact. Nudges never touch the saved sync until you lock them.
 - **Approving a track/course submission now adds it to the database.** In the admin
   **Submissions** tab, approving a submission previously only flipped its status —
   it never created the track or course, so an approved new track/course silently
