@@ -9,8 +9,6 @@
   },
   "account": {
     "signInBlurb": "Sign in to back up and sync your files, garage and notes across devices. Everything here still works offline against this device — Cloud Sync is optional.",
-    "continueWithGoogle": "Continue with Google",
-    "googleSignInFailed": "Google sign-in failed",
     "signIn": "Sign in",
     "createAccount": "Create account",
     "offlineSignIn": "You're offline — sign-in needs a connection.",

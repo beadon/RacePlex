@@ -10,8 +10,6 @@
   },
   "account": {
     "signInBlurb": "Connectez-vous pour sauvegarder et synchroniser vos fichiers, votre garage et vos notes sur tous vos appareils. Tout ici fonctionne toujours hors ligne sur cet appareil — Cloud Sync est optionnel.",
-    "continueWithGoogle": "Continuer avec Google",
-    "googleSignInFailed": "Échec de la connexion avec Google",
     "signIn": "Se connecter",
     "createAccount": "Créer un compte",
     "offlineSignIn": "Vous êtes hors ligne — la connexion nécessite une connexion Internet.",

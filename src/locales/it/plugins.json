@@ -10,8 +10,6 @@
   },
   "account": {
     "signInBlurb": "Accedi per eseguire il backup e sincronizzare i tuoi file, il garage e le note tra i dispositivi. Tutto qui continua a funzionare offline su questo dispositivo — Cloud Sync è facoltativo.",
-    "continueWithGoogle": "Continua con Google",
-    "googleSignInFailed": "Accesso con Google non riuscito",
     "signIn": "Accedi",
     "createAccount": "Crea account",
     "offlineSignIn": "Sei offline — l'accesso richiede una connessione.",
