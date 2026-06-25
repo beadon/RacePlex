@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, lazy, Suspense } from "react";
 import { useTranslation } from "react-i18next";
-import { Gauge, Map, ListOrdered, BarChart3, FolderOpen, Play, Pause, Eye, EyeOff, AlertCircle, Wrench, NotebookPen, SlidersHorizontal, Columns2 } from "lucide-react";
+import { Gauge, Map, ListOrdered, BarChart3, FolderOpen, Play, Pause, StepBack, StepForward, Eye, EyeOff, AlertCircle, Wrench, NotebookPen, SlidersHorizontal, Columns2 } from "lucide-react";
 import { BrandLogo } from "@/components/BrandLogo";
 import { LandingPage } from "@/components/LandingPage";
 import { TrackEditor } from "@/components/TrackEditor"; // still used in compact header
@@ -237,6 +237,17 @@ export default function Index() {
       togglePlayback();
     }
   }, [isPlaying, videoSync.state, videoSync.actions, togglePlayback]);
+
+  // Frame-by-frame stepping: nudge the data cursor one sample, pausing any
+  // playback first. A synced video follows through the same scrub path (the
+  // transposer), so drivers/coaches can step a lap one frame at a time. Disabled
+  // with no data or at the respective end of the window.
+  const lastIndex = Math.max(0, visibleRange[1] - visibleRange[0]);
+  const stepDataFrame = useCallback((dir: 1 | -1) => {
+    if (isPlaying) togglePlayback();
+    if (videoSync.state.isPlaying) videoSync.actions.togglePlay();
+    setCurrentIndex((i) => Math.max(0, Math.min(lastIndex, i + dir)));
+  }, [isPlaying, togglePlayback, videoSync.state.isPlaying, videoSync.actions, setCurrentIndex, lastIndex]);
 
   // Data loading orchestration — owns the track-prompt UI state and the
   // sample-loader. Returns the three callbacks Index.tsx wires up to imports.
@@ -695,12 +706,32 @@ export default function Index() {
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
+                <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => stepDataFrame(-1)} disabled={visibleSamples.length === 0 || currentIndex <= 0} aria-label={t("header.prevFrame")}>
+                  <StepBack className="w-4 h-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{t("header.prevFrame")}</p>
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
                 <Button variant="outline" size="icon" className="h-8 w-8" onClick={handlePlaybackToggle}>
                   {anyPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
                 <p>{anyPlaying ? t("header.pause") : t("header.play")} ({averageFrameRate ? `${averageFrameRate.toFixed(0)} Hz` : "–"})</p>
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => stepDataFrame(1)} disabled={visibleSamples.length === 0 || currentIndex >= lastIndex} aria-label={t("header.nextFrame")}>
+                  <StepForward className="w-4 h-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{t("header.nextFrame")}</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>

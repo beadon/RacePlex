@@ -14,6 +14,8 @@
     "home": "Accueil",
     "play": "Lecture",
     "pause": "Pause",
+    "prevFrame": "Image précédente",
+    "nextFrame": "Image suivante",
     "allLaps": "Tous les tours",
     "lap": "Tour {{number}}",
     "garage": "Garage",

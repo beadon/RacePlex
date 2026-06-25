@@ -14,6 +14,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [2.9.2] - unreleased
 
 ### Added
+- **Frame-by-frame stepping in the header.** Two new buttons flank the play button
+  to step the data cursor one sample back/forward. A synced video follows the step
+  (through the same sync path), landing on the exact frame — so drivers and coaches
+  can compare a lap literally frame by frame. Stepping pauses any running playback.
 - **Split graphs — side-by-side lap comparison (Pro tab).** On tablet and larger,
   a new **Split graphs** button (top-right of the Pro tab, where the Simple tab's
   Overlay toggle sits) splits the graph area into a draggable two-up view. Pick one

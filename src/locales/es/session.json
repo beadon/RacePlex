@@ -14,6 +14,8 @@
     "home": "Inicio",
     "play": "Reproducir",
     "pause": "Pausar",
+    "prevFrame": "Fotograma anterior",
+    "nextFrame": "Fotograma siguiente",
     "allLaps": "Todas las vueltas",
     "lap": "Vuelta {{number}}",
     "garage": "Garaje",
