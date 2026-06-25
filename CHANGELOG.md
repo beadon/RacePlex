@@ -14,6 +14,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [2.9.2] - unreleased
 
 ### Added
+- **Frame-by-frame stepping in the header.** Two new buttons flank the play button
+  to step the data cursor one sample back/forward. A synced video follows the step
+  (through the same sync path), landing on the exact frame — so drivers and coaches
+  can compare a lap literally frame by frame. Stepping pauses any running playback.
 - **Split graphs — side-by-side lap comparison (Pro tab).** On tablet and larger,
   a new **Split graphs** button (top-right of the Pro tab, where the Simple tab's
   Overlay toggle sits) splits the graph area into a draggable two-up view. Pick one
@@ -43,6 +47,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   every tab and panel ~30–60×/sec. The per-frame playhead now lives in its own tiny
   context (like the playback cursor already does), so only the video time readout
   re-renders per frame and the rest of the view stays quiet.
+- **A synced video no longer stutters when you play or scrub the data.** Pressing
+  the top play button used to advance the data cursor on its own clock and *seek*
+  the locked video to chase it — every seek forces the decoder back to a keyframe,
+  so the picture juddered instead of playing. The top play button now drives the
+  **video itself** when it's locked over footage (the same smooth path as the
+  video's own play button), with the cursor derived from the video's playhead.
+- **Scrubbing a synced video is smoother and lands on the same frame every time.**
+  Dragging the data cursor fired a fresh video seek every frame regardless of whether
+  the previous one had finished, so the decoder thrashed (cancel/restart) and the
+  picture juddered; a fixed seek-throttle also dropped the final seek, parking the
+  video on a stale frame. Seeks are now **paced** on the video's own `seeked` event —
+  the next seek is issued only when the last completes, always to the latest cursor
+  position — using a fast approximate seek during the drag and one precise seek once
+  the cursor settles, so the parked frame is exact and repeatable. Scrub cursor
+  updates are also coalesced to one per animation frame, so a high-rate mouse or
+  trackpad no longer floods the main thread with graph redraws while the video seeks.
 - **Split-graphs comparison video no longer drifts lap-by-lap.** Two causes are
   fixed. First, the comparison player seeked off the overlay lap's snapped first
   sample (a sub-sample fraction before the true start/finish crossing); it now

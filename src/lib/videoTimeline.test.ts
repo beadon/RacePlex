@@ -6,6 +6,7 @@ import {
   coverageOf,
   lapCoverage,
   fitVideoTimeline,
+  needsResync,
 } from "./videoTimeline";
 
 // The video sync anchor is absolute session time: one syncOffsetMs maps the
@@ -164,5 +165,28 @@ describe("fitVideoTimeline", () => {
     expect(fitVideoTimeline(primary, [{ sessionMs: 5000, videoSec: 9 }]).syncRate).toBe(1);
     // Wildly inconsistent anchor would imply a >2× rate → clamped back to 1.
     expect(fitVideoTimeline(primary, [{ sessionMs: 6000, videoSec: 100 }]).syncRate).toBe(1);
+  });
+});
+
+// ─── needsResync ─────────────────────────────────────────────────────────────
+
+describe("needsResync", () => {
+  it("ignores sub-threshold jitter", () => {
+    expect(needsResync(10.0, 10.005, 0.5 / 30)).toBe(false); // 5ms < ~16.7ms
+  });
+
+  it("triggers once drift exceeds the threshold", () => {
+    expect(needsResync(10.0, 10.2, 0.5 / 30)).toBe(true); // 200ms > ~16.7ms
+  });
+
+  it("is symmetric (video ahead or behind the target)", () => {
+    const th = 0.5 / 30;
+    expect(needsResync(10.2, 10.0, th)).toBe(true);
+    expect(needsResync(9.8, 10.0, th)).toBe(true);
+  });
+
+  it("treats exactly-at-threshold as no seek (strict greater-than)", () => {
+    expect(needsResync(10.0, 10.1, 0.1)).toBe(false);
+    expect(needsResync(10.0, 10.1000001, 0.1)).toBe(true);
   });
 });

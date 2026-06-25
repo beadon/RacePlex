@@ -5,7 +5,7 @@ import { loadSessionVideo, hasSessionVideo, deleteSessionVideo, getSessionVideoM
 import type { OverlaySettings } from "@/components/video-overlays/types";
 import { DEFAULT_OVERLAY_SETTINGS } from "@/components/video-overlays/types";
 import { findNearestIndex } from "@/components/video-overlays/overlayUtils";
-import { coverageOf, sessionMsToVideoSec, videoSecToSessionMs, fitVideoTimeline, type VideoCoverage } from "@/lib/videoTimeline";
+import { coverageOf, sessionMsToVideoSec, videoSecToSessionMs, fitVideoTimeline, needsResync, type VideoCoverage } from "@/lib/videoTimeline";
 import { buildPlaylist, groupVideoRecordings, virtualToLocal, localToVirtual, type Playlist, type VideoRecording } from "@/lib/videoPlaylist";
 
 interface UseVideoSyncOptions {
@@ -14,6 +14,12 @@ interface UseVideoSyncOptions {
   currentIndex: number;
   onScrub: (index: number) => void;
   sessionFileName: string | null;
+  /**
+   * Whether the telemetry cursor is being PLAYED by the top play button. When
+   * true and the video is locked, the video plays natively as a drift-corrected
+   * slave instead of being seek-scrubbed once per cursor tick (which stutters).
+   */
+  dataIsPlaying: boolean;
 }
 
 export interface VideoSyncState {
@@ -90,6 +96,18 @@ interface ChunkEntry {
   durationSec?: number;
 }
 
+/**
+ * Seek a video element, preferring `fastSeek` (approximate seek, no decode
+ * stall) when the browser supports it — smoother for scrub + drift correction.
+ */
+function seekVideoElement(video: HTMLVideoElement, timeSec: number): void {
+  const fast = (video as HTMLVideoElement & { fastSeek?: (t: number) => void }).fastSeek;
+  try {
+    if (typeof fast === "function") fast.call(video, timeSec);
+    else video.currentTime = timeSec;
+  } catch { /* out-of-range time is clamped by the browser */ }
+}
+
 /** Read a video file's duration via a throwaway metadata-only element. */
 function readVideoDuration(url: string): Promise<number> {
   return new Promise<number>((resolve) => {
@@ -113,11 +131,10 @@ function readVideoDuration(url: string): Promise<number> {
   });
 }
 
-export function useVideoSync({ samples, allSamples, currentIndex, onScrub, sessionFileName }: UseVideoSyncOptions) {
+export function useVideoSync({ samples, allSamples, currentIndex, onScrub, sessionFileName, dataIsPlaying }: UseVideoSyncOptions) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const preloadVideoRef = useRef<HTMLVideoElement>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const lastSeekTimeRef = useRef(0);
 
   const onScrubRef = useRef(onScrub);
   onScrubRef.current = onScrub;
@@ -514,8 +531,13 @@ export function useVideoSync({ samples, allSamples, currentIndex, onScrub, sessi
     }
   }, [videoUrl]);
 
-  // Video-drives-data (locked + playing): map the active chunk's local time to
-  // virtual time, then to telemetry.
+  // Video-drives-data (locked + playing): the VIDEO is the master clock — it
+  // plays natively (smooth decode, never seeked) and the telemetry cursor is
+  // DERIVED from its playhead each frame. Reached both from the video's own play
+  // button and from the top play button (which, when locked + over footage,
+  // routes to video.play() instead of running the rAF data clock — see
+  // Index.tsx). Playing the video natively is the only way to get smooth video;
+  // any approach that seeks the video to chase a separate clock stutters.
   useEffect(() => {
     const video = videoRef.current;
     if (!video || !videoUrl || !isLocked || !isPlaying) return;
@@ -563,42 +585,90 @@ export function useVideoSync({ samples, allSamples, currentIndex, onScrub, sessi
     return () => { active = false; };
   }, [videoUrl, isLocked, isPlaying, syncOffsetMs, syncRate]);
 
-  // Data-drives-video (locked + paused): seek the playlist to the selected sample.
+  // ── Data-drives-video SCRUB (locked + nothing playing) ─────────────────────
+  // Follow the cursor with the video while dragging or parked. Seeks are PACED
+  // on the <video>'s own `seeked` event: we keep only the latest desired
+  // position and issue the next seek when the previous one finishes, rather than
+  // firing a fresh seek every animation frame. Setting `currentTime` faster than
+  // the decoder can service it makes the browser cancel-and-restart in-flight
+  // seeks — that thrash is the scrub stutter. Pacing runs the decoder at its
+  // natural rate and always converges on where the cursor actually ended up.
+  //
+  // During the drag we use the fast (approximate, keyframe) seek for
+  // responsiveness; ~150ms after the cursor settles we land one PRECISE seek so
+  // the parked frame is exact — and deterministic (same cursor → same frame),
+  // which a fixed seek-throttle broke by dropping the trailing seek.
+  const scrubTargetSecRef = useRef<number | null>(null);
+  const scrubInFlightRef = useRef(false);
+  const scrubSettleRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const issueScrubSeek = useCallback((virtualSec: number, precise: boolean): boolean => {
+    const video = videoRef.current;
+    if (!video) return false;
+    const pl = playlistRef.current;
+    if (pl) {
+      const { index, localSec } = virtualToLocal(pl, virtualSec);
+      if (index !== currentChunkIndexRef.current) { loadChunk(index, localSec, false); return true; }
+      if (!needsResync(video.currentTime, localSec, 0.5 / fps)) return false;
+      if (precise) video.currentTime = localSec; else seekVideoElement(video, localSec);
+      return true;
+    }
+    if (!needsResync(video.currentTime, virtualSec, 0.5 / fps)) return false;
+    if (precise) video.currentTime = virtualSec; else seekVideoElement(video, virtualSec);
+    return true;
+  }, [loadChunk, fps]);
+
+  const pumpScrubSeek = useCallback(() => {
+    if (scrubInFlightRef.current) return;
+    const target = scrubTargetSecRef.current;
+    if (target == null) return;
+    scrubTargetSecRef.current = null;
+    if (issueScrubSeek(target, false)) scrubInFlightRef.current = true;
+  }, [issueScrubSeek]);
+
+  // Pace the next queued scrub seek off the previous one completing.
   useEffect(() => {
-    if (!isLocked || isPlaying) return;
+    const video = videoRef.current;
+    if (!video) return;
+    const onSeeked = () => { scrubInFlightRef.current = false; pumpScrubSeek(); };
+    video.addEventListener("seeked", onSeeked);
+    return () => video.removeEventListener("seeked", onSeeked);
+  }, [videoUrl, pumpScrubSeek]);
+
+  useEffect(() => () => { if (scrubSettleRef.current) clearTimeout(scrubSettleRef.current); }, []);
+
+  useEffect(() => {
+    if (!isLocked || isPlaying || dataIsPlaying) return;
     const video = videoRef.current;
     if (!video || !videoUrl || samples.length === 0) return;
-    const pl = playlistRef.current;
-    const total = pl ? pl.totalDuration : video.duration;
-    const now = performance.now();
-    if (now - lastSeekTimeRef.current < 50) return;
-    lastSeekTimeRef.current = now;
     const sample = samples[currentIndex];
     if (!sample) return;
+    const pl = playlistRef.current;
+    const total = pl ? pl.totalDuration : video.duration;
     const virtualSec = sessionMsToVideoSec(sample.t, syncOffsetMs, syncRate);
     const clampedSec = Math.max(0, virtualSec);
     const cov = coverageOf(sample.t, syncOffsetMs, total, syncRate);
     setCoverage(cov);
+    setVideoCurrentTime(clampedSec);
     if (cov !== 'covered') {
-      // No footage for this session position — blank it, but the cursor/charts
-      // stay free to scrub or play through the gap.
+      // No footage here — blank it; the cursor/charts still scrub through the gap.
       setIsOutOfRange(true);
       if (!video.paused) video.pause();
-    } else {
-      setIsOutOfRange(false);
-      if (pl) {
-        const { index, localSec } = virtualToLocal(pl, clampedSec);
-        if (index !== currentChunkIndexRef.current) {
-          loadChunk(index, localSec, false);
-        } else if (Math.abs(video.currentTime - localSec) > 0.5 / fps) {
-          video.currentTime = localSec;
-        }
-      } else if (Math.abs(video.currentTime - clampedSec) > 0.5 / fps) {
-        video.currentTime = clampedSec;
-      }
+      return;
     }
-    setVideoCurrentTime(clampedSec);
-  }, [currentIndex, isLocked, isPlaying, syncOffsetMs, syncRate, samples, videoUrl, fps, loadChunk]);
+    setIsOutOfRange(false);
+    // Queue the latest position; the pacer issues it when the decoder is ready.
+    scrubTargetSecRef.current = clampedSec;
+    pumpScrubSeek();
+    // Land an exact-frame seek once the drag settles (also self-heals a stuck
+    // in-flight flag if a seek never reported back).
+    if (scrubSettleRef.current) clearTimeout(scrubSettleRef.current);
+    scrubSettleRef.current = setTimeout(() => {
+      scrubInFlightRef.current = false;
+      const v = videoRef.current;
+      if (v && v.paused) issueScrubSeek(clampedSec, true);
+    }, 150);
+  }, [currentIndex, isLocked, isPlaying, dataIsPlaying, syncOffsetMs, syncRate, samples, videoUrl, pumpScrubSeek, issueScrubSeek]);
 
   const togglePlay = useCallback(() => {
     const video = videoRef.current;

@@ -14,6 +14,8 @@
     "home": "Home",
     "play": "Riproduci",
     "pause": "Pausa",
+    "prevFrame": "Fotogramma precedente",
+    "nextFrame": "Fotogramma successivo",
     "allLaps": "Tutti i giri",
     "lap": "Giro {{number}}",
     "garage": "Garage",

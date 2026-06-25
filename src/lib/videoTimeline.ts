@@ -120,3 +120,12 @@ export function fitVideoTimeline(
   return { syncOffsetMs, syncRate: rate };
 }
 
+/**
+ * True when the video playhead has drifted far enough from a target time to be
+ * worth a seek. Used to suppress redundant scrub seeks when the video is already
+ * within sub-frame distance of the cursor's position.
+ */
+export function needsResync(actualVideoSec: number, targetVideoSec: number, thresholdSec: number): boolean {
+  return Math.abs(actualVideoSec - targetVideoSec) > thresholdSec;
+}
+

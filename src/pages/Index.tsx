@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, lazy, Suspense } from "react";
 import { useTranslation } from "react-i18next";
-import { Gauge, Map, ListOrdered, BarChart3, FolderOpen, Play, Pause, Eye, EyeOff, AlertCircle, Wrench, NotebookPen, SlidersHorizontal, Columns2 } from "lucide-react";
+import { Gauge, Map, ListOrdered, BarChart3, FolderOpen, Play, Pause, StepBack, StepForward, Eye, EyeOff, AlertCircle, Wrench, NotebookPen, SlidersHorizontal, Columns2 } from "lucide-react";
 import { BrandLogo } from "@/components/BrandLogo";
 import { LandingPage } from "@/components/LandingPage";
 import { TrackEditor } from "@/components/TrackEditor"; // still used in compact header
@@ -211,8 +211,43 @@ export default function Index() {
     currentIndex,
     onScrub: handleScrub,
     sessionFileName: currentFileName,
+    // When the top play button drives the cursor, the video plays natively as a
+    // drift-corrected slave instead of being seek-scrubbed per tick (stutter).
+    dataIsPlaying: isPlaying,
   });
   const currentSample = visibleSamples[currentIndex] ?? null;
+
+  // The top play button. When a video is locked AND the cursor sits over footage,
+  // drive the VIDEO natively (it plays smoothly and video-drives-data derives the
+  // cursor from it) instead of running the rAF data clock — a separate clock that
+  // seeks the video to keep up is what stutters. Otherwise (no video / unlocked /
+  // cursor in an uncovered gap) the data clock drives the cursor and the video
+  // stays put. The icon reflects whichever clock is running.
+  const anyPlaying = isPlaying || videoSync.state.isPlaying;
+  const handlePlaybackToggle = useCallback(() => {
+    const { isLocked, videoUrl, coverage, isPlaying: videoPlaying } = videoSync.state;
+    if (isPlaying || videoPlaying) {
+      if (videoPlaying) videoSync.actions.togglePlay();
+      if (isPlaying) togglePlayback();
+      return;
+    }
+    if (isLocked && videoUrl && coverage === "covered") {
+      videoSync.actions.togglePlay();
+    } else {
+      togglePlayback();
+    }
+  }, [isPlaying, videoSync.state, videoSync.actions, togglePlayback]);
+
+  // Frame-by-frame stepping: nudge the data cursor one sample, pausing any
+  // playback first. A synced video follows through the same scrub path (the
+  // transposer), so drivers/coaches can step a lap one frame at a time. Disabled
+  // with no data or at the respective end of the window.
+  const lastIndex = Math.max(0, visibleRange[1] - visibleRange[0]);
+  const stepDataFrame = useCallback((dir: 1 | -1) => {
+    if (isPlaying) togglePlayback();
+    if (videoSync.state.isPlaying) videoSync.actions.togglePlay();
+    setCurrentIndex((i) => Math.max(0, Math.min(lastIndex, i + dir)));
+  }, [isPlaying, togglePlayback, videoSync.state.isPlaying, videoSync.actions, setCurrentIndex, lastIndex]);
 
   // Data loading orchestration — owns the track-prompt UI state and the
   // sample-loader. Returns the three callbacks Index.tsx wires up to imports.
@@ -671,12 +706,32 @@ export default function Index() {
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="outline" size="icon" className="h-8 w-8" onClick={togglePlayback}>
-                  {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => stepDataFrame(-1)} disabled={visibleSamples.length === 0 || currentIndex <= 0} aria-label={t("header.prevFrame")}>
+                  <StepBack className="w-4 h-4" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>{isPlaying ? t("header.pause") : t("header.play")} ({averageFrameRate ? `${averageFrameRate.toFixed(0)} Hz` : "–"})</p>
+                <p>{t("header.prevFrame")}</p>
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="outline" size="icon" className="h-8 w-8" onClick={handlePlaybackToggle}>
+                  {anyPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{anyPlaying ? t("header.pause") : t("header.play")} ({averageFrameRate ? `${averageFrameRate.toFixed(0)} Hz` : "–"})</p>
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => stepDataFrame(1)} disabled={visibleSamples.length === 0 || currentIndex >= lastIndex} aria-label={t("header.nextFrame")}>
+                  <StepForward className="w-4 h-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{t("header.nextFrame")}</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>

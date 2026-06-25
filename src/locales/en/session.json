@@ -13,6 +13,8 @@
     "home": "Home",
     "play": "Play",
     "pause": "Pause",
+    "prevFrame": "Previous frame",
+    "nextFrame": "Next frame",
     "allLaps": "All Laps",
     "lap": "Lap {{number}}",
     "garage": "Garage",
