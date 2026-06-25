@@ -10,8 +10,6 @@
   },
   "account": {
     "signInBlurb": "サインインすると、ファイル・ガレージ・メモをデバイス間でバックアップ・同期できます。ここのすべては、このデバイス上でオフラインでも動作します。Cloud Sync は任意です。",
-    "continueWithGoogle": "Google で続行",
-    "googleSignInFailed": "Google でのサインインに失敗しました",
     "signIn": "サインイン",
     "createAccount": "アカウントを作成",
     "offlineSignIn": "オフラインです。サインインには接続が必要です。",

@@ -137,6 +137,12 @@ export function useLapManagement(data: ParsedData | null, currentFileName: strin
   // cursor through setCurrentIndex directly, so it is unaffected.)
   const scrubRafRef = useRef<number | null>(null);
   const scrubPendingRef = useRef<number | null>(null);
+  // Clamp against the *live* range inside the deferred frame: visibleRange can
+  // change (crop / sector-select / resize) between the pointer event and the rAF
+  // callback, so closing over it would clamp to a stale window. The ref also lets
+  // handleScrub keep a stable identity (it rides the memoized SessionContext value).
+  const visibleRangeRef = useRef(visibleRange);
+  visibleRangeRef.current = visibleRange;
   useEffect(() => () => { if (scrubRafRef.current != null) cancelAnimationFrame(scrubRafRef.current); }, []);
 
   const handleScrub = useCallback(
@@ -147,11 +153,12 @@ export function useLapManagement(data: ParsedData | null, currentFileName: strin
         scrubRafRef.current = null;
         const idx = scrubPendingRef.current;
         if (idx == null) return;
-        const clampedIndex = Math.max(0, Math.min(idx, visibleRange[1] - visibleRange[0]));
+        const [start, end] = visibleRangeRef.current;
+        const clampedIndex = Math.max(0, Math.min(idx, end - start));
         setCurrentIndex(clampedIndex);
       });
     },
-    [visibleRange]
+    []
   );
 
   // Stable identity (functional update): this callback rides the memoized
