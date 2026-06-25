@@ -6,8 +6,6 @@ import {
   coverageOf,
   lapCoverage,
   fitVideoTimeline,
-  videoSlaveAction,
-  resyncThresholdSec,
   needsResync,
 } from "./videoTimeline";
 
@@ -170,57 +168,25 @@ describe("fitVideoTimeline", () => {
   });
 });
 
-// ─── playback coordination policy ────────────────────────────────────────────
-
-describe("videoSlaveAction", () => {
-  const base = { isLocked: true, dataIsPlaying: true, hasVideo: true, coverage: "covered" as const };
-
-  it("plays the video natively when locked, playing, and over footage", () => {
-    expect(videoSlaveAction(base)).toBe("play");
-  });
-
-  it("holds (blanks) the video when the cursor is in an uncovered gap", () => {
-    expect(videoSlaveAction({ ...base, coverage: "before" })).toBe("hold");
-    expect(videoSlaveAction({ ...base, coverage: "after" })).toBe("hold");
-  });
-
-  it("is idle when not coordinating (unlocked, not playing, or no video)", () => {
-    expect(videoSlaveAction({ ...base, isLocked: false })).toBe("idle");
-    expect(videoSlaveAction({ ...base, dataIsPlaying: false })).toBe("idle");
-    expect(videoSlaveAction({ ...base, hasVideo: false })).toBe("idle");
-  });
-
-  it("idle wins even over a covered cursor (no coordination at all)", () => {
-    expect(videoSlaveAction({ isLocked: false, dataIsPlaying: true, hasVideo: true, coverage: "covered" })).toBe("idle");
-  });
-});
-
-describe("resyncThresholdSec", () => {
-  it("is a couple of frames at the given fps", () => {
-    expect(resyncThresholdSec(30)).toBeCloseTo(2 / 30, 9);
-    expect(resyncThresholdSec(60)).toBeCloseTo(2 / 60, 9);
-    expect(resyncThresholdSec(60, 1)).toBeCloseTo(1 / 60, 9);
-  });
-
-  it("falls back to 30fps for a garbage fps", () => {
-    expect(resyncThresholdSec(0)).toBeCloseTo(2 / 30, 9);
-    expect(resyncThresholdSec(Number.NaN)).toBeCloseTo(2 / 30, 9);
-    expect(resyncThresholdSec(-5)).toBeCloseTo(2 / 30, 9);
-  });
-});
+// ─── needsResync ─────────────────────────────────────────────────────────────
 
 describe("needsResync", () => {
   it("ignores sub-threshold jitter", () => {
-    expect(needsResync(10.0, 10.02, resyncThresholdSec(30))).toBe(false); // 20ms < ~66ms
+    expect(needsResync(10.0, 10.005, 0.5 / 30)).toBe(false); // 5ms < ~16.7ms
   });
 
   it("triggers once drift exceeds the threshold", () => {
-    expect(needsResync(10.0, 10.2, resyncThresholdSec(30))).toBe(true); // 200ms > ~66ms
+    expect(needsResync(10.0, 10.2, 0.5 / 30)).toBe(true); // 200ms > ~16.7ms
   });
 
-  it("is symmetric (video ahead or behind)", () => {
-    const th = resyncThresholdSec(30);
+  it("is symmetric (video ahead or behind the target)", () => {
+    const th = 0.5 / 30;
     expect(needsResync(10.2, 10.0, th)).toBe(true);
     expect(needsResync(9.8, 10.0, th)).toBe(true);
+  });
+
+  it("treats exactly-at-threshold as no seek (strict greater-than)", () => {
+    expect(needsResync(10.0, 10.1, 0.1)).toBe(false);
+    expect(needsResync(10.0, 10.1000001, 0.1)).toBe(true);
   });
 });

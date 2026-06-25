@@ -217,6 +217,27 @@ export default function Index() {
   });
   const currentSample = visibleSamples[currentIndex] ?? null;
 
+  // The top play button. When a video is locked AND the cursor sits over footage,
+  // drive the VIDEO natively (it plays smoothly and video-drives-data derives the
+  // cursor from it) instead of running the rAF data clock — a separate clock that
+  // seeks the video to keep up is what stutters. Otherwise (no video / unlocked /
+  // cursor in an uncovered gap) the data clock drives the cursor and the video
+  // stays put. The icon reflects whichever clock is running.
+  const anyPlaying = isPlaying || videoSync.state.isPlaying;
+  const handlePlaybackToggle = useCallback(() => {
+    const { isLocked, videoUrl, coverage, isPlaying: videoPlaying } = videoSync.state;
+    if (isPlaying || videoPlaying) {
+      if (videoPlaying) videoSync.actions.togglePlay();
+      if (isPlaying) togglePlayback();
+      return;
+    }
+    if (isLocked && videoUrl && coverage === "covered") {
+      videoSync.actions.togglePlay();
+    } else {
+      togglePlayback();
+    }
+  }, [isPlaying, videoSync.state, videoSync.actions, togglePlayback]);
+
   // Data loading orchestration — owns the track-prompt UI state and the
   // sample-loader. Returns the three callbacks Index.tsx wires up to imports.
   const dataLoader = useDataLoader({ sessionData, lapMgmt, sessionMeta });
@@ -674,12 +695,12 @@ export default function Index() {
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="outline" size="icon" className="h-8 w-8" onClick={togglePlayback}>
-                  {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                <Button variant="outline" size="icon" className="h-8 w-8" onClick={handlePlaybackToggle}>
+                  {anyPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>{isPlaying ? t("header.pause") : t("header.play")} ({averageFrameRate ? `${averageFrameRate.toFixed(0)} Hz` : "–"})</p>
+                <p>{anyPlaying ? t("header.pause") : t("header.play")} ({averageFrameRate ? `${averageFrameRate.toFixed(0)} Hz` : "–"})</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>

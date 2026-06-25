@@ -5,7 +5,7 @@ import { loadSessionVideo, hasSessionVideo, deleteSessionVideo, getSessionVideoM
 import type { OverlaySettings } from "@/components/video-overlays/types";
 import { DEFAULT_OVERLAY_SETTINGS } from "@/components/video-overlays/types";
 import { findNearestIndex } from "@/components/video-overlays/overlayUtils";
-import { coverageOf, sessionMsToVideoSec, videoSecToSessionMs, fitVideoTimeline, videoSlaveAction, resyncThresholdSec, needsResync, type VideoCoverage } from "@/lib/videoTimeline";
+import { coverageOf, sessionMsToVideoSec, videoSecToSessionMs, fitVideoTimeline, needsResync, type VideoCoverage } from "@/lib/videoTimeline";
 import { buildPlaylist, groupVideoRecordings, virtualToLocal, localToVirtual, type Playlist, type VideoRecording } from "@/lib/videoPlaylist";
 
 interface UseVideoSyncOptions {
@@ -135,16 +135,11 @@ export function useVideoSync({ samples, allSamples, currentIndex, onScrub, sessi
   const videoRef = useRef<HTMLVideoElement>(null);
   const preloadVideoRef = useRef<HTMLVideoElement>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const lastSeekTimeRef = useRef(0);
 
   const onScrubRef = useRef(onScrub);
   onScrubRef.current = onScrub;
   const samplesRef = useRef(samples);
   samplesRef.current = samples;
-  // The cursor index, readable from the rAF slave loop without re-subscribing it
-  // every tick (it advances at playback rate while the loop runs).
-  const currentIndexRef = useRef(currentIndex);
-  currentIndexRef.current = currentIndex;
 
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [preloadUrl, setPreloadUrl] = useState<string | null>(null);
@@ -162,11 +157,6 @@ export function useVideoSync({ samples, allSamples, currentIndex, onScrub, sessi
   const syncAnchorRef = useRef<{ sessionMs: number; videoSec: number } | null>(null);
   const lapAnchorsRef = useRef<Map<number, { sessionMs: number; videoSec: number }>>(new Map());
   const [fps, setFps] = useState(30);
-  // Read by the slave-playback rAF loop without re-subscribing it: fps is
-  // auto-detected ~0.3s into playback, and a dep change there would tear down +
-  // resume the loop (a visible hitch) mid-play.
-  const fpsRef = useRef(30);
-  fpsRef.current = fps;
   const [videoDuration, setVideoDuration] = useState(0);
   const [videoCurrentTime, setVideoCurrentTime] = useState(0);
   const [chunkCount, setChunkCount] = useState(1);
@@ -541,13 +531,16 @@ export function useVideoSync({ samples, allSamples, currentIndex, onScrub, sessi
     }
   }, [videoUrl]);
 
-  // Video-drives-data (locked + playing via the VIDEO's own controls): map the
-  // active chunk's local time to virtual time, then to telemetry. When the top
-  // play button is the one driving (dataIsPlaying), the data clock owns the
-  // cursor instead — see the slave-playback effect below — so this yields.
+  // Video-drives-data (locked + playing): the VIDEO is the master clock — it
+  // plays natively (smooth decode, never seeked) and the telemetry cursor is
+  // DERIVED from its playhead each frame. Reached both from the video's own play
+  // button and from the top play button (which, when locked + over footage,
+  // routes to video.play() instead of running the rAF data clock — see
+  // Index.tsx). Playing the video natively is the only way to get smooth video;
+  // any approach that seeks the video to chase a separate clock stutters.
   useEffect(() => {
     const video = videoRef.current;
-    if (!video || !videoUrl || !isLocked || !isPlaying || dataIsPlaying) return;
+    if (!video || !videoUrl || !isLocked || !isPlaying) return;
     let active = true;
     const tick = () => {
       const v = videoRef.current;
@@ -590,105 +583,54 @@ export function useVideoSync({ samples, allSamples, currentIndex, onScrub, sessi
       requestAnimationFrame(loop);
     }
     return () => { active = false; };
-  }, [videoUrl, isLocked, isPlaying, dataIsPlaying, syncOffsetMs, syncRate]);
+  }, [videoUrl, isLocked, isPlaying, syncOffsetMs, syncRate]);
 
-  // Data-drives-video SLAVE (locked + the top play button is playing): keep the
-  // video playing NATIVELY and only nudge it back into alignment when it drifts
-  // past a couple of frames — never seek per cursor tick. The telemetry cursor
-  // stays the single authority (usePlayback's rAF advances it); the video is a
-  // drift-corrected follower. This is what kills the seek-scrub stutter.
+  // Data-drives-video SCRUB (locked + nothing playing): seek the playlist to the
+  // selected sample so the video follows the cursor while you drag or park.
   //
-  // The loop is rAF (not requestVideoFrameCallback) so it keeps ticking while
-  // the cursor crosses an uncovered gap with the video paused — rVFC would stop
-  // firing there and never notice the cursor re-entering footage.
-  useEffect(() => {
-    if (!isLocked || !dataIsPlaying) return;
-    const video = videoRef.current;
-    if (!video || !videoUrl) return;
-    let active = true;
-    const tick = () => {
-      if (!active) return;
-      const v = videoRef.current;
-      if (!v) { return; }
-      const pl = playlistRef.current;
-      const total = pl ? pl.totalDuration : v.duration;
-      const s = samplesRef.current;
-      const sample = s[currentIndexRef.current];
-      if (sample) {
-        const cov = coverageOf(sample.t, syncOffsetMs, total, syncRate);
-        setCoverage(cov);
-        const action = videoSlaveAction({ isLocked: true, dataIsPlaying: true, hasVideo: true, coverage: cov });
-        if (action === 'play') {
-          setIsOutOfRange(false);
-          const targetVirtual = Math.max(0, sessionMsToVideoSec(sample.t, syncOffsetMs, syncRate));
-          const { index, localSec } = pl ? virtualToLocal(pl, targetVirtual) : { index: 0, localSec: targetVirtual };
-          if (pl && index !== currentChunkIndexRef.current) {
-            // Crossed a chunk boundary (or jumped chunks): swap + resume there.
-            loadChunk(index, localSec, true);
-          } else if (v.paused) {
-            // Entering footage (start of play, or after a gap): align once, then
-            // let it play natively from here.
-            try { v.currentTime = localSec; } catch { /* clamped by browser */ }
-            v.play().catch(() => {});
-          } else if (needsResync(v.currentTime, localSec, resyncThresholdSec(fpsRef.current))) {
-            // Playing: correct drift only past the threshold (a couple frames).
-            seekVideoElement(v, localSec);
-          }
-          if (!v.paused) setVideoCurrentTime(pl ? localToVirtual(pl, currentChunkIndexRef.current, v.currentTime) : v.currentTime);
-        } else {
-          // 'hold' — no footage here: blank + pause, cursor plays on through.
-          setIsOutOfRange(true);
-          if (!v.paused) v.pause();
-        }
-      }
-      requestAnimationFrame(tick);
-    };
-    requestAnimationFrame(tick);
-    return () => {
-      active = false;
-      // Stop the slave when the cursor stops playing (top pause / end of window).
-      if (!video.paused) video.pause();
-    };
-  }, [isLocked, dataIsPlaying, videoUrl, syncOffsetMs, syncRate, loadChunk]);
-
-  // Data-drives-video SCRUB (locked + everything paused): seek the playlist to
-  // the selected sample. Runs only when neither the video nor the data cursor is
-  // playing — i.e. the user is scrubbing or parked. Uses fastSeek where it
-  // exists; the 50ms gate coalesces a fast drag into a sane seek rate.
+  // The seek is COALESCED onto the next animation frame, not gated by a fixed
+  // time-throttle. A throttle (`if (now - last < 50ms) return`) silently DROPS
+  // the trailing seek when you release after a fast drag, so the same cursor
+  // index lands on a different video frame each time (it's parked wherever the
+  // last un-dropped seek left it). rAF coalescing instead guarantees the LAST
+  // cursor position always seeks — deterministic — while still collapsing a
+  // burst of drag updates to one (fast) seek per frame.
   useEffect(() => {
     if (!isLocked || isPlaying || dataIsPlaying) return;
     const video = videoRef.current;
     if (!video || !videoUrl || samples.length === 0) return;
-    const pl = playlistRef.current;
-    const total = pl ? pl.totalDuration : video.duration;
-    const now = performance.now();
-    if (now - lastSeekTimeRef.current < 50) return;
-    lastSeekTimeRef.current = now;
     const sample = samples[currentIndex];
     if (!sample) return;
-    const virtualSec = sessionMsToVideoSec(sample.t, syncOffsetMs, syncRate);
-    const clampedSec = Math.max(0, virtualSec);
-    const cov = coverageOf(sample.t, syncOffsetMs, total, syncRate);
-    setCoverage(cov);
-    if (cov !== 'covered') {
-      // No footage for this session position — blank it, but the cursor/charts
-      // stay free to scrub or play through the gap.
-      setIsOutOfRange(true);
-      if (!video.paused) video.pause();
-    } else {
-      setIsOutOfRange(false);
-      if (pl) {
-        const { index, localSec } = virtualToLocal(pl, clampedSec);
-        if (index !== currentChunkIndexRef.current) {
-          loadChunk(index, localSec, false);
-        } else if (needsResync(video.currentTime, localSec, 0.5 / fps)) {
-          seekVideoElement(video, localSec);
+    const raf = requestAnimationFrame(() => {
+      const pl = playlistRef.current;
+      const total = pl ? pl.totalDuration : video.duration;
+      const virtualSec = sessionMsToVideoSec(sample.t, syncOffsetMs, syncRate);
+      const clampedSec = Math.max(0, virtualSec);
+      const cov = coverageOf(sample.t, syncOffsetMs, total, syncRate);
+      setCoverage(cov);
+      if (cov !== 'covered') {
+        // No footage for this session position — blank it, but the cursor/charts
+        // stay free to scrub or play through the gap.
+        setIsOutOfRange(true);
+        if (!video.paused) video.pause();
+      } else {
+        setIsOutOfRange(false);
+        if (pl) {
+          const { index, localSec } = virtualToLocal(pl, clampedSec);
+          if (index !== currentChunkIndexRef.current) {
+            loadChunk(index, localSec, false);
+          } else if (needsResync(video.currentTime, localSec, 0.5 / fps)) {
+            seekVideoElement(video, localSec);
+          }
+        } else if (needsResync(video.currentTime, clampedSec, 0.5 / fps)) {
+          seekVideoElement(video, clampedSec);
         }
-      } else if (needsResync(video.currentTime, clampedSec, 0.5 / fps)) {
-        seekVideoElement(video, clampedSec);
       }
-    }
-    setVideoCurrentTime(clampedSec);
+      setVideoCurrentTime(clampedSec);
+    });
+    // A newer cursor value cancels this pending seek and schedules its own, so
+    // only the latest position ever lands — that's what makes it deterministic.
+    return () => cancelAnimationFrame(raf);
   }, [currentIndex, isLocked, isPlaying, dataIsPlaying, syncOffsetMs, syncRate, samples, videoUrl, fps, loadChunk]);
 
   const togglePlay = useCallback(() => {
