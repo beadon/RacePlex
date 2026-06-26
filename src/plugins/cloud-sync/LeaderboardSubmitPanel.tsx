@@ -48,8 +48,9 @@ export default function LeaderboardSubmitPanel(_props: PluginPanelProps) {
       try {
         const mine = await fetchMyEntries(user.id);
         setSubmittedHashes(new Set(mine.map((e) => e.contentHash)));
-      } catch {
-        /* leave the known set as-is; the DB unique constraint is the backstop */
+      } catch (e) {
+        // Leave the known set as-is; the DB unique constraint is the backstop.
+        console.warn("[leaderboard] couldn't load existing entries:", e);
       }
     }
   }, [user]);
@@ -111,8 +112,10 @@ export default function LeaderboardSubmitPanel(_props: PluginPanelProps) {
       setSubmittedHashes((s) => new Set(s).add(newRow.content_hash));
       toast.success(t("leaderboard.submitSuccess"));
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "";
-      toast.error(/duplicate key|unique/i.test(msg) ? t("leaderboard.alreadySubmitted") : t("leaderboard.submitFailed"));
+      const msg = e instanceof Error ? e.message : String(e);
+      console.error("[leaderboard] submit failed:", e);
+      if (/duplicate key|unique/i.test(msg)) toast.error(t("leaderboard.alreadySubmitted"));
+      else toast.error(`${t("leaderboard.submitFailed")} — ${msg}`);
     } finally {
       setRow(snap.id, { busy: false });
     }
