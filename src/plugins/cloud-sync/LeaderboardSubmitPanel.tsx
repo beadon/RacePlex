@@ -114,8 +114,7 @@ export default function LeaderboardSubmitPanel(_props: PluginPanelProps) {
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       console.error("[leaderboard] submit failed:", e);
-      if (/duplicate key|unique/i.test(msg)) toast.error(t("leaderboard.alreadySubmitted"));
-      else toast.error(`${t("leaderboard.submitFailed")} — ${msg}`);
+      toast.error(/duplicate key|unique/i.test(msg) ? t("leaderboard.alreadySubmitted") : t("leaderboard.submitFailed"));
     } finally {
       setRow(snap.id, { busy: false });
     }
