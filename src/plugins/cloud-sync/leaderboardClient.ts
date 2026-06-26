@@ -30,7 +30,7 @@ export function engineClassesTable() {
 
 /** Columns selected for the lightweight browse tree (everything except `data`). */
 export const LIGHT_COLUMNS =
-  "id,user_id,display_name,track_name,course_name,course_key,direction,engine,engine_key,engine_class_id,listed_weight,listed_weight_unit,lap_time_ms,content_hash,setup_public,engine_telemetry_public,status,created_at";
+  "id,user_id,display_name,track_name,course_name,course_key,direction,engine,engine_key,engine_class_id,listed_weight,listed_weight_unit,lap_time_ms,content_hash,engine_telemetry_public,status,created_at";
 
 interface EntryRow {
   id: string;
@@ -47,7 +47,6 @@ interface EntryRow {
   listed_weight_unit: "lb" | "kg" | null;
   lap_time_ms: number;
   content_hash: string;
-  setup_public: boolean;
   engine_telemetry_public: boolean;
   status: "approved" | "denied";
   created_at: string;
@@ -72,7 +71,6 @@ export function mapEntryRow(r: EntryRow): LeaderboardEntry {
     listedWeightUnit: r.listed_weight_unit,
     lapTimeMs: r.lap_time_ms,
     contentHash: r.content_hash,
-    setupPublic: r.setup_public,
     engineTelemetryPublic: r.engine_telemetry_public,
     status: r.status,
     createdAt: r.created_at,
@@ -151,7 +149,6 @@ export interface NewEntryRow {
   listed_weight_unit: "lb" | "kg";
   lap_time_ms: number;
   content_hash: string;
-  setup_public: boolean;
   engine_telemetry_public: boolean;
   data: LeaderboardEntryData;
 }
@@ -159,7 +156,6 @@ export interface NewEntryRow {
 export interface SubmitOptions {
   userId: string;
   displayName: string;
-  setupPublic: boolean;
   engineTelemetryPublic: boolean;
   listedWeight: number;
   listedWeightUnit: "lb" | "kg";
@@ -180,12 +176,8 @@ export function buildNewEntryRow(snap: LapSnapshot, opts: SubmitOptions): NewEnt
     listed_weight_unit: opts.listedWeightUnit,
     lap_time_ms: Math.round(snap.lapTimeMs), // integer column; lapTimeMs is fractional
     content_hash: contentHashForSnapshot(snap),
-    setup_public: opts.setupPublic,
     engine_telemetry_public: opts.engineTelemetryPublic,
-    data: buildEntryData(snap, {
-      setupPublic: opts.setupPublic,
-      engineTelemetryPublic: opts.engineTelemetryPublic,
-    }),
+    data: buildEntryData(snap, { engineTelemetryPublic: opts.engineTelemetryPublic }),
   };
 }
 

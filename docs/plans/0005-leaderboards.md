@@ -22,10 +22,12 @@ Built almost entirely inside the existing **cloud-sync plugin** + **admin panel*
 
 ### Decisions locked with the maintainer
 - **Privacy:** GPS, engine name/class, and the **listed weight** are always
-  public. **Setup sheet** and **engine-telemetry channels** (`rpm`, `water_temp`,
-  `oil_temp`, `egt`, `temp_1`, `temp_2` — the Engine/sensors group in
-  `channels.ts`) are **hidden by default**, each with an opt-in "share publicly"
-  toggle.
+  public. **Engine-telemetry channels** (`rpm`, `water_temp`, `oil_temp`, `egt`,
+  `temp_1`, `temp_2` — the Engine/sensors group in `channels.ts`) are **hidden by
+  default** with an opt-in "share publicly" toggle.
+  - **Post-launch amendment (migration `..._leaderboards_drop_setup.sql`):** setup
+    sharing was removed entirely — it made people uneasy. Setup data is never
+    uploaded; the `setup_public` column + the setup-share toggle were dropped.
 - **Weight:** comes from the vehicle's existing `weight`/`weightUnit` (`Kart` in
   `kartStorage.ts`). Snapshot save must start capturing it. At submission the
   **"Listed weight"** (public, groups exact-match) defaults to the vehicle weight;

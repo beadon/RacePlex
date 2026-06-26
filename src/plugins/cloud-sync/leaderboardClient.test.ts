@@ -35,7 +35,7 @@ function snap(): LapSnapshot {
 describe("buildNewEntryRow", () => {
   it("rounds lap_time_ms to an integer (the column type)", () => {
     const row = buildNewEntryRow(snap(), {
-      userId: "u1", displayName: "Bob", setupPublic: false, engineTelemetryPublic: false,
+      userId: "u1", displayName: "Bob", engineTelemetryPublic: false,
       listedWeight: 365, listedWeightUnit: "lb",
     });
     expect(row.lap_time_ms).toBe(55604);

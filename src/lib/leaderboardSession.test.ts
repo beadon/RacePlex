@@ -25,7 +25,6 @@ function entry(id: string, name: string, lapTimeMs: number, nSamples = 5): Leade
     listedWeightUnit: "lb",
     lapTimeMs,
     contentHash: `h-${id}`,
-    setupPublic: false,
     engineTelemetryPublic: false,
     status: "approved",
     createdAt: "2026-06-26T00:00:00Z",
