@@ -29,8 +29,8 @@
       "description": "Hardware e firmware GPS de código aberto: o DovesDataLogger"
     },
     "leaderboards": {
-      "title": "Leaderboards",
-      "description": "Compare fastest laps by track, course and engine class"
+      "title": "Rankings",
+      "description": "Compare as voltas mais rápidas por pista, traçado e classe de motor"
     }
   },
   "links": {

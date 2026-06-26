@@ -29,8 +29,8 @@
       "description": "オープンソースの GPS ハードウェアとファームウェア — DovesDataLogger"
     },
     "leaderboards": {
-      "title": "Leaderboards",
-      "description": "Compare fastest laps by track, course and engine class"
+      "title": "リーダーボード",
+      "description": "コース、レイアウト、エンジンクラスごとに最速ラップを比較"
     }
   },
   "links": {

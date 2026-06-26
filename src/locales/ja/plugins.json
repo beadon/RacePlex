@@ -7,7 +7,7 @@
     "lapSnapshots": "ラップスナップショット",
     "cloudLogs": "クラウドログ",
     "dataPrivacy": "データとプライバシー",
-    "leaderboards": "Leaderboards"
+    "leaderboards": "リーダーボード"
   },
   "account": {
     "signInBlurb": "サインインすると、ファイル・ガレージ・メモをデバイス間でバックアップ・同期できます。ここのすべては、このデバイス上でオフラインでも動作します。Cloud Sync は任意です。",
@@ -175,26 +175,26 @@
     "zipping": "圧縮中…"
   },
   "leaderboard": {
-    "signInHint": "Sign in to submit your snapshots to the public leaderboards.",
-    "noSnapshots": "Capture a lap snapshot to submit it to the leaderboards.",
-    "intro_one": "You have {{count}} snapshot you can submit to the leaderboards.",
-    "intro_other": "You have {{count}} snapshots you can submit to the leaderboards.",
-    "submitButton": "Submit to leaderboards",
-    "dialogTitle": "Submit to leaderboards",
-    "dialogDescription": "Your GPS data, engine, and listed weight are public so others can compare and verify laps. Your setup sheet and engine sensor data stay private unless you choose to share them.",
-    "listedWeight": "Listed weight",
-    "listedWeightHint": "Shown publicly and used to group records. Defaults to your vehicle weight — change it if you'd rather list a class weight.",
-    "weightRequired": "Enter a listed weight to submit.",
-    "shareSetup": "Share my setup sheet",
-    "shareEngineData": "Share engine sensor data (RPM, temps)",
-    "publicNotice": "Public: GPS, engine name, lap time, listed weight.",
-    "submitOne": "Submit",
-    "submitting": "Submitting…",
-    "submitted": "Submitted",
-    "submitSuccess": "Submitted to the leaderboards.",
-    "submitFailed": "Couldn't submit — please try again.",
-    "alreadySubmitted": "Already on the leaderboards.",
-    "loadFailed": "Couldn't load your submissions.",
-    "close": "Close"
+    "signInHint": "スナップショットを公開リーダーボードに送信するにはサインインしてください。",
+    "noSnapshots": "ラップをスナップショットとして保存すると、リーダーボードに送信できます。",
+    "intro_one": "リーダーボードに送信できるスナップショットが {{count}} 件あります。",
+    "intro_other": "リーダーボードに送信できるスナップショットが {{count}} 件あります。",
+    "submitButton": "リーダーボードに送信",
+    "dialogTitle": "リーダーボードに送信",
+    "dialogDescription": "GPSデータ、エンジン、申告重量は公開され、他のユーザーがラップを比較・確認できます。セットアップシートとエンジンセンサーのデータは、共有を選択しない限り非公開のままです。",
+    "listedWeight": "申告重量",
+    "listedWeightHint": "公開され、記録のグループ分けに使用されます。既定では車両の重量です。クラス重量を表示したい場合は変更してください。",
+    "weightRequired": "送信するには申告重量を入力してください。",
+    "shareSetup": "セットアップシートを共有する",
+    "shareEngineData": "エンジンセンサーのデータを共有する（回転数、温度）",
+    "publicNotice": "公開: GPS、エンジン名、ラップタイム、申告重量。",
+    "submitOne": "送信",
+    "submitting": "送信中…",
+    "submitted": "送信済み",
+    "submitSuccess": "リーダーボードに送信しました。",
+    "submitFailed": "送信できませんでした。もう一度お試しください。",
+    "alreadySubmitted": "すでにリーダーボードに登録されています。",
+    "loadFailed": "あなたの送信を読み込めませんでした。",
+    "close": "閉じる"
   }
 }

@@ -7,7 +7,7 @@
     "lapSnapshots": "Instantâneos de volta",
     "cloudLogs": "Registros na nuvem",
     "dataPrivacy": "Dados e privacidade",
-    "leaderboards": "Leaderboards"
+    "leaderboards": "Rankings"
   },
   "account": {
     "signInBlurb": "Entre para fazer backup e sincronizar seus arquivos, garagem e notas entre dispositivos. Tudo aqui continua funcionando offline neste dispositivo — o Cloud Sync é opcional.",
@@ -175,26 +175,26 @@
     "zipping": "Compactando…"
   },
   "leaderboard": {
-    "signInHint": "Sign in to submit your snapshots to the public leaderboards.",
-    "noSnapshots": "Capture a lap snapshot to submit it to the leaderboards.",
-    "intro_one": "You have {{count}} snapshot you can submit to the leaderboards.",
-    "intro_other": "You have {{count}} snapshots you can submit to the leaderboards.",
-    "submitButton": "Submit to leaderboards",
-    "dialogTitle": "Submit to leaderboards",
-    "dialogDescription": "Your GPS data, engine, and listed weight are public so others can compare and verify laps. Your setup sheet and engine sensor data stay private unless you choose to share them.",
-    "listedWeight": "Listed weight",
-    "listedWeightHint": "Shown publicly and used to group records. Defaults to your vehicle weight — change it if you'd rather list a class weight.",
-    "weightRequired": "Enter a listed weight to submit.",
-    "shareSetup": "Share my setup sheet",
-    "shareEngineData": "Share engine sensor data (RPM, temps)",
-    "publicNotice": "Public: GPS, engine name, lap time, listed weight.",
-    "submitOne": "Submit",
-    "submitting": "Submitting…",
-    "submitted": "Submitted",
-    "submitSuccess": "Submitted to the leaderboards.",
-    "submitFailed": "Couldn't submit — please try again.",
-    "alreadySubmitted": "Already on the leaderboards.",
-    "loadFailed": "Couldn't load your submissions.",
-    "close": "Close"
+    "signInHint": "Faça login para enviar seus instantâneos aos rankings públicos.",
+    "noSnapshots": "Capture uma volta para enviá-la aos rankings.",
+    "intro_one": "Você tem {{count}} instantâneo para enviar aos rankings.",
+    "intro_other": "Você tem {{count}} instantâneos para enviar aos rankings.",
+    "submitButton": "Enviar aos rankings",
+    "dialogTitle": "Enviar aos rankings",
+    "dialogDescription": "Seus dados de GPS, o motor e o peso informado são públicos para que outros possam comparar e verificar as voltas. Sua planilha de acerto e os dados do sensor do motor permanecem privados a menos que você opte por compartilhá-los.",
+    "listedWeight": "Peso informado",
+    "listedWeightHint": "Exibido publicamente e usado para agrupar os registros. O padrão é o peso do seu veículo — altere se preferir informar um peso de categoria.",
+    "weightRequired": "Informe um peso para enviar.",
+    "shareSetup": "Compartilhar minha planilha de acerto",
+    "shareEngineData": "Compartilhar dados do sensor do motor (RPM, temperaturas)",
+    "publicNotice": "Público: GPS, nome do motor, tempo de volta, peso informado.",
+    "submitOne": "Enviar",
+    "submitting": "Enviando…",
+    "submitted": "Enviado",
+    "submitSuccess": "Enviado aos rankings.",
+    "submitFailed": "Não foi possível enviar — tente novamente.",
+    "alreadySubmitted": "Já está nos rankings.",
+    "loadFailed": "Não foi possível carregar seus envios.",
+    "close": "Fechar"
   }
 }
