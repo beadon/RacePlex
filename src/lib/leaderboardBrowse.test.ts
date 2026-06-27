@@ -18,7 +18,6 @@ function e(over: Partial<LeaderboardEntry>): LeaderboardEntry {
     listedWeightUnit: "lb",
     lapTimeMs: 62000,
     contentHash: "h",
-    setupPublic: false,
     engineTelemetryPublic: false,
     status: "approved",
     createdAt: "",

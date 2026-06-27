@@ -3,7 +3,6 @@
 // builder) can depend on them without coupling to Supabase.
 
 import type { Course, FieldMapping, GpsSample } from "@/types/racing";
-import type { VehicleSetup } from "./setupStorage";
 
 /** Canonical engine-telemetry channel ids — stripped on submit unless shared. */
 export const ENGINE_TELEMETRY_CHANNELS: ReadonlySet<string> = new Set([
@@ -25,8 +24,6 @@ export interface LeaderboardEntryData {
   course: Course;
   lapStartMs: number;
   lapEndMs: number;
-  /** Present only when the submitter opted to share their setup. */
-  setup?: VehicleSetup;
 }
 
 /**
@@ -48,7 +45,6 @@ export interface LeaderboardEntry {
   listedWeightUnit: "lb" | "kg" | null;
   lapTimeMs: number;
   contentHash: string;
-  setupPublic: boolean;
   engineTelemetryPublic: boolean;
   status: "approved" | "denied";
   createdAt: string;

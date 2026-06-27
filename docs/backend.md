@@ -125,7 +125,7 @@ through RLS** (no edge function); the client lives in
 
 | Table | Purpose |
 |-------|---------|
-| `leaderboard_entries` | One row per submitted snapshot. Holds the frozen `data` jsonb (clean-lap samples + course geometry; engine-telemetry channels stripped + setup omitted client-side unless shared), the denormalized `display_name`, the raw `engine` + `engine_key`, the admin-overridable `engine_class_id` (+ `class_source`), the public `listed_weight`, `lap_time_ms`, a `content_hash`, and `status` (`approved` default / `denied`). `unique (user_id, content_hash)` blocks identical resubmits. |
+| `leaderboard_entries` | One row per submitted snapshot. Holds the frozen `data` jsonb (clean-lap samples + course geometry; engine-telemetry channels stripped client-side unless shared — **setup data is never uploaded**), the denormalized `display_name`, the raw `engine` + `engine_key`, the admin-overridable `engine_class_id` (+ `class_source`), the public `listed_weight`, `lap_time_ms`, a `content_hash`, and `status` (`approved` default / `denied`). `unique (user_id, content_hash)` blocks identical resubmits. |
 | `engine_classes` | Admin-managed keyword groups (`name`, `keywords[]`, `sort_order`) that collapse free-text engine names into one class. |
 
 | Function / trigger | What it does |

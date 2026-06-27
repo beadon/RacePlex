@@ -26,7 +26,6 @@ import { getMyProfile } from "./profile";
 interface RowState {
   weight: string;
   unit: "lb" | "kg";
-  shareSetup: boolean;
   shareEngine: boolean;
   busy: boolean;
 }
@@ -71,7 +70,6 @@ export default function LeaderboardSubmitPanel(_props: PluginPanelProps) {
         next[s.id] = prev[s.id] ?? {
           weight: d.weight !== null ? String(d.weight) : "",
           unit: d.unit,
-          shareSetup: false,
           shareEngine: false,
           busy: false,
         };
@@ -103,7 +101,6 @@ export default function LeaderboardSubmitPanel(_props: PluginPanelProps) {
       const newRow = buildNewEntryRow(snap, {
         userId: user.id,
         displayName,
-        setupPublic: row.shareSetup,
         engineTelemetryPublic: row.shareEngine,
         listedWeight: weight,
         listedWeightUnit: row.unit,
@@ -199,10 +196,6 @@ export default function LeaderboardSubmitPanel(_props: PluginPanelProps) {
                       </div>
                       <p className="text-[11px] text-muted-foreground">{t("leaderboard.listedWeightHint")}</p>
 
-                      <div className="flex items-center gap-2">
-                        <Switch id={`setup-${snap.id}`} checked={row.shareSetup} onCheckedChange={(v) => setRow(snap.id, { shareSetup: v })} />
-                        <Label htmlFor={`setup-${snap.id}`} className="text-xs text-muted-foreground">{t("leaderboard.shareSetup")}</Label>
-                      </div>
                       <div className="flex items-center gap-2">
                         <Switch id={`eng-${snap.id}`} checked={row.shareEngine} onCheckedChange={(v) => setRow(snap.id, { shareEngine: v })} />
                         <Label htmlFor={`eng-${snap.id}`} className="text-xs text-muted-foreground">{t("leaderboard.shareEngineData")}</Label>

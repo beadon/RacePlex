@@ -32,15 +32,14 @@ export function contentHashForSnapshot(snap: LapSnapshot): string {
 }
 
 export interface BuildEntryOptions {
-  setupPublic: boolean;
   engineTelemetryPublic: boolean;
 }
 
 /**
- * Build the frozen `data` payload for a leaderboard entry, applying privacy: the
- * setup is dropped unless shared, and engine-telemetry channels are stripped from
- * both the samples' `extraFields` and the `fieldMappings` unless shared. GPS,
- * speed, and everything else stay. Always trims to the clean lap (no buffer).
+ * Build the frozen `data` payload for a leaderboard entry, applying privacy:
+ * engine-telemetry channels are stripped from both the samples' `extraFields` and
+ * the `fieldMappings` unless shared. Setup data is never included. GPS, speed, and
+ * everything else stay. Always trims to the clean lap (no buffer).
  */
 export function buildEntryData(snap: LapSnapshot, opts: BuildEntryOptions): LeaderboardEntryData {
   const clean = snapshotLapSamples(snap);
@@ -74,7 +73,6 @@ export function buildEntryData(snap: LapSnapshot, opts: BuildEntryOptions): Lead
     course: snap.course,
     lapStartMs: snap.lapStartMs,
     lapEndMs: snap.lapEndMs,
-    setup: opts.setupPublic ? snap.setup : undefined,
   };
 }
 

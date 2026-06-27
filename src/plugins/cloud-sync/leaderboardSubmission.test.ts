@@ -55,20 +55,23 @@ describe("contentHashForSnapshot", () => {
 });
 
 describe("buildEntryData privacy", () => {
-  it("strips engine-telemetry channels and drops setup by default", () => {
-    const data = buildEntryData(snap(), { setupPublic: false, engineTelemetryPublic: false });
-    expect(data.setup).toBeUndefined();
+  it("never includes setup data", () => {
+    expect("setup" in buildEntryData(snap(), { engineTelemetryPublic: false })).toBe(false);
+    expect("setup" in buildEntryData(snap(), { engineTelemetryPublic: true })).toBe(false);
+  });
+
+  it("strips engine-telemetry channels by default", () => {
+    const data = buildEntryData(snap(), { engineTelemetryPublic: false });
     for (const s of data.samples) {
       expect(s.extraFields.rpm).toBeUndefined();
-      expect(s.extraFields.lat_g).toBe(s.extraFields.lat_g); // non-engine channel kept
+      expect(s.extraFields.lat_g).toBeDefined(); // non-engine channel kept
     }
     expect(data.fieldMappings.map((f) => f.name)).toContain("lat_g");
     expect(data.fieldMappings.map((f) => f.name)).not.toContain("rpm");
   });
 
-  it("keeps engine telemetry and setup when both shared", () => {
-    const data = buildEntryData(snap(), { setupPublic: true, engineTelemetryPublic: true });
-    expect(data.setup).toBeDefined();
+  it("keeps engine telemetry when shared", () => {
+    const data = buildEntryData(snap(), { engineTelemetryPublic: true });
     expect(data.samples[0].extraFields.rpm).toBe(11000);
     expect(data.fieldMappings.map((f) => f.name)).toContain("rpm");
   });
