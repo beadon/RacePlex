@@ -34,6 +34,12 @@ interface LoggerPickerProps {
    * native shell; on web the MyChron card keeps its explanatory dialog.
    */
   onSelectMychron?: () => void;
+  /**
+   * Begin the native Alfano Bluetooth-serial flow. Only supplied (and only fired)
+   * on the native shell; on web the Alfano card keeps its explanatory dialog
+   * (Bluetooth serial can't be reached in-browser).
+   */
+  onSelectAlfano?: () => void;
 }
 
 interface LoggerCardProps {
@@ -82,11 +88,12 @@ function LoggerCard({ image, name, tag, onClick, disabled, badge, hint }: Logger
 
 /**
  * Image-based logger chooser shown before any download begins. PerchWerks
- * Fledgling runs the normal Web Bluetooth flow; MyChron and Alfano are not yet
- * downloadable and open an explanatory dialog instead (MyChron's copy differs
- * between the native shell and the web app — see `isNativeApp`).
+ * Fledgling runs the normal Web Bluetooth flow; MyChron (Wi-Fi) and Alfano
+ * (Bluetooth serial) only download on the native shell, so on web they open an
+ * explanatory dialog instead (copy differs between the native shell and the web
+ * app — see `isNativeApp`).
  */
-export function LoggerPicker({ open, onOpenChange, bleSupported, onSelectFledgling, onSelectMychron }: LoggerPickerProps) {
+export function LoggerPicker({ open, onOpenChange, bleSupported, onSelectFledgling, onSelectMychron, onSelectAlfano }: LoggerPickerProps) {
   const { t } = useTranslation("logger");
   const [info, setInfo] = useState<"mychron" | "alfano" | null>(null);
   const native = isNativeApp();
@@ -126,8 +133,10 @@ export function LoggerPicker({ open, onOpenChange, bleSupported, onSelectFledgli
               image={ALFANO_IMAGE}
               name={ALFANO_NAME}
               tag={t("tags.alfano")}
-              badge={t("comingSoon")}
-              onClick={() => setInfo("alfano")}
+              // Bluetooth serial only works in the (not-yet-public) native app, so
+              // flag it "coming soon" to web users; on native it runs the flow.
+              badge={native ? undefined : t("comingSoon")}
+              onClick={() => (native && onSelectAlfano ? onSelectAlfano() : setInfo("alfano"))}
             />
           </div>
 
@@ -156,7 +165,7 @@ export function LoggerPicker({ open, onOpenChange, bleSupported, onSelectFledgli
         </DialogContent>
       </Dialog>
 
-      {/* Alfano — Bluetooth, no native app needed; coming soon. */}
+      {/* Alfano — Bluetooth serial, web can't reach it; explains the native app. */}
       <Dialog open={info === "alfano"} onOpenChange={(o) => !o && setInfo(null)}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>

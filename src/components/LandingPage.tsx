@@ -87,6 +87,8 @@ export function LandingPage({
   const roadmapItems = t("landing:roadmap.items", { returnObjects: true }) as {
     text: string;
     sub?: string[];
+    /** Shipped — rendered struck through to show it's landed. */
+    done?: boolean;
   }[];
 
   // Group roadmap items by their trailing month/quarter parenthetical (works
@@ -231,14 +233,14 @@ export function LandingPage({
                     <li className="text-sm text-muted-foreground">
                       <div className="flex items-start gap-2">
                         <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary/60" />
-                        <span>{item.text}</span>
+                        <span className={item.done ? "line-through opacity-70" : undefined}>{item.text}</span>
                       </div>
                       {item.sub && item.sub.length > 0 && (
                         <ul className="mt-1.5 space-y-1 pl-5">
                           {item.sub.map((sub) => (
                             <li key={sub} className="flex items-start gap-2">
                               <span className="mt-[7px] h-1 w-1 shrink-0 rounded-full bg-primary/40" />
-                              <span>{sub}</span>
+                              <span className={item.done ? "line-through opacity-70" : undefined}>{sub}</span>
                             </li>
                           ))}
                         </ul>

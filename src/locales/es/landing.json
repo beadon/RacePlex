@@ -53,8 +53,9 @@
         "text": "Descargas desde loggers de terceros (junio '26)",
         "sub": [
           "MyChron: decodificado, requiere aplicación nativa",
-          "Alfano: pendiente"
-        ]
+          "Alfano: Bluetooth serie, requiere app nativa"
+        ],
+        "done": true
       },
       {
         "text": "Aplicación nativa (julio '26)"

@@ -8,7 +8,7 @@
   "tags": {
     "fledgling": "DIYロガー · Bluetooth",
     "mychron": "Wi-Fi · ネイティブアプリが必要",
-    "alfano": "Bluetooth · 近日公開"
+    "alfano": "Bluetooth シリアル · ネイティブアプリが必要"
   },
   "fledglingUnsupported": "Web Bluetooth はこの環境では非対応です。デスクトップの Chrome、Edge、または Opera をご利用ください。",
   "mychron": {
@@ -51,7 +51,24 @@
     }
   },
   "alfano": {
-    "title": "Alfano のダウンロード",
-    "body": "Alfano のダウンロードは、ロガーの Bluetooth 接続によりネイティブアプリなしで利用できるようになります。開発は進行中です。最新情報にご注目ください（2026年7月初旬予定）。"
+    "title": "ネイティブアプリが必要です",
+    "body": "Alfano は Bluetooth シリアルを使用しており、Web ブラウザーからは直接アクセスできず、ネイティブアプリも必要になります。Alfano からダウンロードするための専用ネイティブアプリを開発中です。",
+    "flow": {
+      "scanning": "Alfano ロガーを検索中…",
+      "selectDevice": "Alfano を選択",
+      "deviceInstructions": "接続する Alfano をタップしてください：",
+      "noDevices": "Alfano ロガーが見つかりません。電源が入っていて Bluetooth が有効になっていることを確認し、再検索してください。",
+      "rescan": "再検索",
+      "connecting": "接続中…",
+      "fetching": "セッションを取得中…",
+      "selectFile": "ダウンロードするセッションを選択",
+      "downloading": "ダウンロード中…",
+      "errorTitle": "接続エラー",
+      "instructions": "セッションをタップしてダウンロードして読み込みます：",
+      "empty": "このデバイスにセッションはありません",
+      "savedHint": " — ファイルは保存され、「ファイルを参照」で見つけられます。",
+      "retry": "再試行",
+      "cancel": "キャンセル"
+    }
   }
 }

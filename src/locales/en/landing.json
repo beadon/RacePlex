@@ -50,9 +50,10 @@
       },
       {
         "text": "Downloads from 3rd-party loggers (June '26)",
+        "done": true,
         "sub": [
           "MyChron: decoded, native app required",
-          "Alfano: pending"
+          "Alfano: Bluetooth serial, native app required"
         ]
       },
       {
