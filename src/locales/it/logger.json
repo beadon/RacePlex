@@ -8,7 +8,7 @@
   "tags": {
     "fledgling": "Logger DIY · Bluetooth",
     "mychron": "Wi-Fi · richiede app nativa",
-    "alfano": "Bluetooth · prossimamente"
+    "alfano": "Bluetooth seriale · richiede app nativa"
   },
   "fledglingUnsupported": "Web Bluetooth non è supportato qui: usa Chrome, Edge o Opera su computer.",
   "mychron": {
@@ -51,7 +51,24 @@
     }
   },
   "alfano": {
-    "title": "Download Alfano",
-    "body": "I download Alfano saranno disponibili senza un'app nativa grazie alla connettività Bluetooth del logger. Stiamo facendo progressi: resta sintonizzato per gli aggiornamenti (stimato inizio luglio 2026)."
+    "title": "App nativa richiesta",
+    "body": "Alfano usa il Bluetooth seriale, a cui i browser web non possono accedere nel browser e richiederà anche l'app nativa. Un'app nativa dedicata al download da Alfano è in fase di sviluppo.",
+    "flow": {
+      "scanning": "Ricerca dei logger Alfano…",
+      "selectDevice": "Seleziona il tuo Alfano",
+      "deviceInstructions": "Tocca il tuo Alfano per connetterti:",
+      "noDevices": "Nessun logger Alfano trovato. Assicurati che il tuo sia acceso e che il Bluetooth sia attivo, poi riavvia la ricerca.",
+      "rescan": "Cerca di nuovo",
+      "connecting": "Connessione…",
+      "fetching": "Recupero delle sessioni…",
+      "selectFile": "Seleziona una sessione da scaricare",
+      "downloading": "Download in corso…",
+      "errorTitle": "Errore di connessione",
+      "instructions": "Tocca una sessione per scaricarla e caricarla:",
+      "empty": "Nessuna sessione su questo dispositivo",
+      "savedHint": " — il file è stato salvato e si trova in Sfoglia file.",
+      "retry": "Riprova",
+      "cancel": "Annulla"
+    }
   }
 }

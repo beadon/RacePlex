@@ -14,6 +14,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [2.10.0] - unreleased
 
 ### Added
+- **Alfano logger groundwork.** Picking the Alfano tile in the logger picker now
+  explains that Alfano transfers over Bluetooth serial (Classic Bluetooth SPP),
+  which browsers can't access in-browser, so it will require the native app. The
+  native-side download flow is scaffolded (`src/lib/loggers/alfano/`,
+  `AlfanoDownload`) against the shared native IPC client; the Rust backend that
+  drives it is still to come.
 - **Public driver profiles (plan 0006).** A new public `/driver/{name}` page (shareable,
   viewable signed-out) shows a driver's **profile picture**, display name, their **opt-in
   vehicles** (name/type/engine only — never weights or setups), and their uploaded

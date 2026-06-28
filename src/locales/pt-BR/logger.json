@@ -8,7 +8,7 @@
   "tags": {
     "fledgling": "Registrador DIY · Bluetooth",
     "mychron": "Wi-Fi · app nativo necessário",
-    "alfano": "Bluetooth · em breve"
+    "alfano": "Bluetooth serial · app nativo necessário"
   },
   "fledglingUnsupported": "Web Bluetooth não é compatível aqui — use Chrome, Edge ou Opera no computador.",
   "mychron": {
@@ -51,7 +51,24 @@
     }
   },
   "alfano": {
-    "title": "Downloads do Alfano",
-    "body": "Os downloads do Alfano estarão disponíveis sem um app nativo graças à conectividade Bluetooth do registrador. Estamos progredindo — fique de olho nas novidades (estimado para início de julho de 2026)."
+    "title": "App nativo necessário",
+    "body": "O Alfano usa Bluetooth serial, que os navegadores web não conseguem acessar no navegador — também exigirá o app nativo. Um app nativo dedicado para baixar do Alfano está em desenvolvimento.",
+    "flow": {
+      "scanning": "Procurando registradores Alfano…",
+      "selectDevice": "Selecione seu Alfano",
+      "deviceInstructions": "Toque no seu Alfano para conectar:",
+      "noDevices": "Nenhum registrador Alfano encontrado. Verifique se o seu está ligado e o Bluetooth ativado e procure novamente.",
+      "rescan": "Procurar novamente",
+      "connecting": "Conectando…",
+      "fetching": "Buscando sessões…",
+      "selectFile": "Selecione uma sessão para baixar",
+      "downloading": "Baixando…",
+      "errorTitle": "Erro de conexão",
+      "instructions": "Toque em uma sessão para baixá-la e carregá-la:",
+      "empty": "Nenhuma sessão neste dispositivo",
+      "savedHint": " — o arquivo foi salvo e pode ser encontrado em Procurar arquivos.",
+      "retry": "Tentar novamente",
+      "cancel": "Cancelar"
+    }
   }
 }
