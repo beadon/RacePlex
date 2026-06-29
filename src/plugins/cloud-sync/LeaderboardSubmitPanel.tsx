@@ -4,7 +4,7 @@ import { Trophy, Check, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import type { PluginPanelProps } from "@/plugins/panels";
 import { Button } from "@/components/ui/button";
-import { SubmitTrackDialog } from "@/components/SubmitTrackDialog";
+import { autoSubmitSnapshotTrack } from "./trackAutoSubmit";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -105,6 +105,11 @@ export default function LeaderboardSubmitPanel(_props: PluginPanelProps) {
       await insertEntries([newRow]);
       setSubmittedHashes((s) => new Set(s).add(newRow.content_hash));
       toast.success(t("leaderboard.submitSuccess"));
+      // A custom (non-built-in) track rides along to the community track DB too,
+      // best-effort — never block or fail the snapshot submission over it.
+      void autoSubmitSnapshotTrack(snap)
+        .then((added) => { if (added) toast.success(t("leaderboard.trackAdded")); })
+        .catch((err) => console.warn("[leaderboard] track auto-submit failed:", err));
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       console.error("[leaderboard] submit failed:", e);
@@ -200,21 +205,13 @@ export default function LeaderboardSubmitPanel(_props: PluginPanelProps) {
                       <p className="text-[11px] text-muted-foreground">{t("leaderboard.publicNotice")}</p>
 
                       {/* Custom (non-built-in) track: its layout + sectors ride along in the
-                          snapshot data, and we nudge the user to also add it to the shared
-                          community track DB via the existing submit-track flow. */}
+                          snapshot data AND get auto-submitted to the community track DB on
+                          submit (best-effort, attributed to the signed-in user). */}
                       {snap.course?.isUserDefined && (
-                        <div className="space-y-1.5 rounded-md border border-amber-500/40 bg-amber-500/10 px-2.5 py-2">
-                          <p className="text-[11px] text-amber-700 dark:text-amber-400">
-                            {t("leaderboard.customTrackNotice")}
-                          </p>
-                          <SubmitTrackDialog
-                            trigger={
-                              <Button variant="outline" size="sm" className="h-7 gap-1.5 text-xs">
-                                <MapPin className="h-3.5 w-3.5" /> {t("leaderboard.customTrackSubmit")}
-                              </Button>
-                            }
-                          />
-                        </div>
+                        <p className="flex items-start gap-1.5 rounded-md border border-amber-500/40 bg-amber-500/10 px-2.5 py-2 text-[11px] text-amber-700 dark:text-amber-400">
+                          <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                          {t("leaderboard.customTrackNotice")}
+                        </p>
                       )}
                     </>
                   )}

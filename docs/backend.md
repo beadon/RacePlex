@@ -247,7 +247,11 @@ tab (`src/components/admin/UsersTab.tsx`). Service-role actions:
 Submissions are attributed to a signed-in contributor via
 `submissions.submitted_by_user_id`, which the `submit-track` edge function derives
 from the caller's **verified JWT** (never a client-supplied id; anonymous stays
-`NULL`). The admin Submissions tab resolves it to a `profiles.display_name`.
+`NULL`). The admin Submissions tab resolves it to a `profiles.display_name`. The
+Turnstile CAPTCHA is **skipped for signed-in submitters** (they're accountable via
+their account; IP ban + rate limit still apply) — this lets a custom track
+auto-submit alongside a leaderboard snapshot (`plugins/cloud-sync/trackAutoSubmit`)
+with no interactive CAPTCHA.
 
 **Client wiring** (core, not the cloud-sync plugin — billing is account-level and
 PricingCards renders even with cloud disabled): `lib/billing.ts` is the pure,

@@ -169,8 +169,12 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Verify Turnstile token (once for the whole batch)
-    if (Deno.env.get('TURNSTILE_SECRET_KEY')) {
+    // Verify Turnstile token (once for the whole batch). Skipped for signed-in
+    // users: they're already accountable via their account (and submissions are
+    // attributed to them), so the anti-bot CAPTCHA only gates anonymous submits.
+    // This lets the client auto-submit a custom track alongside a leaderboard
+    // snapshot without an interactive CAPTCHA. IP ban + rate limit still apply.
+    if (Deno.env.get('TURNSTILE_SECRET_KEY') && !submittedByUserId) {
       if (!turnstile_token || typeof turnstile_token !== 'string') {
         return jsonError('Verification required. Please complete the CAPTCHA.', 400);
       }

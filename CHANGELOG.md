@@ -15,10 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - **Custom tracks ride along with leaderboard snapshots.** When you submit a snapshot
-  for a track that isn't in the built-in list, the submit dialog now tells you its
-  layout + sectors are included with the snapshot (so others can view the lap) and
-  offers a one-tap **"Add track to database"** that opens the existing community
-  track-submission flow.
+  for a track that isn't in the built-in list, its layout + sectors are included with
+  the snapshot (so others can view the lap) and the track is **automatically submitted
+  to the community track database** for review — same flow as the manual submitter, no
+  CAPTCHA for signed-in users, deduped so it's only sent once.
 - **Alfano logger groundwork.** Picking the Alfano tile in the logger picker now
   explains that Alfano transfers over Bluetooth serial (Classic Bluetooth SPP),
   which browsers can't access in-browser, so it will require the native app. The
