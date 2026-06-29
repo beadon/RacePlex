@@ -167,7 +167,7 @@ view. Older JSON with only `sector_2_*`/`sector_3_*` is read as the two majors.
 | `STRIPE_SECRET_KEY` | No (required for paid tiers) | Stripe secret key used by the `create-checkout-session`, `stripe-webhook`, and `create-portal-session` edge functions (edge function secret — `???`) |
 | `STRIPE_WEBHOOK_SECRET` | No (required for paid tiers) | Signing secret for the `stripe-webhook` endpoint, from the Stripe dashboard webhook config (edge function secret — `???`) |
 | `DELETION_CRON_SECRET` | No (required for scheduled account deletion) | Shared secret the `process-account-deletions` edge function requires in the `x-cron-secret` header. Must match the Vault secret `deletion_cron_secret` that the daily pg_cron job sends (edge function secret — `???`) |
-| `SUPABASE_ACCESS_TOKEN` | No (preview-branch DBs) | Build-time secret: a Supabase **personal access token**. When set, a preview build resolves its own per-branch Supabase preview database via the Management API and bakes those creds in, falling back to the static `*_PREVIEW`/beta creds when the branch has no preview DB. See *Preview-branch backend* below. Never read by `main` builds, local dev, or the runtime app. |
+| `SUPABASE_ACCESS_TOKEN` | No (preview-branch DBs) | Build-time secret: a Supabase **personal access token**. When set, a **feature-branch** build (not `main`, not `BETA`) resolves its own per-branch Supabase preview database via the Management API and bakes those creds in, falling back to the static `*_PREVIEW`/beta creds when the branch has no preview DB. See *Preview-branch backend* below. Never read by `main`/`BETA` builds, local dev, or the runtime app. |
 | `DOVE_PLUGIN_PACKAGES` | No | Build-time: comma-separated external plugin npm packages to load. Overrides the default (`@perchwerks/eye-in-the-sky`, the public AI coach) when set |
 | `ANTHROPIC_API_KEY` | No (translation tooling) | Required by `bun run i18n:seed` to machine-translate locale files (`scripts/seed-translations.mjs`). Maintainer tool only — never read by the app or the standard CI build (`???`). |
 | `I18N_SEED_MODEL` | No | Optional model override for `bun run i18n:seed` (default `claude-sonnet-4-6`). |
@@ -435,12 +435,22 @@ static frontend.
 
 #### Preview-branch backend (Supabase Branching → preview deployments)
 
-Pushes to a **non-production branch** produce a preview version/URL of the same
-Worker. To point those preview builds at a Supabase **preview-branch database**
-(so beta work doesn't touch production data), set parallel `*_PREVIEW` build
-variables. Workers Builds exposes `WORKERS_CI_BRANCH` (Pages: `CF_PAGES_BRANCH`)
-on every build; `vite.config.ts` prefers the `_PREVIEW` value of each key
-whenever that branch isn't `main`, and ignores them on `main` and in local dev.
+The build picks its Supabase backend by **git branch**, in three tiers:
+
+| Branch | Database | How it's chosen |
+|--------|----------|-----------------|
+| `main` | production | base build vars (`VITE_*` / `HTT_*`) |
+| `BETA` | the shared beta DB | the `*_PREVIEW` build vars |
+| any other branch | that branch's **own** Supabase preview-branch DB | resolved via the Management API, falling back to `*_PREVIEW`/beta when none exists |
+
+`BETA` is the shared integration database and is **never** routed onto a per-branch
+DB — only feature branches consult the resolver. Each build logs the result
+(`[backend] Supabase URL baked: … — <tier>`) so a deploy always states which DB it
+baked and why. Set the `*_PREVIEW` vars so non-`main` builds don't touch production:
+
+Workers Builds exposes `WORKERS_CI_BRANCH` (Pages: `CF_PAGES_BRANCH`) on every
+build; `vite.config.ts` prefers the `_PREVIEW` value of each key whenever the
+branch isn't `main`, and ignores them on `main` and in local dev.
 
 1. Enable **Branching** in Supabase, then copy the preview branch's URL, anon
    key, and project ref from the **Branches** panel.
@@ -457,21 +467,22 @@ whenever that branch isn't `main`, and ignores them on `main` and in local dev.
    is also accepted. Add the Cloudflare preview URL to the preview branch's
    **Auth → Redirect URLs** so cloud sign-in works there.
 
-##### Dynamic per-branch databases (optional, recommended)
+##### Dynamic per-branch databases (feature branches)
 
-The static `*_PREVIEW` values above point *every* preview at **one** fixed DB
-(beta). To instead give each branch its **own** Supabase preview-branch database
-— so a feature branch's preview deployment exercises that branch's migrations
-without merging into beta first — add a `SUPABASE_ACCESS_TOKEN` build secret:
+Without a token, every non-`main` preview (including feature branches) uses the
+static `*_PREVIEW`/beta DB. To instead give each **feature** branch its **own**
+Supabase preview-branch database — so its preview deployment exercises that
+branch's migrations without merging into beta first — add a `SUPABASE_ACCESS_TOKEN`
+build secret (`BETA` always stays on `*_PREVIEW` regardless):
 
 1. Create a Supabase **personal access token** (Account → Access Tokens).
 2. Worker → **Settings → Build → Variables and Secrets** → add it as a secret:
    `SUPABASE_ACCESS_TOKEN` (keep the static `*_PREVIEW` values as the fallback).
 
-On every preview build, `vite.config.ts` then asks the Supabase **Management API**
-whether a preview branch exists for the build's git branch
-(`scripts/resolveSupabaseBranch.ts`). If one does and it's healthy, that branch's
-URL + anon key + ref are baked in; otherwise it falls back to the static
+On a **feature-branch** build (not `main`, not `BETA`), `vite.config.ts` asks the
+Supabase **Management API** whether a preview branch exists for the build's git
+branch (`scripts/resolveSupabaseBranch.ts`). If one does and it's healthy, that
+branch's URL + anon key + ref are baked in; otherwise it falls back to the static
 `*_PREVIEW`/beta creds. The lookup never throws and times out fast, so it can't
 break a deploy. Full design: [`docs/plans/0006-dynamic-supabase-branch-db.md`](docs/plans/0006-dynamic-supabase-branch-db.md).
 

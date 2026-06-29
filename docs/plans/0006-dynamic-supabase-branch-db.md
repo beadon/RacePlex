@@ -30,8 +30,10 @@ branch (`WORKERS_CI_BRANCH`); if so, bake *its* creds in. If not, fall back to t
 existing static `_PREVIEW`/beta creds — i.e. today's behaviour, untouched.
 
 Flow (`scripts/resolveSupabaseBranch.ts`):
-1. Skip entirely unless it's a preview build with a `SUPABASE_ACCESS_TOKEN` and a
-   non-`main` branch.
+1. Skip entirely unless it's a **feature-branch** build with a `SUPABASE_ACCESS_TOKEN`
+   — i.e. a branch that is neither `main` nor `BETA`. (`BETA` is the shared
+   integration DB and always uses the static `*_PREVIEW` creds; only feature
+   branches get their own per-branch database.)
 2. `GET /v1/projects/{prodRef}/branches` → find the non-default branch whose
    `git_branch` matches the build's branch.
 3. **No match** → return null. This is the common "no DB changes, so Supabase made
