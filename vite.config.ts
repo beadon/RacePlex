@@ -132,13 +132,24 @@ export default defineConfig(async ({ mode }) => {
   // instead of production. Production (`main`) builds and local dev never see
   // the _PREVIEW values, so they're untouched. The creds are build-time-baked,
   // not runtime — picking them here is the only place to switch backends.
+  // Backend tier is chosen by the build's git branch:
+  //   main          → base build vars (production database)
+  //   BETA          → static `*_PREVIEW` vars (the one shared beta database)
+  //   any other     → that branch's OWN Supabase preview-branch DB (resolved
+  //                   below via the Management API), falling back to the
+  //                   `*_PREVIEW`/beta creds when no such branch exists.
+  // `_PREVIEW` is preferred for BETA *and* feature branches; only feature
+  // branches additionally consult the resolver (BETA must never be hijacked onto
+  // a per-branch DB — it's the shared integration database).
   const ciBranch = process.env.WORKERS_CI_BRANCH || process.env.CF_PAGES_BRANCH;
   const PROD_BRANCH = "main";
+  const BETA_BRANCH = "BETA";
   const isPreviewBuild = !!ciBranch && ciBranch !== PROD_BRANCH;
+  const isFeatureBranch = isPreviewBuild && ciBranch !== BETA_BRANCH;
 
   const pick = (viteKey: string, httKey: string, fallback: string, override?: string) => {
-    // A resolved per-branch Supabase preview DB (see below) wins over everything:
-    // it's the whole point — this branch's own ephemeral database.
+    // A resolved per-branch Supabase preview DB (feature branches only) wins over
+    // everything — it's the whole point: this branch's own database.
     if (override) return override;
     if (isPreviewBuild) {
       const previewVal =
@@ -151,32 +162,41 @@ export default defineConfig(async ({ mode }) => {
     return env[viteKey] || process.env[viteKey] || env[httKey] || process.env[httKey] || fallback;
   };
 
-  // DYNAMIC PER-BRANCH BACKEND: on a preview build, ask the Supabase Management
-  // API whether a preview-branch database exists for THIS git branch and, if so,
-  // bake in its creds instead of the one static beta DB. This is the only thing
-  // that makes branch-specific databases reachable from branch-specific previews.
-  // Requires a SUPABASE_ACCESS_TOKEN build secret; without it (or when the branch
-  // has no DB changes, so Supabase made no branch) `branchBackend` stays null and
-  // pick() falls through to the existing `_PREVIEW`/beta chain — today's behaviour.
-  // The resolver never throws and times out fast, so it can't break a deploy.
+  // DYNAMIC PER-BRANCH BACKEND — FEATURE BRANCHES ONLY (never main, never BETA).
+  // Ask the Supabase Management API whether a preview-branch database exists for
+  // THIS git branch and, if so, bake its creds in; otherwise fall back to the
+  // `*_PREVIEW`/beta chain via pick(). Requires a SUPABASE_ACCESS_TOKEN build
+  // secret; without it (or when Supabase made no branch) `branchBackend` stays
+  // null. The resolver never throws and times out fast, so it can't break a deploy.
   const prodProjectRef =
     env.VITE_SUPABASE_PROJECT_ID ||
     process.env.VITE_SUPABASE_PROJECT_ID ||
     env.HTT_SUPABASE_PROJECT_ID ||
     process.env.HTT_SUPABASE_PROJECT_ID ||
     "";
-  const branchBackend = isPreviewBuild
+  const branchBackend = isFeatureBranch
     ? await resolveBranchBackend({
         gitBranch: ciBranch ?? "",
         prodProjectRef,
         accessToken: process.env.SUPABASE_ACCESS_TOKEN || env.SUPABASE_ACCESS_TOKEN || "",
       })
     : null;
-  if (branchBackend) {
-    console.log(
-      `[supabase-branch] using preview DB ${branchBackend.projectId} for branch "${ciBranch}"`,
-    );
-  }
+
+  // Resolve the URL once and log which database this build baked in, so a deploy's
+  // logs always state plainly which backend (and why) it points at.
+  const supabaseUrl = pick(
+    "VITE_SUPABASE_URL", "HTT_SUPABASE_URL", PUBLIC_BACKEND_FALLBACKS.VITE_SUPABASE_URL, branchBackend?.url,
+  );
+  const backendTier = !ciBranch
+    ? "local/dev (base vars)"
+    : ciBranch === PROD_BRANCH
+      ? "main (base/production vars)"
+      : ciBranch === BETA_BRANCH
+        ? "BETA (*_PREVIEW vars)"
+        : branchBackend
+          ? `feature "${ciBranch}" (branch DB ${branchBackend.projectId})`
+          : `feature "${ciBranch}" (no branch DB → *_PREVIEW fallback)`;
+  console.log(`[backend] Supabase URL baked: ${supabaseUrl || "(none — offline-only build)"} — ${backendTier}`);
 
   const appVersion = readAppVersion();
   const gitHash = gitShortHash();
@@ -202,9 +222,7 @@ export default defineConfig(async ({ mode }) => {
       "import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY": JSON.stringify(
         pick("VITE_SUPABASE_PUBLISHABLE_KEY", "HTT_SUPABASE_PUBLISHABLE_KEY", PUBLIC_BACKEND_FALLBACKS.VITE_SUPABASE_PUBLISHABLE_KEY, branchBackend?.anonKey),
       ),
-      "import.meta.env.VITE_SUPABASE_URL": JSON.stringify(
-        pick("VITE_SUPABASE_URL", "HTT_SUPABASE_URL", PUBLIC_BACKEND_FALLBACKS.VITE_SUPABASE_URL, branchBackend?.url),
-      ),
+      "import.meta.env.VITE_SUPABASE_URL": JSON.stringify(supabaseUrl),
       "import.meta.env.VITE_ENABLE_ADMIN": JSON.stringify(
         pick("VITE_ENABLE_ADMIN", "HTT_ENABLE_ADMIN", PUBLIC_BACKEND_FALLBACKS.VITE_ENABLE_ADMIN),
       ),
