@@ -89,7 +89,8 @@
       "comment": "Comment",
       "featureRequest": "Feature Request",
       "complaint": "Complaint",
-      "bugReport": "Bug Report"
+      "bugReport": "Bug Report",
+      "newDatalogger": "New datalogger connection"
     },
     "emailLine": "Email: {{email}}",
     "ipLine": "IP: {{ip}}",

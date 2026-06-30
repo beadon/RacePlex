@@ -226,7 +226,8 @@
       "comment": "Comentário",
       "featureRequest": "Solicitação de recurso",
       "complaint": "Reclamação",
-      "bugReport": "Relatório de bug"
+      "bugReport": "Relatório de bug",
+      "newDatalogger": "New datalogger connection"
     },
     "emailLabel": "E-mail",
     "emailOptional": "(opcional, para resposta)",

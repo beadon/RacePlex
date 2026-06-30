@@ -17,6 +17,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Public-vehicle badge.** Vehicles marked *Show on profile* now carry a small
   **Public** badge in the garage's Vehicles tab, so you can see at a glance which are
   shared on your driver profile.
+- **Request a datalogger.** The contact form has a new **New datalogger connection**
+  category, and the "Download from logger" picker has a **Request additional
+  dataloggers** button that opens the contact form with that category preselected.
 - **Custom tracks ride along with leaderboard snapshots.** When you submit a snapshot
   for a track that isn't in the built-in list, its layout + sectors are included with
   the snapshot (so others can view the lap) and the track is **automatically submitted

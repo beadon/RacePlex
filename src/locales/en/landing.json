@@ -181,7 +181,8 @@
       "comment": "Comment",
       "featureRequest": "Feature Request",
       "complaint": "Complaint",
-      "bugReport": "Bug Report"
+      "bugReport": "Bug Report",
+      "newDatalogger": "New datalogger connection"
     },
     "emailLabel": "Email",
     "emailOptional": "(optional, for a reply)",

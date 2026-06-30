@@ -70,5 +70,6 @@
       "retry": "Erneut versuchen",
       "cancel": "Abbrechen"
     }
-  }
+  },
+  "requestLogger": "Request additional dataloggers"
 }

@@ -70,5 +70,6 @@
       "retry": "再試行",
       "cancel": "キャンセル"
     }
-  }
+  },
+  "requestLogger": "Request additional dataloggers"
 }

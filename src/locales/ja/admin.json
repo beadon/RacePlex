@@ -52,7 +52,8 @@
       "comment": "コメント",
       "featureRequest": "機能リクエスト",
       "complaint": "苦情",
-      "bugReport": "バグ報告"
+      "bugReport": "バグ報告",
+      "newDatalogger": "New datalogger connection"
     },
     "emailLine": "メール: {{email}}",
     "ipLine": "IP: {{ip}}",
