@@ -226,7 +226,8 @@
       "comment": "Kommentar",
       "featureRequest": "Funktionswunsch",
       "complaint": "Beschwerde",
-      "bugReport": "Fehlerbericht"
+      "bugReport": "Fehlerbericht",
+      "newDatalogger": "New datalogger connection"
     },
     "emailLabel": "E-Mail",
     "emailOptional": "(optional, für eine Antwort)",

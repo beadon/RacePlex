@@ -24,6 +24,7 @@ const categoryColors: Record<string, string> = {
   "Feature Request": "bg-green-500/20 text-green-400 border-green-500/30",
   "Complaint": "bg-red-500/20 text-red-400 border-red-500/30",
   "Bug Report": "bg-orange-500/20 text-orange-400 border-orange-500/30",
+  "New Datalogger Connection": "bg-purple-500/20 text-purple-400 border-purple-500/30",
 };
 
 // Map the English category value stored in the DB to its locale key.
@@ -32,6 +33,7 @@ const categoryKeys = {
   "Feature Request": "featureRequest",
   "Complaint": "complaint",
   "Bug Report": "bugReport",
+  "New Datalogger Connection": "newDatalogger",
 } as const;
 
 export function MessagesTab({ onUnreadCount }: { onUnreadCount?: (count: number) => void }) {

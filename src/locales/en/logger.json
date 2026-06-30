@@ -3,6 +3,7 @@
   "subtitle": "Choose your logger to start a download.",
   "comingSoon": "Coming soon",
   "close": "Close",
+  "requestLogger": "Request additional dataloggers",
   "trademarks": "MyChron is a trademark of AiM Tech S.r.l. and Alfano is a trademark of Alfano S.A. LapWing is independent and not affiliated with or endorsed by them; all product names, logos, and brands are the property of their respective owners.",
   "tags": {
     "fledgling": "DIY logger · Bluetooth LE",

@@ -52,7 +52,8 @@
       "comment": "Commentaire",
       "featureRequest": "Demande de fonctionnalité",
       "complaint": "Réclamation",
-      "bugReport": "Rapport de bug"
+      "bugReport": "Rapport de bug",
+      "newDatalogger": "New datalogger connection"
     },
     "emailLine": "E-mail : {{email}}",
     "ipLine": "IP : {{ip}}",

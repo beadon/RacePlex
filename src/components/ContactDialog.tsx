@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Mail } from "lucide-react";
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -9,8 +9,14 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 
+// The "request a new datalogger" category — exported so the logger picker can
+// open this dialog with it preselected. Keep the VALUE in sync with the edge
+// function's ALLOWED_CATEGORIES + the admin MessagesTab category map.
 // eslint-disable-next-line react-refresh/only-export-components -- co-located with the dialog that owns the categories
-export const MESSAGE_CATEGORIES = ["Comment", "Feature Request", "Complaint", "Bug Report"] as const;
+export const CATEGORY_NEW_DATALOGGER = "New Datalogger Connection";
+
+// eslint-disable-next-line react-refresh/only-export-components -- co-located with the dialog that owns the categories
+export const MESSAGE_CATEGORIES = ["Comment", "Feature Request", "Complaint", "Bug Report", CATEGORY_NEW_DATALOGGER] as const;
 
 // The category VALUE submitted to the backend stays the English string above;
 // this only maps it to a locale key for display.
@@ -19,15 +25,32 @@ const CATEGORY_KEYS = {
   "Feature Request": "featureRequest",
   "Complaint": "complaint",
   "Bug Report": "bugReport",
+  [CATEGORY_NEW_DATALOGGER]: "newDatalogger",
 } as const;
 
-export function ContactDialog({ variant = "footer" }: { variant?: "header" | "footer" }) {
+export function ContactDialog({
+  variant = "footer",
+  trigger,
+  defaultCategory,
+}: {
+  variant?: "header" | "footer";
+  /** Custom trigger element (overrides the default header/footer button). */
+  trigger?: ReactNode;
+  /** Preselect a category when the dialog opens (e.g. from the logger picker). */
+  defaultCategory?: string;
+}) {
   const { t } = useTranslation("landing");
   const [open, setOpen] = useState(false);
-  const [category, setCategory] = useState<string>("");
+  const [category, setCategory] = useState<string>(defaultCategory ?? "");
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  // Re-seed the preselected category each time the dialog opens.
+  const handleOpenChange = (next: boolean) => {
+    setOpen(next);
+    if (next && defaultCategory) setCategory(defaultCategory);
+  };
 
   const handleSubmit = async () => {
     if (!category || !message.trim()) {
@@ -55,7 +78,7 @@ export function ContactDialog({ variant = "footer" }: { variant?: "header" | "fo
       }
 
       toast({ title: t("contact.sent"), description: t("contact.sentDesc") });
-      setCategory("");
+      setCategory(defaultCategory ?? "");
       setEmail("");
       setMessage("");
       setOpen(false);
@@ -67,9 +90,11 @@ export function ContactDialog({ variant = "footer" }: { variant?: "header" | "fo
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        {variant === "header" ? (
+        {trigger ? (
+          trigger
+        ) : variant === "header" ? (
           <Button variant="default" size="sm" className="gap-2">
             <Mail className="w-4 h-4" />
             <span className="hidden sm:inline">{t("contact.trigger")}</span>
