@@ -80,12 +80,15 @@ telemetry viewer.
 ```
 src/
 ├── pages/
-│   ├── Index.tsx          # ★ Main SPA — file import, tab views, all state orchestration
+│   ├── Index.tsx          # ★ Main SPA — file import, tab views, all state orchestration. Also hosts the read-only Leaderboards viewer (plan 0005): consumes a leaderboardHandoff bundle on mount, injects its prebuilt laps/selection, flips a `readOnly` flag that alert-colours the header + hides Coach/Tools/Setups + video/weather/snapshots and labels laps by submitter.
+│   ├── Leaderboards.tsx   # ★ Public /leaderboards page (cloud-gated): Track→Course→engine/weight accordion (Group-by-weight + Show-top), opens a group into Index's read-only viewer via leaderboardHandoff; shows uploader avatar thumbnails
+│   ├── DriverProfile.tsx  # ★ Public /driver/:username page (plan 0006, anon, case-insensitive via .ilike): avatar + name + opt-in vehicles (no weights/setups) + the driver's approved leaderboard snapshots grouped by course/weight
 │   ├── Admin.tsx          # Admin panel (behind VITE_ENABLE_ADMIN)
 │   └── …                  # Login / Register / Privacy / Terms / NotFound
 ├── components/
 │   ├── ui/                # shadcn/ui primitives
-│   ├── admin/             # Admin tabs (Tracks, Courses, Submissions, Users, BannedIps, Tools, Messages)
+│   ├── SiteHeader.tsx     # ★ Shared sticky top banner (sponsor + settings + profile); LandingPage shows all, Leaderboards hides supported-files/about
+│   ├── admin/             # Admin tabs (Tracks, Courses, Submissions, Users, BannedIps, Tools, Messages, Leaderboards)
 │   ├── tabs/              # View tabs (GraphView, RaceLine, LapTimes, Coach, Tools; SetupsNotesPanel = Setups+Notes 50/50 split on md+, separate tabs on phones — bodies live in drawer/)
 │   ├── graphview/         # Pro mode: GraphPanel, GraphViewPanel, MiniMap, SingleSeriesChart, GGDiagram, InfoBox, PanelCard (resizable card chrome for relocated Video/Mini-Map panels). The left column collapses via a divider flag tab (any screen size), and Video/Mini-Map can be relocated into the resizable graph stack from the top of the "Add Graph" picker (GraphPanel reports which are active so the host drops its duplicate VideoPlayer — single shared video ref). Split graphs (tablet+): SecondaryGraphStack mirrors the main panel's graph set for a chosen overlay lap in a draggable two-up view, overriding PlaybackContext for its subtree (nested PlaybackProvider) so one cursor lands on the same track position in both laps (distance-mapped via lib/referenceUtils mapIndexByDistance); SecondaryVideo is a literal second, lap-synced <video> for in-session overlay laps.
 │   ├── drawer/            # File-manager drawer tabs (Files, Vehicles/Karts, Device*); SetupsTab + NotesTab also here but mounted as main-view tabs
@@ -115,6 +118,9 @@ src/
 │   ├── sampleData.ts      # ★ Bundled sample log seeded as an ordinary file (→ docs/subsystems.md)
 │   ├── lapOverlays.ts / lapAlignment.ts  # ★ Multi-lap overlay logic + Kabsch drift-align (→ docs/subsystems.md)
 │   ├── lapSnapshot*.ts    # ★ Snapshot types/buffer + IndexedDB CRUD (→ docs/subsystems.md)
+│   ├── leaderboard*.ts    # ★ Leaderboards (plan 0005): leaderboardTypes (shared), leaderboardBrowse (Track→Course→engine/weight tree), leaderboardSession (transpose entries → one read-only synthetic session, fastest=lap 1), leaderboardHandoff (one-shot page→Index handoff). Submission + Supabase access live in plugins/cloud-sync (leaderboardSubmission/leaderboardClient). → docs/backend.md
+│   ├── imageCrop.ts       # ★ Pure on-device avatar crop (1:1 centre + downscale ≤256, webp/jpeg) — no Supabase (plan 0006)
+│   ├── driverProfileGroups.ts # ★ Pure: one driver's leaderboard entries → Course→weight buckets (plan 0006, DriverProfile)
 │   ├── setupRevision*.ts  # ★ Content-addressed setup history + IndexedDB CRUD (→ docs/subsystems.md)
 │   ├── setupHistory.ts    # ★ Pure setup-history view-model (diff + fastest-lap aggregation) → drawer/SetupHistoryPanel (→ docs/subsystems.md)
 │   ├── vehicleHistory.ts  # ★ Pure vehicle-history view-model (per-vehicle setup revisions, fastest-lap first, course filter) → drawer/VehicleHistoryPanel; reuses setupHistory primitives; shared card chrome in drawer/HistoryCard.tsx
@@ -124,7 +130,7 @@ src/
 │   ├── fileLoadingState.ts # ★ Host pub/sub for the global file-load overlay
 │   ├── *Storage.ts        # IDB/localStorage store modules (file, vehicle, engine, template, note, setup, …)
 │   ├── gps/               # ★ Phone-as-datalogger layer: gpsFix, customGps, sessionGate, realtimeTimer, dovepWriter
-│   ├── loggers/           # ★ Generic LoggerConnection (listLogs/downloadLog/disconnect) + per-logger adapters — Fledgling=web BLE, mychron/=MyChron over native (Tauri) Wi-Fi IPC, doveslogger/=same Fledgling hardware over native (Tauri) BLE IPC (scan→connect→list→download); native/ipc.ts = shared kind-agnostic native IPC (both lazy; @tauri-apps/api dynamic-imported, native-only); Alfano later. progress.ts = transport-neutral formatters + computeProgress (→ docs/ble.md)
+│   ├── loggers/           # ★ Generic LoggerConnection (listLogs/downloadLog/disconnect) + per-logger adapters — Fledgling=web BLE, mychron/=MyChron over native (Tauri) Wi-Fi IPC, doveslogger/=same Fledgling hardware over native (Tauri) BLE IPC (scan→connect→list→download), alfano/=Alfano over native (Tauri) Bluetooth-serial IPC (SKELETON: web-side seam only, Rust backend TBD — Bluetooth serial can't be reached in-browser so there's no web path); native/ipc.ts = shared kind-agnostic native IPC (all lazy; @tauri-apps/api dynamic-imported, native-only). progress.ts = transport-neutral formatters + computeProgress (→ docs/ble.md)
 │   ├── speedHeatmap.ts / mapMarker.ts / brakingZones / gforceCalculation / …  # racing math
 │   ├── chartUtils / canvas2d / chartAxis / chartColors / videoExport / overlayCanvasRenderer  # charts/video
 │   ├── videoPlaylist.ts   # ★ Pure GoPro chunked-video model: parse/order GH/GX/GP/GOPR chunk names, build a virtual timeline (cumulative offsets) + virtual↔local time mapping + planAudioSegments (export audio stitch). useVideoSync swaps the <video> src per chunk; a single file is a 1-chunk playlist
@@ -384,6 +390,7 @@ and the seeder: **→ `docs/i18n.md`**.
 | `VITE_TURNSTILE_SITE_KEY` | Client | Cloudflare Turnstile site key (optional CAPTCHA) |
 | `TURNSTILE_SECRET_KEY` | Server (edge fn) | Turnstile secret — `???` |
 | `VITE_FIRMWARE_MANIFEST_URL` | Client | Override the logger firmware OTA manifest URL. Unset: `main` → production manifest, non-`main`/preview → beta channel (same `isPreviewBuild()` switch). |
+| `SUPABASE_ACCESS_TOKEN` | Build (secret) | Supabase PAT. On a **feature-branch** build (not `main`, not `BETA`), `vite.config.ts` resolves that branch's own Supabase **preview-branch DB** via the Management API (`scripts/resolveSupabaseBranch.ts`) and bakes its creds in, else falls back to the static `*_PREVIEW`/beta creds. Never on `main`/`BETA`/dev/runtime. → plan 0007. |
 | `DOVE_PLUGIN_PACKAGES` | Build | Comma-separated external plugin npm packages. Overrides the default when set. |
 | `ANTHROPIC_API_KEY` / `I18N_SEED_MODEL` | Maintainer tool | Used **only** by `bun run i18n:seed` (`ANTHROPIC_API_KEY` = `???`). Never in the app or CI build. |
 | `VITE_APP_VERSION` / `VITE_GIT_HASH` / `VITE_BUILD_DATE` / `VITE_GIT_BRANCH` / `VITE_GIT_COMMIT_DATE` | Build (auto) | Footer version stamp — **not hand-set**; baked from `package.json` + git in `vite.config.ts`. |
@@ -399,10 +406,14 @@ the dashboard). The beta domain `beta.lapwingdata.com` can't bind to a Branch
 Preview URL, so a separate thin reverse-proxy Worker in `beta-proxy/` owns it and
 forwards to `beta-lapwing.perchwerks.workers.dev` (auto-deployed by the
 `deploy-beta-proxy.yml` workflow on `BETA` pushes that touch `beta-proxy/**`;
-see `beta-proxy/README.md`). Per-branch preview backend: `vite.config.ts` `pick()`
-prefers `*_PREVIEW` Supabase creds on any non-`main` branch
-(`WORKERS_CI_BRANCH`/`CF_PAGES_BRANCH`), so beta deployments bake in a preview DB.
-`main` and local dev never read `_PREVIEW`. See README "Deployment".
+see `beta-proxy/README.md`). Backend by branch (`vite.config.ts` `pick()`, keyed on
+`WORKERS_CI_BRANCH`/`CF_PAGES_BRANCH`): **`main`** → base/production vars;
+**`BETA`** → static `*_PREVIEW` creds (the shared beta DB — never the resolver);
+**any other branch** → with a `SUPABASE_ACCESS_TOKEN` secret, that branch's own
+Supabase preview-branch DB via the Management API (`scripts/resolveSupabaseBranch.ts`,
+plan 0007), else the `*_PREVIEW`/beta fallback. Each build logs `[backend] Supabase
+URL baked: … — <tier>`. `main` and local dev never read `_PREVIEW`/the token. See
+README "Deployment".
 
 ---
 

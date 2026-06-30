@@ -6,7 +6,8 @@
     "account": "Conta",
     "lapSnapshots": "Instantâneos de volta",
     "cloudLogs": "Registros na nuvem",
-    "dataPrivacy": "Dados e privacidade"
+    "dataPrivacy": "Dados e privacidade",
+    "leaderboards": "Rankings"
   },
   "account": {
     "signInBlurb": "Entre para fazer backup e sincronizar seus arquivos, garagem e notas entre dispositivos. Tudo aqui continua funcionando offline neste dispositivo — o Cloud Sync é opcional.",
@@ -25,7 +26,13 @@
     "nameEmpty": "O nome de exibição não pode ficar vazio.",
     "nameProfanity": "Escolha um nome de exibição mais adequado.",
     "nameUpdateFailed": "Não foi possível atualizar o nome de exibição.",
-    "loadUsageFailed": "Não foi possível carregar o uso de armazenamento"
+    "loadUsageFailed": "Não foi possível carregar o uso de armazenamento",
+    "changeAvatar": "Alterar foto de perfil",
+    "avatarUpdated": "Foto de perfil atualizada.",
+    "avatarFailed": "Não foi possível atualizar a foto de perfil.",
+    "copyProfileLink": "Copiar link do perfil",
+    "linkCopied": "Link do perfil copiado.",
+    "linkCopyFailed": "Não foi possível copiar o link do perfil."
   },
   "plan": {
     "title": "Plano",
@@ -172,5 +179,29 @@
     "downloadingFiles_one": "Baixando {{count}} arquivo da nuvem…",
     "downloadingFiles_other": "Baixando {{count}} arquivos da nuvem…",
     "zipping": "Compactando…"
+  },
+  "leaderboard": {
+    "signInHint": "Faça login para enviar seus instantâneos aos rankings públicos.",
+    "noSnapshots": "Capture uma volta para enviá-la aos rankings.",
+    "intro_one": "Você tem {{count}} instantâneo para enviar aos rankings.",
+    "intro_other": "Você tem {{count}} instantâneos para enviar aos rankings.",
+    "submitButton": "Enviar aos rankings",
+    "dialogTitle": "Enviar aos rankings",
+    "dialogDescription": "Seus dados de GPS, o motor e o peso informado são públicos para que outros possam comparar e verificar as voltas. Os dados do sensor do motor permanecem privados a menos que você opte por compartilhá-los.",
+    "listedWeight": "Peso informado",
+    "listedWeightHint": "Exibido publicamente e usado para agrupar os registros. O padrão é o peso do seu veículo — altere se preferir informar um peso de categoria.",
+    "weightRequired": "Informe um peso para enviar.",
+    "shareEngineData": "Compartilhar dados do sensor do motor (RPM, temperaturas)",
+    "publicNotice": "Público: GPS, nome do motor, tempo de volta, peso informado.",
+    "submitOne": "Enviar",
+    "submitting": "Enviando…",
+    "submitted": "Enviado",
+    "submitSuccess": "Enviado aos rankings.",
+    "submitFailed": "Não foi possível enviar — tente novamente.",
+    "alreadySubmitted": "Já está nos rankings.",
+    "loadFailed": "Não foi possível carregar seus envios.",
+    "close": "Fechar",
+    "customTrackNotice": "Esta pista não está na lista integrada — seu traçado e setores são enviados com o seu snapshot, e a pista é adicionada ao banco de dados da comunidade para revisão.",
+    "trackAdded": "Pista enviada ao banco de dados da comunidade para revisão."
   }
 }

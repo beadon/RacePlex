@@ -4,8 +4,33 @@
   "panels": {
     "account": "Account",
     "lapSnapshots": "Lap snapshots",
+    "leaderboards": "Leaderboards",
     "cloudLogs": "Cloud logs",
     "dataPrivacy": "Data & privacy"
+  },
+  "leaderboard": {
+    "signInHint": "Sign in to submit your snapshots to the public leaderboards.",
+    "noSnapshots": "Capture a lap snapshot to submit it to the leaderboards.",
+    "intro_one": "You have {{count}} snapshot you can submit to the leaderboards.",
+    "intro_other": "You have {{count}} snapshots you can submit to the leaderboards.",
+    "submitButton": "Submit to leaderboards",
+    "dialogTitle": "Submit to leaderboards",
+    "dialogDescription": "Your GPS data, engine, and listed weight are public so others can compare and verify laps. Your engine sensor data stays private unless you choose to share it.",
+    "listedWeight": "Listed weight",
+    "listedWeightHint": "Shown publicly and used to group records. Defaults to your vehicle weight — change it if you'd rather list a class weight.",
+    "weightRequired": "Enter a listed weight to submit.",
+    "shareEngineData": "Share engine sensor data (RPM, temps)",
+    "publicNotice": "Public: GPS, engine name, lap time, listed weight.",
+    "customTrackNotice": "This track isn't in the built-in list — its layout and sectors are submitted with your snapshot, and the track is added to the community database for review.",
+    "trackAdded": "Track sent to the community database for review.",
+    "submitOne": "Submit",
+    "submitting": "Submitting…",
+    "submitted": "Submitted",
+    "submitSuccess": "Submitted to the leaderboards.",
+    "submitFailed": "Couldn't submit — please try again.",
+    "alreadySubmitted": "Already on the leaderboards.",
+    "loadFailed": "Couldn't load your submissions.",
+    "close": "Close"
   },
   "account": {
     "signInBlurb": "Sign in to back up and sync your files, garage and notes across devices. Everything here still works offline against this device — Cloud Sync is optional.",
@@ -24,7 +49,13 @@
     "nameEmpty": "Display name can't be empty.",
     "nameProfanity": "Please choose a cleaner display name.",
     "nameUpdateFailed": "Couldn't update display name.",
-    "loadUsageFailed": "Failed to load storage usage"
+    "loadUsageFailed": "Failed to load storage usage",
+    "changeAvatar": "Change profile picture",
+    "avatarUpdated": "Profile picture updated.",
+    "avatarFailed": "Couldn't update profile picture.",
+    "copyProfileLink": "Copy profile link",
+    "linkCopied": "Profile link copied.",
+    "linkCopyFailed": "Couldn't copy profile link."
   },
   "plan": {
     "title": "Plan",

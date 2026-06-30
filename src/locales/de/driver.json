@@ -1,0 +1,14 @@
+{
+  "_machine": true,
+  "loading": "Profil wird geladen…",
+  "loadFailed": "Dieses Profil konnte nicht geladen werden.",
+  "notFoundTitle": "Fahrer nicht gefunden",
+  "notFoundBody": "Es gibt keinen Fahrer namens “{{name}}”.",
+  "vehiclesTitle": "Fahrzeuge",
+  "vehiclesEmpty": "Dieser Fahrer hat keine Fahrzeuge geteilt.",
+  "unknownType": "Unbekannter Typ",
+  "snapshotsTitle": "Bestenlisten-Snapshots",
+  "snapshotsEmpty": "Dieser Fahrer hat keine Bestenlisten-Snapshots hochgeladen.",
+  "noWeight": "Kein angegebenes Gewicht",
+  "openSnapshot": "Diese Runde im Viewer öffnen"
+}

@@ -11,6 +11,70 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > from git history and grouped by theme rather than exhaustive per-commit
 > detail.
 
+## [3.0.0] - 2026-06-30
+
+### Added
+- **Public-vehicle badge.** Vehicles marked *Show on profile* now carry a small
+  **Public** badge in the garage's Vehicles tab, so you can see at a glance which are
+  shared on your driver profile.
+- **Request a datalogger.** The contact form has a new **New datalogger connection**
+  category, and the "Download from logger" picker has a **Request additional
+  dataloggers** button that opens the contact form with that category preselected.
+- **Custom tracks ride along with leaderboard snapshots.** When you submit a snapshot
+  for a track that isn't in the built-in list, its layout + sectors are included with
+  the snapshot (so others can view the lap) and the track is **automatically submitted
+  to the community track database** for review — same flow as the manual submitter, no
+  CAPTCHA for signed-in users, deduped so it's only sent once.
+- **Alfano logger groundwork.** Picking the Alfano tile in the logger picker now
+  explains that Alfano transfers over Bluetooth serial (Classic Bluetooth SPP),
+  which browsers can't access in-browser, so it will require the native app. The
+  native-side download flow is scaffolded (`src/lib/loggers/alfano/`,
+  `AlfanoDownload`) against the shared native IPC client; the Rust backend that
+  drives it is still to come.
+- **Public driver profiles (plan 0006).** A new public `/driver/{name}` page (shareable,
+  viewable signed-out) shows a driver's **profile picture**, display name, their **opt-in
+  vehicles** (name/type/engine only — never weights or setups), and their uploaded
+  **leaderboard snapshots** as cards. URLs are case-insensitive. **Click a driver's
+  avatar on the Leaderboards** to open their profile, and **click any snapshot card** to
+  load that lap in the read-only viewer.
+- **Profile pictures.** Tap your profile picture on the Profile tab to upload one; it's
+  cropped to a centred square and downscaled to ≤256px on-device, then stored in the
+  cloud. Avatar thumbnails now appear next to names on the Leaderboards.
+- **Copy profile link.** A button under Sign out on the Profile tab copies your public
+  driver-profile link.
+- **Show a vehicle on your profile.** Each vehicle in the garage now has a *Show on
+  profile* toggle that publishes a public-safe projection (no weight, no setup).
+- A **← Back to home** button on the Leaderboards and driver-profile pages.
+- **Leaderboards (plan 0005).** A new public **Leaderboards** page (linked from the
+  landing page) where anyone — signed in or not — can browse fastest community laps
+  by **track → course → engine class**, with an optional **Group by weight** toggle
+  and a **Show top** selector (3/10/25/50/100/All). Picking a group launches the
+  normal telemetry viewer in a new **read-only mode** (alert-coloured header,
+  Coach/Tools/Setups + video/weather/snapshots hidden) where every submitted lap is
+  a row, fastest first, labelled by the submitter's name.
+- **Submit snapshots to the leaderboards.** From the Profile tab, signed-in users
+  with lap snapshots get a **Submit to leaderboards** dialog. GPS, engine name and a
+  **listed weight** are public; **engine-telemetry channels** (RPM, temps) stay
+  private unless you opt to share them. Setup data is never uploaded. The listed
+  weight defaults to the vehicle's weight and can be overridden (e.g. show a class
+  weight). Identical snapshots can't be resubmitted.
+- **Engine classification + moderation (admin).** A new admin **Leaderboards** tab
+  lists every submission with approve/deny (allow-by-default), a per-record engine
+  **class override**, and admin notes. Engine **classes** are keyword groups that
+  collapse free-text engine names ("Tillotson 225" / "225RS" / "Tilly") into one
+  class automatically, with a **Reclassify** action — without ever mutating the
+  user's raw engine string.
+
+### Changed
+- **An engine is now required on every vehicle.** The vehicle form won't save without
+  one (it drives leaderboard grouping and snapshot matching), and any existing
+  engine-less vehicle is flagged in the garage so you can fill it in.
+- **Display names are now unique case-insensitively** so a name can't be impersonated by
+  changing case (existing case-duplicates are auto-suffixed by the migration).
+- **Leaderboard names update live.** A submitter's name on the leaderboards now comes from
+  their current profile (linked by account) instead of a copy frozen at submit time, so
+  renaming your display name updates all your existing entries.
+
 ## [2.9.2] - 2026-06-25
 
 ### Added

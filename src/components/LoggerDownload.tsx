@@ -28,6 +28,12 @@ const MyChronDownload = lazy(() =>
   import("@/components/MyChronDownload").then((m) => ({ default: m.MyChronDownload })),
 );
 
+// The native Alfano Bluetooth-serial flow (skeleton) is likewise lazy so
+// `@tauri-apps/api` (dynamic import inside it) never enters the web/eager bundle.
+const AlfanoDownload = lazy(() =>
+  import("@/components/AlfanoDownload").then((m) => ({ default: m.AlfanoDownload })),
+);
+
 interface LoggerDownloadProps {
   onDataLoaded: (data: ParsedData, fileName?: string) => void;
   autoSave?: boolean;
@@ -43,8 +49,9 @@ interface LoggerDownloadProps {
 /**
  * Entry point for "Download from logger": renders the trigger (button or a
  * caller-supplied tile) and the image-based `LoggerPicker`. Picking the
- * Fledgling mounts the lazy Bluetooth download flow; MyChron and Alfano are
- * handled inside the picker (explanatory dialogs).
+ * Fledgling mounts the lazy Bluetooth download flow. MyChron (Wi-Fi) and Alfano
+ * (Bluetooth serial) mount their native download flows on the native shell, and
+ * fall back to explanatory dialogs inside the picker on the web.
  */
 export function LoggerDownload({ onDataLoaded, autoSave, autoSaveFile, renderTrigger }: LoggerDownloadProps) {
   const { t } = useTranslation("logger");
@@ -55,6 +62,7 @@ export function LoggerDownload({ onDataLoaded, autoSave, autoSaveFile, renderTri
   const [pickerOpen, setPickerOpen] = useState(false);
   const [fledglingActive, setFledglingActive] = useState(false);
   const [mychronActive, setMychronActive] = useState(false);
+  const [alfanoActive, setAlfanoActive] = useState(false);
 
   const openPicker = useCallback(() => setPickerOpen(true), []);
 
@@ -82,6 +90,10 @@ export function LoggerDownload({ onDataLoaded, autoSave, autoSaveFile, renderTri
         onSelectMychron={() => {
           setPickerOpen(false);
           setMychronActive(true);
+        }}
+        onSelectAlfano={() => {
+          setPickerOpen(false);
+          setAlfanoActive(true);
         }}
       />
 
@@ -115,6 +127,18 @@ export function LoggerDownload({ onDataLoaded, autoSave, autoSaveFile, renderTri
             autoSave={autoSave}
             autoSaveFile={autoSaveFile}
             onClose={() => setMychronActive(false)}
+          />
+        </Suspense>
+      )}
+
+      {alfanoActive && (
+        <Suspense fallback={null}>
+          <AlfanoDownload
+            autoStart
+            onDataLoaded={onDataLoaded}
+            autoSave={autoSave}
+            autoSaveFile={autoSaveFile}
+            onClose={() => setAlfanoActive(false)}
           />
         </Suspense>
       )}

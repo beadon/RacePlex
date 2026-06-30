@@ -1,0 +1,14 @@
+{
+  "_machine": true,
+  "loading": "プロフィールを読み込み中…",
+  "loadFailed": "このプロフィールを読み込めませんでした。",
+  "notFoundTitle": "ドライバーが見つかりません",
+  "notFoundBody": "「{{name}}」というドライバーは存在しません。",
+  "vehiclesTitle": "車両",
+  "vehiclesEmpty": "このドライバーは車両を共有していません。",
+  "unknownType": "不明なタイプ",
+  "snapshotsTitle": "リーダーボードのスナップショット",
+  "snapshotsEmpty": "このドライバーはリーダーボードにスナップショットをアップロードしていません。",
+  "noWeight": "重量の記載なし",
+  "openSnapshot": "このラップをビューアで開く"
+}

@@ -72,7 +72,13 @@
     "number": "番号",
     "weight": "重量",
     "update": "車両を更新",
-    "add": "車両を追加"
+    "add": "車両を追加",
+    "engineRequired": "エンジンは必須です。",
+    "needsEngine": "この車両にはエンジンが必要です。編集して追加してください。",
+    "showOnProfile": "プロフィールに表示",
+    "showOnProfileHint": "この車両を公開ドライバープロフィールに表示します（名前・タイプ・エンジンのみ。重量やセットアップは含みません）。",
+    "publicBadge": "公開",
+    "publicHint": "公開ドライバープロフィールに表示されます。"
   },
   "engine": {
     "label": "エンジン",

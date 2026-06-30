@@ -27,6 +27,10 @@
     "build": {
       "title": "自分だけのロガーを作る",
       "description": "オープンソースの GPS ハードウェアとファームウェア — DovesDataLogger"
+    },
+    "leaderboards": {
+      "title": "リーダーボード",
+      "description": "コース、レイアウト、エンジンクラスごとに最速ラップを比較"
     }
   },
   "links": {
@@ -43,14 +47,16 @@
         "text": "より安価なDIYロガーのアップデート（2026年6月）"
       },
       {
-        "text": "トラックのリーダーボードと公開ユーザープロフィール（2026年6月）"
+        "text": "トラックのリーダーボードと公開ユーザープロフィール（2026年6月）",
+        "done": true
       },
       {
         "text": "サードパーティ製ロガーからのダウンロード（2026年6月）",
         "sub": [
           "MyChron：解読済み、ネイティブアプリが必要",
-          "Alfano：保留中"
-        ]
+          "Alfano：Bluetooth シリアル、ネイティブアプリが必要"
+        ],
+        "done": true
       },
       {
         "text": "ネイティブアプリ（2026年7月）"
@@ -220,7 +226,8 @@
       "comment": "コメント",
       "featureRequest": "機能リクエスト",
       "complaint": "苦情",
-      "bugReport": "バグ報告"
+      "bugReport": "バグ報告",
+      "newDatalogger": "新しいデータロガーの接続"
     },
     "emailLabel": "メールアドレス",
     "emailOptional": "（任意、返信用）",

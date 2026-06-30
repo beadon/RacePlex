@@ -1,0 +1,14 @@
+{
+  "_machine": true,
+  "loading": "Carregando perfil…",
+  "loadFailed": "Não foi possível carregar este perfil.",
+  "notFoundTitle": "Piloto não encontrado",
+  "notFoundBody": "Não existe nenhum piloto chamado “{{name}}”.",
+  "vehiclesTitle": "Veículos",
+  "vehiclesEmpty": "Este piloto não compartilhou nenhum veículo.",
+  "unknownType": "Tipo desconhecido",
+  "snapshotsTitle": "Snapshots do ranking",
+  "snapshotsEmpty": "Este piloto não enviou nenhum snapshot ao ranking.",
+  "noWeight": "Sem peso informado",
+  "openSnapshot": "Abrir esta volta no visualizador"
+}

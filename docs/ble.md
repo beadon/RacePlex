@@ -19,9 +19,12 @@ tile mounts `DataloggerDownload` — the lazy Web Bluetooth flow — on demand, 
 `lib/ble/*` stays out of the initial bundle while the menu still opens instantly.
 On the native (Tauri) shell the webview has no Web Bluetooth, so the Fledgling tile
 instead mounts the lazy `DovesloggerDownload` flow (BLE over native IPC: scan →
-pick device → connect → list → download), and the MyChron tile mounts the lazy
-`MyChronDownload` flow (Wi-Fi over native IPC — see `docs/android.md`); on the web
-the MyChron and Alfano tiles still open explanatory dialogs.
+pick device → connect → list → download), the MyChron tile mounts the lazy
+`MyChronDownload` flow (Wi-Fi over native IPC — see `docs/android.md`), and the
+Alfano tile mounts the lazy `AlfanoDownload` flow (Bluetooth serial over native IPC
+— SKELETON, Rust backend TBD); on the web the MyChron and Alfano tiles open
+explanatory dialogs instead (Alfano uses Bluetooth serial / Classic Bluetooth SPP,
+which Web Bluetooth — BLE GATT only — can't reach, so it has no web path at all).
 
 `DataloggerDownload` talks to the device only through the generic
 `LoggerConnection` interface (`src/lib/loggers/`): `listLogs` / `downloadLog` /
@@ -29,13 +32,15 @@ the MyChron and Alfano tiles still open explanatory dialogs.
 is the second adapter — `createMychronConnection()` (`src/lib/loggers/mychron/`),
 native-only, over the Tauri shell — and DovesLogger is the third —
 `createDovesloggerConnection()` (`src/lib/loggers/doveslogger/`), the native-BLE
-path for the same Fledgling hardware over the Tauri shell. Both native loggers share
-the kind-agnostic IPC client in `src/lib/loggers/native/ipc.ts` (only their
-`connect` / `scan` differ); Alfano (web BLE) will be a fourth. All satisfy the same
+path for the same Fledgling hardware over the Tauri shell. The Alfano adapter —
+`createAlfanoConnection()` (`src/lib/loggers/alfano/`), native Bluetooth-serial over
+the Tauri shell — is the fourth, a skeleton whose Rust backend is still TBD. The
+native loggers all share the kind-agnostic IPC client in
+`src/lib/loggers/native/ipc.ts` (only their `connect` / `scan` differ). All satisfy the same
 interface, and `DeviceContext.loggerKind` records which logger is connected so
 Fledgling-only surfaces (settings / tracks / firmware) can gate themselves
-(`supportsDeviceDetails` is `false` for MyChron and for the native DovesLogger path,
-whose settings/tracks/firmware stay on the Web Bluetooth build for now). The pure progress formatters
+(`supportsDeviceDetails` is `false` for MyChron, Alfano, and the native DovesLogger
+path, whose settings/tracks/firmware stay on the Web Bluetooth build for now). The pure progress formatters
 (`formatBytes` / `formatSpeed` / `formatTime`) and the `computeProgress()` helper now
 live transport-neutrally in `src/lib/loggers/progress.ts` (re-exported from
 `src/lib/ble/format.ts` for existing BLE callers) so both flows share them without

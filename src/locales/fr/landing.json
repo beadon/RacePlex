@@ -27,6 +27,10 @@
     "build": {
       "title": "Construisez votre propre enregistreur",
       "description": "Matériel et firmware GPS open source : le DovesDataLogger"
+    },
+    "leaderboards": {
+      "title": "Classements",
+      "description": "Comparez les tours les plus rapides par circuit, tracé et catégorie de moteur"
     }
   },
   "links": {
@@ -43,14 +47,16 @@
         "text": "Logger DIY moins cher mis à jour (juin '26)"
       },
       {
-        "text": "Classements de circuits et profils publics (juin '26)"
+        "text": "Classements de circuits et profils publics (juin '26)",
+        "done": true
       },
       {
         "text": "Téléchargements depuis des loggers tiers (juin '26)",
         "sub": [
           "MyChron : décodé, application native requise",
-          "Alfano : en attente"
-        ]
+          "Alfano : Bluetooth série, app native requise"
+        ],
+        "done": true
       },
       {
         "text": "Application native (juillet '26)"
@@ -220,7 +226,8 @@
       "comment": "Commentaire",
       "featureRequest": "Demande de fonctionnalité",
       "complaint": "Réclamation",
-      "bugReport": "Rapport de bug"
+      "bugReport": "Rapport de bug",
+      "newDatalogger": "Connexion d'un nouvel enregistreur de données"
     },
     "emailLabel": "E-mail",
     "emailOptional": "(facultatif, pour une réponse)",

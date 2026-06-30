@@ -26,6 +26,10 @@
     "build": {
       "title": "Build your own logger",
       "description": "Open-source GPS hardware & firmware — the DovesDataLogger"
+    },
+    "leaderboards": {
+      "title": "Leaderboards",
+      "description": "Compare fastest laps by track, course and engine class"
     }
   },
   "links": {
@@ -42,13 +46,15 @@
         "text": "Updated cheaper DIY logger (June '26)"
       },
       {
-        "text": "Track leaderboards & public user profiles (June '26)"
+        "text": "Track leaderboards & public user profiles (June '26)",
+        "done": true
       },
       {
         "text": "Downloads from 3rd-party loggers (June '26)",
+        "done": true,
         "sub": [
           "MyChron: decoded, native app required",
-          "Alfano: pending"
+          "Alfano: Bluetooth serial, native app required"
         ]
       },
       {
@@ -175,7 +181,8 @@
       "comment": "Comment",
       "featureRequest": "Feature Request",
       "complaint": "Complaint",
-      "bugReport": "Bug Report"
+      "bugReport": "Bug Report",
+      "newDatalogger": "New datalogger connection"
     },
     "emailLabel": "Email",
     "emailOptional": "(optional, for a reply)",

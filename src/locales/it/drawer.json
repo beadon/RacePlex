@@ -72,7 +72,13 @@
     "number": "Numero",
     "weight": "Peso",
     "update": "Aggiorna veicolo",
-    "add": "Aggiungi veicolo"
+    "add": "Aggiungi veicolo",
+    "engineRequired": "È richiesto un motore.",
+    "needsEngine": "Questo veicolo ha bisogno di un motore — modificalo per aggiungerne uno.",
+    "showOnProfile": "Mostra nel profilo",
+    "showOnProfileHint": "Mostra questo veicolo nel tuo profilo pubblico di pilota (solo nome, tipo e motore — mai peso o assetto).",
+    "publicBadge": "Pubblico",
+    "publicHint": "Mostrato nel tuo profilo pubblico di pilota."
   },
   "engine": {
     "label": "Motore",

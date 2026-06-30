@@ -6,7 +6,8 @@
     "account": "Konto",
     "lapSnapshots": "Runden-Snapshots",
     "cloudLogs": "Cloud-Logs",
-    "dataPrivacy": "Daten & Datenschutz"
+    "dataPrivacy": "Daten & Datenschutz",
+    "leaderboards": "Bestenlisten"
   },
   "account": {
     "signInBlurb": "Melde dich an, um deine Dateien, deine Garage und Notizen geräteübergreifend zu sichern und zu synchronisieren. Alles hier funktioniert weiterhin offline auf diesem Gerät — Cloud Sync ist optional.",
@@ -25,7 +26,13 @@
     "nameEmpty": "Der Anzeigename darf nicht leer sein.",
     "nameProfanity": "Bitte wähle einen saubereren Anzeigenamen.",
     "nameUpdateFailed": "Anzeigename konnte nicht aktualisiert werden.",
-    "loadUsageFailed": "Speichernutzung konnte nicht geladen werden"
+    "loadUsageFailed": "Speichernutzung konnte nicht geladen werden",
+    "changeAvatar": "Profilbild ändern",
+    "avatarUpdated": "Profilbild aktualisiert.",
+    "avatarFailed": "Profilbild konnte nicht aktualisiert werden.",
+    "copyProfileLink": "Profillink kopieren",
+    "linkCopied": "Profillink kopiert.",
+    "linkCopyFailed": "Profillink konnte nicht kopiert werden."
   },
   "plan": {
     "title": "Tarif",
@@ -172,5 +179,29 @@
     "downloadingFiles_one": "{{count}} Cloud-Datei wird heruntergeladen…",
     "downloadingFiles_other": "{{count}} Cloud-Dateien werden heruntergeladen…",
     "zipping": "Wird komprimiert…"
+  },
+  "leaderboard": {
+    "signInHint": "Melde dich an, um deine Schnappschüsse an die öffentlichen Bestenlisten zu senden.",
+    "noSnapshots": "Erfasse eine Runde, um sie an die Bestenlisten zu senden.",
+    "intro_one": "Du hast {{count}} Schnappschuss, den du an die Bestenlisten senden kannst.",
+    "intro_other": "Du hast {{count}} Schnappschüsse, die du an die Bestenlisten senden kannst.",
+    "submitButton": "An Bestenlisten senden",
+    "dialogTitle": "An Bestenlisten senden",
+    "dialogDescription": "Deine GPS-Daten, der Motor und das angegebene Gewicht sind öffentlich, damit andere Runden vergleichen und überprüfen können. Die Motorsensordaten bleiben privat, sofern du sie nicht teilst.",
+    "listedWeight": "Angegebenes Gewicht",
+    "listedWeightHint": "Wird öffentlich angezeigt und zum Gruppieren der Einträge verwendet. Standardmäßig das Gewicht deines Fahrzeugs – ändere es, wenn du lieber ein Klassengewicht angeben möchtest.",
+    "weightRequired": "Gib zum Senden ein angegebenes Gewicht ein.",
+    "shareEngineData": "Motorsensordaten teilen (Drehzahl, Temperaturen)",
+    "publicNotice": "Öffentlich: GPS, Motorname, Rundenzeit, angegebenes Gewicht.",
+    "submitOne": "Senden",
+    "submitting": "Wird gesendet…",
+    "submitted": "Gesendet",
+    "submitSuccess": "An die Bestenlisten gesendet.",
+    "submitFailed": "Senden fehlgeschlagen – bitte versuche es erneut.",
+    "alreadySubmitted": "Bereits in den Bestenlisten.",
+    "loadFailed": "Deine Einträge konnten nicht geladen werden.",
+    "close": "Schließen",
+    "customTrackNotice": "Diese Strecke ist nicht in der integrierten Liste – ihr Layout und ihre Sektoren werden mit deinem Snapshot übermittelt, und die Strecke wird zur Überprüfung der Community-Datenbank hinzugefügt.",
+    "trackAdded": "Strecke zur Überprüfung an die Community-Datenbank gesendet."
   }
 }

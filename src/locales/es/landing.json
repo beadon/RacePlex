@@ -27,6 +27,10 @@
     "build": {
       "title": "Construye tu propio registrador",
       "description": "Hardware y firmware GPS de código abierto: el DovesDataLogger"
+    },
+    "leaderboards": {
+      "title": "Clasificaciones",
+      "description": "Compara las vueltas más rápidas por circuito, trazado y clase de motor"
     }
   },
   "links": {
@@ -43,14 +47,16 @@
         "text": "Logger DIY más económico actualizado (junio '26)"
       },
       {
-        "text": "Clasificaciones de circuitos y perfiles públicos de usuario (junio '26)"
+        "text": "Clasificaciones de circuitos y perfiles públicos de usuario (junio '26)",
+        "done": true
       },
       {
         "text": "Descargas desde loggers de terceros (junio '26)",
         "sub": [
           "MyChron: decodificado, requiere aplicación nativa",
-          "Alfano: pendiente"
-        ]
+          "Alfano: Bluetooth serie, requiere app nativa"
+        ],
+        "done": true
       },
       {
         "text": "Aplicación nativa (julio '26)"
@@ -220,7 +226,8 @@
       "comment": "Comentario",
       "featureRequest": "Solicitud de función",
       "complaint": "Queja",
-      "bugReport": "Informe de error"
+      "bugReport": "Informe de error",
+      "newDatalogger": "Conexión de nuevo registrador de datos"
     },
     "emailLabel": "Correo electrónico",
     "emailOptional": "(opcional, para responderte)",

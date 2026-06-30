@@ -22,6 +22,7 @@ import type { Course, Track } from '@/types/racing';
 import { deriveShortName } from '@/lib/trackUtils';
 import { legacyMirror, normalizeCourseSectors } from '@/lib/courseSectors';
 import { sectorsToJson, type SectorJson } from '@/lib/trackStorage';
+import { fnv1a } from '@/lib/fnv1a';
 
 /** Flat snake_case coordinate payload — the shape the edge fn + DB expect. */
 export interface CourseSubmissionData {
@@ -137,15 +138,6 @@ export function courseToSubmissionData(course: Course): CourseSubmissionData {
 }
 
 // FNV-1a 32-bit → 8 hex chars. Not cryptographic — only change-detection.
-function fnv1a(str: string): string {
-  let h = 0x811c9dc5;
-  for (let i = 0; i < str.length; i++) {
-    h ^= str.charCodeAt(i);
-    h = Math.imul(h, 0x01000193);
-  }
-  return (h >>> 0).toString(16).padStart(8, '0');
-}
-
 /** Canonical (rounded) string for a drawn outline, or '' when there is none. */
 function layoutHashInput(layout?: Array<{ lat: number; lon: number }>): string {
   if (!layout || layout.length < 2) return '';
@@ -273,6 +265,60 @@ export function buildSubmissionPlan(
 /** Flatten a plan to the courses that still need uploading. */
 export function pendingCourses(plan: SubmissionPlan): SubmissionCourse[] {
   return plan.groups.flatMap((g) => g.courses.filter((c) => !c.alreadySubmitted));
+}
+
+/**
+ * Build a submission for ONE course (e.g. the frozen course inside a lap snapshot)
+ * against the built-in defaults — used to auto-submit a custom track alongside a
+ * leaderboard snapshot. Returns null when the course is byte-identical to a built-in
+ * one (nothing to contribute). Mirrors `buildSubmissionPlan`'s per-course
+ * classification, including auto-deriving a short name for a wholly new track.
+ */
+export function buildCourseSubmission(
+  trackName: string,
+  courseName: string,
+  course: Course,
+  defaults: Track[],
+  trackShortName?: string,
+): SubmissionCourse | null {
+  const key = submissionKey(trackName, courseName);
+  const hash = courseContentHash(course);
+
+  const defaultTrack = defaults.find((t) => t.name === trackName);
+  const builtinCourse = defaultTrack?.courses.find((c) => c.name === courseName);
+  const builtinHash = builtinCourse ? courseContentHash(builtinCourse) : undefined;
+
+  if (builtinHash !== undefined && builtinHash === hash) return null;
+
+  let type: SubmissionType;
+  let change: CourseChange;
+  if (!defaultTrack) {
+    type = 'new_track';
+    change = 'new-track';
+  } else if (builtinHash === undefined) {
+    type = 'new_course';
+    change = 'new-course';
+  } else {
+    type = 'course_modification';
+    change = 'modified';
+  }
+
+  const resolvedShort = type === 'new_track'
+    ? (trackShortName?.trim() || deriveShortName(trackName) || undefined)
+    : trackShortName;
+
+  return {
+    trackName,
+    trackShortName: resolvedShort,
+    courseName,
+    type,
+    change,
+    courseData: courseToSubmissionData(course),
+    layout: course.layout && course.layout.length >= 2 ? course.layout : undefined,
+    contentHash: hash,
+    key,
+    alreadySubmitted: false,
+  };
 }
 
 /**

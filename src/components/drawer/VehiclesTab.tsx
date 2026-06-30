@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { Pencil, Trash2, Car, History, Plus } from "lucide-react";
+import { Pencil, Trash2, Car, History, Plus, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,6 +31,7 @@ const emptyForm = (defaultTypeId: string): Omit<Vehicle, "id"> => ({
   number: 0,
   weight: 0,
   weightUnit: "lb",
+  publicProfile: false,
 });
 
 export function VehiclesTab({ vehicles, vehicleTypes, onAdd, onUpdate, onRemove, onOpenFile, onCreateVehicleType }: VehiclesTabProps) {
@@ -73,11 +74,14 @@ export function VehiclesTab({ vehicles, vehicleTypes, onAdd, onUpdate, onRemove,
       number: vehicle.number,
       weight: vehicle.weight,
       weightUnit: vehicle.weightUnit,
+      publicProfile: vehicle.publicProfile ?? false,
     });
   };
 
   const handleSubmit = useCallback(async () => {
-    if (!form.name.trim()) return;
+    // Name + engine are both required — the engine powers leaderboards and
+    // snapshot matching, so a vehicle must always carry one.
+    if (!form.name.trim() || !form.engine.trim()) return;
     if (editingId) {
       await onUpdate({ id: editingId, ...form });
     } else {
@@ -132,12 +136,26 @@ export function VehiclesTab({ vehicles, vehicleTypes, onAdd, onUpdate, onRemove,
                 className={`flex items-center gap-2 p-2 rounded-md hover:bg-muted/50 transition-colors ${editingId === vehicle.id ? "ring-1 ring-primary bg-primary/5" : ""}`}
               >
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium truncate text-foreground">
-                    #{vehicle.number} — {vehicle.name}
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span className="text-sm font-medium truncate text-foreground">
+                      #{vehicle.number} — {vehicle.name}
+                    </span>
+                    {vehicle.publicProfile && (
+                      <span
+                        className="flex shrink-0 items-center gap-1 rounded-full bg-primary/15 px-1.5 py-0.5 text-[10px] font-medium text-primary"
+                        title={t("vehicles.publicHint")}
+                      >
+                        <Globe className="h-2.5 w-2.5" /> {t("vehicles.publicBadge")}
+                      </span>
+                    )}
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    {vt?.name ?? t("vehicles.unknownType")} · {vehicle.engine} · {vehicle.weight} {vehicle.weightUnit}
+                    {vt?.name ?? t("vehicles.unknownType")}
+                    {vehicle.engine ? ` · ${vehicle.engine}` : ""} · {vehicle.weight} {vehicle.weightUnit}
                   </div>
+                  {!vehicle.engine.trim() && (
+                    <div className="text-xs text-destructive">{t("vehicles.needsEngine")}</div>
+                  )}
                 </div>
                 <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 opacity-60 hover:opacity-100" onClick={() => setHistoryVehicle(vehicle)} title={t("vehicleHistory.openTitle")}>
                   <History className="w-3.5 h-3.5" />
@@ -203,8 +221,22 @@ export function VehiclesTab({ vehicles, vehicleTypes, onAdd, onUpdate, onRemove,
             </div>
           </div>
         </div>
+        <div className="flex items-center justify-between gap-2 rounded-md border border-border/60 px-3 py-2">
+          <div className="min-w-0">
+            <Label className="text-xs">{t("vehicles.showOnProfile")}</Label>
+            <p className="text-[11px] text-muted-foreground">{t("vehicles.showOnProfileHint")}</p>
+          </div>
+          <Switch
+            checked={!!form.publicProfile}
+            onCheckedChange={checked => setForm(f => ({ ...f, publicProfile: checked }))}
+            className="shrink-0"
+          />
+        </div>
+        {form.name.trim() && !form.engine.trim() && (
+          <p className="text-xs text-destructive">{t("vehicles.engineRequired")}</p>
+        )}
         <div className="flex items-center gap-2">
-          <Button className="flex-1" size="sm" onClick={handleSubmit} disabled={!form.name.trim()}>
+          <Button className="flex-1" size="sm" onClick={handleSubmit} disabled={!form.name.trim() || !form.engine.trim()}>
             {editingId ? t("vehicles.update") : t("vehicles.add")}
           </Button>
           {editingId && (
