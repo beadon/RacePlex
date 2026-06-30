@@ -12,7 +12,6 @@ import { toast } from "@/hooks/use-toast";
 // The "request a new datalogger" category — exported so the logger picker can
 // open this dialog with it preselected. Keep the VALUE in sync with the edge
 // function's ALLOWED_CATEGORIES + the admin MessagesTab category map.
-// eslint-disable-next-line react-refresh/only-export-components -- co-located with the dialog that owns the categories
 export const CATEGORY_NEW_DATALOGGER = "New Datalogger Connection";
 
 // eslint-disable-next-line react-refresh/only-export-components -- co-located with the dialog that owns the categories

@@ -227,7 +227,7 @@
       "featureRequest": "Solicitud de función",
       "complaint": "Queja",
       "bugReport": "Informe de error",
-      "newDatalogger": "New datalogger connection"
+      "newDatalogger": "Conexión de nuevo registrador de datos"
     },
     "emailLabel": "Correo electrónico",
     "emailOptional": "(opcional, para responderte)",

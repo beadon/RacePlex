@@ -27,12 +27,12 @@
     "nameProfanity": "Escolha um nome de exibição mais adequado.",
     "nameUpdateFailed": "Não foi possível atualizar o nome de exibição.",
     "loadUsageFailed": "Não foi possível carregar o uso de armazenamento",
-    "changeAvatar": "Change profile picture",
-    "avatarUpdated": "Profile picture updated.",
-    "avatarFailed": "Couldn't update profile picture.",
-    "copyProfileLink": "Copy profile link",
-    "linkCopied": "Profile link copied.",
-    "linkCopyFailed": "Couldn't copy profile link."
+    "changeAvatar": "Alterar foto de perfil",
+    "avatarUpdated": "Foto de perfil atualizada.",
+    "avatarFailed": "Não foi possível atualizar a foto de perfil.",
+    "copyProfileLink": "Copiar link do perfil",
+    "linkCopied": "Link do perfil copiado.",
+    "linkCopyFailed": "Não foi possível copiar o link do perfil."
   },
   "plan": {
     "title": "Plano",
@@ -201,7 +201,7 @@
     "alreadySubmitted": "Já está nos rankings.",
     "loadFailed": "Não foi possível carregar seus envios.",
     "close": "Fechar",
-    "customTrackNotice": "This track isn't in the built-in list — its layout and sectors are submitted with your snapshot so others can view the lap. Please also add it to the community track database.",
-    "trackAdded": "Track sent to the community database for review."
+    "customTrackNotice": "Esta pista não está na lista integrada — seu traçado e setores são enviados com o seu snapshot, e a pista é adicionada ao banco de dados da comunidade para revisão.",
+    "trackAdded": "Pista enviada ao banco de dados da comunidade para revisão."
   }
 }

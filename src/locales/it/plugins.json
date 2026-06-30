@@ -27,12 +27,12 @@
     "nameProfanity": "Scegli un nome visualizzato più appropriato.",
     "nameUpdateFailed": "Impossibile aggiornare il nome visualizzato.",
     "loadUsageFailed": "Impossibile caricare l'utilizzo dello spazio",
-    "changeAvatar": "Change profile picture",
-    "avatarUpdated": "Profile picture updated.",
-    "avatarFailed": "Couldn't update profile picture.",
-    "copyProfileLink": "Copy profile link",
-    "linkCopied": "Profile link copied.",
-    "linkCopyFailed": "Couldn't copy profile link."
+    "changeAvatar": "Cambia foto profilo",
+    "avatarUpdated": "Foto profilo aggiornata.",
+    "avatarFailed": "Impossibile aggiornare la foto profilo.",
+    "copyProfileLink": "Copia link del profilo",
+    "linkCopied": "Link del profilo copiato.",
+    "linkCopyFailed": "Impossibile copiare il link del profilo."
   },
   "plan": {
     "title": "Piano",
@@ -201,7 +201,7 @@
     "alreadySubmitted": "Già nelle classifiche.",
     "loadFailed": "Impossibile caricare i tuoi invii.",
     "close": "Chiudi",
-    "customTrackNotice": "This track isn't in the built-in list — its layout and sectors are submitted with your snapshot so others can view the lap. Please also add it to the community track database.",
-    "trackAdded": "Track sent to the community database for review."
+    "customTrackNotice": "Questo circuito non è nell'elenco integrato: il suo tracciato e i settori vengono inviati con il tuo snapshot e il circuito viene aggiunto al database della community per la revisione.",
+    "trackAdded": "Circuito inviato al database della community per la revisione."
   }
 }

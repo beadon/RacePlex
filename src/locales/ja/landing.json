@@ -227,7 +227,7 @@
       "featureRequest": "機能リクエスト",
       "complaint": "苦情",
       "bugReport": "バグ報告",
-      "newDatalogger": "New datalogger connection"
+      "newDatalogger": "新しいデータロガーの接続"
     },
     "emailLabel": "メールアドレス",
     "emailOptional": "（任意、返信用）",
