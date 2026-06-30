@@ -27,12 +27,12 @@
     "nameProfanity": "もっと適切な表示名を選んでください。",
     "nameUpdateFailed": "表示名を更新できませんでした。",
     "loadUsageFailed": "ストレージ使用量を読み込めませんでした",
-    "changeAvatar": "Change profile picture",
-    "avatarUpdated": "Profile picture updated.",
-    "avatarFailed": "Couldn't update profile picture.",
-    "copyProfileLink": "Copy profile link",
-    "linkCopied": "Profile link copied.",
-    "linkCopyFailed": "Couldn't copy profile link."
+    "changeAvatar": "プロフィール写真を変更",
+    "avatarUpdated": "プロフィール写真を更新しました。",
+    "avatarFailed": "プロフィール写真を更新できませんでした。",
+    "copyProfileLink": "プロフィールリンクをコピー",
+    "linkCopied": "プロフィールリンクをコピーしました。",
+    "linkCopyFailed": "プロフィールリンクをコピーできませんでした。"
   },
   "plan": {
     "title": "プラン",
@@ -201,7 +201,7 @@
     "alreadySubmitted": "すでにリーダーボードに登録されています。",
     "loadFailed": "あなたの送信を読み込めませんでした。",
     "close": "閉じる",
-    "customTrackNotice": "This track isn't in the built-in list — its layout and sectors are submitted with your snapshot so others can view the lap. Please also add it to the community track database.",
-    "trackAdded": "Track sent to the community database for review."
+    "customTrackNotice": "このコースは組み込みリストにありません。レイアウトとセクターはスナップショットと共に送信され、コースは承認のためコミュニティデータベースに追加されます。",
+    "trackAdded": "コースを承認のためコミュニティデータベースに送信しました。"
   }
 }

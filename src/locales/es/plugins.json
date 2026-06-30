@@ -27,12 +27,12 @@
     "nameProfanity": "Elige un nombre para mostrar más limpio, por favor.",
     "nameUpdateFailed": "No se pudo actualizar el nombre para mostrar.",
     "loadUsageFailed": "No se pudo cargar el uso de almacenamiento",
-    "changeAvatar": "Change profile picture",
-    "avatarUpdated": "Profile picture updated.",
-    "avatarFailed": "Couldn't update profile picture.",
-    "copyProfileLink": "Copy profile link",
-    "linkCopied": "Profile link copied.",
-    "linkCopyFailed": "Couldn't copy profile link."
+    "changeAvatar": "Cambiar foto de perfil",
+    "avatarUpdated": "Foto de perfil actualizada.",
+    "avatarFailed": "No se pudo actualizar la foto de perfil.",
+    "copyProfileLink": "Copiar enlace del perfil",
+    "linkCopied": "Enlace del perfil copiado.",
+    "linkCopyFailed": "No se pudo copiar el enlace del perfil."
   },
   "plan": {
     "title": "Plan",
@@ -201,7 +201,7 @@
     "alreadySubmitted": "Ya está en las clasificaciones.",
     "loadFailed": "No se pudieron cargar tus envíos.",
     "close": "Cerrar",
-    "customTrackNotice": "This track isn't in the built-in list — its layout and sectors are submitted with your snapshot so others can view the lap. Please also add it to the community track database.",
-    "trackAdded": "Track sent to the community database for review."
+    "customTrackNotice": "Este circuito no está en la lista integrada: su trazado y sectores se envían con tu captura, y el circuito se añade a la base de datos de la comunidad para su revisión.",
+    "trackAdded": "Circuito enviado a la base de datos de la comunidad para su revisión."
   }
 }

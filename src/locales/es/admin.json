@@ -53,7 +53,7 @@
       "featureRequest": "Solicitud de función",
       "complaint": "Queja",
       "bugReport": "Informe de error",
-      "newDatalogger": "New datalogger connection"
+      "newDatalogger": "Conexión de nuevo registrador de datos"
     },
     "emailLine": "Correo: {{email}}",
     "ipLine": "IP: {{ip}}",

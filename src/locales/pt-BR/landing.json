@@ -227,7 +227,7 @@
       "featureRequest": "Solicitação de recurso",
       "complaint": "Reclamação",
       "bugReport": "Relatório de bug",
-      "newDatalogger": "New datalogger connection"
+      "newDatalogger": "Conexão de novo datalogger"
     },
     "emailLabel": "E-mail",
     "emailOptional": "(opcional, para resposta)",

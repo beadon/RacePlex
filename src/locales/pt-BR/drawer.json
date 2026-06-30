@@ -75,10 +75,10 @@
     "add": "Adicionar veículo",
     "engineRequired": "Um motor é obrigatório.",
     "needsEngine": "Este veículo precisa de um motor — edite para adicionar um.",
-    "showOnProfile": "Show on profile",
-    "showOnProfileHint": "List this vehicle on your public driver profile (name, type and engine only — never weight or setup).",
-    "publicBadge": "Public",
-    "publicHint": "Shown on your public driver profile."
+    "showOnProfile": "Mostrar no perfil",
+    "showOnProfileHint": "Lista este veículo no seu perfil público de piloto (apenas nome, tipo e motor — nunca peso ou setup).",
+    "publicBadge": "Público",
+    "publicHint": "Exibido no seu perfil público de piloto."
   },
   "engine": {
     "label": "Motor",

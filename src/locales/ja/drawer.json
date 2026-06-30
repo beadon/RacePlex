@@ -75,10 +75,10 @@
     "add": "車両を追加",
     "engineRequired": "エンジンは必須です。",
     "needsEngine": "この車両にはエンジンが必要です。編集して追加してください。",
-    "showOnProfile": "Show on profile",
-    "showOnProfileHint": "List this vehicle on your public driver profile (name, type and engine only — never weight or setup).",
-    "publicBadge": "Public",
-    "publicHint": "Shown on your public driver profile."
+    "showOnProfile": "プロフィールに表示",
+    "showOnProfileHint": "この車両を公開ドライバープロフィールに表示します（名前・タイプ・エンジンのみ。重量やセットアップは含みません）。",
+    "publicBadge": "公開",
+    "publicHint": "公開ドライバープロフィールに表示されます。"
   },
   "engine": {
     "label": "エンジン",

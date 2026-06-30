@@ -27,12 +27,12 @@
     "nameProfanity": "Veuillez choisir un nom d'affichage plus correct.",
     "nameUpdateFailed": "Impossible de mettre à jour le nom d'affichage.",
     "loadUsageFailed": "Impossible de charger l'utilisation du stockage",
-    "changeAvatar": "Change profile picture",
-    "avatarUpdated": "Profile picture updated.",
-    "avatarFailed": "Couldn't update profile picture.",
-    "copyProfileLink": "Copy profile link",
-    "linkCopied": "Profile link copied.",
-    "linkCopyFailed": "Couldn't copy profile link."
+    "changeAvatar": "Changer la photo de profil",
+    "avatarUpdated": "Photo de profil mise à jour.",
+    "avatarFailed": "Impossible de mettre à jour la photo de profil.",
+    "copyProfileLink": "Copier le lien du profil",
+    "linkCopied": "Lien du profil copié.",
+    "linkCopyFailed": "Impossible de copier le lien du profil."
   },
   "plan": {
     "title": "Forfait",
@@ -201,7 +201,7 @@
     "alreadySubmitted": "Déjà dans les classements.",
     "loadFailed": "Impossible de charger vos envois.",
     "close": "Fermer",
-    "customTrackNotice": "This track isn't in the built-in list — its layout and sectors are submitted with your snapshot so others can view the lap. Please also add it to the community track database.",
-    "trackAdded": "Track sent to the community database for review."
+    "customTrackNotice": "Ce circuit n'est pas dans la liste intégrée : son tracé et ses secteurs sont envoyés avec votre instantané, et le circuit est ajouté à la base de données communautaire pour révision.",
+    "trackAdded": "Circuit envoyé à la base de données communautaire pour révision."
   }
 }

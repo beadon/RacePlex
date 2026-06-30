@@ -27,12 +27,12 @@
     "nameProfanity": "Bitte wähle einen saubereren Anzeigenamen.",
     "nameUpdateFailed": "Anzeigename konnte nicht aktualisiert werden.",
     "loadUsageFailed": "Speichernutzung konnte nicht geladen werden",
-    "changeAvatar": "Change profile picture",
-    "avatarUpdated": "Profile picture updated.",
-    "avatarFailed": "Couldn't update profile picture.",
-    "copyProfileLink": "Copy profile link",
-    "linkCopied": "Profile link copied.",
-    "linkCopyFailed": "Couldn't copy profile link."
+    "changeAvatar": "Profilbild ändern",
+    "avatarUpdated": "Profilbild aktualisiert.",
+    "avatarFailed": "Profilbild konnte nicht aktualisiert werden.",
+    "copyProfileLink": "Profillink kopieren",
+    "linkCopied": "Profillink kopiert.",
+    "linkCopyFailed": "Profillink konnte nicht kopiert werden."
   },
   "plan": {
     "title": "Tarif",
@@ -201,7 +201,7 @@
     "alreadySubmitted": "Bereits in den Bestenlisten.",
     "loadFailed": "Deine Einträge konnten nicht geladen werden.",
     "close": "Schließen",
-    "customTrackNotice": "This track isn't in the built-in list — its layout and sectors are submitted with your snapshot so others can view the lap. Please also add it to the community track database.",
-    "trackAdded": "Track sent to the community database for review."
+    "customTrackNotice": "Diese Strecke ist nicht in der integrierten Liste – ihr Layout und ihre Sektoren werden mit deinem Snapshot übermittelt, und die Strecke wird zur Überprüfung der Community-Datenbank hinzugefügt.",
+    "trackAdded": "Strecke zur Überprüfung an die Community-Datenbank gesendet."
   }
 }

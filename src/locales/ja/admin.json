@@ -53,7 +53,7 @@
       "featureRequest": "機能リクエスト",
       "complaint": "苦情",
       "bugReport": "バグ報告",
-      "newDatalogger": "New datalogger connection"
+      "newDatalogger": "新しいデータロガーの接続"
     },
     "emailLine": "メール: {{email}}",
     "ipLine": "IP: {{ip}}",

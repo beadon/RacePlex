@@ -1,14 +1,14 @@
 {
   "_machine": true,
-  "loading": "Loading profile…",
-  "loadFailed": "Couldn't load this profile.",
-  "notFoundTitle": "Driver not found",
-  "notFoundBody": "No driver named “{{name}}” exists.",
-  "vehiclesTitle": "Vehicles",
-  "vehiclesEmpty": "This driver hasn't shared any vehicles.",
-  "unknownType": "Unknown type",
-  "snapshotsTitle": "Leaderboard snapshots",
-  "snapshotsEmpty": "This driver hasn't uploaded any leaderboard snapshots.",
-  "noWeight": "No listed weight",
-  "openSnapshot": "Open this lap in the viewer"
+  "loading": "Carregando perfil…",
+  "loadFailed": "Não foi possível carregar este perfil.",
+  "notFoundTitle": "Piloto não encontrado",
+  "notFoundBody": "Não existe nenhum piloto chamado “{{name}}”.",
+  "vehiclesTitle": "Veículos",
+  "vehiclesEmpty": "Este piloto não compartilhou nenhum veículo.",
+  "unknownType": "Tipo desconhecido",
+  "snapshotsTitle": "Snapshots do ranking",
+  "snapshotsEmpty": "Este piloto não enviou nenhum snapshot ao ranking.",
+  "noWeight": "Sem peso informado",
+  "openSnapshot": "Abrir esta volta no visualizador"
 }
