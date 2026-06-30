@@ -59,8 +59,8 @@ Backend (migrations `..._cloud_sync.sql`, `..._storage_quotas.sql`,
 | `enforce_sync_quota` | trigger | BEFORE INSERT/UPDATE on `sync_records`: rejects a write that pushes the caller's **pooled total** (this table + all `lap_snapshots`, minus the upserted row) over `tier_total_limit()` (`quota_exceeded`). |
 | `enforce_snapshot_quota` | trigger | BEFORE INSERT/UPDATE on `lap_snapshots`: same pooled check keyed off the snapshot's serialized size (`quota_exceeded`). |
 | `sync_storage_usage()` | RPC | Single row `(documents_bytes, logs_bytes, snapshots_bytes, total_limit_bytes)` for the caller — the limit reflects the caller's tier. |
-| `profiles` | table | `(user_id PK→auth.users, display_name, avatar_path, avatar_updated_at, …)`. RLS: authenticated read-all, update/insert own. Display name is **unique case-insensitively** (`unique index on lower(display_name)`, plan 0006) but **not** a key — user-editable. |
-| `public_profiles` | view | Plan 0006. Anon-readable, column-limited (`user_id, display_name, avatar_path, avatar_updated_at`) — backs the public `/driver/:username` page + Leaderboards avatar thumbnails without exposing the base table to anon. |
+| `profiles` | table | `(user_id PK→auth.users, display_name, avatar_path, avatar_updated_at, …)`. RLS: **public (anon) read** (so the `security_invoker` `public_profiles` view + leaderboard name embeds resolve for anon), update/insert own only. Display name is **unique case-insensitively** (`unique index on lower(display_name)`, plan 0006) but **not** a key — user-editable. |
+| `public_profiles` | view | Plan 0006. Anon-readable, column-limited (`user_id, display_name, avatar_path, avatar_updated_at`) — backs the public `/driver/:username` page + Leaderboards avatar thumbnails. A **`security_invoker`** view (not SECURITY DEFINER): it respects the caller's RLS, so `profiles` now has a public (anon) read policy. Writes stay owner-only. |
 | `public_vehicles` | table | Plan 0006. Opt-in public projection of a user's vehicles `(user_id, vehicle_id PK, name, type_name, engine, number)` — **never weight/setup**. RLS: anon read, owner write. Synced off the garage-change path (`publicVehicleSync`); cascades on account delete. |
 | `user-avatars` | Storage bucket | Plan 0006. **Public**. Avatar at `{user_id}/avatar.{webp\|jpg}` (cropped ≤256px client-side). Public read; owner-folder write. Not FK-cascaded — the deletion worker empties the folder. |
 | `handle_new_user` | trigger | On `auth.users` insert: creates a profile, using the sign-up `display_name` or a generated silly name (`SpeedyRac3r-546`). `unique_display_name()` auto-suffixes a taken name at creation (case-insensitively); user edits get an explicit "taken" error instead. |
@@ -128,7 +128,7 @@ through RLS** (no edge function); the client lives in
 
 | Table | Purpose |
 |-------|---------|
-| `leaderboard_entries` | One row per submitted snapshot. Holds the frozen `data` jsonb (clean-lap samples + course geometry; engine-telemetry channels stripped client-side unless shared — **setup data is never uploaded**), the denormalized `display_name`, the raw `engine` + `engine_key`, the admin-overridable `engine_class_id` (+ `class_source`), the public `listed_weight`, `lap_time_ms`, a `content_hash`, and `status` (`approved` default / `denied`). `unique (user_id, content_hash)` blocks identical resubmits. |
+| `leaderboard_entries` | One row per submitted snapshot. Holds the frozen `data` jsonb (clean-lap samples + **full course geometry incl. sectors/layout**; engine-telemetry channels stripped client-side unless shared — **setup data is never uploaded**), the raw `engine` + `engine_key`, the admin-overridable `engine_class_id` (+ `class_source`), the public `listed_weight`, `lap_time_ms`, a `content_hash`, and `status` (`approved` default / `denied`). The submitter's name is **not** stored: an FK `user_id→profiles(user_id)` lets reads embed the LIVE `profiles(display_name)` (plan 0006), so a rename propagates. The legacy `display_name` column is now nullable + unused. `unique (user_id, content_hash)` blocks identical resubmits. |
 | `engine_classes` | Admin-managed keyword groups (`name`, `keywords[]`, `sort_order`) that collapse free-text engine names into one class. |
 
 | Function / trigger | What it does |
@@ -247,7 +247,11 @@ tab (`src/components/admin/UsersTab.tsx`). Service-role actions:
 Submissions are attributed to a signed-in contributor via
 `submissions.submitted_by_user_id`, which the `submit-track` edge function derives
 from the caller's **verified JWT** (never a client-supplied id; anonymous stays
-`NULL`). The admin Submissions tab resolves it to a `profiles.display_name`.
+`NULL`). The admin Submissions tab resolves it to a `profiles.display_name`. The
+Turnstile CAPTCHA is **skipped for signed-in submitters** (they're accountable via
+their account; IP ban + rate limit still apply) — this lets a custom track
+auto-submit alongside a leaderboard snapshot (`plugins/cloud-sync/trackAutoSubmit`)
+with no interactive CAPTCHA.
 
 **Client wiring** (core, not the cloud-sync plugin — billing is account-level and
 PricingCards renders even with cloud disabled): `lib/billing.ts` is the pure,

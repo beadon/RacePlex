@@ -268,6 +268,60 @@ export function pendingCourses(plan: SubmissionPlan): SubmissionCourse[] {
 }
 
 /**
+ * Build a submission for ONE course (e.g. the frozen course inside a lap snapshot)
+ * against the built-in defaults — used to auto-submit a custom track alongside a
+ * leaderboard snapshot. Returns null when the course is byte-identical to a built-in
+ * one (nothing to contribute). Mirrors `buildSubmissionPlan`'s per-course
+ * classification, including auto-deriving a short name for a wholly new track.
+ */
+export function buildCourseSubmission(
+  trackName: string,
+  courseName: string,
+  course: Course,
+  defaults: Track[],
+  trackShortName?: string,
+): SubmissionCourse | null {
+  const key = submissionKey(trackName, courseName);
+  const hash = courseContentHash(course);
+
+  const defaultTrack = defaults.find((t) => t.name === trackName);
+  const builtinCourse = defaultTrack?.courses.find((c) => c.name === courseName);
+  const builtinHash = builtinCourse ? courseContentHash(builtinCourse) : undefined;
+
+  if (builtinHash !== undefined && builtinHash === hash) return null;
+
+  let type: SubmissionType;
+  let change: CourseChange;
+  if (!defaultTrack) {
+    type = 'new_track';
+    change = 'new-track';
+  } else if (builtinHash === undefined) {
+    type = 'new_course';
+    change = 'new-course';
+  } else {
+    type = 'course_modification';
+    change = 'modified';
+  }
+
+  const resolvedShort = type === 'new_track'
+    ? (trackShortName?.trim() || deriveShortName(trackName) || undefined)
+    : trackShortName;
+
+  return {
+    trackName,
+    trackShortName: resolvedShort,
+    courseName,
+    type,
+    change,
+    courseData: courseToSubmissionData(course),
+    layout: course.layout && course.layout.length >= 2 ? course.layout : undefined,
+    contentHash: hash,
+    key,
+    alreadySubmitted: false,
+  };
+}
+
+/**
  * Merge freshly-submitted courses into the remembered set (pure). Returns a new
  * record map; the caller persists it.
  */

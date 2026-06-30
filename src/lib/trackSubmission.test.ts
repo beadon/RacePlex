@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type { Course, Track } from '@/types/racing';
 import {
+  buildCourseSubmission,
   buildSubmissionPlan,
   courseContentHash,
   courseToSubmissionData,
@@ -23,6 +24,37 @@ const sectors = {
   sector2: { a: { lat: 28.411, lon: -81.381 }, b: { lat: 28.412, lon: -81.382 } },
   sector3: { a: { lat: 28.413, lon: -81.383 }, b: { lat: 28.414, lon: -81.384 } },
 };
+
+describe('buildCourseSubmission', () => {
+  const defaults: Track[] = [
+    { name: 'OKC', shortName: 'OKC', courses: [course('Full CW')] },
+  ];
+
+  it('classifies a wholly new track and auto-derives a short name', () => {
+    const sub = buildCourseSubmission('Backyard Karting', 'Loop', course('Loop'), defaults);
+    expect(sub?.type).toBe('new_track');
+    expect(sub?.change).toBe('new-track');
+    expect(sub?.trackShortName).toBeTruthy(); // derived since none was given
+    expect(sub?.courseData.start_a_lat).toBe(28.41);
+  });
+
+  it('classifies a new course on a built-in track', () => {
+    const sub = buildCourseSubmission('OKC', 'Short', course('Short'), defaults);
+    expect(sub?.type).toBe('new_course');
+    expect(sub?.change).toBe('new-course');
+  });
+
+  it('classifies an edited built-in course as a modification', () => {
+    const moved = course('Full CW', { startFinishA: { lat: 28.5, lon: -81.38 } });
+    const sub = buildCourseSubmission('OKC', 'Full CW', moved, defaults);
+    expect(sub?.type).toBe('course_modification');
+    expect(sub?.change).toBe('modified');
+  });
+
+  it('returns null when the course is identical to the built-in one', () => {
+    expect(buildCourseSubmission('OKC', 'Full CW', course('Full CW'), defaults)).toBeNull();
+  });
+});
 
 describe('courseToSubmissionData', () => {
   it('emits the flat start/finish payload without sectors', () => {
