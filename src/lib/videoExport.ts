@@ -508,7 +508,9 @@ async function runWebCodecsExport(
     // Many small parts → Blob lets the browser keep the result off-heap;
     // the in-memory path keeps its single buffer (short exports only).
     const blob = useStreaming
-      ? new Blob(streamedParts.map((p) => p.data), { type: "video/mp4" })
+      ? // TS 5.7+ typed Uint8Array as Uint8Array<ArrayBufferLike>; Blob() wants
+        // Uint8Array<ArrayBuffer>. Muxer output is always ArrayBuffer-backed.
+        new Blob(streamedParts.map((p) => p.data as Uint8Array<ArrayBuffer>), { type: "video/mp4" })
       : new Blob([(target as ArrayBufferTarget).buffer], { type: "video/mp4" });
     streamedParts.length = 0;
 

@@ -366,7 +366,7 @@ describe("buildCourseOutline", () => {
     ])).toEqual([]);
   });
 
-  it("produces an evenly-resampled outline-solid from a dense trace", () => {
+  it("produces an evenly-resampled outline from a dense trace", () => {
     // A ~110m north-south leg sampled densely (~1m apart).
     const samples = Array.from({ length: 100 }, (_, i) => ({
       lat: 28.4 + i * 0.00001,

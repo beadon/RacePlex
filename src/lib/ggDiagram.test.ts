@@ -66,7 +66,7 @@ describe("computeGGPoints", () => {
 });
 
 describe("computeGGAxisMax", () => {
-  it("rounds the peak magnitude up to a clean 0.5 g ring-3", () => {
+  it("rounds the peak magnitude up to a clean 0.5 g ring", () => {
     const points = [{ x: 0.8, y: -1.1 }, { x: 0.2, y: 0.3 }];
     // peak 1.1 * 1.05 = 1.155 -> ceil to 1.5
     expect(computeGGAxisMax(points)).toBe(1.5);

@@ -36,7 +36,7 @@ interface TrackPromptDialogProps {
   /** Auto-detection result with direction and waypoint info */
   detectionResult?: CourseDetectionResult | null;
   /** Current session laps (e.g. waypoint-mode laps) — feeds the create-course
-   *  "Generate outline-solid" picker so the outline can be drawn right here. */
+   *  "Generate outline" picker so the outline can be drawn right here. */
   laps?: Lap[];
   /** Current session GPS samples — enables generating an outline from the whole
    *  session even when no laps were detected. */

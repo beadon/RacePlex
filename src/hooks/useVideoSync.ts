@@ -76,8 +76,8 @@ export interface VideoSyncActions {
     updateOverlaySettings: (settings: OverlaySettings) => void;
     deleteStoredVideo: () => Promise<void>;
     refreshStoredMeta: () => Promise<void>;
-    videoRef: React.RefObject<HTMLVideoElement>;
-    preloadVideoRef: React.RefObject<HTMLVideoElement>;
+    videoRef: React.RefObject<HTMLVideoElement | null>;
+    preloadVideoRef: React.RefObject<HTMLVideoElement | null>;
   }
 
 /** A picked video file held in memory while a recording prompt is pending. */

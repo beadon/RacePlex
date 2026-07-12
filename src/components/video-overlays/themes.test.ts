@@ -22,7 +22,7 @@ describe("THEMES", () => {
 
   it("only neon carries a glowFilter (classic has none)", () => {
     expect(THEMES.classic.glowFilter).toBeUndefined();
-    expect(THEMES.neon.glowFilter).toContain("drop-shadow-sm");
+    expect(THEMES.neon.glowFilter).toContain("drop-shadow");
   });
 });
 

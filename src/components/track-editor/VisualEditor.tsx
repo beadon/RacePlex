@@ -120,7 +120,7 @@ function VisualEditorToolbar({ drawMode, onToggleDraw, showDrawTool, drawPointCo
       <div className="flex items-center gap-2 p-2 bg-card border border-border rounded-lg flex-wrap">
         {showDrawTool && (
             <Button
-              variant={drawMode ? 'default' : 'outline-solid'}
+              variant={drawMode ? 'default' : 'outline'}
               size="sm"
               className="h-8 gap-1.5 text-xs"
               onClick={onToggleDraw}
@@ -142,7 +142,7 @@ function VisualEditorToolbar({ drawMode, onToggleDraw, showDrawTool, drawPointCo
         )}
         {canToggleKnownDrawing && (
           <Button
-            variant={showKnownDrawing ? 'secondary' : 'outline-solid'}
+            variant={showKnownDrawing ? 'secondary' : 'outline'}
             size="sm"
             className="h-8 gap-1.5 text-xs"
             onClick={onToggleKnownDrawing}
