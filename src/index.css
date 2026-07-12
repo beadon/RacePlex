@@ -281,7 +281,7 @@
     --popover: 0 0% 100%;
     --popover-foreground: 220 45% 9%;
 
-    --primary: 351 79% 41%;
+    --primary: 220 85% 33%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 220 22% 93%;
@@ -290,7 +290,7 @@
     --muted: 220 20% 94%;
     --muted-foreground: 220 18% 36%;
 
-    --accent: 220 85% 33%;
+    --accent: 351 79% 41%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 72% 41%;
@@ -304,7 +304,7 @@
 
     --border: 220 20% 80%;
     --input: 220 20% 84%;
-    --ring: 351 79% 41%;
+    --ring: 220 85% 33%;
 
     --lap-best: 142 70% 28%;
 
@@ -313,12 +313,12 @@
 
     --sidebar-background: 0 0% 100%;
     --sidebar-foreground: 220 45% 9%;
-    --sidebar-primary: 351 79% 41%;
+    --sidebar-primary: 220 85% 33%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 220 22% 93%;
     --sidebar-accent-foreground: 220 40% 18%;
     --sidebar-border: 220 20% 80%;
-    --sidebar-ring: 351 79% 41%;
+    --sidebar-ring: 220 85% 33%;
   }
 
   .dark[data-palette="classic"] {
@@ -331,7 +331,7 @@
     --popover: 220 30% 9%;
     --popover-foreground: 0 0% 98%;
 
-    --primary: 351 88% 59%;
+    --primary: 214 92% 64%;
     --primary-foreground: 220 32% 7%;
 
     --secondary: 220 25% 20%;
@@ -340,7 +340,7 @@
     --muted: 220 25% 17%;
     --muted-foreground: 215 18% 68%;
 
-    --accent: 214 92% 64%;
+    --accent: 351 88% 59%;
     --accent-foreground: 220 32% 7%;
 
     --destructive: 0 80% 64%;
@@ -354,7 +354,7 @@
 
     --border: 220 22% 24%;
     --input: 220 25% 20%;
-    --ring: 351 88% 59%;
+    --ring: 214 92% 64%;
 
     --lap-best: 142 65% 50%;
 
@@ -363,12 +363,12 @@
 
     --sidebar-background: 220 30% 11%;
     --sidebar-foreground: 0 0% 98%;
-    --sidebar-primary: 351 88% 59%;
+    --sidebar-primary: 214 92% 64%;
     --sidebar-primary-foreground: 220 32% 7%;
     --sidebar-accent: 220 25% 20%;
     --sidebar-accent-foreground: 0 0% 92%;
     --sidebar-border: 220 22% 24%;
-    --sidebar-ring: 351 88% 59%;
+    --sidebar-ring: 214 92% 64%;
   }
 
   /* Retro Racing — heritage: navy blue, mustard yellow, cherry red (a deeper,

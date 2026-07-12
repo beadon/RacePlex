@@ -35,8 +35,14 @@ export interface PaletteMeta {
 export const PALETTES: readonly PaletteMeta[] = [
   // Core brand: Racing Red on carbon black, Electric Yellow accent.
   { id: 'raceplex', swatch: ['#0C0C0E', '#BB162F', '#F0E005'] },
-  // Motorsport-official: Racing Red, white, deep flag blue.
-  { id: 'classic', swatch: ['#FFFFFF', '#BB162F', '#0D3C9C'] },
+  // Motorsport-official: deep flag blue leads, Racing Red accents, on pure white.
+  //
+  // Blue leads deliberately. When Classic and RacePlex BOTH led with Racing Red they were, in
+  // light mode, effectively the same palette — the picker offered a choice that wasn't one, since
+  // most screens show little chrome beyond the primary. Inverting the pair keeps the same
+  // red/white/blue trio while giving Classic its own identity: the flag-blue, high-contrast look
+  // of an official timing screen, against RacePlex's red-on-carbon.
+  { id: 'classic', swatch: ['#FFFFFF', '#0D3C9C', '#BB162F'] },
   // Heritage: navy blue, cherry red, mustard yellow.
   { id: 'retro', swatch: ['#0C1627', '#9E1A3B', '#E6B00F'] },
   // High-tech: neon green and hologram blue on near-black.
