@@ -120,26 +120,6 @@
       "vbo": {
         "name": "Racelogic VBO",
         "body": "Formato di esportazione Racelogic VBOX e RaceBox. Estensione: <code>.vbo</code>"
-      },
-      "raceboxCsv": {
-        "name": "RaceBox CSV",
-        "body": "L’esportazione predefinita dell’app RaceBox (Mini / Mini S / Micro): GPS, velocità, forza G e giroscopio. Se include la numerazione dei giri di RaceBox, RacePlex ricostruisce le linee di partenza/arrivo. Nota: RaceBox scrive la colonna della velocità <em>senza unità</em> — RacePlex la deduce dalle tue posizioni. Estensione: <code>.csv</code>"
-      },
-      "gpx": {
-        "name": "GPX",
-        "body": "Il formato universale delle tracce GPS. GPX non contiene la velocità, che viene derivata dalla posizione e smussata. Se il file contiene waypoint di partenza/arrivo, RacePlex ricostruisce automaticamente le linee di cronometraggio. Estensione: <code>.gpx</code>"
-      },
-      "gopro": {
-        "name": "Video GoPro (GPMF)",
-        "body": "<em>Trascina il video e basta.</em> Se hai filmato la tua run con una GoPro dotata di GPS, la telemetria è già dentro il file: HERO5–HERO11, HERO13 e MAX scrivono GPS a 10–18 Hz, oltre ad accelerometro e giroscopio, nella traccia di metadati GPMF del video. RacePlex la legge direttamente nel browser con <gpmf>gpmf-extract</gpmf> e <gpmfTelemetry>gopro-telemetry</gpmfTelemetry>; nulla viene caricato e non serve alcuna conversione. Nota: la <em>HERO12 non ha alcun GPS</em>, e sulle fotocamere più vecchie il GPS va attivato nelle Preferenze prima di registrare. Estensione: <code>.mp4</code>"
-      },
-      "vescCsv": {
-        "name": "VESC Tool CSV",
-        "body": "Un log VESC — e il motivo per usare RacePlex su uno skate elettrico. Porta con sé i canali dell'ESC: <em>corrente motore, calo di tensione, duty cycle, ERPM e temperature sullo stesso grafico della traccia GPS</em>. Un nosedive è un evento di duty cycle, non un evento GPS. Estensione: <code>.csv</code>"
-      },
-      "genericCsv": {
-        "name": "Qualsiasi altro CSV",
-        "body": "Quasi ogni log delimitato con latitudine e longitudine verrà importato. RacePlex rileva il delimitatore, mappa le colonne per nome e <em>ti mostra cosa ha deciso per farti correggere</em>. Le unità di tempo e velocità vengono dedotte e mostrate. La tua correzione viene ricordata. Estensioni: <code>.csv</code>, <code>.txt</code>"
       }
     },
     "secondary": {
@@ -185,7 +165,6 @@
   },
   "supportedDevices": {
     "title": "Dispositivi supportati",
-    "description": "Funziona qualsiasi dispositivo che esporti GPX, CSV, VBO, NMEA o UBX — e anche un .mp4 GoPro, perché il GPS è già dentro il video. Anche un CSV sconosciuto viene importato: RacePlex mappa le colonne e ti lascia correggere. RacePlex non vende hardware e non è affiliato a nessuno di questi marchi.",
     "rate": "GPS",
     "imu": "IMU",
     "via": "via",

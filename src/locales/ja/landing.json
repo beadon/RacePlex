@@ -120,26 +120,6 @@
       "vbo": {
         "name": "Racelogic VBO",
         "body": "Racelogic VBOX および RaceBox の書き出し形式。拡張子: <code>.vbo</code>"
-      },
-      "raceboxCsv": {
-        "name": "RaceBox CSV",
-        "body": "RaceBox アプリ（Mini / Mini S / Micro）の標準エクスポート。GPS、速度、G、ジャイロを含みます。RaceBox 自身のラップ番号が含まれていれば、RacePlex はそこからスタート/フィニッシュラインを復元し、設定なしでラップタイムが出ます。注意: RaceBox は速度列に<em>単位を書きません</em>。RacePlex は位置情報と照合して単位を判定します。拡張子: <code>.csv</code>"
-      },
-      "gpx": {
-        "name": "GPX",
-        "body": "GPS トラックの汎用フォーマット。GPX には速度チャンネルがないため、位置から算出して平滑化します。ファイルにスタート/フィニッシュのウェイポイントがあれば、RacePlex が自動的に計測ラインを復元します。拡張子: <code>.gpx</code>"
-      },
-      "gopro": {
-        "name": "GoPro動画 (GPMF)",
-        "body": "<em>動画をドロップするだけ。</em> GPS搭載のGoProで走行を撮影していれば、テレメトリーはすでに動画ファイルの中にあります。HERO5〜HERO11、HERO13、MAXは、10〜18HzのGPSに加えて加速度センサーとジャイロを、動画のGPMFメタデータトラックに記録しています。RacePlexは<gpmf>gpmf-extract</gpmf>と<gpmfTelemetry>gopro-telemetry</gpmfTelemetry>を使ってブラウザ内で直接読み取ります。アップロードは一切なく、変換作業も不要です。注意: <em>HERO12にはGPSが搭載されていません</em>。また、それ以前のカメラでは撮影前に環境設定でGPSをオンにしておく必要があります。拡張子: <code>.mp4</code>"
-      },
-      "vescCsv": {
-        "name": "VESC Tool CSV",
-        "body": "VESC のライドログ。電動スケートボードで RacePlex を使う理由そのものです。ESC のチャンネルを一緒に取り込みます：<em>モーター電流、電圧降下、デューティ比、ERPM、温度が GPS トレースと同じグラフに並びます</em>。ノーズダイブは GPS のイベントではなく、デューティ比のイベントです。拡張子: <code>.csv</code>"
-      },
-      "genericCsv": {
-        "name": "その他の CSV",
-        "body": "緯度と経度を含む区切りログなら、ほぼどれでも読み込めます。RacePlex は区切り文字を判定し、列名でマッピングし、<em>その判断を提示して修正できるようにします</em>。時刻と速度の単位は推定して提示します。修正内容は記憶されるため、聞かれるのは一度だけです。拡張子: <code>.csv</code>, <code>.txt</code>"
       }
     },
     "secondary": {
@@ -185,7 +165,6 @@
   },
   "supportedDevices": {
     "title": "対応デバイス",
-    "description": "GPX、CSV、VBO、NMEA、UBX を書き出せるデバイスなら動作します。GoPro の .mp4 も同様です（GPS は動画の中に入っています）。未知の CSV も取り込めます：RacePlex が列をマッピングし、修正できます。RacePlex はハードウェアを販売しておらず、これらのメーカーとは無関係です。",
     "rate": "GPS",
     "imu": "IMU",
     "via": "形式",
