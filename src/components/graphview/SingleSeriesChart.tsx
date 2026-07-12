@@ -62,10 +62,12 @@ export function SingleSeriesChart({
   const [isDragging, setIsDragging] = useState(false);
 
   // Live card height — driven by the resize handle, seeded from the committed
-  // prop and re-synced whenever the parent's value changes.
+  // prop. Override stamped against committedHeight so a parent-driven change
+  // auto-invalidates it (no set-state-in-effect reset needed).
   const committedHeight = height ?? SINGLE_SERIES_DEFAULT_HEIGHT;
-  const [cardHeight, setCardHeight] = useState(committedHeight);
-  useEffect(() => { setCardHeight(committedHeight); }, [committedHeight]);
+  const [heightOverride, setHeightOverride] = useState<{ home: number; value: number } | null>(null);
+  const cardHeight = heightOverride && heightOverride.home === committedHeight ? heightOverride.value : committedHeight;
+  const setCardHeight = (v: number) => setHeightOverride({ home: committedHeight, value: v });
 
   const isSpeed = seriesKey === 'speed';
   const isPace = seriesKey === '__pace__';

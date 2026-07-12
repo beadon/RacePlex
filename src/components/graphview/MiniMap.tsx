@@ -80,19 +80,18 @@ export function MiniMap({ samples, allSamples, referenceSamples = [], course, bo
   const speedEventsLayerRef = useRef<L.LayerGroup | null>(null);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
 
-  const [showSpeedEvents, setShowSpeedEvents] = useState(true);
-  const [showBrakingZones, setShowBrakingZones] = useState(true);
-
-  // Auto-toggle overlays based on All Laps mode
-  useEffect(() => {
-    if (isAllLaps) {
-      setShowSpeedEvents(false);
-      setShowBrakingZones(false);
-    } else {
-      setShowSpeedEvents(true);
-      setShowBrakingZones(true);
-    }
-  }, [isAllLaps]);
+  // Speed-event / braking-zone overlays are off in All Laps mode and on in
+  // single-lap mode by default; a user toggle overrides that stamped against
+  // the current isAllLaps value so switching modes re-homes.
+  const allLapsHome = !!isAllLaps;
+  const [overlayOverride, setOverlayOverride] = useState<{ home: boolean; speed: boolean; brake: boolean } | null>(null);
+  const overrideValid = overlayOverride?.home === allLapsHome;
+  const showSpeedEvents = overrideValid ? overlayOverride!.speed : !allLapsHome;
+  const showBrakingZones = overrideValid ? overlayOverride!.brake : !allLapsHome;
+  const setShowSpeedEvents = (v: boolean) =>
+    setOverlayOverride({ home: allLapsHome, speed: v, brake: showBrakingZones });
+  const setShowBrakingZones = (v: boolean) =>
+    setOverlayOverride({ home: allLapsHome, speed: showSpeedEvents, brake: v });
   const [mapStyle, setMapStyle] = useState<MapStyle>('dark');
   const isOnline = useOnlineStatus();
 

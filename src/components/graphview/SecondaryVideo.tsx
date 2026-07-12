@@ -42,9 +42,18 @@ export function SecondaryVideo({ videoState, overlayId, lapNumber, onCommitRateA
   const pendingSeekRef = useRef<number | null>(null);
 
   // Manual fine-alignment, local to this comparison only — never written back to
-  // the persisted main video sync. Reset whenever the overlay lap changes.
-  const [nudgeMs, setNudgeMs] = useState(0);
-  useEffect(() => setNudgeMs(0), [overlayId]);
+  // the persisted main video sync. Stored as an override stamped against the
+  // current overlayId so switching overlays auto-invalidates (no reset effect).
+  const [nudgeOverride, setNudgeOverride] = useState<{ home: string | null; value: number } | null>(null);
+  const nudgeMs = nudgeOverride && nudgeOverride.home === (overlayId ?? null) ? nudgeOverride.value : 0;
+  const setNudgeMs = (v: number | ((prev: number) => number)) => {
+    setNudgeOverride((prev) => {
+      const home = overlayId ?? null;
+      const currentValue = prev && prev.home === home ? prev.value : 0;
+      const nextValue = typeof v === 'function' ? v(currentValue) : v;
+      return { home, value: nextValue };
+    });
+  };
 
   const { syncOffsetMs, syncRate, exportChunks, videoDuration, isPlaying } = videoState;
 
