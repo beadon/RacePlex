@@ -8,17 +8,15 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 export function InstallPrompt() {
+  // Read the dismiss flag lazily so no effect+setState pair is needed on mount.
+  const [isDismissed, setIsDismissed] = useState<boolean>(
+    () => sessionStorage.getItem("pwa-install-dismissed") !== null,
+  );
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isVisible, setIsVisible] = useState(false);
-  const [isDismissed, setIsDismissed] = useState(false);
 
   useEffect(() => {
-    // Check if already dismissed in this session
-    const dismissed = sessionStorage.getItem("pwa-install-dismissed");
-    if (dismissed) {
-      setIsDismissed(true);
-      return;
-    }
+    if (isDismissed) return;
 
     const handleBeforeInstall = (e: Event) => {
       e.preventDefault();
@@ -38,7 +36,7 @@ export function InstallPrompt() {
       window.removeEventListener("beforeinstallprompt", handleBeforeInstall);
       window.removeEventListener("appinstalled", handleAppInstalled);
     };
-  }, []);
+  }, [isDismissed]);
 
   const handleInstall = async () => {
     if (!deferredPrompt) return;

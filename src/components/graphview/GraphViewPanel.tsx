@@ -136,7 +136,7 @@ export function GraphViewPanel(props: GraphViewPanelProps) {
   // Split mode hides the side panel (the comparison needs the width); leaving it
   // restores the panel. Kept in a ref so the onExpand handler reads live state.
   const splitActiveRef = useRef(showSplit);
-  splitActiveRef.current = showSplit;
+  useEffect(() => { splitActiveRef.current = showSplit; }, [showSplit]);
   useEffect(() => {
     const panel = leftPanelRef.current;
     if (!panel) return;

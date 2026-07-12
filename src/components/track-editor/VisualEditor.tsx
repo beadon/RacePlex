@@ -273,7 +273,7 @@ export function VisualEditor({
   // Latest selection / callbacks for use inside Leaflet event handlers (refs so
   // the marker-drag closures always see current values without re-binding).
   const onSelectLineRef = useRef(onSelectLine);
-  onSelectLineRef.current = onSelectLine;
+  useEffect(() => { onSelectLineRef.current = onSelectLine; }, [onSelectLine]);
 
   // Location search state (only used when isNewTrack)
   const [searchQuery, setSearchQuery] = useState('');
@@ -757,12 +757,12 @@ export function VisualEditor({
               if (e.key === 'Enter') handleLocationSearch();
             }}
             className="flex-1 h-8 text-sm"
-            disabled={isSearching || !mapRef.current}
+            disabled={isSearching || !mapReady}
           />
-          <Button variant="outline" size="sm" className="h-8 px-3" onClick={handleLocationSearch} disabled={isSearching || !searchQuery.trim() || !mapRef.current}>
+          <Button variant="outline" size="sm" className="h-8 px-3" onClick={handleLocationSearch} disabled={isSearching || !searchQuery.trim() || !mapReady}>
             {isSearching ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
           </Button>
-          <Button variant="outline" size="sm" className="h-8 px-3" onClick={handleUseMyLocation} disabled={isLocating || !mapRef.current} title={t('visual.useMyLocation')}>
+          <Button variant="outline" size="sm" className="h-8 px-3" onClick={handleUseMyLocation} disabled={isLocating || !mapReady} title={t('visual.useMyLocation')}>
             {isLocating ? <Loader2 className="w-4 h-4 animate-spin" /> : <LocateFixed className="w-4 h-4" />}
           </Button>
         </div>

@@ -25,7 +25,7 @@ async function fetchCloudExport(): Promise<CloudExport | null> {
 
 /** Read all local browser data the export should include. */
 async function gatherLocal(): Promise<LocalExport> {
-  let settings: unknown = null;
+  let settings: unknown;
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
     settings = raw ? JSON.parse(raw) : null;

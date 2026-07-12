@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useContext, lazy, Suspense } from 'react';
+import { useState, useEffect, useCallback, useMemo, useContext, lazy, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Plus, Trash2, Edit2, Check, Code, Copy, HelpCircle, Route, ArrowLeft, ChevronRight, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -178,7 +178,7 @@ function CourseDrawingMini({ points, size = 36 }: { points: Array<{ lat: number;
 
   useEffect(() => { refreshPendingSubmissionCount(); }, [refreshPendingSubmissionCount]);
 
-  const selectedTrack = tracks.find(t => t.name === tempTrackName);
+  const selectedTrack = useMemo(() => tracks.find(t => t.name === tempTrackName), [tracks, tempTrackName]);
   const availableCourses = selectedTrack?.courses ?? [];
 
   // %any% substring filter for the tracks list (matches name or short name).
@@ -217,7 +217,7 @@ function CourseDrawingMini({ points, size = 36 }: { points: Array<{ lat: number;
   }, [courseDrawings]);
 
   // Generate JSON for the selected track in datalogger format
-  const generateTrackJson = useCallback(() => {
+  const generatedTrackJson = useMemo(() => {
     if (!selectedTrack) return '{}';
 
     const result: Record<string, {
@@ -265,8 +265,7 @@ function CourseDrawingMini({ points, size = 36 }: { points: Array<{ lat: number;
   }, [selectedTrack]);
 
   const handleCopyJson = () => {
-    const json = generateTrackJson();
-    navigator.clipboard.writeText(json).then(() => {
+    navigator.clipboard.writeText(generatedTrackJson).then(() => {
       toast({ title: t('trackEditor.toastCopied'), description: t('trackEditor.toastCopiedDesc') });
     }).catch(() => {
       toast({ title: t('trackEditor.toastCopyFailed'), variant: 'destructive' });
@@ -683,7 +682,7 @@ function CourseDrawingMini({ points, size = 36 }: { points: Array<{ lat: number;
         <div className="space-y-3">
           <Textarea
             readOnly
-            value={generateTrackJson()}
+            value={generatedTrackJson}
             className="font-mono text-xs h-64 resize-none bg-muted"
           />
           <div className="flex justify-end gap-2">

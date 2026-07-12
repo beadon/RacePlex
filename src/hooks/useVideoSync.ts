@@ -137,9 +137,9 @@ export function useVideoSync({ samples, allSamples, currentIndex, onScrub, sessi
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const onScrubRef = useRef(onScrub);
-  onScrubRef.current = onScrub;
   const samplesRef = useRef(samples);
-  samplesRef.current = samples;
+  useEffect(() => { onScrubRef.current = onScrub; }, [onScrub]);
+  useEffect(() => { samplesRef.current = samples; }, [samples]);
 
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [preloadUrl, setPreloadUrl] = useState<string | null>(null);
@@ -239,6 +239,40 @@ export function useVideoSync({ samples, allSamples, currentIndex, onScrub, sessi
     setFileHandle(entries[0].handle ?? null);
   }, []);
 
+  // Re-grant a restored playlist's file handles and rebuild it (durations are
+  // stored, so no metadata re-read). Returns false if any handle is unavailable.
+  const restoreChunksFromHandles = useCallback(async (chunks: VideoSyncChunk[]): Promise<boolean> => {
+    const entries: ChunkEntry[] = [];
+    for (const c of chunks) {
+      if (!c.fileHandle) return false;
+      try {
+        const permission = await c.fileHandle.queryPermission({ mode: "read" });
+        if (permission !== "granted") return false;
+        const file = await c.fileHandle.getFile();
+        entries.push({ name: c.fileName, url: URL.createObjectURL(file), handle: c.fileHandle, durationSec: c.durationSec });
+      } catch {
+        return false;
+      }
+    }
+    revokeAllUrls();
+    await applyPlaylist(entries);
+    return true;
+  }, [revokeAllUrls, applyPlaylist]);
+
+  const tryLoadStoredVideo = useCallback(async (fileName: string) => {
+    try {
+      const stored = await loadSessionVideo(fileName);
+      if (stored) {
+        revokeAllUrls();
+        await applyPlaylist([{ name: stored.videoFileName, url: URL.createObjectURL(stored.blob) }]);
+        setStoredVideoAvailable(true);
+        setStoredVideoMeta(stored.meta);
+      }
+    } catch (e) {
+      console.error("Failed to load stored video:", e);
+    }
+  }, [revokeAllUrls, applyPlaylist]);
+
   // Restore persisted sync state + auto-load video from IndexedDB
   useEffect(() => {
     if (!sessionFileName) return;
@@ -293,45 +327,7 @@ export function useVideoSync({ samples, allSamples, currentIndex, onScrub, sessi
         await tryLoadStoredVideo(sessionFileName);
       }
     });
-    // `tryLoadStoredVideo`/`restoreChunksFromHandles` are declared after this
-    // effect; including them in deps would TDZ-throw on render. They're stable
-    // (empty-deps useCallback) so the closure resolves them at effect-run time.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionFileName]);
-
-  // Re-grant a restored playlist's file handles and rebuild it (durations are
-  // stored, so no metadata re-read). Returns false if any handle is unavailable.
-  const restoreChunksFromHandles = useCallback(async (chunks: VideoSyncChunk[]): Promise<boolean> => {
-    const entries: ChunkEntry[] = [];
-    for (const c of chunks) {
-      if (!c.fileHandle) return false;
-      try {
-        const permission = await c.fileHandle.queryPermission({ mode: "read" });
-        if (permission !== "granted") return false;
-        const file = await c.fileHandle.getFile();
-        entries.push({ name: c.fileName, url: URL.createObjectURL(file), handle: c.fileHandle, durationSec: c.durationSec });
-      } catch {
-        return false;
-      }
-    }
-    revokeAllUrls();
-    await applyPlaylist(entries);
-    return true;
-  }, [revokeAllUrls, applyPlaylist]);
-
-  const tryLoadStoredVideo = useCallback(async (fileName: string) => {
-    try {
-      const stored = await loadSessionVideo(fileName);
-      if (stored) {
-        revokeAllUrls();
-        await applyPlaylist([{ name: stored.videoFileName, url: URL.createObjectURL(stored.blob) }]);
-        setStoredVideoAvailable(true);
-        setStoredVideoMeta(stored.meta);
-      }
-    } catch (e) {
-      console.error("Failed to load stored video:", e);
-    }
-  }, [revokeAllUrls, applyPlaylist]);
+  }, [sessionFileName, tryLoadStoredVideo, restoreChunksFromHandles, revokeAllUrls, applyPlaylist]);
 
   // Persist sync state
   const persistSync = useCallback((offset: number, handle?: FileSystemFileHandle, fileName?: string, locked?: boolean) => {

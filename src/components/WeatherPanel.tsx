@@ -55,9 +55,9 @@ export function WeatherPanel({
   const [error, setError] = useState(false);
   const metric = useOptionalSettingsContext()?.useMetricWeather ?? false;
   const onStationResolvedRef = useRef(onStationResolved);
-  onStationResolvedRef.current = onStationResolved;
   const onWeatherLoadedRef = useRef(onWeatherLoaded);
-  onWeatherLoadedRef.current = onWeatherLoaded;
+  useEffect(() => { onStationResolvedRef.current = onStationResolved; }, [onStationResolved]);
+  useEffect(() => { onWeatherLoadedRef.current = onWeatherLoaded; }, [onWeatherLoaded]);
 
   useEffect(() => {
     // Reset state when inputs change

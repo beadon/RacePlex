@@ -88,7 +88,7 @@ export function FilesTab({
   // same tree as "cloud" rows; the host never imports any cloud code.
   const sources = useFileSources();
   const sourcesRef = useRef(sources);
-  sourcesRef.current = sources;
+  useEffect(() => { sourcesRef.current = sources; }, [sources]);
   // Stable key (getContributions hands back a fresh [] each call, so we can't
   // depend on the array identity without looping the effect).
   const sourceKey = sources.map((s) => s.id).join("|");
@@ -112,7 +112,7 @@ export function FilesTab({
       const byName = new Map<string, FileSource>();
       const all: RemoteFile[] = [];
       for (const src of sourcesRef.current) {
-        let list: RemoteFile[] = [];
+        let list: RemoteFile[];
         try { list = await src.listFiles(); } catch { list = []; }
         for (const rf of list) {
           if (!byName.has(rf.name)) { byName.set(rf.name, src); all.push(rf); }

@@ -160,7 +160,7 @@ export function SubmitTrackDialog({ trigger, onSubmitted }: SubmitTrackDialogPro
       });
       if (error) throw error;
 
-      const batchId = (data as { batch_id?: string } | null)?.batch_id ?? `local-${Date.now()}`;
+      const batchId = (data as { batch_id?: string } | null)?.batch_id ?? `local-${crypto.randomUUID()}`;
       markCoursesSubmitted(selectedCourses, batchId);
 
       toast({

@@ -63,9 +63,9 @@ export function findSpeedEvents(samples: GpsSample[], options: SpeedEventOptions
   let lastExtremumTime = -Infinity;
   
   // Track candidate extremum
-  let candidateIndex = -1;
-  let candidateSpeed = 0;
-  let signChangeCount = 0;
+  let candidateIndex: number;
+  let candidateSpeed: number;
+  let signChangeCount: number;
   let lastDerivSign: 'pos' | 'neg' | 'zero' = 'zero';
 
   for (let i = 1; i < smoothed.length; i++) {

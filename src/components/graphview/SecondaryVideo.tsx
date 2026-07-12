@@ -84,7 +84,7 @@ export function SecondaryVideo({ videoState, overlayId, lapNumber, onCommitRateA
 
   // The playback loop reads the latest target without re-subscribing per tick.
   const targetRef = useRef(target);
-  targetRef.current = target;
+  useEffect(() => { targetRef.current = target; }, [target]);
 
   // Swap the <video> source when the cursor crosses a chunk boundary; defer the
   // seek until the new chunk's metadata loads.

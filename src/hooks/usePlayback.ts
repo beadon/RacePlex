@@ -36,13 +36,13 @@ export function usePlayback({
 
   // Latest inputs, readable from inside the loop without re-subscribing it.
   const samplesRef = useRef(samples);
-  samplesRef.current = samples;
   const onIndexChangeRef = useRef(onIndexChange);
-  onIndexChangeRef.current = onIndexChange;
   const visibleRangeRef = useRef(visibleRange);
-  visibleRangeRef.current = visibleRange;
   const currentIndexRef = useRef(currentIndex);
-  currentIndexRef.current = currentIndex;
+  useEffect(() => { samplesRef.current = samples; }, [samples]);
+  useEffect(() => { onIndexChangeRef.current = onIndexChange; }, [onIndexChange]);
+  useEffect(() => { visibleRangeRef.current = visibleRange; }, [visibleRange]);
+  useEffect(() => { currentIndexRef.current = currentIndex; }, [currentIndex]);
 
   // Calculate average frame rate from sample timestamps. Memoized on the
   // sample window — the old useCallback(...)() IIFE memoized the *function*

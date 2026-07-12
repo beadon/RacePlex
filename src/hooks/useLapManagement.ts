@@ -142,7 +142,7 @@ export function useLapManagement(data: ParsedData | null, currentFileName: strin
   // callback, so closing over it would clamp to a stale window. The ref also lets
   // handleScrub keep a stable identity (it rides the memoized SessionContext value).
   const visibleRangeRef = useRef(visibleRange);
-  visibleRangeRef.current = visibleRange;
+  useEffect(() => { visibleRangeRef.current = visibleRange; }, [visibleRange]);
   useEffect(() => () => { if (scrubRafRef.current != null) cancelAnimationFrame(scrubRafRef.current); }, []);
 
   const handleScrub = useCallback(

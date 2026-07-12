@@ -30,6 +30,7 @@ export function ResizableSplit({
 
   // Store top panel height in pixels. We'll compute this from the container height.
   const [topPx, setTopPx] = useState<number | null>(null);
+  const [containerHeight, setContainerHeight] = useState<number>(0);
   const [isDragging, setIsDragging] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
 
@@ -48,18 +49,19 @@ export function ResizableSplit({
     const container = containerRef.current;
     if (!container) return;
 
-    const containerHeight = container.clientHeight;
-    if (containerHeight <= 0) return;
+    const nextHeight = container.clientHeight;
+    if (nextHeight <= 0) return;
+    setContainerHeight(nextHeight);
 
     if (isCollapsed) {
       // When collapsed, top panel takes almost all space
-      setTopPx(containerHeight - DIVIDER_HEIGHT - COLLAPSED_HEIGHT);
+      setTopPx(nextHeight - DIVIDER_HEIGHT - COLLAPSED_HEIGHT);
       return;
     }
 
-    const availableHeight = containerHeight - DIVIDER_HEIGHT;
+    const availableHeight = nextHeight - DIVIDER_HEIGHT;
     const desired = availableHeight * ratioRef.current;
-    const clamped = clampTopPx(desired, containerHeight);
+    const clamped = clampTopPx(desired, nextHeight);
 
     // Update ratio to reflect clamped value
     ratioRef.current = clamped / availableHeight;
@@ -152,14 +154,11 @@ export function ResizableSplit({
     };
   }, [isDragging, clampTopPx]);
 
-  // Compute bottom panel height
-  const getBottomPx = () => {
-    const container = containerRef.current;
-    if (!container || topPx === null) return 0;
-    return container.clientHeight - topPx - DIVIDER_HEIGHT;
-  };
-
-  const bottomPx = topPx !== null ? getBottomPx() : 0;
+  // Compute bottom panel height. Uses the last-measured container height so
+  // render doesn't touch containerRef.current directly.
+  const bottomPx = topPx !== null && containerHeight > 0
+    ? containerHeight - topPx - DIVIDER_HEIGHT
+    : 0;
 
   return (
     <div

@@ -48,6 +48,16 @@ interface DeviceTracksTabProps {
 
 type View = "loading" | "tracks" | "courses";
 
+const StatusIcon = ({ status }: { status: string }) => {
+  switch (status) {
+    case 'synced': return <Check className="w-4 h-4 text-green-500 shrink-0" />;
+    case 'mismatch': return <AlertTriangle className="w-4 h-4 text-yellow-500 shrink-0" />;
+    case 'device_only': return <HelpCircle className="w-4 h-4 text-orange-500 shrink-0" />;
+    case 'app_only': return <CloudOff className="w-4 h-4 text-blue-500 shrink-0" />;
+    default: return null;
+  }
+};
+
 export function DeviceTracksTab({ connection }: DeviceTracksTabProps) {
   const { t } = useTranslation("drawer");
   const [view, setView] = useState<View>("loading");
@@ -277,17 +287,6 @@ export function DeviceTracksTab({ connection }: DeviceTracksTabProps) {
     setResyncProgress(null);
     toast.success(t("deviceTracks.resyncedToast", { count: toSync.length }));
     await syncAll();
-  };
-
-  // ── Status icon helper ──
-  const StatusIcon = ({ status }: { status: string }) => {
-    switch (status) {
-      case 'synced': return <Check className="w-4 h-4 text-green-500 shrink-0" />;
-      case 'mismatch': return <AlertTriangle className="w-4 h-4 text-yellow-500 shrink-0" />;
-      case 'device_only': return <HelpCircle className="w-4 h-4 text-orange-500 shrink-0" />;
-      case 'app_only': return <CloudOff className="w-4 h-4 text-blue-500 shrink-0" />;
-      default: return null;
-    }
   };
 
   // ─────────── LOADING VIEW ───────────
