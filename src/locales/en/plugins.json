@@ -120,7 +120,7 @@
     "importing": "Importing…",
     "importDone": "Imported {{files}} file(s) and {{records}} record(s). Reload to see them.",
     "importReload": "Reload",
-    "importFailed": "Import failed — is this a LapWing data-export ZIP?"
+    "importFailed": "Import failed — is this a RacePlex data-export ZIP?"
   },
   "snapshots": {
     "loadFailed": "Failed to load snapshots",

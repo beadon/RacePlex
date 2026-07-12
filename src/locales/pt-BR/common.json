@@ -1,11 +1,10 @@
 {
   "_machine": true,
-  "appName": "LapWing",
+  "appName": "RacePlex",
   "actions": {
     "signIn": "Entrar",
     "signOut": "Sair",
     "profile": "Perfil",
-    "sponsor": "Apoiar",
     "loading": "Carregando…",
     "reset": "Restaurar padrões",
     "update": "Atualizar",

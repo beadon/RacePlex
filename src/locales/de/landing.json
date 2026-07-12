@@ -101,12 +101,12 @@
   },
   "about": {
     "trigger": "Über",
-    "title": "Über LapWing",
+    "title": "Über RacePlex",
     "featuresHeading": "Funktionen",
     "sections": {
       "offline": {
         "heading": "Funktioniert offline & ist installierbar",
-        "body": "LapWing ist eine vollständig offlinefähige Web-App. Einmal geladen, funktioniert sie ohne Internetverbindung — perfekt für die Strecke. Du kannst sie <strong>wie eine native App installieren</strong> auf Telefon, Tablet oder Computer über die Option „Installieren“ im Browsermenü (oder die Aufforderung unten auf der Seite)."
+        "body": "RacePlex ist eine vollständig offlinefähige Web-App. Einmal geladen, funktioniert sie ohne Internetverbindung — perfekt für die Strecke. Du kannst sie <strong>wie eine native App installieren</strong> auf Telefon, Tablet oder Computer über die Option „Installieren“ im Browsermenü (oder die Aufforderung unten auf der Seite)."
       },
       "data": {
         "heading": "Deine Daten bleiben auf deinem Gerät",
@@ -118,7 +118,7 @@
       },
       "oss": {
         "heading": "Kostenlos & Open Source",
-        "body": "Alle lokalen Funktionen von LapWing sind völlig kostenlos, und der Quellcode ist offen und auf GitHub verfügbar. Der optionale Cloud-Speicher hat eine kostenlose Stufe; mehr Speicher und KI-Coaching sind kostenpflichtige Zusatzoptionen, die Server- und Modellkosten decken — aber alle lokalen Funktionen bleiben immer kostenlos."
+        "body": "Alle lokalen Funktionen von RacePlex sind völlig kostenlos, und der Quellcode ist offen und auf GitHub verfügbar. Der optionale Cloud-Speicher hat eine kostenlose Stufe; mehr Speicher und KI-Coaching sind kostenpflichtige Zusatzoptionen, die Server- und Modellkosten decken — aber alle lokalen Funktionen bleiben immer kostenlos."
       }
     },
     "features": [

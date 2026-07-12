@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 
 // Emergency migration notice for the OLD domain. HackTheTrack is moving to
-// LapWing (lapwingdata.com), which is a different origin — so local-only files
+// RacePlex (lapwingdata.com), which is a different origin — so local-only files
 // (IndexedDB/localStorage) do NOT carry over. This banner warns users on the old
 // host to create an account (cloud sync follows them) or export a copy before the
 // old site is shut down.
@@ -81,7 +81,7 @@ export function MigrationBanner() {
         <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
         <div className="min-w-0 flex-1 space-y-2">
           <p className="text-sm font-medium">
-            HackTheTrack is moving to <span className="font-bold">LapWing</span> at{" "}
+            HackTheTrack is moving to <span className="font-bold">RacePlex</span> at{" "}
             <span className="font-bold">lapwingdata.com</span>.{" "}
             {closed
               ? "This site (hackthetrack.net) is closing."
@@ -103,7 +103,7 @@ export function MigrationBanner() {
               Export my data
             </Button>
             <Button size="sm" variant="ghost" asChild>
-              <a href={NEW_SITE} target="_blank" rel="noopener noreferrer">Go to LapWing →</a>
+              <a href={NEW_SITE} target="_blank" rel="noopener noreferrer">Go to RacePlex →</a>
             </Button>
           </div>
         </div>

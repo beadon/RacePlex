@@ -411,7 +411,7 @@ export function FilesTab({
         <input
           ref={fileInputRef}
           type="file"
-          accept=".csv,.nmea,.txt,.ubx,.vbo,.dove,.ld"
+          accept=".csv,.gpx,.nmea,.txt,.ubx,.vbo,.dove,.ld"
           onChange={handleUpload}
           className="hidden"
         />

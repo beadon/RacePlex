@@ -38,6 +38,19 @@ export interface Course {
   startFinishA: { lat: number; lon: number };
   startFinishB: { lat: number; lon: number };
   /**
+   * Optional separate FINISH line, making this a point-to-point course rather than a circuit.
+   *
+   * On a circuit, one line serves as both start and finish and a lap runs from each crossing to
+   * the next. On a point-to-point course — a hill run, a slalom, a drag strip, most of what an
+   * eskate rider actually does — the finish is somewhere else entirely, and a "lap" runs from a
+   * start crossing to the next finish crossing after it.
+   *
+   * When absent (the overwhelmingly common case, and every course upstream ships), the course is
+   * a circuit and `startFinishA/B` behaves exactly as before.
+   */
+  finishA?: { lat: number; lon: number };
+  finishB?: { lat: number; lon: number };
+  /**
    * Ordered sector lines after start/finish (canonical model). Normalized in
    * from the legacy `sector2`/`sector3` fields at every load boundary via
    * `normalizeCourseSectors` — the rest of the app reads only this.
@@ -175,6 +188,15 @@ export interface ParsedData {
   };
   duration: number;
   startDate?: Date;
+  /**
+   * A course carried inside the datalog itself.
+   *
+   * RaceBox writes its Start/Finish timing lines into its GPX export as waypoints, which means
+   * the file already knows where the course is. When a parser can recover that, the rider gets
+   * lap timing immediately on import instead of having to draw a start/finish line by hand — so
+   * it takes precedence over track-database matching and the speed heuristic.
+   */
+  embeddedCourse?: Course;
   dovexMetadata?: DovexMetadata;
   parserStats?: ParserStats;
 }

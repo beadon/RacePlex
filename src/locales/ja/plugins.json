@@ -97,7 +97,7 @@
     "importing": "インポート中…",
     "importDone": "{{files}} 個のファイルと {{records}} 件のレコードをインポートしました。再読み込みして表示してください。",
     "importReload": "再読み込み",
-    "importFailed": "インポートに失敗しました — これは LapWing のエクスポート ZIP ですか？"
+    "importFailed": "インポートに失敗しました — これは RacePlex のエクスポート ZIP ですか？"
   },
   "snapshots": {
     "loadFailed": "スナップショットを読み込めませんでした",

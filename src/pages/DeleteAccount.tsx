@@ -29,8 +29,8 @@ const enableCloud = import.meta.env.VITE_ENABLE_CLOUD === "true";
 // when the build has no cloud accounts it shows an explanatory note instead.
 export default function DeleteAccount() {
   useDocumentHead({
-    title: "Delete your account — LapWing",
-    description: "Request permanent deletion of your LapWing cloud account and all associated data.",
+    title: "Delete your account — RacePlex",
+    description: "Request permanent deletion of your RacePlex cloud account and all associated data.",
     canonical: "https://lapwingdata.com/delete-account",
   });
 

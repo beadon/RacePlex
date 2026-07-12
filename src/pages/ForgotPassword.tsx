@@ -40,7 +40,7 @@ export default function ForgotPassword() {
       <div className="w-full max-w-sm space-y-6">
         <div className="flex items-center gap-3 justify-center">
           <BrandLogo className="w-8 h-8" />
-          <h1 className="text-xl font-semibold text-foreground">LapWing</h1>
+          <h1 className="text-xl font-semibold text-foreground">RacePlex</h1>
         </div>
         <div className="racing-card p-6 space-y-4">
           <h2 className="text-lg font-semibold text-foreground">{t('forgot.heading')}</h2>

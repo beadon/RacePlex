@@ -97,7 +97,7 @@
     "importing": "Importando…",
     "importDone": "Se importaron {{files}} archivo(s) y {{records}} registro(s). Recarga para verlos.",
     "importReload": "Recargar",
-    "importFailed": "Error al importar — ¿es un ZIP de exportación de LapWing?"
+    "importFailed": "Error al importar — ¿es un ZIP de exportación de RacePlex?"
   },
   "snapshots": {
     "loadFailed": "No se pudieron cargar las instantáneas",

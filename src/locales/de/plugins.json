@@ -97,7 +97,7 @@
     "importing": "Importieren…",
     "importDone": "{{files}} Datei(en) und {{records}} Datensätze importiert. Zum Anzeigen neu laden.",
     "importReload": "Neu laden",
-    "importFailed": "Import fehlgeschlagen — ist das eine LapWing-Export-ZIP?"
+    "importFailed": "Import fehlgeschlagen — ist das eine RacePlex-Export-ZIP?"
   },
   "snapshots": {
     "loadFailed": "Snapshots konnten nicht geladen werden",

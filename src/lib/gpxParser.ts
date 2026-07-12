@@ -175,6 +175,13 @@ export function parseGpxFile(content: string): ParsedData {
 
   deriveSpeeds(samples);
 
+  // If the file carries its own timing lines, hand them out — the rider gets lap times on import
+  // with no setup at all. Nameless GPX (a phone recording, a Strava export) simply has none.
+  const waypoints = extractGpxWaypoints(content);
+  const embeddedCourse =
+    courseFromGpxWaypoints(waypoints, samples, innerTag(content, 'desc') ?? 'Imported course') ??
+    undefined;
+
   const fieldMappings = [
     { index: -1, name: 'Speed', enabled: true },
     ...(samples.some((s) => s.extraFields['Altitude (m)'] !== undefined)
@@ -191,6 +198,7 @@ export function parseGpxFile(content: string): ParsedData {
     bounds: calculateBounds(samples),
     duration: samples[samples.length - 1].t,
     startDate,
+    ...(embeddedCourse ? { embeddedCourse } : {}),
   };
 }
 
@@ -251,12 +259,20 @@ function timingLineAt(
  *
  * Returns null when the file carries no recognizable timing waypoints.
  *
- * NOTE: a course whose Start and Finish are at *different* places (a hill run, a slalom, a drag
- * strip) cannot be fully represented by the current Course type, which models only a single
- * start/finish line plus sectors. We currently anchor on Start (falling back to Finish) so lap
- * detection at least triggers. Proper point-to-point support is a separate change to the lap
- * engine — see docs/research/FORMATS.md.
+ * Handles both course shapes:
+ *
+ *  - CIRCUIT — a single `Start/Finish` waypoint, or a Start and Finish at the same place. A lap
+ *    runs from each crossing of that line to the next.
+ *  - POINT-TO-POINT — Start and Finish at *different* places, which is what a hill run, a slalom
+ *    or a drag strip looks like, and what the real RaceBox export in sample_race_files/ actually
+ *    is (its Start and Finish are ~85 m apart). A run goes from the start line to the finish line.
+ *
+ * The two are told apart by distance, not by naming: if the Start and Finish waypoints are within
+ * COINCIDENT_LINE_M of each other they're the same line under two names, which is how a lot of
+ * loop courses get exported.
  */
+const COINCIDENT_LINE_M = 20;
+
 export function courseFromGpxWaypoints(
   waypoints: GpxWaypoint[],
   samples: GpsSample[],
@@ -273,8 +289,17 @@ export function courseFromGpxWaypoints(
   const anchor = startFinish ?? start ?? finish;
   if (!anchor) return null;
 
-  const line = timingLineAt(anchor, samples, widthM);
-  if (!line) return null;
+  const startLine = timingLineAt(anchor, samples, widthM);
+  if (!startLine) return null;
+
+  // A distinct finish line makes this point-to-point.
+  let finishLine: SectorLine | null = null;
+  if (!startFinish && start && finish) {
+    const apart = haversineDistance(start.lat, start.lon, finish.lat, finish.lon);
+    if (apart > COINCIDENT_LINE_M) {
+      finishLine = timingLineAt(finish, samples, widthM);
+    }
+  }
 
   const splits = waypoints.filter((w) => {
     const n = (w.name ?? '').trim().toLowerCase();
@@ -288,8 +313,9 @@ export function courseFromGpxWaypoints(
 
   return {
     name,
-    startFinishA: line.a,
-    startFinishB: line.b,
+    startFinishA: startLine.a,
+    startFinishB: startLine.b,
+    ...(finishLine ? { finishA: finishLine.a, finishB: finishLine.b } : {}),
     ...(sectors.length > 0 ? { sectors } : {}),
     isUserDefined: false,
   };

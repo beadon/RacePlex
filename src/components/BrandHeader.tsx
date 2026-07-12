@@ -3,14 +3,14 @@ import { BrandLogo } from "@/components/BrandLogo";
 import { cn } from "@/lib/utils";
 
 /**
- * Sticky brand bar (logo + "LapWing") shared by the auth and legal full-page
+ * Sticky brand bar (logo + "RacePlex") shared by the auth and legal full-page
  * routes (login / register / privacy / terms). Clicking it returns home.
  *
  * It sticks to the top of the viewport and carries the top safe-area inset
  * itself (`safe-area-top`), so its background fills behind the device status bar
  * on native while page content scrolls beneath it. Host pages should therefore
  * use `safe-area-x` (left/right only) rather than `safe-area-inset` to avoid
- * double-padding the top. The accessible name comes from the visible "LapWing"
+ * double-padding the top. The accessible name comes from the visible "RacePlex"
  * text — no aria-label needed.
  */
 export function BrandHeader({ className }: { className?: string }) {
@@ -29,7 +29,7 @@ export function BrandHeader({ className }: { className?: string }) {
           className="flex items-center gap-3 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <BrandLogo className="w-8 h-8" />
-          <span className="text-xl font-semibold text-foreground">LapWing</span>
+          <span className="text-xl font-semibold text-foreground">RacePlex</span>
         </button>
       </div>
     </header>

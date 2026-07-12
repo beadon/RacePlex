@@ -13,4 +13,5 @@ Allow: /
 User-agent: *
 Allow: /
 
-Sitemap: https://lapwingdata.com/sitemap.xml
+# No Sitemap directive: RacePlex has no deployed domain yet. (Upstream's pointed at
+# lapwingdata.com — inheriting it would advertise someone else's site as ours.)

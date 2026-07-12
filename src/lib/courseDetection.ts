@@ -82,9 +82,39 @@ function detectDirection(samples: GpsSample[], course: Course, laps: Lap[]): Cou
  */
 export function autoDetectCourse(
   samples: GpsSample[],
-  tracks: Track[]
+  tracks: Track[],
+  embeddedCourse?: Course
 ): CourseDetectionResult | null {
-  if (samples.length < 10 || tracks.length === 0) return null;
+  if (samples.length < 10) return null;
+
+  // Step 0: a course carried inside the datalog itself beats anything we could infer.
+  //
+  // RaceBox writes its Start/Finish timing lines into its GPX export as waypoints, so the file
+  // already knows exactly where the course is — there is nothing to guess at, and no reason to
+  // ask the rider to draw a line they have already drawn. This runs before the track database is
+  // even consulted, and crucially before the `tracks.length === 0` bail below: a brand-new user
+  // with an empty garage is precisely the person who benefits most from lap times appearing on
+  // their very first import.
+  if (embeddedCourse) {
+    const laps = calculateLaps(samples, embeddedCourse);
+    if (laps.length > 0) {
+      return {
+        track: {
+          name: embeddedCourse.name,
+          courses: [embeddedCourse],
+          isUserDefined: true,
+        },
+        course: embeddedCourse,
+        direction: detectDirection(samples, embeddedCourse, laps),
+        laps,
+        isWaypointMode: false,
+      };
+    }
+    // Fall through when the embedded course yields no laps — the rider may have logged a session
+    // somewhere else entirely, and a stale course is worse than none.
+  }
+
+  if (tracks.length === 0) return null;
 
   // Step 1: Find first valid GPS sample
   const validSample = samples.find(

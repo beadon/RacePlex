@@ -65,8 +65,9 @@ const MIN_CROSSING_INTERVAL_MS = 5000; // 5 seconds for start/finish
 const MIN_SECTOR_CROSSING_INTERVAL_MS = 1000; // 1 second for sector lines
 
 interface LineCrossing {
-  // 'sf' = start/finish; a number is the 0-based index into course.sectors.
-  lineType: 'sf' | number;
+  // 'sf' = start/finish; 'finish' = the separate finish line of a point-to-point course;
+  // a number is the 0-based index into course.sectors.
+  lineType: 'sf' | 'finish' | number;
   crossingTime: number;
   sampleIndex: number;
   fraction: number;
@@ -84,7 +85,7 @@ function detectLineCrossings(
   lineB: Point,
   centerLat: number,
   centerLon: number,
-  lineType: 'sf' | number,
+  lineType: 'sf' | 'finish' | number,
   minInterval: number
 ): LineCrossing[] {
   const candidates: LineCrossing[] = [];
@@ -176,13 +177,54 @@ export function calculateLaps(samples: GpsSample[], inputCourse: Course): Lap[] 
   // line k → line k+1 (last segment wraps back to start/finish).
   const lineCount = courseSectors.length + 1;
 
+  // Work out which crossings bound each lap.
+  //
+  // CIRCUIT (no finish line): one line is both start and finish, so a lap runs from each
+  // crossing of it to the next.
+  //
+  // POINT-TO-POINT (a finish line is defined): the finish is somewhere else — a hill run, a
+  // slalom, a drag strip. A run goes from a start crossing to the FIRST finish crossing after
+  // it; we then skip past that finish, so riding the course a second time yields a second run
+  // rather than an overlapping one. Runs that start but never finish (the rider bailed, or the
+  // log ends mid-run) are simply not emitted.
+  const lapBounds: Array<{ start: LapCrossing; end: LapCrossing }> = [];
+
+  if (course.finishA && course.finishB) {
+    const fA = projectToPlane(course.finishA.lat, course.finishA.lon, centerLat, centerLon);
+    const fB = projectToPlane(course.finishB.lat, course.finishB.lon, centerLat, centerLon);
+    const finishCrossings = detectLineCrossings(
+      samples, fA, fB, centerLat, centerLon, 'finish', MIN_CROSSING_INTERVAL_MS,
+    );
+
+    let f = 0;
+    for (const start of crossings) {
+      while (f < finishCrossings.length && finishCrossings[f].crossingTime <= start.crossingTime) {
+        f++;
+      }
+      if (f >= finishCrossings.length) break;
+      const fin = finishCrossings[f];
+      lapBounds.push({
+        start,
+        end: {
+          sampleIndex: fin.sampleIndex,
+          crossingTime: fin.crossingTime,
+          fraction: fin.fraction,
+        },
+      });
+      f++;
+    }
+  } else {
+    for (let i = 0; i < crossings.length - 1; i++) {
+      lapBounds.push({ start: crossings[i], end: crossings[i + 1] });
+    }
+  }
+
   // Calculate laps from crossings
   const laps: Lap[] = [];
-  
-  for (let i = 0; i < crossings.length - 1; i++) {
-    const start = crossings[i];
-    const end = crossings[i + 1];
-    
+
+  for (let i = 0; i < lapBounds.length; i++) {
+    const { start, end } = lapBounds[i];
+
     const lapTimeMs = end.crossingTime - start.crossingTime;
     
     // Find max and min speed in this lap with glitch filtering

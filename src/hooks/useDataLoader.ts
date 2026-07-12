@@ -156,7 +156,13 @@ export function useDataLoader({
 
       setGpsCenter({ lat: validSample.lat, lon: validSample.lon });
 
-      const detection = autoDetectCourse(parsedData.samples, tracks);
+      // parsedData.embeddedCourse is the course the datalog brought with it (RaceBox GPX carries
+      // its Start/Finish lines as waypoints). It takes precedence over track matching.
+      const detection = autoDetectCourse(
+        parsedData.samples,
+        tracks,
+        parsedData.embeddedCourse,
+      );
       setDetectionResult(detection);
 
       if (detection && !detection.isWaypointMode) {

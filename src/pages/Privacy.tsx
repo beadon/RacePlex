@@ -18,9 +18,9 @@ const enableCloud = import.meta.env.VITE_ENABLE_CLOUD === "true";
 const Privacy = () => {
   const navigate = useNavigate();
   useDocumentHead({
-    title: "Privacy Policy — LapWing",
+    title: "Privacy Policy — RacePlex",
     description:
-      "How LapWing handles your data: offline-first telemetry stored in your browser, with optional cloud sync and AI features when you create an account.",
+      "How RacePlex handles your data: offline-first telemetry stored in your browser, with optional cloud sync and AI features when you create an account.",
     canonical: "https://lapwingdata.com/privacy",
   });
   return (
@@ -44,7 +44,7 @@ const Privacy = () => {
             The short version
           </h2>
           <p>
-            LapWing is offline-first. By default, everything you do —
+            RacePlex is offline-first. By default, everything you do —
             importing telemetry, taking notes, building kart profiles and setup
             sheets — stays in your browser and{" "}
             <strong className="text-foreground">never leaves your device</strong>.
@@ -388,7 +388,7 @@ const Privacy = () => {
             Self-Hosting
           </h2>
           <p>
-            LapWing is open source. If someone else runs their own instance,
+            RacePlex is open source. If someone else runs their own instance,
             they — not us — control any data collected by that instance, and this
             policy describes only the official hosted service.
           </p>
