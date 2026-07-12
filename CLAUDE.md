@@ -448,13 +448,27 @@ own design notes: **→ `docs/subsystems.md`**.
 i18next + react-i18next. English is **bundled** (zero-flash fallback); other
 languages (`es`, `fr`, `de`, `it`, `pt-BR`, `ja`) lazy-load per namespace, precached
 by the SW (offline). Language is a setting (`AppSettings.language`); keys are typed
-(`types/i18next.d.ts`) so a missing key fails `tsc -b`. **Every user-facing surface
-is migrated** (legal pages stay English by design).
+(`types/i18next.d.ts`) so a missing key fails `tsc -b`.
 
-**Migrating a surface:** replace literals with `t("ns:key")`, add the key to
-`src/locales/en/<ns>.json` (new namespace → register in `config.ts` + the typing),
-then `bun run i18n:seed` to fill other languages. Mechanics, plugin-owned namespaces,
-and the seeder: **→ `docs/i18n.md`**.
+### ⚠️ RacePlex: English is the source of truth; the other languages are BEST-EFFORT
+
+This is a deliberate departure from upstream, whose standard was "every user-facing surface is
+migrated" across all seven locales. RacePlex is a small eskate-focused fork that *inherited* those
+locales — hand-writing six translations for every new string is friction with nobody waiting on the
+other end.
+
+- **Add the English key and move on.** `fallbackLng: en` means an untranslated key renders in
+  English, which is a fine outcome, not a defect.
+- **Do NOT block a feature on translating it**, and do not report an English-only surface as a gap.
+- Translate when it's cheap (`bun run i18n:seed`, needs `ANTHROPIC_API_KEY`); never gate on it.
+- The tools-plugin parity test no longer fails a lagging locale. It still catches the two things
+  that are genuinely *broken* rather than merely untranslated: a key English doesn't have (dead
+  string — it can never render, so nobody would notice it was wrong), and a dropped `{{placeholder}}`
+  in a string that *has* been translated (that doesn't fall back — it renders broken text).
+
+**Adding a string:** put it in `src/locales/en/<ns>.json` (new namespace → register in `config.ts` +
+the typing) and use `t("ns:key")`. Other locales are optional. Mechanics and the seeder:
+**→ `docs/i18n.md`**.
 
 ---
 
