@@ -151,7 +151,11 @@ src/
 │   └── use*Manager        # IndexedDB CRUD: File, Vehicle (←Kart compat), Engine, Template, Note, Setup
 ├── lib/
 │   ├── datalogParser.ts   # ★ Format auto-detection router (entry point for all parsing)
-│   ├── *Parser.ts         # nmea, ubx, iracing (.ibt), vbo, dove, dovex, alfano, aim, motec
+│   ├── *Parser.ts         # nmea, ubx, iracing (.ibt), vbo, dove, dovex, alfano, aim, motec, gpx, racebox, vesc
+│   ├── csvTable.ts        # ★ Generic delimited-table reader (delimiter sniffing, `#` comments, VESC tagged headers, name-based columnIndex). Every CSV profile is built on it.
+│   ├── genericCsvParser.ts # ★ LAST-resort CSV importer: auto-maps columns by header name, infers the two units a name can't carry (time, speed), interpolates 1 Hz GPS across fast channels. Proposes a mapping; the rider confirms it in CsvMappingDialog (csvMappingRequest pub/sub) and it's remembered by header hash (csvMappingStorage, localStorage).
+│   ├── speedUnit.ts       # ★ Recover a speed column's unit by MEASURING it against position-derived speed (never from the magnitude — 25 is plausible in m/s, km/h and mph alike)
+│   ├── gpsFixes.ts        # ★ Distinct GPS fixes + position interpolation between them — keep every row, never decimate to the GPS rate (shared by vesc + generic CSV)
 │   ├── xrk/               # ★ AiM .xrk/.xrz importer — libxrk (Rust→WASM) in a Web Worker (→ docs/subsystems.md)
 │   ├── channels.ts        # ★ Canonical channel registry + normalizeChannels()
 │   ├── courseDetection.ts # ★ Auto track/course/direction detection + waypoint mode (→ docs/subsystems.md)

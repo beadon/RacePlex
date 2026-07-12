@@ -32,9 +32,6 @@
 
 import { Course, GpsSample, ParsedData, SectorLine } from '@/types/racing';
 import {
-  KNOTS_TO_MPS,
-  KPH_TO_MPS,
-  MPH_TO_MPS,
   calculateBounds,
   haversineDistance,
   parseCsvLine,
@@ -42,28 +39,25 @@ import {
   validateGpsCoords,
 } from './parserUtils';
 import {
+  SPEED_FACTOR,
+  detectSpeedUnit,
+  speedUnitFromHeader,
+  type SpeedUnit,
+} from './speedUnit';
+import {
   COINCIDENT_LINE_M,
   DEFAULT_TIMING_LINE_WIDTH_M,
   LatLon,
   timingLineBetween,
 } from './timingLines';
 
-export type RaceBoxSpeedUnit = 'mps' | 'kph' | 'mph' | 'knots';
-
-const SPEED_FACTOR: Record<RaceBoxSpeedUnit, number> = {
-  mps: 1,
-  kph: KPH_TO_MPS,
-  mph: MPH_TO_MPS,
-  knots: KNOTS_TO_MPS,
-};
-
-/** Expected value of (reported speed / true m/s) for each unit. */
-const UNIT_RATIO: Array<[RaceBoxSpeedUnit, number]> = [
-  ['mps', 1],
-  ['knots', 1 / KNOTS_TO_MPS], // ~1.944
-  ['mph', 1 / MPH_TO_MPS], // ~2.237
-  ['kph', 3.6],
-];
+/**
+ * The unit detector this parser was built around now lives in `speedUnit.ts`, because every
+ * header-driven CSV importer needs it (see genericCsvParser). Re-exported here so the RaceBox
+ * story stays readable from its own file.
+ */
+export { detectSpeedUnit };
+export type RaceBoxSpeedUnit = SpeedUnit;
 
 /** Strip a UTF-8 BOM, which some exports carry. */
 function stripBom(text: string): string {
@@ -87,66 +81,12 @@ function findColumn(headers: string[], ...candidates: string[]): number {
   return -1;
 }
 
-/** Read the unit out of an annotated header like `Speed (m/s)` or `KPH`. Null if unannotated. */
-function speedUnitFromHeader(header: string): RaceBoxSpeedUnit | null {
-  const h = header.toLowerCase();
-  if (/\bm\/s\b|\bmps\b/.test(h)) return 'mps';
-  if (/\bkph\b|\bkm\/h\b|\bkmh\b/.test(h)) return 'kph';
-  if (/\bmph\b/.test(h)) return 'mph';
-  if (/\bknots?\b/.test(h)) return 'knots';
-  return null;
-}
-
 interface RawRow {
   timeMs: number;
   lat: number;
   lon: number;
   reportedSpeed?: number;
   cells: string[];
-}
-
-/**
- * Recover the speed column's unit by measuring it against the positions.
- * Returns null when the log has too little movement to tell — a stationary trace has no opinion.
- */
-export function detectSpeedUnit(rows: RawRow[]): RaceBoxSpeedUnit | null {
-  const ratios: number[] = [];
-
-  for (let i = 1; i < rows.length; i++) {
-    const a = rows[i - 1];
-    const b = rows[i];
-    const dtSec = (b.timeMs - a.timeMs) / 1000;
-    if (dtSec <= 0) continue;
-
-    const reported = b.reportedSpeed;
-    if (reported === undefined) continue;
-
-    const derivedMps = haversineDistance(a.lat, a.lon, b.lat, b.lon) / dtSec;
-
-    // Only compare while genuinely moving. At a standstill, GPS jitter gives a derived speed of a
-    // few tenths of a m/s against a reported 0, and the ratio is pure noise.
-    if (derivedMps < 2 || reported < 2) continue;
-
-    ratios.push(reported / derivedMps);
-  }
-
-  if (ratios.length < 20) return null;
-
-  ratios.sort((x, y) => x - y);
-  const median = ratios[Math.floor(ratios.length / 2)];
-
-  let best: RaceBoxSpeedUnit | null = null;
-  let bestErr = Infinity;
-  for (const [unit, expected] of UNIT_RATIO) {
-    const err = Math.abs(median - expected) / expected;
-    if (err < bestErr) {
-      bestErr = err;
-      best = unit;
-    }
-  }
-
-  // Nothing within 15% means this column probably isn't a ground speed at all. Refuse to guess.
-  return bestErr < 0.15 ? best : null;
 }
 
 export function isRaceBoxCsvFormat(content: string): boolean {

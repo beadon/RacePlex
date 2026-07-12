@@ -43,8 +43,9 @@
  */
 
 import { GpsSample, ParsedData } from '@/types/racing';
-import { calculateBounds, speedTriple, validateGpsCoords } from './parserUtils';
+import { calculateBounds, speedTriple } from './parserUtils';
 import { cellNumber, columnIndex, parseCsvTable, type CsvTable } from './csvTable';
+import { collectGpsAnchors, createPositionInterpolator } from './gpsFixes';
 
 /** Channels we lift out of the ESC side of the log and put on the chart next to GPS. */
 const ESC_CHANNELS: { aliases: string[]; label: string; index: number }[] = [
@@ -123,53 +124,23 @@ export function parseVescCsvFile(content: string): ParsedData {
   //
   // A fix is written to every ESC row until the next one lands, so the first row carrying a new
   // `gnss_posTime` is the row where that fix is genuinely current. Those are our anchors.
-  interface Anchor {
-    row: number;
-    t: number;
-    lat: number;
-    lon: number;
-  }
-  const anchors: Anchor[] = [];
-  let lastFixKey: string | undefined;
-
-  for (let i = 0; i < table.rows.length; i++) {
-    const row = table.rows[i]!;
-    const lat = cellNumber(row, cLat);
-    const lon = cellNumber(row, cLon);
-    if (lat === undefined || lon === undefined) continue;
-    // A VESC log records rows before GPS lock, with lat/lon at exactly 0.
-    if (lat === 0 && lon === 0) continue;
-    if (validateGpsCoords(lat, lon) !== null) continue;
-
-    const fixKey = cPosTime !== -1 ? (row[cPosTime] ?? '') : `${row[cLat]},${row[cLon]}`;
-    if (fixKey === lastFixKey) continue;
-    lastFixKey = fixKey;
-
-    anchors.push({ row: i, t: times[i] ?? 0, lat, lon });
-  }
+  // (Shared with the generic CSV importer — see gpsFixes.ts for why interpolation, not decimation.)
+  const anchors = collectGpsAnchors({
+    rowCount: table.rows.length,
+    times,
+    lat: (i) => cellNumber(table.rows[i]!, cLat),
+    lon: (i) => cellNumber(table.rows[i]!, cLon),
+    fixKey:
+      cPosTime !== -1
+        ? (i) => table.rows[i]![cPosTime] ?? ''
+        : (i) => `${table.rows[i]![cLat]},${table.rows[i]![cLon]}`,
+  });
 
   if (anchors.length === 0) {
     throw new Error('VESC CSV: no GPS fixes found (was the GNSS module connected?)');
   }
 
-  /**
-   * Position at time `t`, linearly interpolated between the surrounding GPS anchors.
-   *
-   * Straight-line interpolation across a ~1 s gap is a real approximation — a rider carving a
-   * corner will cut it slightly. But it is a far better one than the alternative, which is to
-   * repeat the last fix and produce a track that teleports once a second, and a speed trace that
-   * alternates between zero and a spike. Over a 1 s gap at eskate speeds this is a few metres of
-   * chord error at worst, and it is smooth, which is what the map and the charts need.
-   */
-  const interpolateAt = (t: number, hint: number): { lat: number; lon: number } => {
-    // hint is the anchor index at or before t, maintained by the caller (avoids a binary search
-    // per row on a long log).
-    const a = anchors[Math.min(hint, anchors.length - 1)]!;
-    const b = anchors[Math.min(hint + 1, anchors.length - 1)]!;
-    if (b === a || b.t <= a.t) return { lat: a.lat, lon: a.lon };
-    const u = Math.min(1, Math.max(0, (t - a.t) / (b.t - a.t)));
-    return { lat: a.lat + (b.lat - a.lat) * u, lon: a.lon + (b.lon - a.lon) * u };
-  };
+  const positionAt = createPositionInterpolator(anchors);
 
   // ── Pass 2: emit EVERY ESC row, with an interpolated position. ──────────────────────────────
   //
@@ -179,14 +150,12 @@ export function parseVescCsvFile(content: string): ParsedData {
   const samples: GpsSample[] = [];
   const first = anchors[0]!;
   const last = anchors[anchors.length - 1]!;
-  let anchorHint = 0;
 
   for (let i = first.row; i <= last.row; i++) {
     const row = table.rows[i]!;
     const t = times[i] ?? 0;
 
-    while (anchorHint + 1 < anchors.length && anchors[anchorHint + 1]!.t <= t) anchorHint++;
-    const { lat, lon } = interpolateAt(t, anchorHint);
+    const { lat, lon } = positionAt(t);
 
     // gnss_gVel is m/s. (Confirmed against the real log: its ratio to speed derived from the
     // positions is 0.974, i.e. 1.0 — not 3.6.) It only updates at the GNSS rate, so fall back to

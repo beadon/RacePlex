@@ -14,6 +14,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [3.1.0] - unreleased
 
 ### Added
+- **Generic GPS-CSV import, with a column mapper you can correct.** Any delimited log with a
+  latitude and a longitude in it now imports, even from a device we have never seen — VESC Tool
+  subsets, Float Control, pOnewheel, TrackAddict, Metr, Qstarz. RacePlex sniffs the delimiter,
+  maps the columns by name, and shows you what it decided alongside a preview (first timestamp,
+  session duration, sample rate, first coordinate, top speed) so a wrong guess is obvious before
+  you import. Override any column or unit from a dropdown; the answer is saved against that
+  device's column layout, so the same logger never asks twice.
+- Time units (`ms_today`, `Time(s)`, epoch ms, epoch seconds…) and speed units (m/s vs km/h vs
+  mph) are inferred rather than guessed — the speed column is *measured* against GPS-derived
+  speed, and with no speed column at all, speed is derived from the positions.
+- Loggers that write GPS at 1 Hz while logging everything else at 10-50 Hz (which is most of them)
+  keep their fast channels at full rate: position is interpolated between fixes rather than the
+  log being decimated to the GPS rate.
 - **A community track collection you can actually contribute to.** Tracks now live in
   a `tracks/` directory in the repo — one JSON file per track — and adding one is a
   pull request. No account, no server, nothing anyone can switch off. `public/tracks.json`

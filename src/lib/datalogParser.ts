@@ -12,6 +12,8 @@ import { isIracingFormat, parseIracingFile } from './iracingParser';
 import { isGpxFormat, parseGpxFile } from './gpxParser';
 import { isRaceBoxCsvFormat, parseRaceBoxCsvFile } from './raceboxCsvParser';
 import { isVescCsvFormat, parseVescCsvFile } from './vescCsvParser';
+import { isGenericCsvFormat } from './genericCsvParser';
+import { importGenericCsv, importGenericCsvSync } from './genericCsvImport';
 import { isXrkFile, parseXrkFile, type XrkProgressCallback } from './xrk/xrkImporter';
 import { beginFileLoading, updateFileLoading, endFileLoading } from './fileLoadingState';
 
@@ -28,6 +30,8 @@ import { beginFileLoading, updateFileLoading, endFileLoading } from './fileLoadi
  * - Alfano CSV format (Alfano data loggers)
  * - AiM CSV format (MyChron 5/6, Race Studio 3 exports)
  * - AiM XRK/XRZ binary format (MyChron/SoloDL — parsed in-browser via libxrk wasm)
+ * - Generic GPS CSV (LAST resort: any delimited table with lat/lon — VESC subsets, Float Control,
+ *   pOnewheel, TrackAddict, Metr… — with a user-correctable, remembered column mapping)
  * - NMEA text format (CSV with NMEA sentences, .nmea files)
  *
  * `onProgress` only fires for the async, worker-backed XRK path (wasm load +
@@ -146,6 +150,18 @@ async function routeDatalogFile(
     return parseAimFile(text);
   }
 
+  // LAST RESORT: any delimited table with a latitude and a longitude in it. This must sit below
+  // every named format — it would happily claim a RaceBox or MoTeC file and import it worse than
+  // its own parser does. It sits ABOVE the NMEA fallback only because NMEA is not a detection at
+  // all, just the historical "we give up" path, and a generic GPS CSV has never parsed as NMEA
+  // (which requires `$GPRMC` sentences in the first column) — it just failed.
+  //
+  // Interactive: proposes a column mapping and asks the rider to confirm it, unless they have
+  // already confirmed one for this exact header (see genericCsvImport).
+  if (isGenericCsvFormat(text)) {
+    return importGenericCsv(text, file.name);
+  }
+
   // Otherwise, treat as NMEA text format
   return parseDatalog(text);
 }
@@ -213,6 +229,12 @@ function routeDatalogContent(content: string | ArrayBuffer): ParsedData {
       return parseAimFile(text);
     }
 
+    // Last resort — see routeDatalogFile. No dialog is possible on the sync path, so this uses a
+    // remembered mapping if there is one and the auto-proposal otherwise.
+    if (isGenericCsvFormat(text)) {
+      return importGenericCsvSync(text);
+    }
+
     return parseDatalog(text);
   }
 
@@ -255,6 +277,10 @@ function routeDatalogContent(content: string | ArrayBuffer): ParsedData {
 
   if (isAimFormat(content)) {
     return parseAimFile(content);
+  }
+
+  if (isGenericCsvFormat(content)) {
+    return importGenericCsvSync(content);
   }
 
   return parseDatalog(content);

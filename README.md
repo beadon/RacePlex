@@ -86,9 +86,14 @@ Bluetooth receiver — not a better app — is the fix.**
 ⚠️ **Dragy does not export CSV.** The vendor confirms it. Use the *dragy·Lap* app's `.vbo` export, or
 run it as a Bluetooth source for RaceChrono.
 
-⚠️ **"It exports CSV" does not mean it works.** RacePlex reads GPX, VBO, NMEA, UBX and a few
-*specific* CSV dialects (RaceBox, MoTeC, AiM, Alfano, Dove). There is no generic "CSV with lat/lon"
-parser — an unrecognised CSV is rejected. See [docs/research/FORMATS.md](docs/research/FORMATS.md).
+✅ **An unrecognised CSV now imports.** RacePlex reads GPX, VBO, NMEA, UBX and several *specific*
+CSV dialects (RaceBox, VESC, MoTeC, AiM, Alfano, Dove) — and anything else with a latitude and a
+longitude in it falls through to the **generic CSV importer**, which sniffs the delimiter, maps the
+columns by name, and then *shows you the mapping and lets you fix it* before importing. The units it
+cannot recover from a column name (time and speed) are inferred and put in front of you, because a
+wrong one produces a ride that charts beautifully and is wrong. Your correction is remembered
+against that device's column layout, so you are only ever asked once. See
+[docs/research/FORMATS.md](docs/research/FORMATS.md).
 
 ### If you ride a VESC board, read this
 
