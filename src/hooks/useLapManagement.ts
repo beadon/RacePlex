@@ -172,6 +172,7 @@ export function useLapManagement(data: ParsedData | null, currentFileName: strin
     setVisibleRange(newRange);
     const visibleLength = newRange[1] - newRange[0];
     setCurrentIndex((prev) => (prev > visibleLength ? visibleLength : prev));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- setVisibleRange is a derived-state setter that recreates each render but doesn't need re-memoing here
   }, []);
 
   // Format range label helper

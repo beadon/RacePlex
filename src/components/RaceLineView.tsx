@@ -143,19 +143,18 @@ export function RaceLineView({ samples, allSamples, referenceSamples = [], cours
   const speedEventsLayerRef = useRef<L.LayerGroup | null>(null);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
   
-  const [showSpeedEvents, setShowSpeedEvents] = useState(true);
-  const [showBrakingZones, setShowBrakingZones] = useState(true);
-
-  // Auto-toggle overlays based on All Laps mode
-  useEffect(() => {
-    if (isAllLaps) {
-      setShowSpeedEvents(false);
-      setShowBrakingZones(false);
-    } else {
-      setShowSpeedEvents(true);
-      setShowBrakingZones(true);
-    }
-  }, [isAllLaps]);
+  // Speed-event / braking-zone overlays derive from isAllLaps (off in All
+  // Laps, on in single-lap) with a user toggle overriding, stamped against
+  // the current isAllLaps so switching modes re-homes.
+  const allLapsHome = !!isAllLaps;
+  const [overlayOverride, setOverlayOverride] = useState<{ home: boolean; speed: boolean; brake: boolean } | null>(null);
+  const overrideValid = overlayOverride?.home === allLapsHome;
+  const showSpeedEvents = overrideValid ? overlayOverride!.speed : !allLapsHome;
+  const showBrakingZones = overrideValid ? overlayOverride!.brake : !allLapsHome;
+  const setShowSpeedEvents = (v: boolean) =>
+    setOverlayOverride({ home: allLapsHome, speed: v, brake: showBrakingZones });
+  const setShowBrakingZones = (v: boolean) =>
+    setOverlayOverride({ home: allLapsHome, speed: showSpeedEvents, brake: v });
   const [showWeather, setShowWeather] = useState(true);
   const [mapStyle, setMapStyle] = useState<MapStyle>('dark');
 

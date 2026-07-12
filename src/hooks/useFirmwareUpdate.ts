@@ -128,7 +128,7 @@ export function useFirmwareUpdate(connection: BleConnection | null) {
     } finally {
       setChecking(false);
     }
-  }, [connection, info]);
+  }, [connection, info, refreshVersion]);
 
   const cancel = useCallback(() => {
     setConfirmOpen(false);

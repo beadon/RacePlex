@@ -284,7 +284,6 @@ export function SetupsTab({
       return;
     }
     if (filteredVehicles.length === 1 && form.vehicleId !== filteredVehicles[0].id) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- see block-comment above
       handleVehicleChange(filteredVehicles[0].id);
     }
   }, [mode, selectedTypeId, vehicles, vehicleTypes, filteredVehicles, form.vehicleId, handleTypeChange, handleVehicleChange]);

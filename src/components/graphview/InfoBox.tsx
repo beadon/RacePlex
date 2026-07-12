@@ -114,13 +114,18 @@ export function InfoBox({
   const selectedSetup = setups.find(s => s.id === sessionSetupId);
   const isSaved = selectedVehicleId === sessionKartId && selectedSetupId === sessionSetupId;
 
+  // Handlers wrap the derived-state setters (which recreate each render, but
+  // that's fine — these callbacks are DOM onValueChange handlers, not deps of
+  // anything memoized downstream).
   const handleVehicleChange = useCallback((v: string) => {
     setSelectedVehicleId(v === 'none' ? null : v);
     setSelectedSetupId(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- setters intentionally omitted; see block-comment above
   }, []);
 
   const handleSetupChange = useCallback((v: string) => {
     setSelectedSetupId(v === 'none' ? null : v);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- setter intentionally omitted; see block-comment above
   }, []);
 
   const handleSave = useCallback(async () => {

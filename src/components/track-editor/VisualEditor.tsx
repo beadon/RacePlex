@@ -237,8 +237,12 @@ export function VisualEditor({
     return wayback.releases.find((r) => r.date === satelliteDate)?.tileUrl ?? DEFAULT_SATELLITE_TILE_URL;
   }, [satelliteDate, wayback.releases]);
 
-  // Pending coordinates for the line currently being dragged.
-  const [pendingLine, setPendingLine] = useState<{ id: LineId; coords: { a: GpsPoint; b: GpsPoint } } | null>(null);
+  // Pending coordinates for the line currently being dragged. Stored under
+  // the selectedLine id it was set against; a selection change auto-invalidates
+  // the pending state (derived read below), so no reset effect is needed.
+  const [pendingLineRaw, setPendingLineRaw] = useState<{ id: LineId; coords: { a: GpsPoint; b: GpsPoint } } | null>(null);
+  const pendingLine = pendingLineRaw && pendingLineRaw.id === selectedLine ? pendingLineRaw : null;
+  const setPendingLine = setPendingLineRaw;
 
   // Drawing state. The ref mirrors drawPoints so the draw handlers can read the
   // latest points synchronously and auto-save each change to the parent.
@@ -249,10 +253,14 @@ export function VisualEditor({
   const drawPolylineRef = useRef<L.Polyline | null>(null);
   const drawClickHandlerRef = useRef<((e: L.LeafletMouseEvent) => void) | null>(null);
 
-  // Sync drawPoints when layoutPointsProp changes (e.g. async load from DB)
+  // Sync drawPoints when layoutPointsProp changes (e.g. async load from DB).
+  // This effect isn't just setState — it also mutates the Leaflet polyline
+  // to match, which is a genuine "sync with external system" (Leaflet is
+  // not React-managed). The setState calls happen alongside that sync.
   useEffect(() => {
     const incoming = layoutPointsProp ?? [];
     drawPointsRef.current = incoming;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Leaflet-side sync; see block-comment above
     setDrawPoints(incoming);
     if (incoming.length > 0) setShowKnownDrawing(true);
     if (mapRef.current && drawPolylineRef.current) {
@@ -461,7 +469,7 @@ export function VisualEditor({
     const markerA = createMarker(coords.a, true);
     const markerB = createMarker(coords.b, false);
     markersRef.current = [markerA, markerB];
-  }, [colorFor, onStartFinishChange, onSectorLineChange]);
+  }, [colorFor, onStartFinishChange, onSectorLineChange, setPendingLine]);
 
   // --- Draw mode helpers ---
   const updateDrawPolyline = useCallback((points: Array<{ lat: number; lon: number }>) => {
@@ -722,10 +730,8 @@ export function VisualEditor({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedLine, drawMode]);
 
-  // Clear pending drag state once the committed geometry matches (selection change).
-  useEffect(() => {
-    setPendingLine(null);
-  }, [selectedLine]);
+  // Pending drag state clears automatically when selectedLine changes — see
+  // the derived `pendingLine` above (returns null if the stored id ≠ current).
 
   const labels = useMemo(() => sectorLabels({
     name: '', startFinishA: { lat: 0, lon: 0 }, startFinishB: { lat: 0, lon: 0 }, sectors,

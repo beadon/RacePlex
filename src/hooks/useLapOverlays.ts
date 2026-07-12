@@ -50,16 +50,23 @@ export function useLapOverlays({
   // Parsed external files (samples + laps) cached by name, for the picker.
   const parsedFiles = useRef<Map<string, { samples: GpsSample[]; laps: Lap[] }>>(new Map());
 
-  // A fresh session is a fresh slate.
+  // A fresh session (data change) or a course switch is a fresh slate: drop
+  // stale cross-session overlays + the parsed-file cache. Both effects react
+  // to genuine external state (session identity) and clean up local scratch
+  // that would otherwise reference a session that no longer applies; there
+  // is no derived-state alternative because the picked overlays are
+  // user-chosen accumulations, not derivations of `data`.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- see block-comment above
     setOverlaySelections([]);
     setExternalOverlays({});
     parsedFiles.current.clear();
   }, [data]);
 
-  // Changing the course re-derives laps, so external overlays (lap indices for
-  // the old course) no longer apply — drop them.
+  // Changing the course re-derives laps, so external overlays (lap indices
+  // for the old course) no longer apply — drop them.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- see block-comment above
     setExternalOverlays({});
     parsedFiles.current.clear();
     setOverlaySelections((prev) => prev.filter((id) => !id.startsWith('file:')));

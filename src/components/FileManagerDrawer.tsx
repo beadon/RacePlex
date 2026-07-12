@@ -155,7 +155,6 @@ export function FileManagerDrawer({
       return;
     }
     if (!device.connection) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset local scratch on external state (connection loss)
       setBattery(null);
     }
   }, [device.connection, topTab, fetchBattery]);

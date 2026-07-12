@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useSyncExternalStore } from 'react';
 import { useTranslation, Trans } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { Button } from '@/components/ui/button';
@@ -110,14 +110,22 @@ export function SubmitTrackDialog({ trigger, onSubmitted }: SubmitTrackDialogPro
     }
   }, [step, open, renderTurnstile]);
 
-  // Reset + (re)build the plan each time the dialog opens.
-  useEffect(() => {
-    if (open) {
-      setStep('confirm');
-      setTurnstileToken(null);
-      buildPlan();
-    }
-  }, [open, buildPlan]);
+  // Build the plan each time the dialog opens. Fired from a
+  // useSyncExternalStore subscribe (not useEffect) so the internal setStates
+  // in buildPlan happen in an event context — same idiom as DeviceTracksTab.
+  // Radix Dialog unmounts on close, so `step` / `turnstileToken` reset via
+  // remount rather than an explicit reset effect.
+  useSyncExternalStore(
+    useCallback(
+      () => {
+        if (open) void buildPlan();
+        return () => {};
+      },
+      [open, buildPlan],
+    ),
+    () => 0,
+    () => 0,
+  );
 
   const toggle = (key: string) => {
     setSelected(prev => {
