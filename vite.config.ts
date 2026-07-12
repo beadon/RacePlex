@@ -267,11 +267,14 @@ export default defineConfig(async ({ mode }) => {
         },
         includeAssets: ["favicon.png", "favicon.ico", "robots.txt", "tracks.json", "samples/**/*"],
         manifest: {
-          name: "LapWing - Motorsport Data Viewer",
-          short_name: "LapWing",
-          description: "Open source motorsport data acquisition and analytics",
-          theme_color: "#1a1a2e",
-          background_color: "#0f0f1a",
+          name: "RacePlex — Lap Timing & Telemetry for Electric Skateboards",
+          short_name: "RacePlex",
+          description:
+            "Open-source lap timing and telemetry analysis for electric skateboards. Runs entirely offline in your browser.",
+          // Carbon Black. Drives the Android status-bar tint and the PWA splash screen, so it must
+          // track the brand — upstream's #1a1a2e was their violet-navy.
+          theme_color: "#0C0C0E",
+          background_color: "#0C0C0E",
           display: "standalone",
           start_url: "/",
           icons: [

@@ -8,11 +8,42 @@
 
 ## Project Identity
 
-**Dove's DataViewer / LapWing** — Open-source, offline-first motorsport
-telemetry viewer.
-- Live: [lapwingdata.com](https://lapwingdata.com) | Beta: [beta.lapwingdata.com](https://beta.lapwingdata.com)
-- Companion hardware: [DovesDataLogger](https://github.com/TheAngryRaven/DovesDataLogger) (nRF52840 GPS logger with BLE — Seeed XIAO nRF52840, `sense`/`nonsense` IMU variants)
-- PWA with full offline support via service worker + IndexedDB
+**RacePlex** — Open-source, offline-first lap timing and telemetry analysis for
+**electric skateboards**.
+- Repo: [github.com/beadon/RacePlex](https://github.com/beadon/RacePlex). No deployed domain yet.
+- PWA with full offline support via service worker + IndexedDB.
+- Brand: Racing Red `#BD162C`, Carbon Black `#0C0C0E`, Electric Yellow `#F0E005`.
+
+### ⚠️ RacePlex is a FORK of Dove's DataViewer
+
+This codebase is a GPL-3.0 fork of
+[TheAngryRaven/DovesDataViewer](https://github.com/TheAngryRaven/DovesDataViewer)
+(aka LapWing), with upstream's full history merged in. **Most of what you will
+read below — the lap engine, the VBO/NMEA/UBX/MoTeC/AiM parsers, the map, the
+charts, the video overlay, the architecture — is upstream's work.** Much of this
+file was written by and for them. Read it that way.
+
+What is **ours** (see `NOTICE` for the full statement of changes):
+- `gpxParser.ts`, `raceboxCsvParser.ts`, `timingLines.ts` — device support
+  upstream does not have.
+- **Point-to-point courses** (`Course.finishA/finishB`) — a run from a start line
+  to a *different* finish line. Upstream models circuits only. Eskate runs (hill
+  runs, slalom, drag) are usually not circuits.
+- **`ParsedData.embeddedCourse`** — a course carried inside the datalog itself, so
+  a rider gets lap times on first import with zero setup. RaceBox GPX supplies it
+  via `<wpt>` waypoints; RaceBox CSV via reconstruction from its `Lap` column.
+- `src/lib/palettes.ts` + `[data-palette]` blocks in `index.css` — brand themes.
+- `scripts/verify-import.mjs` — see Golden Rule 3b below.
+
+Upstream is aimed at cars and karts and is growing paid tiers. **RacePlex stays
+free and fully local.** We do not commit to upstreaming changes, but we do stay
+roughly mergeable with upstream so we can keep pulling their improvements —
+follow their conventions where it's free, deviate where we have a better answer.
+
+**Things NOT ours, do not treat as authoritative:** `CHANGELOG.md` and `docs/plans/`,
+`docs/reviews/` are upstream's history. Do not rewrite them. The BLE stack is
+specific to upstream's *DovesDataLogger* hardware — a generic Web Bluetooth path
+for RaceBox/Dragy does not exist yet.
 
 ---
 
@@ -27,6 +58,19 @@ telemetry viewer.
 3. **Tests are part of the change.** New parsers, pure utilities, and protocol/
    format logic ship with Vitest coverage. Bug fixes add a regression test that
    fails before the fix. Don't leave testable logic untested.
+3b. **Green tests do not mean it works — RUN THE APP.** Unit tests prove a
+   function returns the right numbers. They are *completely blind to whether
+   anything calls it.* Two bugs have already shipped here with a fully green
+   suite: (a) the GPX parser was perfect but `.gpx` was missing from the file
+   picker's `accept` list, so no user could select a GPX file; (b)
+   `courseFromGpxWaypoints()` was written and unit-tested and **never called**, so
+   lap timing silently did not exist. Both were wiring, not logic.
+   → After any change to import, parsing, or lap detection, run
+   **`bun run verify:import`** (`scripts/verify-import.mjs`): it drives a real
+   browser, feeds the files in `sample_race_files/` through the app's own file
+   input, and asserts the map drew and the lap time is right. Ground truth: the
+   real RaceBox session's own `Lap` column says **36.480 s**; our GPX path gives
+   36.547 s and our CSV path 36.520 s. If those move, something broke.
 4. **Changelog is part of the change.** Add user-facing changes to `CHANGELOG.md`
    as you make them. **Once a beta version is picked (e.g. `2.6.0`), keep that
    heading as `## [2.6.0] - unreleased` and keep adding under it until it ships —
@@ -400,13 +444,18 @@ outside preview/iframe contexts); `public/sw.js` is a legacy kill-switch. `vite.
 also emits `/version.json` per build (the freshness signal for `versionCheck.ts`); it's
 excluded from the Workbox precache (`globIgnores`) and fetched uncached. Static
 hosting is Cloudflare Workers (static-assets-only, `wrangler.jsonc`,
-`bun run build` then `wrangler deploy`). Production `lapwingdata.com` attaches via
-a `custom_domain` route in `wrangler.jsonc` (auto DNS+TLS — don't also attach it in
-the dashboard). The beta domain `beta.lapwingdata.com` can't bind to a Branch
-Preview URL, so a separate thin reverse-proxy Worker in `beta-proxy/` owns it and
-forwards to `beta-lapwing.perchwerks.workers.dev` (auto-deployed by the
-`deploy-beta-proxy.yml` workflow on `BETA` pushes that touch `beta-proxy/**`;
-see `beta-proxy/README.md`). Backend by branch (`vite.config.ts` `pick()`, keyed on
+`bun run build` then `wrangler deploy`).
+
+> **⚠️ RacePlex has NO deployed domain and no custom_domain route.** Upstream
+> deployed to `lapwingdata.com`; that route was **deliberately removed** from
+> `wrangler.jsonc` when forking, because inheriting it means a `wrangler deploy`
+> from this repo could publish RacePlex **over the top of upstream's live site**.
+> Do not re-add a `custom_domain` route pointing at any lapwingdata.com host. The
+> rest of this paragraph describes **upstream's** deploy topology (beta proxy,
+> per-branch preview backends) and is retained as reference — none of it is
+> currently wired up for RacePlex.
+
+Backend by branch (`vite.config.ts` `pick()`, keyed on
 `WORKERS_CI_BRANCH`/`CF_PAGES_BRANCH`): **`main`** → base/production vars;
 **`BETA`** → static `*_PREVIEW` creds (the shared beta DB — never the resolver);
 **any other branch** → with a `SUPABASE_ACCESS_TOKEN` secret, that branch's own
