@@ -138,7 +138,7 @@ export function generatedDrawingSpacing(lengthMeters: number): number {
  * ready to drop straight onto `Course.layout`. Drops null-island samples
  * (lat/lon 0) and resamples to the length-scaled spacing. Returns `[]` when
  * there isn't enough usable GPS to draw a line — callers can treat that as
- * "no outline".
+ * "no outline-solid".
  *
  * Used to pre-fill a new course's drawing from the loaded session (its fastest
  * lap, or the whole trace when no laps are detected) so the user doesn't have

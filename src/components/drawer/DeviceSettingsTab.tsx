@@ -224,7 +224,7 @@ export function DeviceSettingsTab({ connection, onResetComplete }: DeviceSetting
       {rows.length > 0 && (
         <div className="pt-4 border-t border-border">
           <Button
-            variant={confirmReset ? "destructive" : "outline"}
+            variant={confirmReset ? "destructive" : "outline-solid"}
             size="sm"
             className="w-full gap-2"
             disabled={resetting}

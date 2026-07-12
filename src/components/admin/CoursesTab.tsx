@@ -424,7 +424,7 @@ export function CoursesTab() {
                   <Switch checked={course.enabled ?? true} onCheckedChange={val => handleToggle(course.id, val)} />
                   {hasLayout && (
                     <span
-                      className="inline-block w-3 h-3 rounded-full flex-shrink-0"
+                      className="inline-block w-3 h-3 rounded-full shrink-0"
                       style={{ backgroundColor: color }}
                       title={t('courses.hasLayoutTitle')}
                     />

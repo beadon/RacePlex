@@ -80,7 +80,7 @@ export function BannedIpsTab() {
             <select
               value={newDurationDays}
               onChange={e => setNewDurationDays(e.target.value)}
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
               <option value="1">{t('bannedIps.duration.oneDay')}</option>
               <option value="7">{t('bannedIps.duration.sevenDays')}</option>

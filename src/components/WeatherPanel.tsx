@@ -139,7 +139,7 @@ export function WeatherPanel({
   }
 
   return (
-    <div className="bg-card/90 backdrop-blur-sm border border-border rounded p-2 min-w-[140px]">
+    <div className="bg-card/90 backdrop-blur-xs border border-border rounded p-2 min-w-[140px]">
       <div className="flex items-center gap-1.5 text-xs font-medium text-foreground mb-2 border-b border-border pb-1.5">
         <Cloud className="w-3.5 h-3.5 text-primary" />
         <span>{t("title")}</span>

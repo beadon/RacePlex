@@ -578,7 +578,7 @@ export const VideoPlayer = memo(function VideoPlayer({
         <Video className="w-12 h-12 text-muted-foreground/50" />
         <p className="text-muted-foreground text-sm">{t("player.noVideo")}</p>
         {state.videoFileName && (
-          <p className="text-xs text-muted-foreground max-w-xs break-words">{t("player.lastUsed", { name: state.videoFileName })}</p>
+          <p className="text-xs text-muted-foreground max-w-xs wrap-break-word">{t("player.lastUsed", { name: state.videoFileName })}</p>
         )}
         <Button variant="outline" size="sm" onClick={actions.loadVideo} className="gap-2">
           <Video className="w-4 h-4" /> {t("player.loadVideo")}
@@ -661,7 +661,7 @@ export const VideoPlayer = memo(function VideoPlayer({
       {/* Overlay Settings Dialog */}
       <Dialog open={showOverlayDialog} onOpenChange={setShowOverlayDialog}>
         <DialogContent className="sm:max-w-md max-h-[85vh] flex flex-col">
-          <DialogHeader className="flex-shrink-0">
+          <DialogHeader className="shrink-0">
             <DialogTitle className="flex items-center gap-2">
               <Sliders className="w-5 h-5" />
               {t("player.overlaySettingsTitle")}
@@ -705,11 +705,11 @@ export const VideoPlayer = memo(function VideoPlayer({
           controlsVisible ? "opacity-100" : "opacity-0 pointer-events-none"
         }`}
       >
-        <div className="flex items-center gap-1 px-3 py-1.5 bg-black/70 backdrop-blur-sm">
-          <Button variant="ghost" size="icon" className="h-7 w-7 bg-white/15 backdrop-blur-sm text-white hover:bg-white/30 active:bg-white/25" onClick={actions.togglePlay}>
+        <div className="flex items-center gap-1 px-3 py-1.5 bg-black/70 backdrop-blur-xs">
+          <Button variant="ghost" size="icon" className="h-7 w-7 bg-white/15 backdrop-blur-xs text-white hover:bg-white/30 active:bg-white/25" onClick={actions.togglePlay}>
             {state.isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
           </Button>
-          <Button variant="ghost" size="icon" className="h-7 w-7 bg-white/15 backdrop-blur-sm text-white hover:bg-white/30 active:bg-white/25" onClick={() => setIsMuted(m => !m)} title={isMuted ? t("player.unmute") : t("player.mute")}>
+          <Button variant="ghost" size="icon" className="h-7 w-7 bg-white/15 backdrop-blur-xs text-white hover:bg-white/30 active:bg-white/25" onClick={() => setIsMuted(m => !m)} title={isMuted ? t("player.unmute") : t("player.mute")}>
             {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
           </Button>
 
@@ -717,7 +717,7 @@ export const VideoPlayer = memo(function VideoPlayer({
 
           <Button
             variant="ghost" size="icon"
-            className={`h-7 w-7 backdrop-blur-sm text-white ${state.isLocked ? "bg-primary/70 hover:bg-primary/50" : "bg-white/15 hover:bg-white/30"}`}
+            className={`h-7 w-7 backdrop-blur-xs text-white ${state.isLocked ? "bg-primary/70 hover:bg-primary/50" : "bg-white/15 hover:bg-white/30"}`}
             onClick={actions.toggleLock}
             title={state.isLocked ? t("player.unlockSync") : t("player.lockSync")}
           >
@@ -725,13 +725,13 @@ export const VideoPlayer = memo(function VideoPlayer({
           </Button>
           {!state.isLocked && (
             <>
-              <Button variant="ghost" size="icon" className="h-7 w-7 bg-white/15 backdrop-blur-sm text-white hover:bg-white/30" onClick={() => actions.stepFrame(-1)} title={t("player.previousFrame")}>
+              <Button variant="ghost" size="icon" className="h-7 w-7 bg-white/15 backdrop-blur-xs text-white hover:bg-white/30" onClick={() => actions.stepFrame(-1)} title={t("player.previousFrame")}>
                 <Minus className="w-3.5 h-3.5" />
               </Button>
-              <Button variant="ghost" size="icon" className="h-7 w-7 bg-white/15 backdrop-blur-sm text-white hover:bg-white/30" onClick={() => actions.stepFrame(1)} title={t("player.nextFrame")}>
+              <Button variant="ghost" size="icon" className="h-7 w-7 bg-white/15 backdrop-blur-xs text-white hover:bg-white/30" onClick={() => actions.stepFrame(1)} title={t("player.nextFrame")}>
                 <Plus className="w-3.5 h-3.5" />
               </Button>
-              <Button variant="ghost" size="sm" className="h-7 bg-white/15 backdrop-blur-sm text-white hover:bg-white/30 text-xs gap-1.5" onClick={actions.setSyncPoint} title={t("player.setSyncPoint")}>
+              <Button variant="ghost" size="sm" className="h-7 bg-white/15 backdrop-blur-xs text-white hover:bg-white/30 text-xs gap-1.5" onClick={actions.setSyncPoint} title={t("player.setSyncPoint")}>
                 <Crosshair className="w-3.5 h-3.5" /> {t("player.sync")}
               </Button>
             </>
@@ -742,7 +742,7 @@ export const VideoPlayer = memo(function VideoPlayer({
           {/* Overlay position lock */}
           <Button
             variant="ghost" size="icon"
-            className={`h-7 w-7 backdrop-blur-sm text-white ${!overlaysLocked ? "bg-amber-500/60 hover:bg-amber-500/40" : "bg-white/15 hover:bg-white/30"}`}
+            className={`h-7 w-7 backdrop-blur-xs text-white ${!overlaysLocked ? "bg-amber-500/60 hover:bg-amber-500/40" : "bg-white/15 hover:bg-white/30"}`}
             onClick={() => actions.updateOverlaySettings({ ...state.overlaySettings, overlaysLocked: !overlaysLocked })}
             title={overlaysLocked ? t("player.unlockOverlays") : t("player.lockOverlays")}
           >
@@ -752,7 +752,7 @@ export const VideoPlayer = memo(function VideoPlayer({
           {/* Overlay config */}
           <Button
             variant="ghost" size="icon"
-            className={`h-7 w-7 backdrop-blur-sm text-white ${showOverlayDialog ? "bg-white/30" : "bg-white/15"} hover:bg-white/30`}
+            className={`h-7 w-7 backdrop-blur-xs text-white ${showOverlayDialog ? "bg-white/30" : "bg-white/15"} hover:bg-white/30`}
             onClick={() => setShowOverlayDialog(v => !v)}
             title={t("player.overlaySettings")}
           >
@@ -763,7 +763,7 @@ export const VideoPlayer = memo(function VideoPlayer({
           {(
             <Button
               variant="ghost" size="icon"
-              className="h-7 w-7 bg-white/15 backdrop-blur-sm text-white hover:bg-white/30"
+              className="h-7 w-7 bg-white/15 backdrop-blur-xs text-white hover:bg-white/30"
               onClick={() => setShowExportDialog(true)}
               title={t("player.exportVideo")}
             >
@@ -773,7 +773,7 @@ export const VideoPlayer = memo(function VideoPlayer({
         </div>
 
         {/* Progress bar row */}
-        <div className="flex items-center gap-2 px-3 py-1.5 bg-black/70 backdrop-blur-sm">
+        <div className="flex items-center gap-2 px-3 py-1.5 bg-black/70 backdrop-blur-xs">
           <div
             ref={progressRef}
             onPointerDown={handlePointerDown}
@@ -795,7 +795,7 @@ export const VideoPlayer = memo(function VideoPlayer({
           <span className="text-white/60 text-xs font-mono min-w-[80px] text-right">
             {formatTime(videoCurrentTime)} / {formatTime(state.videoDuration)}
           </span>
-          <Button variant="ghost" size="icon" className="h-7 w-7 bg-white/15 backdrop-blur-sm text-white hover:bg-white/30" onClick={actions.loadVideo} title={t("player.replaceVideo")}>
+          <Button variant="ghost" size="icon" className="h-7 w-7 bg-white/15 backdrop-blur-xs text-white hover:bg-white/30" onClick={actions.loadVideo} title={t("player.replaceVideo")}>
             <RefreshCw className="w-3.5 h-3.5" />
           </Button>
         </div>

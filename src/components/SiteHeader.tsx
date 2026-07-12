@@ -41,7 +41,7 @@ export function SiteHeader({
   const { t } = useTranslation(["common"]);
 
   return (
-    <header className="sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur safe-area-top">
+    <header className="sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur-sm safe-area-top">
       <div className="mx-auto flex w-full max-w-4xl items-center justify-between gap-3 px-6 py-4">
         <div className="flex items-center gap-3">
           <BrandLogo className="w-8 h-8" />

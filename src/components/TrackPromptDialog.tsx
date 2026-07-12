@@ -36,7 +36,7 @@ interface TrackPromptDialogProps {
   /** Auto-detection result with direction and waypoint info */
   detectionResult?: CourseDetectionResult | null;
   /** Current session laps (e.g. waypoint-mode laps) — feeds the create-course
-   *  "Generate outline" picker so the outline can be drawn right here. */
+   *  "Generate outline-solid" picker so the outline can be drawn right here. */
   laps?: Lap[];
   /** Current session GPS samples — enables generating an outline from the whole
    *  session even when no laps were detected. */
@@ -237,7 +237,7 @@ export function TrackPromptDialog({
             <div className="space-y-4">
               <div className="p-3 rounded-md border border-yellow-500/30 bg-yellow-500/5">
                 <div className="flex items-start gap-2">
-                  <AlertTriangle className="w-4 h-4 text-yellow-500 mt-0.5 flex-shrink-0" />
+                  <AlertTriangle className="w-4 h-4 text-yellow-500 mt-0.5 shrink-0" />
                   <div>
                     <p className="text-sm font-medium text-foreground">{t('prompt.waypointTiming')}</p>
                     <p className="text-xs text-muted-foreground mt-1">

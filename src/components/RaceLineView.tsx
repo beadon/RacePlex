@@ -539,7 +539,7 @@ export function RaceLineView({ samples, allSamples, referenceSamples = [], cours
 
       {/* Multi-lap overlay legend - bottom center */}
       {overlayLines.length > 0 && (
-        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-[1000] flex max-w-[70%] flex-wrap items-center justify-center gap-x-3 gap-y-1 rounded bg-card/90 backdrop-blur-sm border border-border px-2.5 py-1.5">
+        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-1000 flex max-w-[70%] flex-wrap items-center justify-center gap-x-3 gap-y-1 rounded bg-card/90 backdrop-blur-xs border border-border px-2.5 py-1.5">
           {/* Collapse the per-lap list without touching the racing lines — keeps a
               crowded line-up (5+ overlays) from burying the map under labels. */}
           {onToggleOverlayLegend && (
@@ -583,7 +583,7 @@ export function RaceLineView({ samples, allSamples, referenceSamples = [], cours
 
       {/* Controls panel */}
       {showOverlays && (
-        <div className="absolute top-4 left-4 bg-card/90 backdrop-blur-sm border border-border rounded p-2 z-[1000] transition-opacity duration-200">
+        <div className="absolute top-4 left-4 bg-card/90 backdrop-blur-xs border border-border rounded p-2 z-1000 transition-opacity duration-200">
           {/* Map style toggle */}
           <button
             onClick={cycleMapStyle}
@@ -608,7 +608,7 @@ export function RaceLineView({ samples, allSamples, referenceSamples = [], cours
                     value={satelliteDate}
                     onChange={(e) => setSatelliteDate(e.target.value)}
                     disabled={wayback.loading && wayback.releases.length === 0}
-                    className="flex-1 min-w-0 bg-transparent text-foreground/90 text-[11px] outline-none cursor-pointer"
+                    className="flex-1 min-w-0 bg-transparent text-foreground/90 text-[11px] outline-hidden cursor-pointer"
                     title={t('map.imageryDateTitle')}
                   >
                     <option value="">{wayback.loading ? t('map.imageryLoading') : t('map.imageryLatest')}</option>
@@ -686,7 +686,7 @@ export function RaceLineView({ samples, allSamples, referenceSamples = [], cours
           {showWeather && sessionWeatherData && (
             <button
               onClick={() => setSessionMetarOpen(true)}
-              className="absolute bottom-4 right-14 z-[1000] p-2 rounded bg-card/90 backdrop-blur-sm border border-border transition-colors hover:bg-muted/50 text-primary"
+              className="absolute bottom-4 right-14 z-1000 p-2 rounded bg-card/90 backdrop-blur-xs border border-border transition-colors hover:bg-muted/50 text-primary"
               title={t('map.metarDetail')}
             >
               <FileText className="w-4 h-4" />
@@ -696,7 +696,7 @@ export function RaceLineView({ samples, allSamples, referenceSamples = [], cours
           {/* Weather toggle button - bottom right */}
           <button
             onClick={() => setShowWeather(prev => !prev)}
-            className={`absolute bottom-4 right-4 z-[1000] p-2 rounded bg-card/90 backdrop-blur-sm border border-border transition-colors hover:bg-muted/50 ${showWeather ? 'text-primary' : 'text-muted-foreground'}`}
+            className={`absolute bottom-4 right-4 z-1000 p-2 rounded bg-card/90 backdrop-blur-xs border border-border transition-colors hover:bg-muted/50 ${showWeather ? 'text-primary' : 'text-muted-foreground'}`}
             title={showWeather ? t('map.weatherHide') : t('map.weatherShow')}
           >
             <CloudSun className="w-4 h-4" />
@@ -713,7 +713,7 @@ export function RaceLineView({ samples, allSamples, referenceSamples = [], cours
 
       {/* Speed legend and stats panel */}
       {showOverlays && (
-        <div className="absolute top-4 right-4 bg-card/90 backdrop-blur-sm border border-border rounded p-2 z-[1000] min-w-[120px] transition-opacity duration-200">
+        <div className="absolute top-4 right-4 bg-card/90 backdrop-blur-xs border border-border rounded p-2 z-1000 min-w-[120px] transition-opacity duration-200">
           <div className="text-xs text-muted-foreground mb-1">{t('map.speedLegend', { unit })}</div>
           <div className="w-full h-3 speed-gradient rounded" />
           <div className="flex justify-between text-xs text-muted-foreground mt-1 font-mono">
@@ -827,7 +827,7 @@ export function RaceLineView({ samples, allSamples, referenceSamples = [], cours
 
       {/* Dropped packet / rejected row indicator */}
       {((droppedPacketInfo?.droppedCount ?? 0) > 0 || (parserStats && parserStats.acceptedRows < parserStats.totalRows)) && (
-        <div className="absolute bottom-2 left-12 z-[1000] bg-card/80 backdrop-blur-sm border border-border rounded px-2 py-1 text-xs font-mono text-muted-foreground">
+        <div className="absolute bottom-2 left-12 z-1000 bg-card/80 backdrop-blur-xs border border-border rounded px-2 py-1 text-xs font-mono text-muted-foreground">
           {droppedPacketInfo && droppedPacketInfo.droppedCount > 0 && (
             <div>
               <span className="text-destructive font-semibold">{droppedPacketInfo.droppedCount}</span>

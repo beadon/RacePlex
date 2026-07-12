@@ -75,7 +75,7 @@ describe('formatEntriesForCopy', () => {
   });
 });
 
-describe('debugLog ring buffer', () => {
+describe('debugLog ring-3 buffer', () => {
   beforeEach(() => debugLog.clear());
 
   it('accumulates entries and notifies subscribers', () => {

@@ -763,7 +763,7 @@ export default function Index() {
             type="button"
             onClick={clearSession}
             aria-label={t("header.home")}
-            className="flex items-center gap-3 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="flex items-center gap-3 rounded-md focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
           >
             <BrandLogo className="w-6 h-6" />
             <span className="font-semibold text-foreground hidden sm:inline">RacePlex</span>

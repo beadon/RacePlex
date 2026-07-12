@@ -194,7 +194,7 @@ export function ResizableSplit({
             a floating "flag" pill hanging off the divider's left edge so the
             divider itself stays thin and the icons get a clear, padded surface
             (matches the map's floating controls). */}
-        <div className="absolute left-2 top-full -mt-3 flex items-center gap-0.5 rounded-md border border-border bg-card/90 px-1 py-0.5 shadow-sm backdrop-blur-sm">
+        <div className="absolute left-2 top-full -mt-3 flex items-center gap-0.5 rounded-md border border-border bg-card/90 px-1 py-0.5 shadow-xs backdrop-blur-xs">
           <button
             onClick={(e) => {
               e.stopPropagation();

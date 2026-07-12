@@ -52,7 +52,7 @@ export default function ToolsLandingTile(_props: { ctx: LandingContext }) {
         // than living inside the landing page's scroll/stacking context. h-dvh
         // tracks the dynamic mobile viewport so the bottom-pinned content stays
         // put as the browser chrome shows/hides.
-        <div className="fixed inset-0 z-[10001] flex h-[100dvh] flex-col bg-background overscroll-none animate-in fade-in duration-150">
+        <div className="fixed inset-0 z-10001 flex h-dvh flex-col bg-background overscroll-none animate-in fade-in duration-150">
           <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
             <div className="flex items-center gap-2">
               <Wrench className="w-5 h-5 text-primary" />

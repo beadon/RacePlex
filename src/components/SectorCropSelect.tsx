@@ -74,7 +74,7 @@ export function SectorCropSelect({
         value={currentKey}
         onChange={(e) => handleChange(e.target.value)}
         disabled={disabled}
-        className="min-w-0 flex-1 cursor-pointer rounded border border-border bg-transparent px-1 py-0.5 text-xs text-foreground/90 outline-none disabled:cursor-not-allowed disabled:opacity-50"
+        className="min-w-0 flex-1 cursor-pointer rounded border border-border bg-transparent px-1 py-0.5 text-xs text-foreground/90 outline-hidden disabled:cursor-not-allowed disabled:opacity-50"
         title={disabled ? t('crop.disabledTitle') : t('crop.enabledTitle')}
       >
         {currentKey === 'custom' && <option value="custom">{t('crop.customRange')}</option>}

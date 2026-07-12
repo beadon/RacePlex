@@ -335,7 +335,7 @@ export function GraphViewPanel(props: GraphViewPanelProps) {
 
           <button
             onClick={toggleMap}
-            className="absolute bottom-1 left-1/2 -translate-x-1/2 z-[1001] flex items-center gap-1 px-2 py-0.5 rounded bg-card/90 backdrop-blur-sm border border-border hover:bg-muted/50 text-muted-foreground text-xs"
+            className="absolute bottom-1 left-1/2 -translate-x-1/2 z-1001 flex items-center gap-1 px-2 py-0.5 rounded bg-card/90 backdrop-blur-xs border border-border hover:bg-muted/50 text-muted-foreground text-xs"
           >
             {mapVisible ? <><EyeOff className="w-3 h-3" /> {t('graphs.hideMap')}</> : <><MapIcon className="w-3 h-3" /> {t('graphs.showMap')}</>}
           </button>
@@ -348,7 +348,7 @@ export function GraphViewPanel(props: GraphViewPanelProps) {
         <div className="relative h-full flex flex-col">
           <button
             onClick={toggleLeftPanel}
-            className="absolute top-2 left-0 z-[1100] flex items-center py-3 pl-0.5 pr-1 rounded-r-md bg-primary text-primary-foreground shadow-md hover:bg-primary/90"
+            className="absolute top-2 left-0 z-1100 flex items-center py-3 pl-0.5 pr-1 rounded-r-md bg-primary text-primary-foreground shadow-md hover:bg-primary/90"
             title={leftCollapsed ? t('graphs.expandPanel') : t('graphs.collapsePanel')}
             aria-label={leftCollapsed ? t('graphs.expandPanel') : t('graphs.collapsePanel')}
           >

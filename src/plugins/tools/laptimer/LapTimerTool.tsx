@@ -97,7 +97,7 @@ export default function LapTimerTool(props: PluginPanelProps) {
 
       {/* Ended overlay */}
       {phase === "ended" && (
-        <div className="absolute inset-0 z-[10] flex items-center justify-center bg-background/90 backdrop-blur">
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/90 backdrop-blur-sm">
           <div className="max-w-sm space-y-3 px-6 text-center">
             {saving ? (
               <>

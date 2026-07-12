@@ -120,7 +120,7 @@ function VisualEditorToolbar({ drawMode, onToggleDraw, showDrawTool, drawPointCo
       <div className="flex items-center gap-2 p-2 bg-card border border-border rounded-lg flex-wrap">
         {showDrawTool && (
             <Button
-              variant={drawMode ? 'default' : 'outline'}
+              variant={drawMode ? 'default' : 'outline-solid'}
               size="sm"
               className="h-8 gap-1.5 text-xs"
               onClick={onToggleDraw}
@@ -142,7 +142,7 @@ function VisualEditorToolbar({ drawMode, onToggleDraw, showDrawTool, drawPointCo
         )}
         {canToggleKnownDrawing && (
           <Button
-            variant={showKnownDrawing ? 'secondary' : 'outline'}
+            variant={showKnownDrawing ? 'secondary' : 'outline-solid'}
             size="sm"
             className="h-8 gap-1.5 text-xs"
             onClick={onToggleKnownDrawing}
@@ -797,7 +797,7 @@ export function VisualEditor({
             value={satelliteDate}
             onChange={(e) => setSatelliteDate(e.target.value)}
             disabled={wayback.loading && wayback.releases.length === 0}
-            className="flex-1 min-w-0 bg-transparent text-foreground/90 text-xs outline-none cursor-pointer border border-border rounded px-1 py-0.5"
+            className="flex-1 min-w-0 bg-transparent text-foreground/90 text-xs outline-hidden cursor-pointer border border-border rounded px-1 py-0.5"
             title={t('visual.imageryDateTitle')}
           >
             <option value="">{wayback.loading ? t('visual.loadingDates') : t('visual.latestDefault')}</option>

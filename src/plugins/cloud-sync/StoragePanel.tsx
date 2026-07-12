@@ -249,7 +249,7 @@ function DisplayName({ userId, email, action }: { userId: string; email: string;
         onClick={() => fileRef.current?.click()}
         disabled={uploading}
         aria-label={t("account.changeAvatar")}
-        className="group relative shrink-0 rounded-full ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        className="group relative shrink-0 rounded-full ring-offset-background focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
       >
         <ProfileAvatar url={avatarUrl} alt={name ?? ""} sizeClassName="h-12 w-12" />
         <span className="absolute inset-0 flex items-center justify-center rounded-full bg-black/45 text-white opacity-0 transition-opacity group-hover:opacity-100">

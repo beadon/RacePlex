@@ -288,7 +288,7 @@ export function SubmitTrackDialog({ trigger, onSubmitted }: SubmitTrackDialogPro
               )}
 
               <div className="flex gap-2">
-                <Button variant="outline" onClick={() => setStep('confirm')} className="flex-shrink-0">
+                <Button variant="outline" onClick={() => setStep('confirm')} className="shrink-0">
                   <ArrowLeft className="w-4 h-4 mr-1" /> {t('submit.back')}
                 </Button>
                 <Button

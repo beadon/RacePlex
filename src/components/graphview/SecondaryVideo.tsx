@@ -176,7 +176,7 @@ export function SecondaryVideo({ videoState, overlayId, lapNumber, onCommitRateA
       )}
       {covered && (
         <div
-          className="absolute bottom-1.5 right-1.5 flex items-center gap-0.5 rounded-md bg-card/90 px-0.5 py-0.5 text-foreground backdrop-blur-sm"
+          className="absolute bottom-1.5 right-1.5 flex items-center gap-0.5 rounded-md bg-card/90 px-0.5 py-0.5 text-foreground backdrop-blur-xs"
           title={t('graphs.splitVideoNudgeTooltip')}
         >
           {syncRate !== 1 && (
@@ -197,7 +197,7 @@ export function SecondaryVideo({ videoState, overlayId, lapNumber, onCommitRateA
           </button>
           <button
             type="button"
-            className="min-w-[3.25rem] px-1 text-center font-mono text-[11px] tabular-nums hover:text-primary"
+            className="min-w-13 px-1 text-center font-mono text-[11px] tabular-nums hover:text-primary"
             onClick={() => setNudgeMs(0)}
           >
             {nudgeMs > 0 ? '+' : ''}{(nudgeMs / 1000).toFixed(2)}s

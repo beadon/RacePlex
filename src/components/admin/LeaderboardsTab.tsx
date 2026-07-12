@@ -202,7 +202,7 @@ function EngineClassesEditor({ classes, onChanged }: { classes: EngineClass[]; o
           <label className="text-xs text-muted-foreground">{t("leaderboards.className")}</label>
           <Input className="h-8" value={name} onChange={(e) => setName(e.target.value)} placeholder={t("leaderboards.classNamePlaceholder")} />
         </div>
-        <div className="flex-[2] min-w-[180px]">
+        <div className="flex-2 min-w-[180px]">
           <label className="text-xs text-muted-foreground">{t("leaderboards.keywords")}</label>
           <Input className="h-8" value={keywords} onChange={(e) => setKeywords(e.target.value)} placeholder={t("leaderboards.keywordsPlaceholder")} />
         </div>
@@ -246,7 +246,7 @@ function EngineClassRow({ cls, onChanged }: { cls: EngineClass; onChanged: () =>
   return (
     <div className="flex flex-wrap items-end gap-2">
       <Input className="h-8 flex-1 min-w-[120px]" value={name} onChange={(e) => setName(e.target.value)} />
-      <Input className="h-8 flex-[2] min-w-[160px]" value={keywords} onChange={(e) => setKeywords(e.target.value)} />
+      <Input className="h-8 flex-2 min-w-[160px]" value={keywords} onChange={(e) => setKeywords(e.target.value)} />
       <Button size="sm" variant="outline" className="h-8" disabled={busy} onClick={() => void save()}>{t("leaderboards.saveClass")}</Button>
       <Button size="sm" variant="ghost" className="h-8 text-destructive" disabled={busy} onClick={() => void remove()}>{t("leaderboards.deleteClass")}</Button>
     </div>

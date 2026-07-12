@@ -2,18 +2,265 @@
    precache and render offline from first paint — no fonts.googleapis.com
    round-trip. Family names match the Google Fonts originals, so the Tailwind
    `font-sans`/`font-mono` tokens stay unchanged. */
-@import '@fontsource/inter/latin-400.css';
-@import '@fontsource/inter/latin-500.css';
-@import '@fontsource/inter/latin-600.css';
-@import '@fontsource/inter/latin-700.css';
-@import '@fontsource/jetbrains-mono/latin-400.css';
-@import '@fontsource/jetbrains-mono/latin-500.css';
-@import '@fontsource/jetbrains-mono/latin-600.css';
-@import '@fontsource/jetbrains-mono/latin-700.css';
+@import '@fontsource/inter/latin-400.css' layer(base);
+@import '@fontsource/inter/latin-500.css' layer(base);
+@import '@fontsource/inter/latin-600.css' layer(base);
+@import '@fontsource/inter/latin-700.css' layer(base);
+@import '@fontsource/jetbrains-mono/latin-400.css' layer(base);
+@import '@fontsource/jetbrains-mono/latin-500.css' layer(base);
+@import '@fontsource/jetbrains-mono/latin-600.css' layer(base);
+@import '@fontsource/jetbrains-mono/latin-700.css' layer(base);
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+
+@plugin 'tailwindcss-animate';
+
+@custom-variant dark (&:is(.dark *));
+
+@utility container {
+  margin-inline: auto;
+  padding-inline: 2rem;
+  @media (width >= --theme(--breakpoint-sm)) {
+    max-width: none;
+  }
+  @media (width >= 1400px) {
+    max-width: 1400px;
+  }
+}
+
+@theme {
+  --font-sans: Inter, system-ui, sans-serif;
+  --font-mono: JetBrains Mono, monospace;
+
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+
+  --color-warning: hsl(var(--warning));
+  --color-warning-foreground: hsl(var(--warning-foreground));
+
+  --color-success: hsl(var(--success));
+  --color-success-foreground: hsl(var(--success-foreground));
+
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+
+  --color-racing-speedSlow: hsl(var(--speed-slow));
+  --color-racing-speedMedium: hsl(var(--speed-medium));
+  --color-racing-speedFast: hsl(var(--speed-fast));
+  --color-racing-speedMax: hsl(var(--speed-max));
+  --color-racing-startFinish: hsl(var(--start-finish));
+  --color-racing-lapBest: hsl(var(--lap-best));
+  --color-racing-telemetrySpeed: hsl(var(--telemetry-speed));
+  --color-racing-telemetryRpm: hsl(var(--telemetry-rpm));
+  --color-racing-telemetryTemp: hsl(var(--telemetry-temp));
+  --color-racing-scrubCursor: hsl(var(--scrub-cursor));
+  --color-racing-chartGrid: hsl(var(--chart-grid));
+  --color-racing-chartAxis: hsl(var(--chart-axis));
+
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+
+  --animate-accordion-down: accordion-down 0.2s ease-out;
+  --animate-accordion-up: accordion-up 0.2s ease-out;
+  --animate-pulse-glow: pulse-glow 2s ease-in-out infinite;
+  --animate-slide-in: slide-in 0.3s ease-out;
+  --animate-attention-glow: attention-glow 2.4s ease-in-out infinite;
+
+  @keyframes accordion-down {
+    from {
+      height: 0;
+    }
+    to {
+      height: var(--radix-accordion-content-height);
+    }
+  }
+  @keyframes accordion-up {
+    from {
+      height: var(--radix-accordion-content-height);
+    }
+    to {
+      height: 0;
+    }
+  }
+  @keyframes pulse-glow {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
+  }
+  @keyframes slide-in {
+    from {
+      transform: translateY(-10px);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+  @keyframes attention-glow {
+    0%,
+    100% {
+      box-shadow: 0 0 0 0 hsl(var(--primary) / 0.45);
+    }
+    70% {
+      box-shadow: 0 0 0 7px hsl(var(--primary) / 0);
+    }
+  }
+}
+
+/*
+  The default border color has changed to `currentcolor` in Tailwind CSS v4,
+  so we've added these compatibility styles to make sure everything still
+  looks the same as it did with Tailwind CSS v3.
+
+  If we ever want to remove these styles, we need to add an explicit border
+  color utility to any element that depends on these defaults.
+*/
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentcolor);
+  }
+}
+
+@utility racing-card {
+  @apply bg-card border border-border rounded-lg;
+}
+
+@utility data-display {
+  @apply font-mono text-sm tabular-nums;
+}
+
+@utility speed-gradient {
+  background: linear-gradient(
+    90deg,
+    hsl(var(--speed-slow)),
+    hsl(var(--speed-medium)),
+    hsl(var(--speed-fast)),
+    hsl(var(--speed-max))
+  );
+}
+
+@utility leaflet-container {
+  /* Leaflet map styling overrides */
+  background: hsl(var(--background));
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+@utility leaflet-control-attribution {
+  background: hsl(var(--card) / 0.8) !important;
+  color: hsl(var(--muted-foreground)) !important;
+  font-size: 10px;
+
+  & a {
+    color: hsl(var(--primary)) !important;
+  }
+}
+
+@utility safe-area-inset {
+  /* Keep app chrome clear of device notches / status bars on native (Android
+     WebView / iOS) and installed PWAs, which draw edge-to-edge. Requires
+     `viewport-fit=cover` (set in index.html). Insets resolve to 0 on browsers
+     and desktops without a safe area, so this is a no-op everywhere else.
+     Applied to every full-screen surface — the app shell + landing, full-page
+     routes (login/register/admin/legal), and portal overlays like the file-
+     manager drawer — whose `border-box` sizing keeps the padding inside
+     `h-screen`/`min-h-screen` (no overflow) while the surface's background
+     fills the inset region behind the status bar. */
+  padding-top: env(safe-area-inset-top);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+@utility safe-area-x {
+  /* The horizontal (left/right) inset on its own — for surfaces whose top inset
+     is owned by a sticky header (which carries `.safe-area-top`), so we don't
+     double-pad the top. */
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+@utility safe-area-top {
+  /* The top inset on its own — for a sticky/fixed header so its background fills
+     behind the status bar while its content stays clear of the notch. */
+  padding-top: env(safe-area-inset-top);
+}
+
+@utility safe-area-modal {
+  /* Modal/dialog padding that also clears device notches: never less than the
+     base 1.5rem (so it doesn't collapse to 0 on un-notched devices the way a
+     bare `env()` inset would), growing to the safe-area inset where present. */
+  padding-top: max(1.5rem, env(safe-area-inset-top));
+  padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
+  padding-left: max(1.5rem, env(safe-area-inset-left));
+  padding-right: max(1.5rem, env(safe-area-inset-right));
+}
+
+@utility scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--muted)) transparent;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted));
+    border-radius: 3px;
+  }
+}
+
+@utility overlay-sparkle {
+  /* Video overlay animations */
+  background-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.15) 40%,
+    rgba(255, 255, 255, 0.3) 50%,
+    rgba(255, 255, 255, 0.15) 60%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: overlay-sparkle 1.2s ease-in-out;
+}
+
+@utility overlay-sector-sweep {
+  animation: overlay-sector-sweep 0.6s ease-out forwards;
+}
 
 @layer base {
   :root {
@@ -736,100 +983,7 @@
   }
 }
 
-@layer components {
-  .racing-card {
-    @apply bg-card border border-border rounded-lg;
-  }
-  
-  .data-display {
-    @apply font-mono text-sm tabular-nums;
-  }
-  
-  .speed-gradient {
-    background: linear-gradient(90deg, 
-      hsl(var(--speed-slow)), 
-      hsl(var(--speed-medium)), 
-      hsl(var(--speed-fast)),
-      hsl(var(--speed-max))
-    );
-  }
-  
-  /* Leaflet map styling overrides */
-  .leaflet-container {
-    background: hsl(var(--background));
-    font-family: 'Inter', system-ui, sans-serif;
-  }
-  
-  .leaflet-control-attribution {
-    background: hsl(var(--card) / 0.8) !important;
-    color: hsl(var(--muted-foreground)) !important;
-    font-size: 10px;
-  }
-  
-  .leaflet-control-attribution a {
-    color: hsl(var(--primary)) !important;
-  }
-}
-
 @layer utilities {
-  /* Keep app chrome clear of device notches / status bars on native (Android
-     WebView / iOS) and installed PWAs, which draw edge-to-edge. Requires
-     `viewport-fit=cover` (set in index.html). Insets resolve to 0 on browsers
-     and desktops without a safe area, so this is a no-op everywhere else.
-     Applied to every full-screen surface — the app shell + landing, full-page
-     routes (login/register/admin/legal), and portal overlays like the file-
-     manager drawer — whose `border-box` sizing keeps the padding inside
-     `h-screen`/`min-h-screen` (no overflow) while the surface's background
-     fills the inset region behind the status bar. */
-  .safe-area-inset {
-    padding-top: env(safe-area-inset-top);
-    padding-left: env(safe-area-inset-left);
-    padding-right: env(safe-area-inset-right);
-  }
-
-  /* The horizontal (left/right) inset on its own — for surfaces whose top inset
-     is owned by a sticky header (which carries `.safe-area-top`), so we don't
-     double-pad the top. */
-  .safe-area-x {
-    padding-left: env(safe-area-inset-left);
-    padding-right: env(safe-area-inset-right);
-  }
-
-  /* The top inset on its own — for a sticky/fixed header so its background fills
-     behind the status bar while its content stays clear of the notch. */
-  .safe-area-top {
-    padding-top: env(safe-area-inset-top);
-  }
-
-  /* Modal/dialog padding that also clears device notches: never less than the
-     base 1.5rem (so it doesn't collapse to 0 on un-notched devices the way a
-     bare `env()` inset would), growing to the safe-area inset where present. */
-  .safe-area-modal {
-    padding-top: max(1.5rem, env(safe-area-inset-top));
-    padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
-    padding-left: max(1.5rem, env(safe-area-inset-left));
-    padding-right: max(1.5rem, env(safe-area-inset-right));
-  }
-
-  .scrollbar-thin {
-    scrollbar-width: thin;
-    scrollbar-color: hsl(var(--muted)) transparent;
-  }
-  
-  .scrollbar-thin::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-  }
-  
-  .scrollbar-thin::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  
-  .scrollbar-thin::-webkit-scrollbar-thumb {
-    background: hsl(var(--muted));
-    border-radius: 3px;
-  }
-
   /* Hide default number input spinners — custom component handles step buttons */
   input[type="number"]::-webkit-inner-spin-button,
   input[type="number"]::-webkit-outer-spin-button {
@@ -841,8 +995,6 @@
   input[type="number"] {
     -moz-appearance: textfield;
   }
-
-  /* Video overlay animations */
   @keyframes overlay-sparkle {
     0%, 100% {
       background-position: -200% 0;
@@ -859,22 +1011,5 @@
     100% {
       transform: translateX(100%);
     }
-  }
-
-  .overlay-sparkle {
-    background-image: linear-gradient(
-      90deg,
-      transparent 0%,
-      rgba(255, 255, 255, 0.15) 40%,
-      rgba(255, 255, 255, 0.3) 50%,
-      rgba(255, 255, 255, 0.15) 60%,
-      transparent 100%
-    );
-    background-size: 200% 100%;
-    animation: overlay-sparkle 1.2s ease-in-out;
-  }
-
-  .overlay-sector-sweep {
-    animation: overlay-sector-sweep 0.6s ease-out forwards;
   }
 }
