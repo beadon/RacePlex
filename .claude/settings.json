@@ -1,0 +1,27 @@
+{
+  "$comment": [
+    "Shared project permissions — this file IS committed, so it applies to every contributor.",
+    "Keep it to things that are safe to grant a stranger: the project's own read-only checks.",
+    "Broad grants (arbitrary interpreters, unrestricted curl/network) belong in",
+    ".claude/settings.local.json, which is gitignored and personal to your machine."
+  ],
+  "permissions": {
+    "allow": [
+      "Bash(npx vitest *)",
+      "Bash(npx tsc *)",
+      "Bash(npx eslint *)",
+
+      "Bash(bun run test)",
+      "Bash(bun run test:run)",
+      "Bash(bun run test:coverage)",
+      "Bash(bun run typecheck)",
+      "Bash(bun run lint)",
+      "Bash(bun run build)",
+      "Bash(bun run dev)",
+      "Bash(bun run verify:import)",
+      "Bash(bun install)",
+
+      "Bash(node scripts/verify-import.mjs *)"
+    ]
+  }
+}
