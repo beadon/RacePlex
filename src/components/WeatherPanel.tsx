@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { Cloud, Thermometer, Droplets, Gauge, Wind, Mountain, Navigation } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -10,12 +10,21 @@ import {
 } from "@/lib/weatherService";
 import { getCachedWeather, saveCachedWeather } from "@/lib/weatherCacheStorage";
 import { useOptionalSettingsContext } from "@/contexts/SettingsContext";
+import { useAsyncSnapshot } from "@/hooks/useAsyncSnapshot";
 import {
   formatTemperature,
   formatPressure,
   formatAltitudeFt,
   windSpeedValue,
 } from "@/lib/units";
+
+interface WeatherSnapshot {
+  weather: WeatherData | null;
+  loaded: boolean;
+  error: boolean;
+}
+
+const EMPTY_WEATHER: WeatherSnapshot = { weather: null, loaded: false, error: false };
 
 function isToday(date: Date): boolean {
   const now = new Date();
@@ -50,83 +59,57 @@ export function WeatherPanel({
   detailed = false,
 }: WeatherPanelProps) {
   const { t } = useTranslation("weather");
-  const [weather, setWeather] = useState<WeatherData | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(false);
   const metric = useOptionalSettingsContext()?.useMetricWeather ?? false;
   const onStationResolvedRef = useRef(onStationResolved);
   const onWeatherLoadedRef = useRef(onWeatherLoaded);
   useEffect(() => { onStationResolvedRef.current = onStationResolved; }, [onStationResolved]);
   useEffect(() => { onWeatherLoadedRef.current = onWeatherLoaded; }, [onWeatherLoaded]);
 
-  useEffect(() => {
-    // Reset state when inputs change
-    setWeather(null);
-    setError(false);
+  const inputsValid =
+    lat !== undefined && lon !== undefined && !!sessionDate && isValidGpsPoint(lat!, lon!);
 
-    // Validate inputs
-    if (
-      lat === undefined ||
-      lon === undefined ||
-      !sessionDate ||
-      !isValidGpsPoint(lat, lon)
-    ) {
-      return;
-    }
-
-    let cancelled = false;
-
-    const doFetch = async () => {
-      setLoading(true);
-      try {
-        // A session's date never changes, so its weather is immutable: serve a
-        // previously-cached result and skip the network entirely (don't keep
-        // pinging the station/API on every reopen).
-        if (sessionFileName) {
-          const cached = await getCachedWeather(sessionFileName);
-          if (cancelled) return;
-          if (cached) {
-            setWeather(cached);
-            onWeatherLoadedRef.current?.(cached);
-            setError(false);
-            return;
-          }
-        }
-
-        // One call: cached/US-ASOS path with an automatic global (Open-Meteo)
-        // fallback, so non-US sessions still resolve.
-        const data = await fetchSessionWeather(lat, lon, sessionDate, cachedStation);
-        if (cancelled) return;
-        if (data) {
-          setWeather(data);
-          onWeatherLoadedRef.current?.(data);
-          // Cache the resolved source (real station or the Open-Meteo marker) so
-          // the next open skips re-resolving it.
-          if (!cachedStation) onStationResolvedRef.current?.(data.station);
-          // Persist the full result locally so we never hit the network for this
-          // session again (best-effort; the station-cache fallback still works).
-          if (sessionFileName) void saveCachedWeather(sessionFileName, data);
-          setError(false);
-        } else {
-          setError(true);
-        }
-      } catch (e) {
-        if (!cancelled) {
-          setError(true);
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
+  const load = useCallback(async (): Promise<WeatherSnapshot> => {
+    if (!inputsValid) return { weather: null, loaded: true, error: false };
+    try {
+      // A session's date never changes, so its weather is immutable: serve a
+      // previously-cached result and skip the network entirely (don't keep
+      // pinging the station/API on every reopen).
+      if (sessionFileName) {
+        const cached = await getCachedWeather(sessionFileName);
+        if (cached) {
+          onWeatherLoadedRef.current?.(cached);
+          return { weather: cached, loaded: true, error: false };
         }
       }
-    };
+      // One call: cached/US-ASOS path with an automatic global (Open-Meteo)
+      // fallback, so non-US sessions still resolve.
+      const data = await fetchSessionWeather(lat!, lon!, sessionDate!, cachedStation);
+      if (!data) return { weather: null, loaded: true, error: true };
+      onWeatherLoadedRef.current?.(data);
+      // Cache the resolved source (real station or the Open-Meteo marker) so
+      // the next open skips re-resolving it.
+      if (!cachedStation) onStationResolvedRef.current?.(data.station);
+      // Persist the full result locally so we never hit the network for this
+      // session again (best-effort; the station-cache fallback still works).
+      if (sessionFileName) void saveCachedWeather(sessionFileName, data);
+      return { weather: data, loaded: true, error: false };
+    } catch {
+      return { weather: null, loaded: true, error: true };
+    }
+  }, [inputsValid, lat, lon, sessionDate, cachedStation, sessionFileName]);
 
-    doFetch();
+  // Cache is keyed on every input that could change the result. Distinct
+  // sessions read from distinct cache slots; identical inputs share one fetch.
+  const key = `weather:${lat ?? "-"}:${lon ?? "-"}:${sessionDate?.toISOString() ?? "-"}:${cachedStation?.name ?? "-"}:${sessionFileName ?? "-"}`;
 
-    return () => {
-      cancelled = true;
-    };
-  }, [lat, lon, sessionDate, cachedStation, sessionFileName]);
+  const { data: snapshot } = useAsyncSnapshot<WeatherSnapshot>({
+    key,
+    initial: EMPTY_WEATHER,
+    load,
+  });
+  const weather = snapshot.weather;
+  const error = snapshot.error;
+  const loading = inputsValid && !snapshot.loaded;
 
   // Don't render if no valid GPS
   if (

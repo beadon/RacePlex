@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState, useSyncExternalStore } from "react";
+import { useAsyncSnapshot } from "@/hooks/useAsyncSnapshot";
 import { useTranslation } from "react-i18next";
 import { Loader2, Save, AlertCircle, RefreshCw, RotateCcw, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -41,31 +42,25 @@ export function DeviceSettingsTab({ connection, onResetComplete }: DeviceSetting
   // The signed-in user's account name, used by the "use profile name" shortcut
   // on the Device Name field. Loaded lazily so the Supabase client never lands
   // on the offline-first eager graph; null when signed out or unavailable.
-  const [profileName, setProfileName] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!user) {
-      setProfileName(null);
-      return;
+  const loadProfileName = useCallback(async (): Promise<string | null> => {
+    if (!user) return null;
+    try {
+      const { supabase } = await import("@/integrations/supabase/client");
+      const { data } = await supabase
+        .from("profiles")
+        .select("display_name")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      return data?.display_name?.trim() || null;
+    } catch {
+      return null;
     }
-    let cancelled = false;
-    void (async () => {
-      try {
-        const { supabase } = await import("@/integrations/supabase/client");
-        const { data } = await supabase
-          .from("profiles")
-          .select("display_name")
-          .eq("user_id", user.id)
-          .maybeSingle();
-        if (!cancelled) setProfileName(data?.display_name?.trim() || null);
-      } catch {
-        if (!cancelled) setProfileName(null);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
   }, [user]);
+  const { data: profileName } = useAsyncSnapshot<string | null>({
+    key: `device-settings:profile-name:${user?.id ?? "anon"}`,
+    initial: null,
+    load: loadProfileName,
+  });
 
   const fetchSettings = useCallback(async () => {
     setLoading(true);
@@ -94,9 +89,17 @@ export function DeviceSettingsTab({ connection, onResetComplete }: DeviceSetting
     }
   }, [connection, t]);
 
-  useEffect(() => {
-    fetchSettings();
-  }, [fetchSettings]);
+  // Fire the initial fetch from a subscribe callback (not useEffect) so the
+  // setState calls inside fetchSettings run in an event context. See the
+  // matching pattern in drawer/DeviceTracksTab.tsx.
+  useSyncExternalStore(
+    useCallback(() => {
+      void fetchSettings();
+      return () => {};
+    }, [fetchSettings]),
+    () => 0,
+    () => 0,
+  );
 
   const handleChange = (index: number, newValue: string) => {
     setRows((prev) =>
