@@ -37,7 +37,14 @@ const SAMPLES_DIR = resolve(import.meta.dirname, '..', 'sample_race_files');
 const args = process.argv.slice(2);
 const expectIdx = args.indexOf('--expect-lap');
 const expectLapSec = expectIdx !== -1 ? Number(args[expectIdx + 1]) : null;
-const explicit = args.filter((a, i) => !a.startsWith('--') && i !== expectIdx + 1);
+// The index of --expect-lap's VALUE, or -1 when the flag is absent. Guarding on `expectIdx !== -1`
+// is the whole point: without it, `expectIdx + 1` is 0 when the flag is absent, and the filter
+// below silently drops the FIRST file path — so the documented usage
+// (`node scripts/verify-import.mjs path/to/log.gpx`) ignored the file it was handed and swept
+// sample_race_files/ instead, while still printing a cheerful ✅. A verification tool that
+// verifies the wrong thing is worse than no tool at all.
+const expectValueIdx = expectIdx === -1 ? -1 : expectIdx + 1;
+const explicit = args.filter((a, i) => !a.startsWith('--') && i !== expectValueIdx);
 
 const files = explicit.length
   ? explicit.map((f) => resolve(f))
