@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useAsyncSnapshot } from "@/hooks/useAsyncSnapshot";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import {
@@ -42,51 +43,71 @@ const SEGMENTS = [
 // local — so you can see both at a glance; signed out it offers sign-in and shows
 // just the local bar. Everything here works offline — the cloud is an optional
 // backup, not a requirement.
+interface StorageSnapshot {
+  cloudUsage: StorageUsage | null;
+  localUsage: StorageUsage | null;
+  pending: number;
+  error: string | null;
+  loaded: boolean;
+}
+
+const EMPTY: StorageSnapshot = {
+  cloudUsage: null,
+  localUsage: null,
+  pending: 0,
+  error: null,
+  loaded: false,
+};
+
 export default function StoragePanel(_props: PluginPanelProps) {
   const { t } = useTranslation("plugins");
   const { user, loading, logout } = useAuth();
   const online = useOnlineStatus();
-  const [cloudUsage, setCloudUsage] = useState<StorageUsage | null>(null);
-  const [localUsage, setLocalUsage] = useState<StorageUsage | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [pending, setPending] = useState(0);
 
-  // The local meter never needs the network, so read it on its own — it stays
-  // accurate even when the cloud read fails (offline) and refreshes cheaply on
-  // every on-device change.
-  const refreshLocal = useCallback(async () => {
+  const load = useCallback(async (): Promise<StorageSnapshot> => {
+    let localUsage: StorageUsage | null = null;
     try {
-      setLocalUsage(await getLocalStorageUsage());
+      localUsage = await getLocalStorageUsage();
     } catch {
-      // A local read failing is not worth surfacing; leave the last value.
+      // A local read failing is not worth surfacing.
     }
-  }, []);
-
-  const refresh = useCallback(async () => {
-    await refreshLocal();
-    if (!user) {
-      setPending(0);
-      setCloudUsage(null);
-      setError(null);
-      return;
-    }
+    if (!user) return { cloudUsage: null, localUsage, pending: 0, error: null, loaded: true };
     try {
-      setPending(await pendingCount());
-      setCloudUsage(await getStorageUsage());
-      setError(null);
+      const [pending, cloudUsage] = await Promise.all([pendingCount(), getStorageUsage()]);
+      return { cloudUsage, localUsage, pending, error: null, loaded: true };
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("account.loadUsageFailed"));
+      return {
+        cloudUsage: null,
+        localUsage,
+        pending: 0,
+        error: e instanceof Error ? e.message : t("account.loadUsageFailed"),
+        loaded: true,
+      };
     }
-  }, [user, t, refreshLocal]);
+  }, [user, t]);
 
-  // Re-read on mount and whenever connectivity flips (pending changes flush on
-  // reconnect). On-device garage changes update the local meter live (signed in
-  // or out); signed in, the cloud meter follows post-sync server reads rather
-  // than re-fetching over the network on every local edit.
-  useEffect(() => {
-    void refresh();
-    return onGarageChange(() => void (user ? refreshLocal() : refresh()));
-  }, [refresh, refreshLocal, online, user]);
+  // Any garage mutation invalidates the cache — the on-device local meter
+  // reflects that mutation immediately; the cloud meter follows post-sync.
+  const subscribe = useCallback(
+    (onChange: () => void) => onGarageChange(() => onChange()),
+    [],
+  );
+
+  const { data: snapshot, refresh } = useAsyncSnapshot({
+    // Include online in the key so a connectivity flip forces a fresh cloud
+    // read (pending changes flush on reconnect).
+    key: `storage-panel:${user?.id ?? "anon"}:${online ? "on" : "off"}`,
+    initial: EMPTY,
+    load,
+    subscribe,
+  });
+  const cloudUsage = snapshot.cloudUsage;
+  const localUsage = snapshot.localUsage;
+  const pending = snapshot.pending;
+  const error = snapshot.error;
+
+  // Kept for a couple of button handlers below that call it explicitly.
+  const refreshLocal = refresh;
 
   if (loading) return <p className="text-sm text-muted-foreground">{t("loading")}</p>;
 

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Camera, Trash2, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAsyncSnapshot } from "@/hooks/useAsyncSnapshot";
 import { STORE_NAMES } from "@/lib/dbUtils";
 import { onGarageChange } from "@/lib/garageEvents";
 import { formatLapTime } from "@/lib/lapCalculation";
@@ -27,57 +28,72 @@ function formatDate(ms?: number): string {
 // YOUR cloud (delete removes the cloud copy; local copies on devices are kept).
 // Signed out: manage the snapshots saved on THIS device — the only thing you can
 // do with them until you sign in to sync.
+interface Snapshot {
+  items: LapSnapshot[] | null;
+  localIds: Set<string>;
+  error: string | null;
+  loaded: boolean;
+}
+
+const EMPTY: Snapshot = { items: null, localIds: new Set(), error: null, loaded: false };
+
 export default function LapSnapshotsPanel(_props: PluginPanelProps) {
   const { t } = useTranslation("plugins");
   const { user, loading } = useAuth();
-  const [items, setItems] = useState<LapSnapshot[] | null>(null);
-  const [localIds, setLocalIds] = useState<Set<string>>(new Set());
-  const [error, setError] = useState<string | null>(null);
   const [confirming, setConfirming] = useState<string | null>(null);
   const [alsoLocal, setAlsoLocal] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
 
-  const refresh = useCallback(async () => {
-    try {
-      const local = await listSnapshots();
-      setLocalIds(new Set(local.map((s) => s.id)));
-      if (user) {
-        const cloud = await listCloudSnapshots(user.id);
-        setItems(cloud.map((c) => c.data));
-      } else {
-        setItems(local);
-      }
-      setError(null);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t("snapshots.loadFailed"));
-    }
-  }, [user, t]);
-
-  // Auto-detect local-only snapshots and upload them when signed in (the same
-  // reconcile autoSync runs on sign-in, re-triggered here so opening the panel
-  // self-heals a sign-in reconcile that failed — e.g. a transient outage —
-  // without needing an app reload), then load the list. Re-runs whenever the
-  // snapshot store changes (local saves, cloud pulls).
-  const syncAndRefresh = useCallback(async () => {
+  const load = useCallback(async (): Promise<Snapshot> => {
+    // Reconcile local-only snapshots up to the cloud on load (opening the
+    // panel self-heals a sign-in reconcile that failed transiently). Failures
+    // are surfaced by autoSync's own toast + the list/usage read below.
     if (user) {
-      // Failures (network/quota) are surfaced by autoSync's own toast + the
-      // list/usage read below; don't double-notify from here.
       try {
         await reconcileSnapshots(user.id);
       } catch {
-        /* fall through to refresh, which shows the current cloud state */
+        /* fall through — list below shows the current cloud state */
       }
     }
-    await refresh();
-  }, [user, refresh]);
+    try {
+      const local = await listSnapshots();
+      const localIds = new Set(local.map((s) => s.id));
+      let items: LapSnapshot[];
+      if (user) {
+        const cloud = await listCloudSnapshots(user.id);
+        items = cloud.map((c) => c.data);
+      } else {
+        items = local;
+      }
+      return { items, localIds, error: null, loaded: true };
+    } catch (e) {
+      return {
+        items: null,
+        localIds: new Set(),
+        error: e instanceof Error ? e.message : t("snapshots.loadFailed"),
+        loaded: true,
+      };
+    }
+  }, [user, t]);
 
-  useEffect(() => {
-    void syncAndRefresh();
-    return onGarageChange((change) => {
-      if (change.store === STORE_NAMES.LAP_SNAPSHOTS) void syncAndRefresh();
-    });
-  }, [syncAndRefresh]);
+  const subscribe = useCallback(
+    (onChange: () => void) =>
+      onGarageChange((change) => {
+        if (change.store === STORE_NAMES.LAP_SNAPSHOTS) onChange();
+      }),
+    [],
+  );
+
+  const { data: snapshot, refresh } = useAsyncSnapshot({
+    key: `cloud-sync:lap-snapshots:${user?.id ?? "anon"}`,
+    initial: EMPTY,
+    load,
+    subscribe,
+  });
+  const items = snapshot.items;
+  const localIds = snapshot.localIds;
+  const error = snapshot.error;
 
   if (loading) return <p className="text-sm text-muted-foreground">{t("loading")}</p>;
 

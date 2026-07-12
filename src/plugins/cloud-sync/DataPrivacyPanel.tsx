@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
+import { useAsyncSnapshot } from "@/hooks/useAsyncSnapshot";
 import { useTranslation, Trans } from "react-i18next";
 import { AlertTriangle, Download, Loader2, ShieldX, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
@@ -29,20 +30,21 @@ export default function DataPrivacyPanel(_props: PluginPanelProps) {
 
   const [exporting, setExporting] = useState(false);
   const [exportPhase, setExportPhase] = useState("");
-  const [pending, setPending] = useState<PendingDeletion | null>(null);
 
-  const refreshPending = useCallback(async () => {
-    if (!user) return setPending(null);
+  const loadPending = useCallback(async (): Promise<PendingDeletion | null> => {
+    if (!user) return null;
     try {
-      setPending(await getPendingDeletion(user.id));
+      return await getPendingDeletion(user.id);
     } catch {
-      /* non-fatal: leave as-is */
+      return null; /* non-fatal: caller shows nothing */
     }
   }, [user]);
 
-  useEffect(() => {
-    void refreshPending();
-  }, [refreshPending]);
+  const { data: pending, refresh: refreshPending } = useAsyncSnapshot<PendingDeletion | null>({
+    key: `data-privacy:pending:${user?.id ?? "anon"}`,
+    initial: null,
+    load: loadPending,
+  });
 
   const runExport = async () => {
     setExporting(true);
