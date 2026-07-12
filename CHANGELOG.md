@@ -11,7 +11,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > from git history and grouped by theme rather than exhaustive per-commit
 > detail.
 
-## [3.1.0] - unreleased
+## [0.2.0] - 2026-07-12
+
+> **A note on the numbering.** RacePlex restarted versioning at `0.x` when it forked — the `2.x` and
+> `3.x` entries below this line are **upstream's** (Dove's DataViewer) release history, kept because
+> we kept their commits. They are not our releases. `0.2.0` is RacePlex's second tag.
 
 ### Added
 - **Generic GPS-CSV import, with a column mapper you can correct.** Any delimited log with a
