@@ -42,5 +42,6 @@ Changes made by RacePlex relative to upstream:
   * Committed to remaining free and fully local: no subscription tiers, no feature gating, no
     required backend.
 
-Where these changes are useful to upstream, we intend to offer them back as contributions rather
-than keep them here.
+RacePlex is an independent project and makes no commitment to contribute these changes upstream.
+Where they are useful to upstream, upstream is welcome to take them — that is what the licence is
+for.

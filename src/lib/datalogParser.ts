@@ -9,6 +9,8 @@ import { parseAlfanoFile, isAlfanoFormat } from './alfanoParser';
 import { parseAimFile, isAimFormat, hasAimSignature } from './aimParser';
 import { isMotecLdFormat, parseMotecLdFile, isMotecCsvFormat, parseMotecCsvFile } from './motecParser';
 import { isIracingFormat, parseIracingFile } from './iracingParser';
+import { isGpxFormat, parseGpxFile } from './gpxParser';
+import { isRaceBoxCsvFormat, parseRaceBoxCsvFile } from './raceboxCsvParser';
 import { isXrkFile, parseXrkFile, type XrkProgressCallback } from './xrk/xrkImporter';
 import { beginFileLoading, updateFileLoading, endFileLoading } from './fileLoadingState';
 
@@ -88,7 +90,18 @@ async function routeDatalogFile(
 
   // For text formats, read as string
   const text = await file.text();
-  
+
+  // GPX is XML and unambiguous, so it can be claimed first.
+  if (isGpxFormat(text)) {
+    return parseGpxFile(text);
+  }
+
+  // RaceBox CSV must be claimed before the loose CSV matchers below (Alfano's and AiM's header
+  // checks are broad enough to grab it and then fail to parse the layout).
+  if (isRaceBoxCsvFormat(text)) {
+    return parseRaceBoxCsvFile(text);
+  }
+
   // Check if it's VBO format
   if (isVboFormat(text)) {
     return parseVboFile(text);
@@ -152,7 +165,15 @@ function routeDatalogContent(content: string | ArrayBuffer): ParsedData {
     // Convert to text for text-based format detection
     const decoder = new TextDecoder();
     const text = decoder.decode(content);
-    
+
+    if (isGpxFormat(text)) {
+      return parseGpxFile(text);
+    }
+
+    if (isRaceBoxCsvFormat(text)) {
+      return parseRaceBoxCsvFile(text);
+    }
+
     if (isVboFormat(text)) {
       return parseVboFile(text);
     }
@@ -185,6 +206,14 @@ function routeDatalogContent(content: string | ArrayBuffer): ParsedData {
   }
 
   // String content
+  if (isGpxFormat(content)) {
+    return parseGpxFile(content);
+  }
+
+  if (isRaceBoxCsvFormat(content)) {
+    return parseRaceBoxCsvFile(content);
+  }
+
   if (isVboFormat(content)) {
     return parseVboFile(content);
   }

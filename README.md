@@ -27,9 +27,11 @@ for them is theirs.
    their right, and the GPL protects it exactly as much as it protects us. RacePlex commits to
    staying free and fully local — every feature, for everyone.
 
-**We intend to contribute upstream, not merely diverge.** The device parsers we add here (GPX,
-RaceBox CSV, RaceChrono CSV) are precisely what upstream's `CONTRIBUTING.md` asks for, and we would
-like to see them land there too.
+**On upstreaming:** RacePlex is its own project and makes no commitment to feed changes back. We do
+try to stay *mergeable* with upstream — they ship quickly and we'd like to keep pulling their
+improvements — so we follow their conventions where doing so is free, and deviate where we think we
+have a better answer. If a change we make is useful to them, they are of course welcome to take it;
+that is what the licence is for.
 
 **Licence: GPL-3.0-or-later**, inherited from upstream and kept deliberately. Anything built on
 RacePlex stays open. See [LICENSE](LICENSE) and [NOTICE](NOTICE).
