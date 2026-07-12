@@ -18,7 +18,21 @@ const GOPRO_TELEMETRY_URL = "https://github.com/JuanIrache/gopro-telemetry";
 // class; GPX comes out of nearly every other logger, phone app and watch; VBO is the one format
 // Dragy·Lap, RaceChrono and RaceBox all emit. Upstream's own formats stay fully supported, just
 // further down the list.
-const PRIMARY_IDS = ["raceboxCsv", "gpx", "gopro", "vbo", "nmea", "dove", "dovex"] as const;
+// VESC leads: it is the only format carrying the ESC channels (motor current, battery sag, duty
+// cycle) alongside GPS, which is the whole reason an eskate rider would pick this over a car tool.
+// `genericCsv` sits mid-list because it is the catch-all rather than a headline — but it MUST be
+// listed, or a rider with an unknown logger has no way to learn that their file will just work.
+const PRIMARY_IDS = [
+  "vescCsv",
+  "raceboxCsv",
+  "gpx",
+  "gopro",
+  "genericCsv",
+  "vbo",
+  "nmea",
+  "dove",
+  "dovex",
+] as const;
 const SECONDARY_IDS = ["ubx", "xrk", "iracing", "motecLd", "motecCsv", "alfano", "aimCsv"] as const;
 const EXPERIMENTAL = new Set(["motecLd", "motecCsv", "alfano", "aimCsv"]);
 

@@ -132,6 +132,14 @@
       "gopro": {
         "name": "Vídeo GoPro (GPMF)",
         "body": "<em>Arrastra el vídeo y ya está.</em> Si grabaste tu recorrido con una GoPro con GPS, la telemetría ya está dentro del archivo: las HERO5–HERO11, HERO13 y MAX escriben GPS a 10–18 Hz, además de acelerómetro y giroscopio, en la pista de metadatos GPMF del vídeo. RacePlex la lee directamente en tu navegador con <gpmf>gpmf-extract</gpmf> y <gpmfTelemetry>gopro-telemetry</gpmfTelemetry>; no se sube nada y no hace falta ningún paso de conversión. Nota: la <em>HERO12 no tiene GPS</em>, y en las cámaras más antiguas hay que activar el GPS en Preferencias antes de grabar. Extensión: <code>.mp4</code>"
+      },
+      "vescCsv": {
+        "name": "VESC Tool CSV",
+        "body": "Un registro de VESC — y la razón para usar RacePlex en un monopatín eléctrico. Trae consigo los canales del ESC: <em>corriente del motor, caída de tensión, ciclo de trabajo, ERPM y temperaturas en el mismo gráfico que tu traza GPS</em>. Un nosedive es un evento de ciclo de trabajo, no de GPS. Extensión: <code>.csv</code>"
+      },
+      "genericCsv": {
+        "name": "Cualquier otro CSV",
+        "body": "Casi cualquier registro delimitado con latitud y longitud se importará. RacePlex detecta el delimitador, asigna las columnas por nombre y <em>te muestra lo que ha decidido para que lo corrijas</em> antes de importar. Las unidades de tiempo y velocidad se infieren y se te muestran. Tu corrección se recuerda. Extensiones: <code>.csv</code>, <code>.txt</code>"
       }
     },
     "secondary": {
@@ -177,7 +185,7 @@
   },
   "supportedDevices": {
     "title": "Dispositivos compatibles",
-    "description": "Funciona cualquier dispositivo que exporte GPX, CSV, VBO, NMEA o UBX. RacePlex no vende hardware ni está afiliado a ninguna de estas marcas: un dispositivo aparece porque funciona.",
+    "description": "Funciona cualquier dispositivo que exporte GPX, CSV, VBO, NMEA o UBX — y también un .mp4 de GoPro, porque el GPS ya está dentro del vídeo. Un CSV desconocido también se importa: RacePlex asigna las columnas y te deja corregirlo. RacePlex no vende hardware ni está afiliado a ninguna de estas marcas.",
     "rate": "GPS",
     "imu": "IMU",
     "via": "vía",

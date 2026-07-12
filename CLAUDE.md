@@ -24,8 +24,23 @@ charts, the video overlay, the architecture — is upstream's work.** Much of th
 file was written by and for them. Read it that way.
 
 What is **ours** (see `NOTICE` for the full statement of changes):
-- `gpxParser.ts`, `raceboxCsvParser.ts`, `timingLines.ts` — device support
-  upstream does not have.
+- **Parsers upstream does not have:** `gpxParser.ts`, `raceboxCsvParser.ts`,
+  `vescCsvParser.ts`, `genericCsvParser.ts` (+ `csvTable.ts`, the by-NAME table
+  engine every CSV profile sits on), `gopro/` (GPMF — the GPS inside an .mp4),
+  and `timingLines.ts`.
+- **`vescCsvParser.ts` is the flagship.** It is the only format carrying the ESC
+  channels (motor current, battery sag, duty cycle, ERPM) alongside GPS — the one
+  thing no car-oriented lap timer can do. ⚠️ Two traps, both documented in the
+  file: `gnss_gVel` is **m/s** (there is no `kmh_gnss` column on disk, whatever
+  the internet says), and the ESC logs ~12x faster than the GNSS — keep every ESC
+  row and *interpolate position*, never decimate to the GPS rate, or a 0.2 s
+  duty-cycle spike (2 samples at 12 Hz, 0.2 at 1 Hz) disappears.
+- **`genericCsvParser.ts` is the LAST resort in the dispatcher.** Any delimited log
+  with a lat/lon, with a user-correctable, remembered column mapping. It exists
+  because these formats have *unstable column sets* — pOnewheel generates its
+  columns per-ride, so a fixed parser for it is impossible by construction. ⚠️ Its
+  speed-unit measurement must run on the **distinct GPS fixes, not raw rows**, or a
+  kph column is confidently misread as m/s.
 - **Point-to-point courses** (`Course.finishA/finishB`) — a run from a start line
   to a *different* finish line. Upstream models circuits only. Eskate runs (hill
   runs, slalom, drag) are usually not circuits.
@@ -60,11 +75,14 @@ for RaceBox/Dragy does not exist yet.
    fails before the fix. Don't leave testable logic untested.
 3b. **Green tests do not mean it works — RUN THE APP.** Unit tests prove a
    function returns the right numbers. They are *completely blind to whether
-   anything calls it.* Two bugs have already shipped here with a fully green
+   anything calls it.* THREE bugs have already shipped here with a fully green
    suite: (a) the GPX parser was perfect but `.gpx` was missing from the file
    picker's `accept` list, so no user could select a GPX file; (b)
    `courseFromGpxWaypoints()` was written and unit-tested and **never called**, so
-   lap timing silently did not exist. Both were wiring, not logic.
+   lap timing silently did not exist; (c) the VESC parser deduped GPS fixes for a
+   clean track — and thereby downsampled the ESC channels from 12 Hz to 1 Hz,
+   destroying the very resolution a nosedive lives in. Caught by *looking at the
+   rendered chart*, not by any test. None were logic errors.
    → After any change to import, parsing, or lap detection, run
    **`bun run verify:import`** (`scripts/verify-import.mjs`): it drives a real
    browser, feeds the files in `sample_race_files/` through the app's own file

@@ -16,11 +16,14 @@ formats actually are — including several places where the popular understandin
 | Source | File export | Live BLE | Notes |
 |---|---|---|---|
 | **RaceBox** (Mini / Mini S / Micro) | **CSV, VBO, GPX, KML** | **Documented** (official PDF) | The well-behaved citizen. Everything is public. |
+| **VESC Tool** | **CSV** (semicolon-delimited) | n/a | ✅ **Supported.** The only format that carries the ESC channels next to GPS. See below. |
+| **GoPro** (HERO5–11, 13) | the **`.mp4` itself** — GPS is in the GPMF metadata track | n/a | ✅ **Supported**, read in-browser. No ffmpeg, no conversion. HERO12 has no GPS. |
+| **Anything else with a CSV** | **CSV** | n/a | ✅ **Supported** via the generic importer + column mapper. Float Control, pOnewheel, Metr, TrackAddict, Qstarz… |
 | **Dragy** (DRG70 / Pro) | **VBO only**, from the *dragy·Lap* app | [REVERSE-ENGINEERED] | **No CSV export exists.** See below. |
 | **RaceChrono** | **VBO, CSV v3, NMEA**; native `.rcz` | n/a (it's an app) | Imports VBO — so VBO is our export target too. |
 
-**Build order: VBO → RaceBox CSV → GPX → NMEA → RaceChrono CSV v3.** VBO leads because one parser
-serves Dragy *and* RaceChrono *and* RaceBox.
+**Status:** VBO, RaceBox CSV, GPX, NMEA, UBX, **VESC CSV**, **GoPro GPMF** and a **generic CSV**
+fallback are all implemented. FIT (Garmin/Wahoo/Coros) is the main gap — see issue #17.
 
 ---
 
@@ -246,3 +249,103 @@ Every one of these is now a test:
 - [RaceChrono — creating a custom track (the trap model)](https://racechrono.com/article/1923)
 - [RaceChrono forum — optimal lap = sum of best sectors](https://racechrono.com/forum/d/2631)
 - [lbulej/vbo-tools](https://github.com/lbulej/vbo-tools)
+
+
+---
+
+## VESC Tool CSV  ✅ [VERIFIED against a real Onewheel ride]
+
+The format that matters most for eskate, because it is the only one that puts **motor current,
+battery sag, duty cycle and ERPM on the same timeline as GPS**. A nosedive is a duty-cycle event; a
+GPS trace only shows you the aftermath.
+
+Schema confirmed from the writer itself — `vedderb/vesc_tool`, `vescinterface.cpp` (header emitter
+lines 1772–1829, row emitter 468–526). **55 columns, `;`-delimited, with a trailing `;`.**
+
+### 🔥 Four things the internet gets wrong about this format
+
+1. **There is NO `kmh_gnss` column.** It is widely cited — it was in our own first research notes —
+   but it is one of vesc_tool's internal *display* names (`pageloganalysis.cpp`) and is never
+   written to disk. The real column is **`gnss_gVel`, and it is in METRES PER SECOND**. Read it as
+   km/h and every speed is 3.6× too low, while still looking entirely plausible. (Measured against
+   position-derived speed on a real log: ratio **0.974**.) Same story for `trip_gnss` (derived, not
+   stored) and `gnss_h_acc` (actually `gnss_hAcc`).
+
+2. **The GPS repeats — and the obvious fix is WRONG.** The ESC logs at ~12 Hz; the GNSS only fixes
+   at ~1 Hz, so lat/lon are repeated across ~12 consecutive rows. The tempting fix is to keep one
+   sample per GPS fix. **That also downsamples the ESC channels to 1 Hz** — and a duty-cycle spike
+   lasting 0.2 s is *2 samples at 12 Hz and 0.2 samples at 1 Hz*. You would ship a VESC importer
+   that cannot see the one event it exists to show. RacePlex keeps **every ESC row** and
+   **interpolates position** between fixes.
+
+3. **The trailing `;`** means a naive split yields 56 tokens for 55 columns, and every positional
+   index runs off the end.
+
+4. **Do not parse by position**, even though vesc_tool's own reader does. Third-party apps (Float
+   Control, Floaty) emit *subsets* of these columns in *different orders*.
+
+### Two dialects
+- **RT log** — bare column names (`gnss_gVel`). This is what we've verified.
+- **VESC Express / SD card** — header tokens tagged `key:name:unit:precision:...`. Handled by
+  `csvTable.ts`, but **[OPEN]** — nobody has sent us one. See issue #15.
+
+---
+
+## Generic CSV  ✅
+
+Any delimited log with a latitude and a longitude now imports, **including from devices we have
+never seen**. This is deliberately a *mapper*, not a parser-per-device, because the one thing every
+eskate format has in common is that **its column set is not stable**:
+
+- **pOnewheel generates its columns per-ride**, from whichever BLE attributes that ride recorded. A
+  fixed column map for it is *impossible by construction*.
+- **Float Control reorders columns between app versions** — two real exports have `ADC1`/`ADC2` at
+  positions 6–7 in one and 18–19 in the other.
+- **TrackAddict's** columns depend on which sensors and OBD-II PIDs were switched on.
+
+So: delimiter sniffed by counting, `#` comment lines kept aside, phantom trailing column dropped,
+columns mapped **by name**, and the mapping **shown to the user to correct** before import. The
+correction is remembered against a hash of the header row.
+
+### 🔥 The two units that silently corrupt data
+Both produce output that *charts beautifully and is wrong*, which is worse than failing:
+
+- **Time.** `ms_today` (ms since local midnight), `Time(s)` (seconds since start), `time` (epoch ms),
+  `UTC Time` (epoch **seconds** as a float) — indistinguishable from the column name. Inferred, then
+  **shown** (first timestamp, duration, sample rate) so a wrong guess is obvious.
+- **Speed.** `gnss_gVel` is m/s; `Speed (Km/h)` is km/h; `speed_kph` is km/h. **Measured against
+  position-derived speed**, never guessed from the values.
+
+⚠️ **And the measurement must run on the DISTINCT GPS FIXES, not the raw rows.** On a log with 1 Hz
+GNSS and 10 Hz rows, nine of every ten row-gaps show zero movement, so the few that move appear to
+cover a full second of travel in 100 ms:
+
+```
+column is m/s | raw rows -> m/s  ok      | distinct fixes -> m/s ✓
+column is kph | raw rows -> m/s  ✗ WRONG | distinct fixes -> kph ✓
+column is mph | raw rows -> m/s  ✗ WRONG | distinct fixes -> mph ✓
+```
+
+---
+
+## GoPro GPMF (`.mp4`)  ✅ [VERIFIED against hero5.mp4]
+
+**The GPS is already inside the video file.** Every rider films their runs; almost none know the
+telemetry is in there. Read entirely in the browser — **no ffmpeg, no upload** — via `gpmf-extract`
+(+ `mp4box`) and `gopro-telemetry`, both MIT and lazy-loaded (+0.58 kB to the main bundle; the 235 kB
+of decoder sits in chunks that only load on a video import).
+
+- **GPS9** (HERO11+, 10 Hz) preferred over **GPS5** (HERO5–10, 18 Hz). Genuinely usable for lap
+  timing, unlike a phone or a watch.
+- Accelerometer and gyro come along, merged onto the GPS timebase.
+- ⚠️ **The HERO12 has NO GPS.** GoPro removed it. This catches people constantly.
+- ⚠️ `useWorker` defaults true but is documented to crash on some browsers — there is a tested
+  fallback, plus a stall guard for a *stillborn* worker that never reports and never rejects.
+- **[OPEN]** Chapter-split recordings import as separate files.
+
+### Two decoder traps
+- `repeatSticky` **inlines** sticky keys onto the sample and deletes `sticky` — reading them the
+  documented way silently returns nothing.
+- `gopro-telemetry` returns `date` as a **`Date` object**, so `Date.parse()` truncates the
+  milliseconds — a quiet ~900 ms error in the session start time.
+

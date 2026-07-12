@@ -132,6 +132,14 @@
       "gopro": {
         "name": "Vídeo GoPro (GPMF)",
         "body": "<em>É só arrastar o vídeo.</em> Se você filmou sua volta com uma GoPro com GPS, a telemetria já está dentro do arquivo: as HERO5–HERO11, HERO13 e MAX gravam GPS a 10–18 Hz, além de acelerômetro e giroscópio, na trilha de metadados GPMF do vídeo. O RacePlex lê tudo direto no seu navegador com <gpmf>gpmf-extract</gpmf> e <gpmfTelemetry>gopro-telemetry</gpmfTelemetry>; nada é enviado e não há etapa de conversão. Atenção: a <em>HERO12 não tem GPS nenhum</em>, e nas câmeras mais antigas o GPS precisa estar ligado nas Preferências antes de gravar. Extensão: <code>.mp4</code>"
+      },
+      "vescCsv": {
+        "name": "VESC Tool CSV",
+        "body": "Um log do VESC — e a razão para usar o RacePlex num skate elétrico. Ele traz os canais do ESC: <em>corrente do motor, queda de tensão, duty cycle, ERPM e temperaturas no mesmo gráfico da sua trilha de GPS</em>. Um nosedive é um evento de duty cycle, não de GPS. Extensão: <code>.csv</code>"
+      },
+      "genericCsv": {
+        "name": "Qualquer outro CSV",
+        "body": "Quase todo log delimitado com latitude e longitude será importado. O RacePlex detecta o delimitador, mapeia as colunas por nome e <em>mostra o que decidiu para você corrigir</em>. As unidades de tempo e velocidade são inferidas e exibidas. Sua correção é lembrada. Extensões: <code>.csv</code>, <code>.txt</code>"
       }
     },
     "secondary": {
@@ -177,7 +185,7 @@
   },
   "supportedDevices": {
     "title": "Dispositivos compatíveis",
-    "description": "Qualquer dispositivo que exporte GPX, CSV, VBO, NMEA ou UBX funciona. O RacePlex não vende hardware e não tem vínculo com nenhuma dessas marcas — um dispositivo é listado porque funciona.",
+    "description": "Funciona qualquer dispositivo que exporte GPX, CSV, VBO, NMEA ou UBX — e também um .mp4 de GoPro, porque o GPS já está dentro do vídeo. Um CSV desconhecido também importa: o RacePlex mapeia as colunas e deixa você corrigir. O RacePlex não vende hardware e não tem vínculo com nenhuma dessas marcas.",
     "rate": "GPS",
     "imu": "IMU",
     "via": "via",

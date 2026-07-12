@@ -4,16 +4,18 @@
 
 RacePlex is a Progressive Web App for electric skateboard riders. All telemetry parsing, lap detection and visualisation happen locally in the browser (IndexedDB); no server ever processes your data, and there is no paid tier or feature gating.
 
-Supported formats: **RaceBox CSV** (Mini / Mini S / Micro), **GPX** (emitted by nearly every GPS logger, phone app and watch), **VBO** (RaceLogic VBOX — the format Dragy·Lap, RaceChrono and RaceBox all export), **NMEA 0183**, **UBX**, plus the car/kart formats inherited from upstream: MoTeC i2, AiM MyChron (CSV and XRK/XRZ), Alfano, iRacing, and Dove/Dovex.
+Supported formats: **VESC Tool CSV**, **RaceBox CSV**, **GPX**, **GoPro `.mp4`** (the GPS is inside the video's GPMF track — read in-browser, no conversion), **VBO**, **NMEA 0183**, **UBX**, and — via a generic importer with a user-correctable column mapper — **essentially any delimited log with a latitude and a longitude in it** (Float Control, pOnewheel, Metr, TrackAddict, Qstarz, or a logger nobody has heard of). Plus the car/kart formats inherited from upstream: MoTeC i2, AiM MyChron (CSV and XRK/XRZ), Alfano, iRacing, and Dove/Dovex.
 
-Two things RacePlex does that car-oriented tools do not:
+Four things RacePlex does that car-oriented tools do not:
 
+- **ESC telemetry next to GPS.** A VESC log imports with motor current, battery sag, duty cycle and ERPM on the same chart as the GPS trace. This is the point: a nosedive is a duty-cycle event, not a GPS event — a GPS trace only ever shows the aftermath.
 - **Point-to-point courses.** A hill run, a slalom or a drag pass starts in one place and ends in another. Most lap timers only model a circuit — one line crossed repeatedly — and find zero laps in such a session.
 - **Lap timing with no setup.** If a datalog already knows where its timing lines were, RacePlex reads them back out and times the run immediately: from GPX Start/Finish waypoints, or by reconstructing the lines from RaceBox's own lap-number column.
+- **A stance tool grounded in physics.** Where your feet go, and the braking deceleration at which the rear wheels unload and you go over the front. A board endos at about 0.37 g — below the ~0.6 g urethane can grip, which is exactly why boards nosedive instead of skidding. The same sum for a kart gives ~2.1 g: a kart physically cannot endo, which is why no car tool models this.
 
 Other features: automatic track/course detection, sector splits and optimal lap, reference-lap overlays and pace delta, speed heatmaps on a Leaflet map, braking-zone analysis, G-force visualisation, video-with-overlay export via WebCodecs, and Web Bluetooth session download from supported loggers.
 
-Note: **Dragy does not export CSV** (the vendor confirms this) — use the dragy·Lap app's `.vbo` export instead.
+Notes: **Dragy does not export CSV** (the vendor confirms this) — use the dragy·Lap app's `.vbo` export instead. **The GoPro HERO12 has no GPS at all** — GoPro removed it.
 
 ## Pages
 

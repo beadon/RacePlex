@@ -42,11 +42,15 @@ RacePlex stays open. See [LICENSE](LICENSE) and [NOTICE](NOTICE).
 
 | | Status |
 |---|---|
+| **VESC Tool import** — motor current, battery sag, duty cycle and ERPM on the same chart as GPS | ✅ done |
+| **Generic CSV import** — any delimited log with a lat/lon, with a column mapper you can correct | ✅ done |
+| **GoPro `.mp4` import** — the GPS is already in the video; read in-browser, no conversion | ✅ done |
 | **GPX import** — no upstream parser exists | ✅ done |
 | **RaceBox CSV import**, with automatic speed-unit detection | ✅ done |
 | **Point-to-point courses** (start ≠ finish) — hill runs, slalom, drag | ✅ done |
 | **Lap timing with zero setup** — timing lines recovered from the datalog itself | ✅ done |
-| **VESC / eskate telemetry** — motor current, battery sag, ERPM alongside GPS | 🔨 help wanted |
+| **Stance tool** — where your feet go, and the deceleration at which you nosedive | ✅ done |
+| **FIT import** (Garmin / Wahoo / Coros) | 🔨 [help wanted](https://github.com/beadon/RacePlex/issues/17) |
 | **Generic Web Bluetooth** live capture for RaceBox / Dragy | 📋 planned |
 | **RaceChrono CSV v3 import** | 📋 planned |
 
@@ -95,15 +99,24 @@ wrong one produces a ride that charts beautifully and is wrong. Your correction 
 against that device's column layout, so you are only ever asked once. See
 [docs/research/FORMATS.md](docs/research/FORMATS.md).
 
-### If you ride a VESC board, read this
+### If you ride a VESC board
 
-**None of the eskate apps can currently produce a file RacePlex can open.** Not VESC Tool, not
-FreeSK8, not Metr, not Float Control, not the official Onewheel app. Every one of them logs GPS into
-its own bespoke layout.
+**Your VESC Tool log imports directly** — and it brings the ESC channels with it. Motor current,
+battery sag, duty cycle, ERPM and temps land on the **same chart as your GPS trace**.
 
-That's the gap this project exists to close, and it's the top of our help-wanted list — a **VESC Tool
-CSV parser** would unlock every VESC rider *and* let us put motor current and battery sag next to
-GPS on the same chart, which no car-oriented lap timer can do. See the open issues.
+That's the whole reason an eskate-specific tool deserves to exist: **a nosedive is a duty-cycle
+event, not a GPS event.** A GPS trace only ever shows you the aftermath. No car-oriented lap timer
+puts those channels next to each other, because no car driver needs them to.
+
+One detail worth knowing, because getting it wrong would quietly ruin the feature: a VESC log writes
+the ESC at ~12 Hz but only fixes GPS at ~1 Hz. RacePlex keeps **every ESC row at full rate** and
+interpolates position between GPS fixes — rather than the obvious-but-wrong thing, which is to
+decimate the log to the GPS rate and throw away the very resolution a duty-cycle spike lives in.
+(A 0.2 s spike is 2 samples at 12 Hz, and 0.2 samples at 1 Hz.)
+
+Float Control, pOnewheel, Metr and FreeSK8 import through the generic CSV path. If one of yours
+doesn't work, [send us the file](https://github.com/beadon/RacePlex/issues/15) — that is the single
+most useful contribution anyone can make.
 
 ## Documentation
 
