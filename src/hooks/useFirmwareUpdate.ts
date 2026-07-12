@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useAsyncSnapshot } from "@/hooks/useAsyncSnapshot";
 import { toast } from "sonner";
 import type { BleConnection } from "@/lib/bleDatalogger";
 import { useDeviceContext } from "@/contexts/DeviceContext";
@@ -48,9 +49,32 @@ function fwLog(...args: unknown[]): void {
 export function useFirmwareUpdate(connection: BleConnection | null) {
   const { setFlashing, disconnectDevice } = useDeviceContext();
 
-  const [info, setInfo] = useState<DeviceFirmwareInfo | null>(null);
-  const [loadingVersion, setLoadingVersion] = useState(false);
-  const [versionError, setVersionError] = useState<string | null>(null);
+  // Firmware version read is keyed on the connection identity — reconnecting
+  // (or connecting to a different device) automatically refetches.
+  interface VersionSnapshot {
+    info: DeviceFirmwareInfo | null;
+    error: string | null;
+    loaded: boolean;
+  }
+  const EMPTY_VERSION: VersionSnapshot = { info: null, error: null, loaded: false };
+  const connectionKey = connection ? String((connection.server as unknown as { id?: string })?.id ?? "connected") : "disconnected";
+  const loadVersion = useCallback(async (): Promise<VersionSnapshot> => {
+    if (!connection) return { info: null, error: null, loaded: true };
+    try {
+      const info = await readDeviceFirmwareInfo(connection.server);
+      return { info, error: null, loaded: true };
+    } catch (e) {
+      return { info: null, error: errorMessage(e), loaded: true };
+    }
+  }, [connection]);
+  const { data: versionSnapshot, refresh: refreshVersion } = useAsyncSnapshot({
+    key: `firmware:version:${connectionKey}`,
+    initial: EMPTY_VERSION,
+    load: loadVersion,
+  });
+  const info = versionSnapshot.info;
+  const loadingVersion = !!connection && !versionSnapshot.loaded;
+  const versionError = versionSnapshot.error;
 
   const [checking, setChecking] = useState(false);
   const [latestVersion, setLatestVersion] = useState<string | null>(null);
@@ -66,31 +90,15 @@ export function useFirmwareUpdate(connection: BleConnection | null) {
   // closing the error dialog must drop the (stale) software connection.
   const [needsDisconnect, setNeedsDisconnect] = useState(false);
 
-  // Read the installed firmware version whenever a connection appears.
-  useEffect(() => {
-    if (!connection) {
-      setInfo(null);
-      setVersionError(null);
-      return;
-    }
-    let cancelled = false;
-    setLoadingVersion(true);
-    setVersionError(null);
-    readDeviceFirmwareInfo(connection.server)
-      .then((i) => !cancelled && setInfo(i))
-      .catch((e) => !cancelled && setVersionError(errorMessage(e)))
-      .finally(() => !cancelled && setLoadingVersion(false));
-    return () => {
-      cancelled = true;
-    };
-  }, [connection]);
+  // Firmware version fetch handled by useAsyncSnapshot above — no reset
+  // effect needed; disconnection recomputes the snapshot key.
 
   const checkForUpdates = useCallback(async () => {
     if (!connection) return;
     setChecking(true);
     try {
       const current = info ?? (await readDeviceFirmwareInfo(connection.server));
-      if (current !== info) setInfo(current);
+      if (current !== info) void refreshVersion();
       const manifest = await fetchFirmwareManifest();
       setLatestVersion(manifest.version);
       // On beta/preview builds the version check is bypassed so testers can

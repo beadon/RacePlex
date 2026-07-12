@@ -150,6 +150,7 @@ export function FileManagerDrawer({
   // and setState from a callback."
   useEffect(() => {
     if (device.connection && topTab === "device") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- fetchBattery is async and subscribes to an external system (BLE); this is the sanctioned "trigger a fetch when external state changes" case per React docs
       void fetchBattery();
       return;
     }

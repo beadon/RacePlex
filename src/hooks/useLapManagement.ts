@@ -12,7 +12,6 @@ export function useLapManagement(data: ParsedData | null, currentFileName: strin
   const [laps, setLaps] = useState<Lap[]>([]);
   const [selectedLapNumber, setSelectedLapNumber] = useState<number | null>(null);
   const [referenceLapNumber, setReferenceLapNumber] = useState<number | null>(null);
-  const [visibleRange, setVisibleRange] = useState<[number, number]>([0, 0]);
   const [currentIndex, setCurrentIndex] = useState(0);
 
   const selectedCourse: Course | null = selection?.course ?? null;
@@ -26,17 +25,22 @@ export function useLapManagement(data: ParsedData | null, currentFileName: strin
     return data.samples.slice(lap.startIndex, lap.endIndex + 1);
   }, [data, laps, selectedLapNumber]);
 
-  // Reset visible range when filtered samples change
-  // In "All Laps" mode with large datasets, crop to first ~1 minute to reduce initial render cost
-  useEffect(() => {
-    if (filteredSamples.length > 0) {
-      if (selectedLapNumber === null && filteredSamples.length > 1500) {
-        setVisibleRange([0, 1499]);
-      } else {
-        setVisibleRange([0, filteredSamples.length - 1]);
-      }
-    }
+  // The visible range derives from filteredSamples.length + selectedLapNumber
+  // (crop to first 1500 in All Laps for large datasets, otherwise the full
+  // range). A user crop overrides that derived value, stamped against the
+  // current derived range so switching laps re-homes without a reset effect.
+  const derivedVisibleRange = useMemo<[number, number]>(() => {
+    if (filteredSamples.length === 0) return [0, 0];
+    if (selectedLapNumber === null && filteredSamples.length > 1500) return [0, 1499];
+    return [0, filteredSamples.length - 1];
   }, [filteredSamples.length, selectedLapNumber]);
+  const derivedHome = `${derivedVisibleRange[0]}-${derivedVisibleRange[1]}`;
+  const [rangeOverride, setRangeOverride] = useState<{ home: string; value: [number, number] } | null>(null);
+  const visibleRange: [number, number] =
+    rangeOverride && rangeOverride.home === derivedHome
+      ? rangeOverride.value
+      : derivedVisibleRange;
+  const setVisibleRange = (v: [number, number]) => setRangeOverride({ home: derivedHome, value: v });
 
   // Visible samples based on range selection
   const visibleSamples = useMemo((): GpsSample[] => {

@@ -14,9 +14,16 @@ export function useSessionData(
   const [currentFileName, setCurrentFileName] = useState<string | null>(null);
   const [fieldMappings, setFieldMappings] = useState<FieldMapping[]>([]);
 
-  // Sync field visibility when settings change (real-time toggle)
+  // Sync field visibility when settings change (real-time toggle). The rule
+  // wants derived state here, but fieldMappings is user-editable: they may
+  // toggle a field's enabled bit per-session via `handleFieldToggle`. When the
+  // user opens Settings and changes the default-hidden set mid-session, the
+  // intended UX is to overwrite the per-field state with the new default —
+  // effectively a "reset to defaults." That's a genuine external-event
+  // reaction, and there's no derived-state pattern that captures it.
   useEffect(() => {
     if (fieldMappings.length === 0) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- see block-comment above
     setFieldMappings((prev) =>
       prev.map((f) => ({
         ...f,

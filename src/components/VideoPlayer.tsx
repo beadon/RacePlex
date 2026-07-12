@@ -83,9 +83,9 @@ function DraggableOverlay({
     if (!dragging.current && !resizing.current) setLocalPos(position);
   }, [position]);
 
-  useEffect(() => {
-    if (locked) setSelected(false);
-  }, [locked]);
+  // Locked overlays can't be selected. `effectiveSelected` derives from
+  // `selected` and `locked` without a reset effect.
+  const effectiveSelected = selected && !locked;
 
   const [containerWidth, setContainerWidth] = useState(BASE_WIDTH);
   useEffect(() => {
@@ -383,10 +383,11 @@ export const VideoPlayer = memo(function VideoPlayer({
   }, [state.isPlaying, overlaysLocked]);
 
   useEffect(() => {
-    // When overlays are unlocked, always keep controls visible
+    // When overlays are unlocked, we short-circuit into "always visible" via
+    // the derived read at the JSX site (`effectiveControlsVisible` below); no
+    // setState here, so the effect body stays free of state writes.
     if (!overlaysLocked) {
       if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
-      setControlsVisible(true);
       return;
     }
 
@@ -394,10 +395,15 @@ export const VideoPlayer = memo(function VideoPlayer({
       hideTimerRef.current = setTimeout(() => setControlsVisible(false), 3000);
     } else {
       if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- react to external play-state going idle: cancel the auto-hide timer + surface controls
       setControlsVisible(true);
     }
     return () => { if (hideTimerRef.current) clearTimeout(hideTimerRef.current); };
   }, [state.isPlaying, overlaysLocked]);
+
+  // When overlays are unlocked the controls are ALWAYS visible; when locked
+  // they follow the timer-driven `controlsVisible` state above.
+  const effectiveControlsVisible = !overlaysLocked || controlsVisible;
 
   // Video rect tracking
   const [videoRect, setVideoRect] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
@@ -722,7 +728,7 @@ export const VideoPlayer = memo(function VideoPlayer({
         onPointerMove={resetHideTimer}
         onClick={e => e.stopPropagation()}
         className={`absolute bottom-0 left-0 right-0 transition-opacity duration-300 ${
-          controlsVisible ? "opacity-100" : "opacity-0 pointer-events-none"
+          effectiveControlsVisible ? "opacity-100" : "opacity-0 pointer-events-none"
         }`}
       >
         <div className="flex items-center gap-1 px-3 py-1.5 bg-black/70 backdrop-blur-xs">
