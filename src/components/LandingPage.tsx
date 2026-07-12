@@ -17,9 +17,6 @@ import { FileImport } from "@/components/FileImport";
 import { ActionTile } from "@/components/ActionTile";
 import { TrackEditor } from "@/components/TrackEditor";
 import { LocalWeatherDialog } from "@/components/LocalWeatherDialog";
-import { BrowserCompatDialog } from "@/components/BrowserCompatDialog";
-import { ContactDialog } from "@/components/ContactDialog";
-import { CreditsDialog } from "@/components/CreditsDialog";
 import { PluginMount } from "@/plugins/PluginMount";
 import { MountSlot } from "@/plugins/mounts";
 import { useAuth } from "@/contexts/AuthContext";
@@ -80,24 +77,8 @@ export function LandingPage({
   const { t } = useTranslation(["landing", "common"]);
 
   // On the native (Tauri/Android) shell the user has already installed the app,
-  // so the marketing surfaces (hero pitch, roadmap, GitHub/sponsor links) just
-  // add noise — hide them. The DIY-logger tile stays (it's genuinely useful).
+  // so the hero pitch just adds noise — hide it.
   const native = isNativeApp();
-
-  const roadmapItems = t("landing:roadmap.items", { returnObjects: true }) as {
-    text: string;
-    sub?: string[];
-    /** Shipped — rendered struck through to show it's landed. */
-    done?: boolean;
-  }[];
-
-  // Group roadmap items by their trailing month/quarter parenthetical (works
-  // across locales — handles both ASCII "()" and full-width "（）") so we can
-  // draw a divider whenever the timeframe changes.
-  const roadmapTimeframe = (text: string): string => {
-    const match = text.match(/[（(]([^（()）]*)[）)]\s*$/);
-    return match ? match[1].trim() : "";
-  };
 
   return (
     <div className="min-h-screen bg-background flex flex-col safe-area-x">
@@ -177,7 +158,8 @@ export function LandingPage({
                   icon={Map}
                   title={t("landing:tiles.tracks.title")}
                   description={t("landing:tiles.tracks.description")}
-                  badge={enableCloud ? t("landing:tiles.tracks.badge") : undefined}
+                  /* No badge. Upstream dangled "🎁 contribute tracks, earn free cloud storage"
+                     here; RacePlex has no cloud tier to reward anyone with. */
                 />
               }
             />
@@ -205,65 +187,17 @@ export function LandingPage({
             <PluginMount slot={MountSlot.Landing} ctx={{}} />
           </div>
 
-          {/* Roadmap — what's still coming, with rough timing estimates.
-              Hidden on native: it's a sales surface for a user who's already in. */}
-          {!native && (
-          <div className="rounded-xl border border-border bg-card/50 p-5">
-            <div className="flex items-center gap-2">
-              <Route className="h-5 w-5 text-primary" />
-              <h3 className="text-base font-semibold text-foreground">
-                {t("landing:roadmap.title")}
-              </h3>
-              <span className="text-xs text-muted-foreground">
-                ({t("landing:roadmap.estimated")})
-              </span>
-            </div>
-            <p className="mt-3 text-sm text-muted-foreground">
-              {t("landing:roadmap.blurb")}
-            </p>
-            <ul className="mt-3 space-y-2">
-              {roadmapItems.map((item, i) => {
-                const showDivider =
-                  i > 0 && roadmapTimeframe(item.text) !== roadmapTimeframe(roadmapItems[i - 1].text);
-                return (
-                  <Fragment key={item.text}>
-                    {showDivider && (
-                      <li aria-hidden="true" className="my-1 border-t border-border/60" />
-                    )}
-                    <li className="text-sm text-muted-foreground">
-                      <div className="flex items-start gap-2">
-                        <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary/60" />
-                        <span className={item.done ? "line-through opacity-70" : undefined}>{item.text}</span>
-                      </div>
-                      {item.sub && item.sub.length > 0 && (
-                        <ul className="mt-1.5 space-y-1 pl-5">
-                          {item.sub.map((sub) => (
-                            <li key={sub} className="flex items-start gap-2">
-                              <span className="mt-[7px] h-1 w-1 shrink-0 rounded-full bg-primary/40" />
-                              <span className={item.done ? "line-through opacity-70" : undefined}>{sub}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </li>
-                  </Fragment>
-                );
-              })}
-            </ul>
-            <p className="mt-3 text-sm font-medium text-foreground">
-              {t("landing:roadmap.contact")}
-            </p>
-          </div>
-          )}
-
-          {/* Reference dialogs — Credits sits to the left of Browser Compatibility. */}
+          {/* No roadmap, no "contact us", no credits/compat buttons.
+              Upstream's landing page is a product surface — a feature roadmap with delivery
+              estimates, a sales contact CTA, and tiering. RacePlex isn't selling anything, so
+              the page just says what the app is and lets you drop a file on it. Roadmap lives
+              where it belongs for an open-source project: GitHub issues.
+              (Map data attribution is unaffected — Leaflet/CARTO/OSM credit each other on the
+              map layer itself, which is where the licences actually require it.) */}
           <div className="flex flex-wrap items-center justify-center gap-3">
-            <CreditsDialog />
-            <BrowserCompatDialog />
             <span className="inline-flex">
               <LocalWeatherDialog />
             </span>
-            <ContactDialog variant="header" />
           </div>
 
           {enableAdmin && isAdmin && (
@@ -286,31 +220,22 @@ export function LandingPage({
           isPreviewBuild() ? "border-warning/60 bg-warning/10" : "border-border",
         )}
       >
-        {/* Operated-by + build stamp read as one solid block. On the stable
-            (non-preview) build, Privacy flanks it on the left and Terms on the
-            right; the preview build keeps the block centered + the warning. */}
+        {/* No Privacy / Terms links. Those are the legal surface of a service that collects
+            data and offers an account; RacePlex is neither. Everything runs locally, nothing
+            is uploaded, and there is nobody to agree to terms with. */}
         <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-1">
-          {!isPreviewBuild() && (
-            <Link
-              to="/privacy"
-              className="inline-flex items-center gap-1 text-[11px] text-muted-foreground/60 transition-colors hover:text-muted-foreground"
-            >
-              <Shield className="w-3 h-3" />
-              {t("landing:links.privacy")}
-            </Link>
-          )}
-
           <div>
+            {/* No "Operated by <LLC>" line. RacePlex is not operated by a company — it's an
+                open-source project, so the footer points at the source, not at an owner. */}
             <p className="text-center text-xs text-muted-foreground">
-              {t("landing:footer.operatedBy")}{" "}
               <a
-                href="https://PerchWerks.com"
+                href="https://github.com/beadon/RacePlex"
                 target="_blank"
                 rel="noopener noreferrer"
-                onClick={(e) => interceptExternal(e, "https://PerchWerks.com")}
+                onClick={(e) => interceptExternal(e, "https://github.com/beadon/RacePlex")}
                 className="font-medium text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
               >
-                PerchWerks LLC
+                {t("landing:footer.openSource")}
               </a>
             </p>
             <p
@@ -339,15 +264,6 @@ export function LandingPage({
             </p>
           </div>
 
-          {!isPreviewBuild() && (
-            <Link
-              to="/terms"
-              className="inline-flex items-center gap-1 text-[11px] text-muted-foreground/60 transition-colors hover:text-muted-foreground"
-            >
-              <FileText className="w-3 h-3" />
-              {t("landing:links.terms")}
-            </Link>
-          )}
         </div>
         {isPreviewBuild() && (
           <p className="mx-auto mt-2 max-w-2xl text-center text-[11px] leading-relaxed text-warning">

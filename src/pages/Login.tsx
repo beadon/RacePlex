@@ -97,16 +97,7 @@ export default function Login() {
           <ArrowLeft className="w-4 h-4" /> {t('backToHome')}
         </Button>
 
-        <div className="flex items-center justify-center gap-6">
-          <Link to="/privacy" className="inline-flex items-center gap-1 text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors">
-            <Shield className="w-3 h-3" />
-            {t('landing:links.privacy')}
-          </Link>
-          <Link to="/terms" className="inline-flex items-center gap-1 text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors">
-            <FileText className="w-3 h-3" />
-            {t('landing:links.terms')}
-          </Link>
-        </div>
+        {/* No Privacy / Terms links — RacePlex has no service to have terms with. */}
       </div>
       </div>
     </div>

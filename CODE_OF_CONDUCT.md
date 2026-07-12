@@ -59,8 +59,15 @@ representative at an online or offline event.
 ## Enforcement
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be
-reported to the community leaders responsible for enforcement at
-support@perchwerks.com.
+reported to the maintainers of this project by opening a
+[private security advisory](https://github.com/beadon/RacePlex/security/advisories/new)
+on the RacePlex repository (which is private to the maintainers), or by
+contacting a maintainer directly through GitHub.
+
+(This previously pointed at `support@perchwerks.com` — the company behind the
+upstream project RacePlex is forked from. They are not responsible for conduct
+in this fork, and reports about this project should not go to them.)
+
 All complaints will be reviewed and investigated promptly and fairly.
 
 All community leaders are obligated to respect the privacy and security of the

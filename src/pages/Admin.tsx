@@ -11,7 +11,6 @@ import { TracksTab } from '@/components/admin/TracksTab';
 import { CoursesTab } from '@/components/admin/CoursesTab';
 import { ToolsTab } from '@/components/admin/ToolsTab';
 import { BannedIpsTab } from '@/components/admin/BannedIpsTab';
-import { MessagesTab } from '@/components/admin/MessagesTab';
 import { UsersTab } from '@/components/admin/UsersTab';
 import { LeaderboardsTab } from '@/components/admin/LeaderboardsTab';
 
@@ -19,7 +18,6 @@ export default function Admin() {
   const { t } = useTranslation('admin');
   const { user, isAdmin, loading, logout } = useAuth();
   const navigate = useNavigate();
-  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -58,16 +56,8 @@ export default function Admin() {
       </header>
 
       <main className="flex-1 p-6 max-w-6xl mx-auto w-full">
-        <Tabs defaultValue="messages" className="w-full">
-          <TabsList className="grid w-full grid-cols-8">
-            <TabsTrigger value="messages" className="relative">
-              {t('tabs.messages')}
-              {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center">
-                  {unreadCount > 99 ? "99+" : unreadCount}
-                </span>
-              )}
-            </TabsTrigger>
+        <Tabs defaultValue="submissions" className="w-full">
+          <TabsList className="grid w-full grid-cols-7">
             <TabsTrigger value="submissions">{t('tabs.submissions')}</TabsTrigger>
             <TabsTrigger value="users">{t('tabs.users')}</TabsTrigger>
             <TabsTrigger value="tracks">{t('tabs.tracks')}</TabsTrigger>
@@ -76,7 +66,6 @@ export default function Admin() {
             <TabsTrigger value="tools">{t('tabs.tools')}</TabsTrigger>
             <TabsTrigger value="banned">{t('tabs.banned')}</TabsTrigger>
           </TabsList>
-          <TabsContent value="messages"><MessagesTab onUnreadCount={setUnreadCount} /></TabsContent>
           <TabsContent value="submissions"><SubmissionsTab /></TabsContent>
           <TabsContent value="users"><UsersTab /></TabsContent>
           <TabsContent value="tracks"><TracksTab /></TabsContent>

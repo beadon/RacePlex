@@ -17,7 +17,7 @@
  * (`getSpeedColor` in `lib/speedHeatmap.ts`).
  */
 
-export type PaletteId = 'raceplex' | 'classic' | 'retro' | 'neon' | 'original';
+export type PaletteId = 'raceplex' | 'classic' | 'retro' | 'neon' | 'lime' | 'original';
 
 export interface PaletteMeta {
   id: PaletteId;
@@ -41,6 +41,8 @@ export const PALETTES: readonly PaletteMeta[] = [
   { id: 'retro', swatch: ['#0C1627', '#9E1A3B', '#E6B00F'] },
   // High-tech: neon green and hologram blue on near-black.
   { id: 'neon', swatch: ['#0B0C0E', '#28F67E', '#41DCFB'] },
+  // The logo's own colours: its lime trace on the near-black plate it's drawn on.
+  { id: 'lime', swatch: ['#0D0F11', '#C8FA4B', '#3BD8F7'] },
   // Upstream DataViewer look (violet). Kept selectable so nothing is lost.
   { id: 'original', swatch: ['#FAFAFA', '#8846B4', '#E9B10C'] },
 ] as const;

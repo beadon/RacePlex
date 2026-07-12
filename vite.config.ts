@@ -204,7 +204,10 @@ export default defineConfig(async ({ mode }) => {
   const branch = gitBranch();
   const commitDate = gitCommitDate();
 
-  const DEFAULT_PLUGIN_PACKAGES = "@perchwerks/eye-in-the-sky";
+  // No default plugin package. Upstream loads its proprietary AI-coaching plugin here
+  // (@perchwerks/eye-in-the-sky, a paid add-on). RacePlex has no paid add-ons and ships
+  // no closed-source plugin, so the list is empty unless an operator opts in explicitly.
+  const DEFAULT_PLUGIN_PACKAGES = "";
   const pluginPackages = (env.DOVE_PLUGIN_PACKAGES || DEFAULT_PLUGIN_PACKAGES)
     .split(",")
     .map((s) => s.trim())

@@ -128,16 +128,9 @@ export default function Register() {
                 onChange={e => setConfirmAge(e.target.checked)}
                 className="mt-0.5 h-4 w-4 shrink-0 rounded border-input accent-primary"
               />
-              <span>
-                <Trans
-                  t={t}
-                  i18nKey="register.ageConfirm"
-                  components={{
-                    terms: <Link to="/terms" className="text-primary hover:underline" />,
-                    privacy: <Link to="/privacy" className="text-primary hover:underline" />,
-                  }}
-                />
-              </span>
+              {/* Age confirmation only. Upstream also required agreeing to its Terms and
+                  Privacy Policy here; RacePlex is not a service and has neither. */}
+              <span>{t('register.ageConfirm')}</span>
             </label>
             <div className="flex items-center gap-3">
               {!native && <PlanCheckoutSummary value={plan} config={config} />}

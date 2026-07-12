@@ -10,7 +10,6 @@ import {
 } from "@/components/ui/dialog";
 import { MailPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ContactDialog, CATEGORY_NEW_DATALOGGER } from "@/components/ContactDialog";
 import { isNativeApp } from "@/lib/platform";
 import { cn } from "@/lib/utils";
 
@@ -141,17 +140,19 @@ export function LoggerPicker({ open, onOpenChange, bleSupported, onSelectFledgli
               onClick={() => (native && onSelectAlfano ? onSelectAlfano() : setInfo("alfano"))}
             />
           </div>
-
-          {/* Don't see your logger? Open the contact form pre-set to request one. */}
-          <ContactDialog
-            defaultCategory={CATEGORY_NEW_DATALOGGER}
-            trigger={
-              <Button variant="outline" className="w-full gap-2">
-                <MailPlus className="h-4 w-4" />
-                {t("requestLogger")}
-              </Button>
-            }
-          />
+          {/* Don't see your logger? Open a GitHub issue. Upstream opened a contact form here;
+              an open-source project takes format requests in public, where a sample file can be
+              attached and anyone can pick the work up. Adding parsers is the whole point. */}
+          <a
+            href="https://github.com/beadon/RacePlex/issues/new"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <Button variant="outline" className="w-full gap-2">
+              <MailPlus className="h-4 w-4" />
+              {t("requestLogger")}
+            </Button>
+          </a>
 
           <p className="text-[11px] leading-relaxed text-muted-foreground/70">
             {t("trademarks")}

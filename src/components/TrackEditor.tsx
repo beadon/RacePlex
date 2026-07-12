@@ -577,12 +577,9 @@ function CourseDrawingMini({ points, size = 36 }: { points: Array<{ lat: number;
       )}
       <Button variant="outline" size="sm" onClick={openAddTrack} className="w-full"><Plus className="w-4 h-4 mr-2" />{t('trackEditor.addTrack')}</Button>
       <div className="flex justify-start pt-2">{submitToDbControls}</div>
-      {CLOUD_ENABLED && (
-        <p className="flex items-center gap-1.5 text-xs text-primary">
-          <span aria-hidden>🎁</span>
-          {t('trackEditor.submitGift')}
-        </p>
-      )}
+      {/* No "contribute tracks, earn free cloud storage" incentive. That is upstream's
+          cloud-quota scheme; RacePlex has no cloud tier to reward anyone with, so dangling
+          one would be a lie. Contribute tracks because sharing them is useful. */}
     </div>
   );
 

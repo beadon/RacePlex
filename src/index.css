@@ -579,6 +579,126 @@
     --sidebar-border: 190 30% 20%;
     --sidebar-ring: 145 92% 56%;
   }
+
+  /* ── Lime Trace ───────────────────────────────────────────────────────────────
+     The palette that matches the RacePlex logo. The mark is a speed trace drawn on
+     chart axes, and its accent is a lime `#C8FA4B` on a near-black plate `#0D0F11`,
+     with muted olive axes `#4A5148`. Those exact colours are reproduced here, so the
+     logo sits in the UI as if it were made for it — because it was.
+
+     The designer supplied a light variant of the mark too (`#3E6E12`, a deep olive),
+     and light mode uses precisely that, rather than a lightened guess at the dark one.
+
+     Note `--lap-best` is a TRUE green (142°) here, the opposite of what `neon` does.
+     Neon's brand colour is a spring green, so there `--lap-best` moves to lime to stay
+     clear of it. Here the brand colour IS the lime, so `--lap-best` moves back. Either
+     way the rule holds: the fastest-lap colour must never collapse into the brand
+     colour, or a highlighted lap row reads as chrome instead of as data. The gap is
+     65° (dark) / 51° (light), well past the 25° the tests demand. */
+  [data-palette="lime"] {
+    --background: 90 20% 96%;
+    --foreground: 100 25% 10%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 100 25% 10%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 100 25% 10%;
+
+    /* #3E6E12 — the logo's light-mode trace, exactly. 6.10:1 on white. */
+    --primary: 91 72% 25%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 90 16% 91%;
+    --secondary-foreground: 100 20% 22%;
+
+    --muted: 90 16% 92%;
+    --muted-foreground: 105 10% 36%;
+
+    --accent: 193 95% 26%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 72% 41%;
+    --destructive-foreground: 0 0% 100%;
+
+    --warning: 30 98% 32%;
+    --warning-foreground: 0 0% 100%;
+
+    --success: 142 72% 26%;
+    --success-foreground: 0 0% 100%;
+
+    --border: 90 14% 84%;
+    --input: 90 14% 87%;
+    --ring: 91 72% 25%;
+
+    --lap-best: 142 72% 26%;
+
+    --chart-grid: 90 14% 87%;
+    --chart-axis: 105 10% 36%;
+
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 100 25% 10%;
+    --sidebar-primary: 91 72% 25%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 90 16% 91%;
+    --sidebar-accent-foreground: 100 20% 22%;
+    --sidebar-border: 90 14% 84%;
+    --sidebar-ring: 91 72% 25%;
+  }
+
+  .dark[data-palette="lime"] {
+    /* #0D0F11 — the plate the logo's icon is drawn on. */
+    --background: 210 13% 6%;
+    --foreground: 90 8% 95%;
+
+    --card: 210 10% 9%;
+    --card-foreground: 90 8% 95%;
+
+    --popover: 210 12% 7%;
+    --popover-foreground: 90 8% 95%;
+
+    /* #C8FA4B — the logo's trace, exactly. 15.76:1 on the plate above. */
+    --primary: 76.9 94.1% 63.6%;
+    --primary-foreground: 210 13% 6%;
+
+    --secondary: 107 8% 16%;
+    --secondary-foreground: 90 8% 90%;
+
+    /* Olive-tinted greys, taken from the mark's axes (#4A5148). This is what keeps
+       Lime Trace from reading as a re-skin of `neon`, whose greys are blue-black. */
+    --muted: 107 7% 14%;
+    --muted-foreground: 107 9% 66%;
+
+    --accent: 190 92% 60%;
+    --accent-foreground: 210 13% 6%;
+
+    --destructive: 0 85% 66%;
+    --destructive-foreground: 210 13% 6%;
+
+    --warning: 38 96% 58%;
+    --warning-foreground: 210 13% 6%;
+
+    --success: 142 70% 52%;
+    --success-foreground: 210 13% 6%;
+
+    --border: 107 10% 20%;
+    --input: 107 8% 16%;
+    --ring: 76.9 94.1% 63.6%;
+
+    --lap-best: 142 70% 52%;
+
+    --chart-grid: 107 8% 18%;
+    --chart-axis: 107 9% 66%;
+
+    --sidebar-background: 210 10% 9%;
+    --sidebar-foreground: 90 8% 95%;
+    --sidebar-primary: 76.9 94.1% 63.6%;
+    --sidebar-primary-foreground: 210 13% 6%;
+    --sidebar-accent: 107 8% 16%;
+    --sidebar-accent-foreground: 90 8% 90%;
+    --sidebar-border: 107 10% 20%;
+    --sidebar-ring: 76.9 94.1% 63.6%;
+  }
 }
 
 @layer base {

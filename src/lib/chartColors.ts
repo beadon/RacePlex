@@ -153,6 +153,32 @@ const palettes: Record<PaletteId, { dark: ChartColorPalette; light: ChartColorPa
       deltaText: 'hsl(200, 40%, 18%)',
     },
   },
+
+  // Lime Trace — olive-tinted greys, mirroring the mark's own axes (#4A5148).
+  lime: {
+    dark: {
+      background: 'hsl(210, 10%, 9%)',
+      grid: 'hsl(107, 8%, 18%)',
+      axisText: 'hsl(107, 9%, 66%)',
+      tooltipBg: 'hsla(210, 10%, 9%, 0.9)',
+      tooltipBorder: 'hsl(107, 10%, 24%)',
+      scrubCursor: 'hsl(0, 85%, 66%)',
+      zeroLine: 'hsla(107, 9%, 66%, 0.4)',
+      refLine: 'hsla(107, 9%, 66%, 0.5)',
+      deltaText: 'hsl(90, 8%, 92%)',
+    },
+    light: {
+      background: 'hsl(0, 0%, 100%)',
+      grid: 'hsl(90, 14%, 87%)',
+      axisText: 'hsl(105, 10%, 36%)',
+      tooltipBg: 'hsla(0, 0%, 100%, 0.95)',
+      tooltipBorder: 'hsl(90, 14%, 80%)',
+      scrubCursor: 'hsl(0, 72%, 41%)',
+      zeroLine: 'hsla(105, 10%, 36%, 0.4)',
+      refLine: 'hsla(105, 10%, 36%, 0.5)',
+      deltaText: 'hsl(100, 25%, 18%)',
+    },
+  },
 };
 
 /**

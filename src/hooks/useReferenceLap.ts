@@ -8,6 +8,26 @@ import { computeLapPace, type DeltaMethod } from "@/lib/lapDelta";
 import { findSpeedEvents } from "@/lib/speedEvents";
 
 /**
+ * How far the selected lap is off the fastest lap in the session, in ms.
+ *
+ * Returns null when there is nothing to compare against — which, importantly, includes a session
+ * with only ONE lap. That lap is trivially its own fastest, so the delta would be exactly 0.000s,
+ * and a "Δ best" panel full of zeros reads as a broken chart rather than as "no comparison
+ * exists". Single-lap sessions are the common case for eskate: a hill run, a slalom, a drag pass
+ * are all point-to-point, one-run affairs.
+ */
+export function lapTimeDeltaToFastest(
+  laps: Pick<Lap, "lapNumber" | "lapTimeMs">[],
+  selectedLapNumber: number | null,
+): number | null {
+  if (selectedLapNumber === null || laps.length < 2) return null;
+  const selected = laps.find((l) => l.lapNumber === selectedLapNumber);
+  if (!selected) return null;
+  const fastest = laps.reduce((min, lap) => (lap.lapTimeMs < min.lapTimeMs ? lap : min), laps[0]);
+  return selected.lapTimeMs - fastest.lapTimeMs;
+}
+
+/**
  * Manages reference lap comparison: external reference loading, pace
  * calculation, speed deltas, and fastest-lap fallback comparison.
  */
@@ -53,17 +73,10 @@ export function useReferenceLap(
     };
   }, [filteredSamples, referenceSamples, useKph, deltaMethod, deltaSampleMeters]);
 
-  // Calculate lap to fastest delta (direct lap time difference)
-  const lapToFastestDelta = useMemo((): number | null => {
-    if (selectedLapNumber === null || laps.length === 0) return null;
-    const selectedLap = laps.find((l) => l.lapNumber === selectedLapNumber);
-    if (!selectedLap) return null;
-    const fastestLap = laps.reduce(
-      (min, lap) => (lap.lapTimeMs < min.lapTimeMs ? lap : min),
-      laps[0]
-    );
-    return selectedLap.lapTimeMs - fastestLap.lapTimeMs;
-  }, [laps, selectedLapNumber]);
+  const lapToFastestDelta = useMemo(
+    () => lapTimeDeltaToFastest(laps, selectedLapNumber),
+    [laps, selectedLapNumber],
+  );
 
   // Calculate pace diff for display (vs reference if selected, else vs best)
   const { paceDiff, paceDiffLabel, deltaTopSpeed, deltaMinSpeed, refAvgTopSpeed, refAvgMinSpeed } = useMemo((): {
@@ -124,8 +137,11 @@ export function useReferenceLap(
       };
     }
 
-    // Otherwise, compare to fastest lap
-    if (fastestLapSamples.length > 0) {
+    // Otherwise, compare to the fastest lap — but only if there IS another lap to be fastest.
+    // With a single lap, `fastestLapSamples` is the selected lap itself, so every delta comes out
+    // as exactly zero: the lap compared against itself. That is not a measurement, and showing it
+    // as one is worse than showing nothing.
+    if (laps.length > 1 && fastestLapSamples.length > 0) {
       const bestPaceData = computeLapPace(filteredSamples, fastestLapSamples, { method: deltaMethod, sampleMeters: deltaSampleMeters });
       const lastPace = bestPaceData.filter((p) => p !== null).pop() ?? null;
       const { deltaTop, deltaMin, refTop, refMin } = calculateDeltas(fastestLapSamples);
@@ -140,7 +156,7 @@ export function useReferenceLap(
     }
 
     return defaultResult;
-  }, [filteredSamples, referenceSamples, fastestLapSamples, paceData, selectedLapNumber, deltaMethod, deltaSampleMeters]);
+  }, [filteredSamples, referenceSamples, fastestLapSamples, paceData, selectedLapNumber, deltaMethod, deltaSampleMeters, laps]);
 
   return {
     referenceSamples,

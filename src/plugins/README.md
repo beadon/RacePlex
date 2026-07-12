@@ -147,9 +147,19 @@ const prefs = await store.get<{ theme: string }>("prefs");
 
 ## The AI coach as a public npm package
 
+> **⚠️ RacePlex does not ship this plugin.** `@perchwerks/eye-in-the-sky` is *upstream's*
+> AI-coaching plugin — a paid add-on belonging to the project RacePlex is forked from. It has
+> been removed from `optionalDependencies`, and `DEFAULT_PLUGIN_PACKAGES` in `vite.config.ts` is
+> empty, so RacePlex builds with **no plugins loaded** and no closed-source code. RacePlex has no
+> paid add-ons.
+>
+> The plugin *mechanism* below is retained and still works — it's a good extension point, and an
+> operator can opt in to their own package via `DOVE_PLUGIN_PACKAGES`. The rest of this section
+> documents how upstream publishes theirs, and is kept as a worked example.
+
 The coach lives in its own repo and is published to the **public npm registry**
 as [`@perchwerks/eye-in-the-sky`](https://www.npmjs.com/package/@perchwerks/eye-in-the-sky).
-It's an `optionalDependency` of the app, so a clone that skips optional installs
+Upstream declares it an `optionalDependency`, so a clone that skips optional installs
 still builds fine — the loader just compiles to an empty plugin list.
 
 ### One-time: publish the coach package

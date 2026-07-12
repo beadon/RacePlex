@@ -2,7 +2,7 @@
   "_machine": true,
   "tagline": "Visualizzatore di dati telemetrici",
   "hero": {
-    "title": "Visualizzatore di telemetria VBO, MoTeC, AiM e NMEA gratuito",
+    "title": "Cronometraggio e telemetria open source per skateboard elettrici",
     "subtitle": "Carica un datalog ed esplora i tuoi giri: mappe, grafici, settori e sincronizzazione video. Tutto funziona localmente nel tuo browser. Nessun caricamento, nessun account richiesto.",
     "offlineNote": "Funziona completamente offline ora che l’hai visitato!"
   },
@@ -21,8 +21,7 @@
     },
     "tracks": {
       "title": "Gestisci le piste",
-      "description": "Crea, disegna e modifica i layout di piste e percorsi",
-      "badge": "🎁 Condividi circuiti con l'account e ottieni spazio cloud gratuito"
+      "description": "Crea, disegna e modifica i layout di piste e percorsi"
     },
     "build": {
       "title": "Costruisci il tuo logger",
@@ -34,70 +33,11 @@
     }
   },
   "links": {
-    "privacy": "Informativa sulla privacy",
-    "terms": "Termini di servizio",
     "admin": "Amministrazione"
   },
-  "roadmap": {
-    "title": "Roadmap delle funzionalità in arrivo",
-    "estimated": "i tempi sono stimati",
-    "blurb": "Siamo supportati da un team che sviluppa software di livello enterprise da oltre 20 anni. Siamo qui per offrire qualità.",
-    "items": [
-      {
-        "text": "Logger DIY più economico aggiornato (giugno '26)"
-      },
-      {
-        "text": "Classifiche dei circuiti e profili utente pubblici (giugno '26)",
-        "done": true
-      },
-      {
-        "text": "Download da logger di terze parti (giugno '26)",
-        "sub": [
-          "MyChron: decodificato, richiede l'app nativa",
-          "Alfano: Bluetooth seriale, richiede l'app nativa"
-        ],
-        "done": true
-      },
-      {
-        "text": "App nativa (luglio '26)"
-      },
-      {
-        "text": "Organizzazione della giornata di gara (luglio '26)"
-      },
-      {
-        "text": "Gestione del team e inventario (luglio '26)",
-        "sub": [
-          "Gratis per team di 5 persone o meno"
-        ]
-      },
-      {
-        "text": "Primi prodotti fisici (luglio '26)",
-        "sub": [
-          "Kit DIY Fledgling con custodia",
-          "Sensore contagiri autonomo"
-        ]
-      },
-      {
-        "text": "Aggiornamenti all'editor video (agosto '26)"
-      },
-      {
-        "text": "Integrazione Insta360 — avvio/stop/GPS (agosto '26)"
-      },
-      {
-        "text": "Aggiornamenti al coaching offline (agosto '26)"
-      },
-      {
-        "text": "Coaching con IA, una volta stabilizzate le funzioni principali (agosto '26)"
-      },
-      {
-        "text": "Uscita del logger «Vulture» (Q1 '27)"
-      }
-    ],
-    "contact": "Contattaci per qualsiasi funzionalità di cui hai bisogno!"
-  },
   "footer": {
-    "operatedBy": "Gestito da",
-    "previewWarning": "Questo branch è in esecuzione su un database di anteprima: gli account possono essere cancellati in qualsiasi momento. Non fare affidamento sul salvataggio dei dati in un luogo diverso da quello locale. Se i pagamenti sono attivati, <strong>non inserire informazioni di pagamento reali.</strong>"
+    "previewWarning": "Questo branch è in esecuzione su un database di anteprima: gli account possono essere cancellati in qualsiasi momento. Non fare affidamento sul salvataggio dei dati in un luogo diverso da quello locale. Se i pagamenti sono attivati, <strong>non inserire informazioni di pagamento reali.</strong>",
+    "openSource": "Open source — GPL-3.0 · Vedi su GitHub"
   },
   "about": {
     "trigger": "Informazioni",
@@ -117,8 +57,8 @@
         "body": "Non trovi la tua pista? Puoi definire tracciati di piste e circuiti personalizzati nell'editor e poi inviarli al database del sito affinché tutti li usino. Gli invii vengono revisionati prima di essere aggiunti."
       },
       "oss": {
-        "heading": "Gratuito e open source",
-        "body": "Tutte le funzionalità locali di RacePlex sono completamente gratuite e il codice sorgente è aperto e disponibile su GitHub. L'archiviazione cloud facoltativa ha un piano gratuito; più spazio e il coaching con IA sono componenti aggiuntivi a pagamento che coprono i costi di server e modelli — ma tutte le funzionalità locali resteranno sempre gratuite."
+        "heading": "Open source",
+        "body": "RacePlex è open source con licenza GPL-3.0 e il codice è su GitHub. Nessun piano a pagamento, nessuna funzione bloccata, nessun account: tutte le funzioni sono disponibili per tutti e l’app funziona interamente sul tuo dispositivo."
       }
     },
     "features": [
@@ -210,71 +150,6 @@
         "body": "Esportazioni CSV da Race Studio 3 (stile RS2Analysis) per MyChron 5/6. Estensione: <code>.csv</code>"
       }
     }
-  },
-  "credits": {
-    "trigger": "Crediti",
-    "title": "Crediti",
-    "intro": "Costruito sulle spalle di questi incredibili progetti open source e servizi gratuiti."
-  },
-  "contact": {
-    "trigger": "Contatti",
-    "title": "Contattaci",
-    "description": "Inviaci un messaggio: li leggiamo tutti.",
-    "categoryLabel": "Categoria *",
-    "categoryPlaceholder": "Seleziona una categoria",
-    "categories": {
-      "comment": "Commento",
-      "featureRequest": "Richiesta di funzionalità",
-      "complaint": "Reclamo",
-      "bugReport": "Segnalazione di bug",
-      "newDatalogger": "Connessione di un nuovo data logger"
-    },
-    "emailLabel": "Email",
-    "emailOptional": "(facoltativa, per una risposta)",
-    "emailPlaceholder": "tua@email.com",
-    "messageLabel": "Messaggio *",
-    "messagePlaceholder": "A cosa stai pensando?",
-    "sending": "Invio…",
-    "send": "Invia messaggio",
-    "missingFields": "Campi mancanti",
-    "missingFieldsDesc": "Seleziona una categoria e inserisci un messaggio.",
-    "tooLong": "Messaggio troppo lungo",
-    "tooLongDesc": "Massimo 2000 caratteri.",
-    "error": "Errore",
-    "errorGeneric": "Qualcosa è andato storto.",
-    "errorNetwork": "Impossibile inviare il messaggio. Riprova.",
-    "sent": "Messaggio inviato!",
-    "sentDesc": "Grazie per il tuo feedback."
-  },
-  "browserCompat": {
-    "trigger": "Compatibilità del browser",
-    "title": "Compatibilità del browser",
-    "description": "Supporto delle funzionalità per il tuo browser attuale.",
-    "note": "Tutte le funzionalità principali funzionano sui browser moderni. Alcune funzionalità avanzate funzionano meglio in Chrome o Edge.",
-    "features": {
-      "gpsFileParsing": "Analisi dei file GPS",
-      "videoSync": "Sincronizzazione video",
-      "videoExport": "Esportazione video (MP4)",
-      "audioInExport": "Audio nell'esportazione",
-      "bleDatalogger": "Datalogger BLE",
-      "wifiDatalogger": "Datalogger Wi-Fi (MyChron)",
-      "filePicker": "Selettore di file",
-      "pwaOffline": "PWA / Offline"
-    },
-    "statuses": {
-      "supported": "Supportato",
-      "notAvailable": "Non disponibile",
-      "frameAccurate": "Precisione al fotogramma",
-      "approximateSync": "Sincronizzazione approssimativa",
-      "mp4H264": "MP4 (H.264)",
-      "webmFallback": "Ripiego WebM",
-      "silentExports": "Esportazioni mute",
-      "native": "Nativo",
-      "fileInputFallback": "Ripiego su campo file"
-    },
-    "triggerNative": "Compatibilità del dispositivo",
-    "titleNative": "Compatibilità del dispositivo",
-    "descriptionNative": "Supporto delle funzioni su questo dispositivo."
   },
   "fileImport": {
     "title": "Apri un datalog",

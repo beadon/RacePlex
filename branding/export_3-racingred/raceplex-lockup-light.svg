@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="200" viewBox="0 0 720 200" font-family="&#39;Space Grotesk&#39;,&#39;Helvetica Neue&#39;,Arial,sans-serif"><rect width="720" height="200" fill="none"></rect><g transform="translate(24,44) scale(1.12)">
+  <g fill="none" stroke-linecap="round">
+    <line x1="32" y1="55" x2="88" y2="55" stroke="#C9CEC2" stroke-width="1.4" stroke-opacity="0.55"></line>
+    <line x1="32" y1="34" x2="88" y2="34" stroke="#C9CEC2" stroke-width="1.4" stroke-opacity="0.55"></line>
+    <line x1="18" y1="14" x2="18" y2="78" stroke="#AEB3A6" stroke-width="2.8"></line>
+    <line x1="18" y1="78" x2="88" y2="78" stroke="#AEB3A6" stroke-width="2.8"></line>
+    <line x1="36" y1="78" x2="36" y2="82" stroke="#AEB3A6" stroke-width="2"></line>
+    <line x1="54" y1="78" x2="54" y2="82" stroke="#AEB3A6" stroke-width="2"></line>
+    <line x1="72" y1="78" x2="72" y2="82" stroke="#AEB3A6" stroke-width="2"></line>
+    <path d="M26 66 L40 58 L54 62 L68 40 L84 22 L84 78 L26 78 Z" fill="#BD162C" fill-opacity="0.12" stroke="none"></path>
+    <polyline points="26,66 40,58 54,62 68,40 84,22" stroke="#BD162C" stroke-width="6" stroke-linejoin="round"></polyline>
+    <circle cx="40" cy="58" r="3.4" fill="#BD162C"></circle><circle cx="54" cy="62" r="3.4" fill="#BD162C"></circle><circle cx="68" cy="40" r="3.4" fill="#BD162C"></circle><circle cx="84" cy="22" r="4.6" fill="#BD162C"></circle>
+  </g></g><text x="176" y="104" font-size="72" font-weight="700" letter-spacing="1"><tspan fill="#12140F">RACE</tspan><tspan fill="#BD162C">PLEX</tspan></text><text x="178" y="140" font-family="&#39;JetBrains Mono&#39;,monospace" font-size="16" letter-spacing="7" fill="#5B6055">LAP TIMING · TELEMETRY</text></svg>
