@@ -1,0 +1,70 @@
+name: Track Submission
+description: Contribute a track so everyone gets lap times on it.
+labels: ["track submission"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for contributing a track! Every track here ships with the app, so
+        the next rider at your spot gets lap times without setting anything up.
+
+        **The easy way:** draw the track in the app (Track Editor → draw the
+        outline and the start/finish line), then hit **Submit Track**. It hands
+        you a block of JSON — paste it below and you're done. You never need to
+        touch git.
+
+        **The direct way:** if you'd rather open the pull request yourself, drop
+        the file in `tracks/` and run `bun run build:tracks`. See
+        [CONTRIBUTING.md](../blob/main/CONTRIBUTING.md#adding-a-track).
+
+        Either way a maintainer reviews it before it lands, and CI checks the
+        geometry actually works.
+  - type: input
+    id: track-name
+    attributes:
+      label: Track name
+      description: The full name riders would recognise.
+      placeholder: "Maryhill Loops Road"
+    validations:
+      required: true
+  - type: input
+    id: location
+    attributes:
+      label: Where is it?
+      description: Town / region, and a maps link if you have one. Helps us sanity-check the coordinates.
+      placeholder: "Goldendale, WA, USA"
+    validations:
+      required: true
+  - type: textarea
+    id: track-json
+    attributes:
+      label: Track JSON
+      description: Paste what the app's Submit Track button gave you. This becomes `tracks/<name>.json` verbatim.
+      render: json
+      placeholder: |
+        {
+          "name": "Maryhill Loops Road",
+          "shortName": "MARY",
+          "defaultCourse": "Full",
+          "courses": [ ... ]
+        }
+    validations:
+      required: true
+  - type: dropdown
+    id: verified
+    attributes:
+      label: Have you ridden it with this timing line?
+      description: A track that produces a correct lap time on a real session is worth ten that merely look right on a map.
+      options:
+        - "Yes — I have a session and the lap times come out right"
+        - "No — I drew it from the map but haven't ridden it yet"
+    validations:
+      required: true
+  - type: input
+    id: attribution
+    attributes:
+      label: Credit
+      description: How you'd like to be credited in the track file, if at all. Leave blank to stay anonymous.
+      placeholder: "@your-handle"
+    validations:
+      required: false

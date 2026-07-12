@@ -11,6 +11,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > from git history and grouped by theme rather than exhaustive per-commit
 > detail.
 
+## [3.1.0] - unreleased
+
+### Added
+- **A community track collection you can actually contribute to.** Tracks now live in
+  a `tracks/` directory in the repo — one JSON file per track — and adding one is a
+  pull request. No account, no server, nothing anyone can switch off. `public/tracks.json`
+  and `public/drawings.json` are generated from it (`bun run build:tracks`, wired into
+  `bun run build`), so the whole collection still ships offline in the bundle.
+  See [CONTRIBUTING.md](CONTRIBUTING.md#adding-a-track), plan `0008`.
+- **Track submissions are checked before they land.** CI validates every track: schema,
+  coordinate ranges, and — the checks that matter — that no timing line is implausibly
+  wide (which catches a transposed digit, otherwise a perfectly valid coordinate) and
+  that every timing line actually crosses the drawn outline. Duplicate track names and
+  short names are rejected too.
+- **Track Submission issue template**, so a rider who has never used git can paste the
+  JSON the app gives them and let a maintainer open the PR.
+
 ## [3.0.0] - 2026-06-30
 
 ### Added
