@@ -11,9 +11,11 @@ concurrency:
   cancel-in-progress: true
 
 # pull-requests: write  -> post/update the per-PR coverage summary comment
-# The live % badge is pushed to a GitHub Gist (see the gist step below) with a
-# dedicated GIST_TOKEN secret, so this workflow no longer needs `contents: write`
-# and no longer publishes a `badges` branch (which Cloudflare kept trying to deploy).
+#
+# There is no coverage badge. Upstream pushed one to a GitHub Gist, which needs a
+# GIST_TOKEN secret + COVERAGE_GIST_ID variable that this fork has never had — so
+# it failed every push to main, for a picture the README never displayed. The gate
+# below is what actually protects the code; a badge is only a social signal.
 permissions:
   pull-requests: write
 
@@ -65,24 +67,3 @@ jobs:
               // Fork PRs get a read-only token and can't comment — warn, don't fail.
               core.warning(`Could not post coverage comment: ${e.message}`);
             }
-
-      # ---- Live % badge: push shields.io endpoint fields to a GitHub Gist ----
-      # No Git branch is created, so Cloudflare Workers Builds has nothing extra
-      # to deploy. coverage-badge.mjs computes the message + color and hands them
-      # over as step outputs. Requires repo secret GIST_TOKEN (PAT with `gist`
-      # scope) and repo variable COVERAGE_GIST_ID (see README → Coverage badge).
-      - name: Generate badge fields
-        id: badge
-        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
-        run: bun run coverage:badge
-
-      - name: Push badge to coverage gist
-        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
-        uses: Schneegans/dynamic-badges-action@v1.9.0
-        with:
-          auth: ${{ secrets.GIST_TOKEN }}
-          gistID: ${{ vars.COVERAGE_GIST_ID }}
-          filename: coverage-badge.json
-          label: coverage
-          message: ${{ steps.badge.outputs.message }}
-          color: ${{ steps.badge.outputs.color }}

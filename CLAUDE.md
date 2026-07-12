@@ -497,8 +497,10 @@ bun run test:coverage  # Vitest + v8 coverage (enforces thresholds in vitest.con
 > exclude `hooks/`/`lib/` to inflate it. Thresholds are floors — ratchet up.
 
 CI is five parallel workflows (`lint`, `typecheck`, `test`, `build`, `coverage`).
-`coverage.yml` enforces thresholds, posts a per-PR comment, and pushes the badge to
-a **GitHub Gist** (secret `GIST_TOKEN` + var `COVERAGE_GIST_ID`).
+`coverage.yml` enforces thresholds and posts a per-PR comment. **No badge** — upstream
+pushed one to a GitHub Gist needing a `GIST_TOKEN` this fork never had, so it failed
+every push for a picture the README never showed. The threshold is the gate; don't
+re-add badge plumbing that needs a secret to stay green.
 
 ---
 
