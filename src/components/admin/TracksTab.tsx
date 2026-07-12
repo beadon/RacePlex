@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,11 +8,13 @@ import { toast } from '@/hooks/use-toast';
 import { getDatabase } from '@/lib/db';
 import type { DbTrack } from '@/lib/db/types';
 import { Plus, Trash2, Edit2, Check, X } from 'lucide-react';
+import { useAsyncSnapshot } from '@/hooks/useAsyncSnapshot';
+
+interface Snapshot { items: DbTrack[]; loaded: boolean }
+const INITIAL: Snapshot = { items: [], loaded: false };
 
 export function TracksTab() {
   const { t } = useTranslation('admin');
-  const [tracks, setTracks] = useState<DbTrack[]>([]);
-  const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [editShortName, setEditShortName] = useState('');
@@ -22,17 +24,23 @@ export function TracksTab() {
 
   const db = getDatabase();
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const loadSnapshot = useCallback(async (): Promise<Snapshot> => {
     try {
-      setTracks(await db.getTracks());
+      return { items: await db.getTracks(), loaded: true };
     } catch (e: unknown) {
       toast({ title: t('common.error'), description: (e as Error).message, variant: 'destructive' });
+      return { items: [], loaded: true };
     }
-    setLoading(false);
   }, [db, t]);
 
-  useEffect(() => { load(); }, [load]);
+  const { data, refresh } = useAsyncSnapshot({
+    key: 'admin:tracks',
+    initial: INITIAL,
+    load: loadSnapshot,
+  });
+  const tracks = data.items;
+  const loading = !data.loaded;
+  const load = refresh;
 
   const handleAdd = async () => {
     if (!newName.trim() || !newShortName.trim()) return;

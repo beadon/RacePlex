@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState, useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ArrowLeft,
@@ -112,9 +112,19 @@ export function DeviceTracksTab({ connection }: DeviceTracksTabProps) {
     }
   }, [connection, t]);
 
-  useEffect(() => {
-    syncAll();
-  }, [syncAll]);
+  // React 19: run the initial sync from a subscribe callback (not useEffect)
+  // so the setState calls inside syncAll — progress reporting throughout the
+  // device I/O loop — happen in an event context, not during a render effect.
+  // Consumers just need a stable snapshot; there's no external event to
+  // listen for, so getSnapshot is a constant.
+  useSyncExternalStore(
+    useCallback(() => {
+      void syncAll();
+      return () => {};
+    }, [syncAll]),
+    () => 0,
+    () => 0,
+  );
 
   // ── helpers to check if track exists on device ──
   const isOnDevice = (entry: MergedTrackEntry) =>

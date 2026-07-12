@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -13,32 +13,49 @@ import {
   createEngineClass, updateEngineClass, deleteEngineClass,
 } from "@/plugins/cloud-sync/leaderboardClient";
 import { fetchEngineClasses } from "@/plugins/cloud-sync/leaderboardClient";
+import { useAsyncSnapshot } from "@/hooks/useAsyncSnapshot";
 
 type StatusFilter = "all" | "approved" | "denied";
 const UNCLASSIFIED = "__none__";
 
+interface Snapshot {
+  entries: LeaderboardEntry[] | null;
+  classes: EngineClass[];
+  error: string | null;
+  loaded: boolean;
+}
+
+const EMPTY: Snapshot = { entries: null, classes: [], error: null, loaded: false };
+
 export function LeaderboardsTab() {
   const { t } = useTranslation("admin");
-  const [entries, setEntries] = useState<LeaderboardEntry[] | null>(null);
-  const [classes, setClasses] = useState<EngineClass[]>([]);
   const [filter, setFilter] = useState<StatusFilter>("all");
-  const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
 
-  const classesById = useMemo(() => new Map(classes.map((c) => [c.id, c])), [classes]);
-
-  const refresh = useCallback(async () => {
+  const load = useCallback(async (): Promise<Snapshot> => {
     try {
       const [e, c] = await Promise.all([fetchAllEntriesAdmin(), fetchEngineClasses()]);
-      setEntries(e);
-      setClasses(c);
-      setError(null);
+      return { entries: e, classes: c, error: null, loaded: true };
     } catch (err) {
-      setError(err instanceof Error ? err.message : t("leaderboards.loadFailed"));
+      return {
+        entries: null,
+        classes: [],
+        error: err instanceof Error ? err.message : t("leaderboards.loadFailed"),
+        loaded: true,
+      };
     }
   }, [t]);
 
-  useEffect(() => { void refresh(); }, [refresh]);
+  const { data, refresh } = useAsyncSnapshot({
+    key: "admin:leaderboards",
+    initial: EMPTY,
+    load,
+  });
+  const entries = data.entries;
+  const classes = data.classes;
+  const error = data.error;
+
+  const classesById = useMemo(() => new Map(classes.map((c) => [c.id, c])), [classes]);
 
   const patch = async (id: string, p: Parameters<typeof updateEntryAdmin>[1]) => {
     setBusy(id);

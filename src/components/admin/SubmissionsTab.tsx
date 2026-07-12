@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,6 +7,7 @@ import { toast } from '@/hooks/use-toast';
 import { getDatabase } from '@/lib/db';
 import type { DbSubmission } from '@/lib/db/types';
 import { Check, X, Layers, Route, User } from 'lucide-react';
+import { useAsyncSnapshot } from '@/hooks/useAsyncSnapshot';
 
 /** Mini SVG preview of a submitted track outline. */
 function DrawingPreview({ points, size = 64 }: { points: Array<{ lat: number; lon: number }>; size?: number }) {
@@ -57,36 +58,48 @@ function groupSubmissions(submissions: DbSubmission[]): SubmissionGroup[] {
   return groups;
 }
 
+interface Snapshot {
+  submissions: DbSubmission[];
+  namesByUserId: Record<string, string>;
+  loaded: boolean;
+}
+
+const EMPTY_SNAPSHOT: Snapshot = { submissions: [], namesByUserId: {}, loaded: false };
+
 export function SubmissionsTab() {
   const { t } = useTranslation('admin');
-  const [submissions, setSubmissions] = useState<DbSubmission[]>([]);
   const [filter, setFilter] = useState('pending');
-  const [loading, setLoading] = useState(true);
   const [reviewNotes, setReviewNotes] = useState<Record<string, string>>({});
-  // Resolve submitter user ids → display names so the admin sees who contributed.
-  const [namesByUserId, setNamesByUserId] = useState<Record<string, string>>({});
 
   const db = getDatabase();
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const loadSnapshot = useCallback(async (): Promise<Snapshot> => {
     try {
       const data = await db.getSubmissions(filter === 'all' ? undefined : filter);
-      setSubmissions(data);
       const userIds = data.map(s => s.submitted_by_user_id).filter((id): id is string => !!id);
+      let namesByUserId: Record<string, string> = {};
       if (userIds.length > 0) {
         try {
           const profiles = await db.getProfiles(userIds);
-          setNamesByUserId(Object.fromEntries(profiles.map(p => [p.user_id, p.display_name])));
+          namesByUserId = Object.fromEntries(profiles.map(p => [p.user_id, p.display_name]));
         } catch { /* names are a nicety; fall back to the raw id */ }
       }
+      return { submissions: data, namesByUserId, loaded: true };
     } catch (e: unknown) {
       toast({ title: t('submissions.loadError'), description: (e as Error).message, variant: 'destructive' });
+      return { submissions: [], namesByUserId: {}, loaded: true };
     }
-    setLoading(false);
   }, [filter, db, t]);
 
-  useEffect(() => { load(); }, [load]);
+  const { data, refresh } = useAsyncSnapshot({
+    key: `admin:submissions:${filter}`,
+    initial: EMPTY_SNAPSHOT,
+    load: loadSnapshot,
+  });
+  const submissions = data.submissions;
+  const namesByUserId = data.namesByUserId;
+  const loading = !data.loaded;
+  const load = refresh;
 
   const groups = useMemo(() => groupSubmissions(submissions), [submissions]);
 
