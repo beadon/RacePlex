@@ -46,14 +46,16 @@ guessing required.
 
 **Branch:** `chore/deps-major-migration`
 **Worktree:** `/Users/beadon/work/RacePlex-deps`
-**Latest commit:** `53cb4c5` — ESLint 10 refactor pass complete (121 → 0 lint errors)
+**Latest commit:** `a83fe37` — sonner + tailwind-merge + lucide-react (all bumps done)
 
 **Suite state:**
-- lint: **0 errors, 0 warnings** — the ESLint 10 migration is finished
+- lint: 0 errors, 0 warnings
 - typecheck: green
 - test:run: green (2255/2255 — includes the 8 useAsyncSnapshot tests)
 - build: green (Rolldown, ~1.3s)
 - verify:import: green (both samples, correct lap times)
+
+**Ready to open PR into `main`.**
 
 **Commits already on the branch (in order):**
 1. `765111d` — `chore: sync bun.lock — drop stale @perchwerks/eye-in-the-sky entry`
@@ -74,6 +76,10 @@ guessing required.
 16. `3367b2f` — `refactor(graphview): drop 7 set-state-in-effect via derived+override pattern`
 17. `e29a12f` — `refactor: 7 more set-state-in-effect (VideoPlayer, usePlayback, useLapManagement, useSessionData, useFirmwareUpdate, FileManagerDrawer)`
 18. `53cb4c5` — `refactor: eliminate the last 11 react-hooks/set-state-in-effect errors` — **lint fully green**
+19. `cd09555` — `plan 0009: mark ESLint 10 migration complete; refresh commit trail`
+20. `7049cda` — `chore(deps): bump react-router-dom 6 → 7`
+21. `4edde8b` — `chore(deps): bump react-resizable-panels 2 → 4` — Group/Separator/panelRef/etc.
+22. `a83fe37` — `chore(deps): bump sonner 1→2, tailwind-merge 2→3, lucide-react 0.462→1` — all bumps done
 
 ## Overall progress (checklist)
 
@@ -88,9 +94,9 @@ guessing required.
 - [x] Bump ESLint 9 → 10 + eslint-plugin-react-hooks 5 → 7 + friends
   - [x] Install stack, keep rules at v7-recommended (NOT downgraded/suppressed)
   - [x] All 121 initially-flagged sites cleared (0 errors, 0 warnings on lint)
-- [ ] Bump react-router-dom 6 → 7
-- [ ] Bump react-resizable-panels 2 → 4
-- [ ] Bump sonner 1 → 2, tailwind-merge 2 → 3, lucide-react 0.462 → 1.24
+- [x] Bump react-router-dom 6 → 7 (`7049cda`)
+- [x] Bump react-resizable-panels 2 → 4 (`4edde8b`)
+- [x] Bump sonner 1 → 2, tailwind-merge 2 → 3, lucide-react 0.462 → 1.24 (`a83fe37`)
 - [ ] Final green suite + verify:import + push branch + open PR + close
       superseded Dependabot PRs (#5–#12)
 
