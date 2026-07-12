@@ -1,7 +1,6 @@
 {
   "name": "raceplex",
   "private": true,
-  "version": "0.2.0",
   "description": "Open-source lap timing and telemetry analysis for electric skateboards. A fork of Dove's DataViewer.",
   "license": "GPL-3.0-or-later",
   "author": "RacePlex contributors",

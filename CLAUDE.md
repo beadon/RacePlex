@@ -55,8 +55,10 @@ free and fully local.** We do not commit to upstreaming changes, but we do stay
 roughly mergeable with upstream so we can keep pulling their improvements —
 follow their conventions where it's free, deviate where we have a better answer.
 
-**Things NOT ours, do not treat as authoritative:** `CHANGELOG.md` and `docs/plans/`,
-`docs/reviews/` are upstream's history. Do not rewrite them. The BLE stack is
+**Things NOT ours, do not treat as authoritative:** `docs/plans/` and `docs/reviews/` are
+upstream's history. Do not rewrite them. (`CHANGELOG.md` is **gone** — release notes live in GitHub
+Releases; see *Releasing*.) The `.claude/skills/beta-release-*` skills encode upstream's
+BETA-branch, changelog-driven release process, which RacePlex does not use — **ignore them**. The BLE stack is
 specific to upstream's *DovesDataLogger* hardware — a generic Web Bluetooth path
 for RaceBox/Dragy does not exist yet.
 
@@ -89,11 +91,14 @@ for RaceBox/Dragy does not exist yet.
    input, and asserts the map drew and the lap time is right. Ground truth: the
    real RaceBox session's own `Lap` column says **36.480 s**; our GPX path gives
    36.547 s and our CSV path 36.520 s. If those move, something broke.
-4. **Changelog is part of the change.** Add user-facing changes to `CHANGELOG.md`
-   as you make them. **Once a beta version is picked (e.g. `2.6.0`), keep that
-   heading as `## [2.6.0] - unreleased` and keep adding under it until it ships —
-   do NOT create a new `[Unreleased]` block or bump the patch on every commit.**
-   Only on release do you set the date/tag, then start the next version.
+4. **Release notes live in GitHub Releases — there is no CHANGELOG.md.**
+   It was deleted deliberately. A changelog file and a GitHub release are two
+   records of the same thing, and they drift: ours had already reached `3.1.0`
+   (upstream's numbering) while `package.json` said `0.1.0`. One source of truth.
+   → **Write the *why* in the commit message**, which is where it belongs and which
+   nothing can desync from. At release time, the notes are assembled from
+   `git log <last-tag>..HEAD` and published with `gh release create`. See
+   *Releasing* below.
 5. **Docs stay in sync.** Update `README.md`, this file, the relevant `docs/*`, and
    the in-app `CreditsDialog.tsx` alongside the code that makes them stale (parsers,
    env vars, dependencies, architecture). README Credits and `CreditsDialog` must
@@ -440,6 +445,34 @@ Other key settings: `gForceSmoothing(+Strength)`, `gForceSource`,
 
 The analysis charts, lap delta, multi-lap overlays, and the G-G diagram have their
 own design notes: **→ `docs/subsystems.md`**.
+
+---
+
+## Releasing
+
+RacePlex versions itself from `0.x`. **Upstream's `2.x`/`3.x` tags are their release history, kept
+because we kept their commits — they are not ours.** Ignore them.
+
+**The git tag IS the version.** There is no version in `package.json` (it was deleted — a second
+place to state the same fact is a second place to drift), and no `CHANGELOG.md`. The build reads
+`git describe --tags --abbrev=0` and bakes it into the footer stamp.
+
+```sh
+# 1. tag, and push ONLY that tag:
+git tag -a v0.3.0 -m "…"
+git push origin refs/tags/v0.3.0     # NOT --tags: that would publish upstream's 21 inherited tags
+# 2. publish the notes, assembled from the commit log:
+gh release create v0.3.0 --title "…" --notes-file notes.md --latest
+```
+
+A build with no tags visible (a shallow CI clone, a fresh fork) shows the **commit hash alone**
+rather than inventing a version. That is deliberate: a stale number is worse than no number.
+
+`--latest` is not optional: without it GitHub may pick an inherited `v3.x` tag as "latest" by
+semver, making our newest release look like a regression.
+
+Write the release notes for a **rider**, not a maintainer: what they can now do that they couldn't,
+and what is still broken. `v0.2.0` is the model.
 
 ---
 

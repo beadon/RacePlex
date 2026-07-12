@@ -7,7 +7,7 @@
 //   - any other branch  → "my-branch · 837b514 · <commit time>"
 
 export interface BuildInfo {
-  /** App version from package.json (e.g. "2.0.0"). */
+  /** App version, from the nearest GIT TAG (e.g. "0.2.0"). Empty when there is no tag. */
   version: string;
   /** Short git commit hash, or "unknown" when it couldn't be resolved. */
   commit: string;
@@ -23,7 +23,7 @@ const GITHUB_REPO = "TheAngryRaven/DovesDataViewer";
 const PROD_BRANCH = "main";
 
 export const buildInfo: BuildInfo = {
-  version: import.meta.env.VITE_APP_VERSION ?? "0.0.0",
+  version: import.meta.env.VITE_APP_VERSION ?? "",
   commit: import.meta.env.VITE_GIT_HASH ?? "unknown",
   buildDate: import.meta.env.VITE_BUILD_DATE ?? "",
   branch: import.meta.env.VITE_GIT_BRANCH ?? "unknown",
@@ -71,6 +71,8 @@ export function formatBuildLabel(info: BuildInfo = buildInfo): string {
     if (time) parts.push(time);
     return parts.join(" · ");
   }
+  // No tag (shallow clone, fresh fork) -> show the hash alone rather than inventing a version.
+  if (!info.version) return hasCommit(info) ? info.commit : "";
   return hasCommit(info) ? `v${info.version} · ${info.commit}` : `v${info.version}`;
 }
 
