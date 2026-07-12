@@ -264,24 +264,39 @@ export function SetupsTab({
   // as the signal); with a single candidate vehicle, pre-select that too (which
   // also preloads its latest setup). Both pickers stay visible — these are
   // convenience defaults, not locks.
+  //
+  // Why an effect + setState: `selectedTypeId` and `form.vehicleId` are the
+  // user's editable form state; deriving them from `[vehicles, vehicleTypes,
+  // filteredVehicles]` would mean losing the user's later manual pick when the
+  // garage changes shape. The auto-fill is a one-shot convenience that has to
+  // WRITE into that state to work. React's `react-hooks/set-state-in-effect`
+  // rule flags this as a smell; useEffectEvent doesn't help because the
+  // setState is still inside the effect body per the rule's static trace. See
+  // react.dev/reference/react/useEffectEvent → "DON'T Use to hide missing
+  // dependencies or avoid re-runs that should happen."
   useEffect(() => {
     if (mode !== "new") return;
     if (!selectedTypeId) {
       const typesInUse = [...new Set(vehicles.map(v => v.vehicleTypeId).filter(Boolean))];
       const only = typesInUse.length === 1 ? typesInUse[0] : vehicleTypes.length === 1 ? vehicleTypes[0].id : "";
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- see block-comment above
       if (only && vehicleTypes.some(vt => vt.id === only)) handleTypeChange(only);
       return;
     }
     if (filteredVehicles.length === 1 && form.vehicleId !== filteredVehicles[0].id) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- see block-comment above
       handleVehicleChange(filteredVehicles[0].id);
     }
   }, [mode, selectedTypeId, vehicles, vehicleTypes, filteredVehicles, form.vehicleId, handleTypeChange, handleVehicleChange]);
 
   // External shortcut (the Vehicles tab's "New type" button) drops the user
   // straight into the vehicle-type creator. The parent clears the request once
-  // handled so it fires once per click.
+  // handled so it fires once per click. This is a genuine "signal received"
+  // pattern with no alternative — the parent has no ref-based imperative API
+  // here, and the state to set (`mode`) is child-owned.
   useEffect(() => {
     if (!requestNewType) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-shot signal from parent; parent's onRequestNewTypeHandled clears the flag
     setMode("new-type");
     onRequestNewTypeHandled?.();
   }, [requestNewType, onRequestNewTypeHandled]);
