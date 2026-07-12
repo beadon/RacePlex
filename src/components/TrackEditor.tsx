@@ -55,9 +55,6 @@ import { Send } from 'lucide-react';
 
 import type { Lap, GpsSample } from '@/types/racing';
 
-// The free-cloud-storage nudge only applies on builds where accounts exist.
-const CLOUD_ENABLED = import.meta.env.VITE_ENABLE_CLOUD === 'true';
-
 // List ergonomics: scroll a list once it gets past a handful of rows, and add a
 // filter box for the tracks list once it's genuinely long.
 const SCROLLABLE_LIST_THRESHOLD = 5;

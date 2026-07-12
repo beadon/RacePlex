@@ -201,7 +201,6 @@
     "alreadySubmitted": "Già nelle classifiche.",
     "loadFailed": "Impossibile caricare i tuoi invii.",
     "close": "Chiudi",
-    "customTrackNotice": "Questo circuito non è nell'elenco integrato: il suo tracciato e i settori vengono inviati con il tuo snapshot e il circuito viene aggiunto al database della community per la revisione.",
-    "trackAdded": "Circuito inviato al database della community per la revisione."
+    "customTrackNotice": "Questo circuito non è nell'elenco integrato: il suo tracciato e i settori vengono inviati con il tuo snapshot e il circuito viene aggiunto al database della community per la revisione."
   }
 }

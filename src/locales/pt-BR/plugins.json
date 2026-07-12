@@ -201,7 +201,6 @@
     "alreadySubmitted": "Já está nos rankings.",
     "loadFailed": "Não foi possível carregar seus envios.",
     "close": "Fechar",
-    "customTrackNotice": "Esta pista não está na lista integrada — seu traçado e setores são enviados com o seu snapshot, e a pista é adicionada ao banco de dados da comunidade para revisão.",
-    "trackAdded": "Pista enviada ao banco de dados da comunidade para revisão."
+    "customTrackNotice": "Esta pista não está na lista integrada — seu traçado e setores são enviados com o seu snapshot, e a pista é adicionada ao banco de dados da comunidade para revisão."
   }
 }

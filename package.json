@@ -16,8 +16,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "prebuild": "bun run build:tracks",
     "build": "vite build",
     "build:dev": "vite build --mode development",
+    "build:tracks": "node scripts/build-tracks.mjs",
+    "check:tracks": "node scripts/build-tracks.mjs --check",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest",
