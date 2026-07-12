@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useContext, lazy, Suspense } from 'react';
+import { useAsyncSnapshot } from '@/hooks/useAsyncSnapshot';
 import { useTranslation } from 'react-i18next';
 import { Plus, Trash2, Edit2, Check, Code, Copy, HelpCircle, Route, ArrowLeft, ChevronRight, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -86,18 +87,17 @@ export function TrackEditor({
   triggerButton,
 }: TrackCourseEditorProps) {
   const { t } = useTranslation('tracks');
-  const [tracks, setTracks] = useState<Track[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [isSelectDialogOpen, setIsSelectDialogOpen] = useState(false);
   const [isAddCourseOpen, setIsAddCourseOpen] = useState(false);
   const [isAddTrackOpen, setIsAddTrackOpen] = useState(false);
-  const [tempTrackName, setTempTrackName] = useState<string>('');
-  const [tempCourseName, setTempCourseName] = useState<string>('');
+  // Override + derived pattern: the dialog-opening effect used to reset these
+  // from `selection`; now we derive from selection while it's open and layer
+  // user picks on top.
+  const [tempTrackOverride, setTempTrackOverride] = useState<string | null>(null);
+  const [tempCourseOverride, setTempCourseOverride] = useState<string | null>(null);
   const [isJsonViewOpen, setIsJsonViewOpen] = useState(false);
-  const [courseDrawings, setCourseDrawings] = useState<Record<string, CourseDrawing[]>>({});
   // Courses that still differ from the community DB (drives the always-visible
   // "Submit to DB" button: greyed out when there's nothing new to send).
-  const [pendingSubmissionCount, setPendingSubmissionCount] = useState(0);
   // Manage mode is a drill-down: the Tracks list ('tracks') → a single track's
   // Course manager ('courses'). `tempTrackName` holds the track being drilled into.
   const [managePage, setManagePage] = useState<'tracks' | 'courses'>('tracks');
@@ -131,29 +131,38 @@ function CourseDrawingMini({ points, size = 36 }: { points: Array<{ lat: number;
 }
 
 
-  useEffect(() => {
-    let mounted = true;
-    loadTracks().then(loadedTracks => {
-      if (mounted) { setTracks(loadedTracks); setIsLoading(false); }
-    });
-    loadCourseDrawings().then(drawings => {
-      if (mounted) setCourseDrawings(drawings);
-    });
-    return () => { mounted = false; };
+  interface EditorSnapshot {
+    tracks: Track[];
+    courseDrawings: Record<string, CourseDrawing[]>;
+    loaded: boolean;
+  }
+  const EMPTY_EDITOR: EditorSnapshot = { tracks: [], courseDrawings: {}, loaded: false };
+  const loadEditor = useCallback(async (): Promise<EditorSnapshot> => {
+    const [tracks, courseDrawings] = await Promise.all([loadTracks(), loadCourseDrawings()]);
+    return { tracks, courseDrawings, loaded: true };
   }, []);
+  const { data: editorData, refresh: refreshEditor } = useAsyncSnapshot({
+    key: 'track-editor',
+    initial: EMPTY_EDITOR,
+    load: loadEditor,
+  });
+  const tracks = editorData.tracks;
+  const courseDrawings = editorData.courseDrawings;
+  const isLoading = !editorData.loaded;
 
-  useEffect(() => {
-    if (isSelectDialogOpen && selection) {
-      setTempTrackName(selection.trackName);
-      setTempCourseName(selection.courseName);
-    }
-  }, [isSelectDialogOpen, selection]);
+  // Derive the temp track/course from the current selection while the dialog
+  // is open; a user pick overrides it.
+  const derivedTempTrack = isSelectDialogOpen && selection ? selection.trackName : '';
+  const derivedTempCourse = isSelectDialogOpen && selection ? selection.courseName : '';
+  const tempTrackName = tempTrackOverride ?? derivedTempTrack;
+  const tempCourseName = tempCourseOverride ?? derivedTempCourse;
+  const setTempTrackName = (n: string) => setTempTrackOverride(n);
+  const setTempCourseName = (n: string) => setTempCourseOverride(n);
 
   const refreshTracks = useCallback(async () => {
-    const loaded = await loadTracks();
-    setTracks(loaded);
-    return loaded;
-  }, []);
+    await refreshEditor();
+    return editorData.tracks;
+  }, [refreshEditor, editorData.tracks]);
 
   // Keep this instance's track list in sync with edits made anywhere — another
   // TrackEditor instance (e.g. the landing-page "Manage Tracks" dialog vs. the
@@ -163,20 +172,26 @@ function CourseDrawingMini({ points, size = 36 }: { points: Array<{ lat: number;
   useEffect(() => {
     return onGarageChange((change) => {
       if (change.store === TRACKS_SYNC_STORE) {
-        loadTracks().then(setTracks);
+        void refreshEditor();
       }
     });
-  }, []);
+  }, [refreshEditor]);
 
-  // Recompute how many courses still need submitting (uses the same diffing the
-  // submit dialog does, so the button greys out when nothing is pending).
-  const refreshPendingSubmissionCount = useCallback(async () => {
+  // Recompute how many courses still need submitting (uses the same diffing
+  // the submit dialog does, so the button greys out when nothing is pending).
+  // Wrapped in a useAsyncSnapshot keyed on the track-name signature so it
+  // recomputes exactly when the track list actually changes shape.
+  const trackKey = tracks.map((t) => `${t.name}:${t.courses.length}`).join(',');
+  const loadPending = useCallback(async () => {
     const defaults = await loadDefaultTracks();
     const plan = buildSubmissionPlan(tracks, defaults, loadSubmittedRecords());
-    setPendingSubmissionCount(plan.pendingCount);
+    return plan.pendingCount;
   }, [tracks]);
-
-  useEffect(() => { refreshPendingSubmissionCount(); }, [refreshPendingSubmissionCount]);
+  const { data: pendingSubmissionCount, refresh: refreshPendingSubmissionCount } = useAsyncSnapshot({
+    key: `track-editor:pending:${trackKey}`,
+    initial: 0,
+    load: loadPending,
+  });
 
   const selectedTrack = useMemo(() => tracks.find(t => t.name === tempTrackName), [tracks, tempTrackName]);
   const availableCourses = selectedTrack?.courses ?? [];
