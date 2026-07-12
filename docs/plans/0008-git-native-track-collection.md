@@ -1,8 +1,10 @@
 # 0008 — Git-native community track collection
 
-**Status:** in progress — `tracks/` + build + CI landed; submit-button rewire landed.
-Remaining: seed the collection (OSM import), delete the dead `supabase/` submission
-function, fix the stale backend prose in `CLAUDE.md`.
+**Status:** in progress — `tracks/` + build + CI landed (#19); submit-button rewire
+landed (#19); `CLAUDE.md` backend prose corrected (#22).
+Remaining: delete the dead `supabase/functions/submit-track`.
+**Not doing:** bulk-seeding from OpenStreetMap (see below) — the collection grows
+from riders.
 **Supersedes (for RacePlex):** upstream's Supabase `submit-track` → `submissions`
 table → admin-approve → hand-commit `tracks.json` loop.
 
@@ -199,16 +201,20 @@ Checked, so nobody has to check again:
 - GPL-3 covers upstream's **code**, not their users' submitted **data**. Even with
   access, bulk-copying it here is not clearly ours to do.
 
-So the seed has to come from elsewhere:
+**The collection is seeded by riders, and that is the whole answer.** Bulk-importing
+from OpenStreetMap was considered and **rejected** — do not revisit it:
 
-1. **OpenStreetMap** (ODbL) — `leisure=track`, `sport=karting`. Gives real outlines by
-   bounding box. Cannot give a start/finish line (that's a judgment call about where a
-   lap begins), so these land as stubs a rider finishes in the editor.
-2. **Riders.** Upstream's one track is a *kart circuit*. RacePlex is for hill runs,
-   slalom, and drag — point-to-point courses (`finishA`/`finishB`) upstream does not
-   even model. The tracks our users want are a stretch of road somebody rides; they are
-   in nobody's database. They only come from riders, which makes the cost of submitting
-   the thing that actually matters.
+- OSM has kart circuits and race tracks. RacePlex is for **hill runs, slalom, and
+  drag** — point-to-point courses (`finishA`/`finishB`) that upstream does not even
+  model. The tracks our users want are a stretch of public road somebody rides. They
+  are not in OSM, or in anyone's database.
+- OSM cannot supply a **start/finish line** anyway — where a lap begins is a judgment
+  call, not a map feature. Every import would land as a stub a rider still has to
+  finish, so the import buys almost nothing.
+
+Which makes the **cost of submitting** the thing that actually matters, and the reason
+the in-app flow hands a rider a ready-to-paste record and a one-click issue. A track
+that produces a correct lap time on a real session is worth ten drawn from a map.
 
 ## Scope
 
