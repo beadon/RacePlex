@@ -1,144 +1,271 @@
 # RacePlex
 
-**Lap timing and telemetry analysis for electric skateboards.**
+RacePlex is a lap timing and telemetry analysis application for electric skateboards. It reads ride
+logs from GPS meters, phone apps, VESC controllers and GoPro cameras, and presents them as a
+speed-coloured track map, lap and sector times, and comparable telemetry charts.
 
-Import a ride from a GPS logger, a phone app, a VESC, or a GoPro video, and get a speed-coloured
-track map, lap and sector times, an optimal lap, and two laps overlaid on the same chart.
-
-Everything runs in your browser. There is no account, no upload and no backend. Your rides stay on
-your device.
-
----
-
-## A fork of Dove's DataViewer
-
-RacePlex is a fork of [Dove's DataViewer](https://github.com/TheAngryRaven/DovesDataViewer) by
-TheAngryRaven, a GPL-3.0 offline-first motorsport telemetry viewer. Its VBO, NMEA, MoTeC and AiM
-parsers, the lap-crossing detection, the sector and optimal-lap maths, and the chart and map layers
-are upstream's work.
-
-RacePlex exists because upstream targets cars and karts. Electric skateboards run at different
-speeds, on different course shapes, with a telemetry channel set that no car tool has reason to
-support (VESC motor current, battery sag, ERPM). RacePlex also stays free and fully local; upstream
-is building a hosted backend and subscription tiers.
-
-We try to stay mergeable with upstream so we can keep pulling their improvements. We follow their
-conventions where that's easy and diverge where we have a good reason. Anything useful here is
-theirs to take, under the licence.
-
-**Licence: GPL-3.0-or-later**, inherited from upstream. See [LICENSE](LICENSE) and [NOTICE](NOTICE).
+The application runs in your browser. It requires no account and no network connection. Ride data is
+parsed locally and stored on your device.
 
 ---
 
-## What RacePlex adds
+## Open source
 
-| | Status |
+RacePlex is licensed under the GPL-3.0-or-later. Every feature is available to everyone. There are
+no paid tiers, no feature gating and no subscription.
+
+**Nothing is uploaded.** Parsing, lap detection and analysis all run in the browser. There is no
+server component, no account system and no telemetry. If you disconnect from the network after the
+first visit, the application continues to work.
+
+**The reference data is data, not code.** Three parts of the project are plain files you can read
+and edit without writing any TypeScript:
+
+| File | Contents |
 |---|---|
-| **VESC Tool import** — motor current, battery sag, duty cycle and ERPM charted alongside GPS | ✅ done |
-| **Generic CSV import** — any delimited log with a lat/lon, with a column mapper you can correct | ✅ done |
-| **GoPro `.mp4` import** — reads the GPS from the video's telemetry track, in the browser | ✅ done |
-| **GPX import** | ✅ done |
-| **RaceBox CSV import**, with automatic speed-unit detection | ✅ done |
-| **Point-to-point courses** — hill runs, slalom, drag, where the finish is somewhere else | ✅ done |
-| **Lap timing with no setup** — timing lines recovered from the datalog itself | ✅ done |
-| **Stance tool** — foot position, weight distribution, and your nosedive threshold | ✅ done |
-| **FIT import** (Garmin / Wahoo / Coros) | 🔨 [help wanted](https://github.com/beadon/RacePlex/issues/17) |
-| **Live capture over Web Bluetooth** (RaceBox / Dragy) | 📋 [planned](https://github.com/beadon/RacePlex/issues/32) |
-| **RaceChrono CSV v3 import** | 📋 [planned](https://github.com/beadon/RacePlex/issues/33) |
+| [`src/data/supported-devices.json`](src/data/supported-devices.json) | The device list shown in the application |
+| [`tracks/`](tracks/) | The community track collection, one file per track |
+| [`docs/research/FORMATS.md`](docs/research/FORMATS.md) | The telemetry format reference |
+
+Adding a device, a track or a format correction is a pull request against one of them.
+
+**You can host it yourself.** `bun run build` produces a static site. It has no backend
+requirements, so it can be served from any static host, a local machine, or a device at the track.
+
+---
+
+## Capabilities
+
+**Import.** Reads GPX, VBO, NMEA, UBX, GoPro `.mp4`, and CSV from RaceBox, VESC Tool, MoTeC, AiM,
+Alfano and Dove. Any other delimited log containing a latitude and a longitude can be imported
+through the column mapper.
+
+**Lap and sector timing.** Detects line crossings with sub-sample interpolation, and reports lap
+times, sector splits, and a theoretical optimal lap assembled from your best sectors. Supports both
+circuits and point-to-point courses.
+
+**Motor telemetry.** VESC logs import with motor current, battery voltage, duty cycle, ERPM and
+temperatures charted on the same timeline as the GPS trace.
+
+**Analysis.** Speed-coloured track map, braking-zone detection, reference-lap overlay with pace
+delta, G-force plots, and video export with data overlays.
+
+**Setup tools.** A stance model that reports weight distribution and the deceleration at which the
+rear wheels unload.
+
+---
+
+## Getting started
+
+1. Open the application and drop a ride log onto the import panel, or click to browse.
+2. If the file contains timing lines, lap times appear immediately. Otherwise, select or draw a
+   course (see [Lap timing](#lap-timing)).
+3. Use the tabs to switch between the map, the telemetry charts, and the lap table.
+
+RacePlex ships with a sample session. Select **Load Sample** on the landing page to try the
+application without a file of your own.
+
+---
+
+## Supported formats
+
+| Format | Extension | Notes |
+|---|---|---|
+| RaceBox CSV | `.csv` | Includes lap numbering, from which RacePlex reconstructs the timing lines. |
+| VESC Tool CSV | `.csv` | Includes the ESC channels. See [Motor telemetry](#motor-telemetry). |
+| GPX | `.gpx` | Start and Finish waypoints, where present, become timing lines. |
+| GoPro video | `.mp4` | GPS is read from the video's GPMF metadata track. |
+| VBO | `.vbo` | RaceLogic VBOX. Exported by Dragy·Lap, RaceChrono and RaceBox. |
+| NMEA 0183 | `.nmea`, `.txt` | |
+| UBX | `.ubx` | u-blox binary. |
+| MoTeC i2 | `.ld`, `.csv` | |
+| AiM | `.csv`, `.xrk`, `.xrz` | MyChron and SoloDL. |
+| Alfano | `.csv` | |
+| iRacing | `.ibt` | |
+| Dove / Dovex | `.dove`, `.dovex` | |
+| Other CSV | `.csv`, `.txt` | Imported through the column mapper. |
+
+Format details, including the layouts and units of each, are documented in
+[docs/research/FORMATS.md](docs/research/FORMATS.md).
 
 ---
 
 ## Supported devices
 
-The full list — with sample rates, prices and the format to export — lives in
-[`src/data/supported-devices.json`](src/data/supported-devices.json) and is shown in the app under
-**Supported Devices**. It's plain data; to add a device, open a pull request.
+The full device list — with sample rates, prices and the format to export — is maintained in
+[`src/data/supported-devices.json`](src/data/supported-devices.json) and displayed in the
+application under **Supported Devices**. To add a device, edit that file and open a pull request.
 
-RacePlex sells no hardware and has no affiliation with any of these vendors.
+RacePlex sells no hardware and has no affiliation with any vendor listed.
 
-### Recommendations
+### Choosing a logger
 
 | | |
 |---|---|
-| **Best for eskate** | **RaceBox Micro (~$129)** — 25 Hz, IMU, records standalone with a hardware button, exports GPX, VBO and CSV. Our test fixtures come from one. |
-| **Best software** | **RaceChrono Pro (~$20)** driving a RaceBox or Dragy over Bluetooth at 25 Hz. Export VBO, NMEA or GPX. Its own CSV format is not supported. |
-| **Cheapest** | A bare **u-blox module (~$25)** logging NMEA or UBX to an SD card. |
-| **A GoPro you already own** | Drop the `.mp4` in. HERO5–11 and HERO13 record 10–18 Hz GPS inside the video. The HERO12 has no GPS. |
-| **A VESC board** | Export the log from VESC Tool. See below. |
+| **RaceBox Micro** (~$129) | 25 Hz, IMU, records standalone with a hardware button. Exports GPX, VBO and CSV. The project's test fixtures come from one. |
+| **RaceChrono Pro** (~$20) | Phone application. Pair it with a RaceBox or Dragy over Bluetooth for 25 Hz logging, and export VBO, NMEA or GPX. Its own CSV format is not supported. |
+| **u-blox module** (~$25) | Logs NMEA or UBX to an SD card. The lowest-cost option. |
+| **GoPro** | HERO5–11 and HERO13 record 10–18 Hz GPS inside the video. The HERO12 has no GPS receiver. |
+| **VESC controller** | Export the ride log from VESC Tool. |
 
 ### Sample rate
 
-An eskate run often lasts under a minute, so the GPS rate matters more than it does for cars. At
-40 km/h:
+An eskate run is often shorter than a minute, which makes the GPS sample rate the most significant
+specification when choosing a logger. At 40 km/h:
 
-| Rate | Distance between fixes | |
+| Rate | Distance between fixes | Typical source |
 |---|---|---|
-| 1 Hz | 11 m | Phone GPS, Garmin, Strava. Too coarse to place a gate or a braking point. |
-| 10 Hz | 1.1 m | Workable. |
-| 25 Hz | 44 cm | Recommended. |
+| 1 Hz | 11 m | Phone GPS, sports watches, Strava |
+| 10 Hz | 1.1 m | Qstarz, Garmin GLO |
+| 25 Hz | 44 cm | RaceBox, Dragy |
 
-A 20-second run at 1 Hz gives you 20 data points. If you're logging with a phone, an external
-Bluetooth GPS receiver is the upgrade that matters.
+At 1 Hz, a 20-second run produces 20 data points, which is not sufficient to locate a braking point
+or an apex. If you log with a phone, adding an external Bluetooth GPS receiver raises the rate to
+10–25 Hz.
 
-### Two things to know
+### Dragy
 
-**Dragy has no CSV export.** The vendor confirms this. Use the dragy·Lap app's `.vbo` export, or run
-the Dragy as a Bluetooth GPS source for RaceChrono.
-
-**An unrecognised CSV will still import.** RacePlex reads GPX, VBO, NMEA, UBX, GoPro `.mp4`, and
-several named CSV formats (RaceBox, VESC, MoTeC, AiM, Alfano, Dove). Anything else with a latitude
-and a longitude falls through to the generic CSV importer, which detects the delimiter, maps the
-columns by name, and shows you the mapping so you can correct it before importing. Time and speed
-units are inferred and displayed, because a wrong unit produces a chart that looks fine and is
-wrong. Your correction is saved against that device's column layout, so you're only asked once.
+Dragy does not provide a CSV export. Export `.vbo` from the Dragy·Lap application, or use the Dragy
+as a Bluetooth GPS source for RaceChrono and export from there.
 
 ---
 
-## VESC boards
+## Lap timing
 
-Export your ride from VESC Tool and import the CSV. The ESC channels come with it: motor current,
-battery sag, duty cycle, ERPM and temperatures are charted on the same timeline as GPS.
+RacePlex times a run by detecting where the ride crosses a timing line. Crossing times are
+interpolated between GPS samples, so a lap time is not limited to the resolution of the log.
 
-This is what makes RacePlex useful on a board. A nosedive shows up as a duty-cycle spike, which a
-GPS trace can only show you after the fact.
+### Courses
 
-One implementation detail, because it affects what you see: a VESC log writes ESC data at about
-12 Hz and GPS fixes at about 1 Hz. RacePlex keeps every ESC row at full rate and interpolates
-position between GPS fixes. Sampling down to the GPS rate would leave a 0.2-second duty-cycle spike
-as a fifth of a data point.
+A course is a set of timing lines: a start/finish line for a circuit, or separate start and finish
+lines for a point-to-point run such as a hill run, a slalom or a drag pass. Split lines divide a lap
+into sectors.
 
-Float Control, pOnewheel, Metr and FreeSK8 import through the generic CSV path. If one of yours
-doesn't work, [send us the file](https://github.com/beadon/RacePlex/issues/15).
+Draw a course in the **Track Editor**, or let RacePlex recover one from the file.
+
+### Recovering timing lines from a file
+
+Some logs already record where their timing lines were. RacePlex reads them back, and lap times
+appear on import without any setup:
+
+- **GPX files** may contain `Start` and `Finish` waypoints. RacePlex places a timing line at each,
+  oriented across your direction of travel at that point.
+- **RaceBox CSV files** contain a lap-number column. Each change in the lap number marks a line
+  crossing, and the GPS columns record where you were, so the geometry can be reconstructed.
+
+### Optimal lap
+
+The optimal lap is the sum of your fastest time in each sector, taken across every complete lap in
+the session. It is at least as fast as your best lap.
 
 ---
 
-## Documentation
+## Motor telemetry
 
-[docs/research/FORMATS.md](docs/research/FORMATS.md) documents every telemetry format RacePlex
-reads: column layouts, byte offsets, and the details that are easy to get wrong. Corrections
-welcome.
+Export a ride log from VESC Tool and import the CSV. Alongside the GPS trace, the ESC channels are
+charted on the same timeline:
+
+- motor current and battery current
+- battery voltage
+- duty cycle
+- ERPM
+- motor and controller temperatures
+- fault codes and pitch
+
+A VESC controller records ESC data faster than it records GPS fixes. RacePlex keeps the ESC data at
+its full rate and interpolates position between fixes, so brief events — a duty-cycle spike lasting
+a fraction of a second — remain visible in the chart.
+
+Float Control, pOnewheel, Metr and FreeSK8 logs import through the column mapper below.
+
+---
+
+## Importing an unrecognised log
+
+If your logger is not listed, import its CSV anyway.
+
+RacePlex detects the delimiter, matches the columns by name, and displays the mapping it has chosen
+alongside a preview: session duration, sample rate, first coordinate, and top speed.
+
+**Check the preview before importing.** Time and speed units cannot be determined from a column name
+alone, so RacePlex infers them and shows the result. If the duration or the top speed is
+implausible, correct the column or the unit from the dropdown.
+
+Your correction is saved against that logger's column layout. The same device will not prompt you
+again.
+
+This path is known to work with Float Control, pOnewheel, Metr, TrackAddict and Qstarz.
+
+---
+
+## Stance tool
+
+The stance tool models weight distribution on the board. Set the wheelbase, deck height, board and
+rider mass, foot positions, weight split and crouch; the tool reports:
+
+- static weight distribution, front and rear
+- combined centre-of-gravity height
+- the braking deceleration at which the rear wheels unload — the point at which the board pitches
+  forward
+- the acceleration at which the front wheels lift
+- the lean angle required to hold a given cornering force
+
+A typical board reaches the forward-pitch threshold at around 0.37 g, below the grip available from
+urethane on asphalt. Crouching lowers the centre of gravity and raises the threshold; moving your
+weight rearward does the same.
+
+The model is rigid-body statics. It does not account for deck flex, bushing lean, or how quickly
+load transfers, so treat the thresholds as an upper bound.
+
+---
 
 ## Development
 
-RacePlex uses **Bun**. `bun.lock` is committed; other lockfiles are gitignored.
+RacePlex uses Bun. `bun.lock` is committed; other lockfiles are ignored.
 
 ```sh
 bun install
-bun run dev          # http://localhost:8080
-bun run test:run     # 2,300+ unit tests
+bun run dev             # http://localhost:8080
+bun run test:run        # unit tests
 bun run typecheck
-bun run verify:import   # drives a real browser against sample_race_files/
+bun run verify:import   # drives a browser against sample_race_files/
+bun run build
 ```
 
-A fresh clone runs fully offline. Cloud, auth and admin features are compiled out unless you supply
-your own backend credentials.
+A fresh clone runs fully offline. The cloud, authentication and administration features are compiled
+out unless you supply your own backend credentials.
 
 Versions come from git tags. There is no `CHANGELOG.md` and no `version` field in `package.json`;
-release notes live in [GitHub Releases](https://github.com/beadon/RacePlex/releases).
+release notes are published in
+[GitHub Releases](https://github.com/beadon/RacePlex/releases).
+
+---
 
 ## Contributing
 
-Device and format support is the most useful thing to add, and the easiest place to start.
+Open issues are labelled [help wanted](https://github.com/beadon/RacePlex/labels/help%20wanted).
 
-If you own hardware we haven't tested, **sending a sample export file helps more than code**. Every
-format detail documented in `FORMATS.md` came from opening a real file.
+**Without writing code:**
+
+- **Add a device** to [`src/data/supported-devices.json`](src/data/supported-devices.json).
+- **Add a track** to [`tracks/`](tracks/) — one JSON file per track, validated by CI.
+- **Correct a format detail** in [`docs/research/FORMATS.md`](docs/research/FORMATS.md).
+- **Send a sample export file.** If you own hardware the project has not been tested against, this
+  is the most useful contribution available. Every format detail in `FORMATS.md` was established by
+  reading a real file. [Issue #15](https://github.com/beadon/RacePlex/issues/15) lists what is
+  currently needed.
+
+**Writing code:** device and format support is the easiest place to start. A new parser needs a
+detector and a parse function, registration in `datalogParser.ts`, tests against a real file, and an
+entry in the supported-formats table.
+
+---
+
+## Credits and licence
+
+RacePlex is a fork of [Dove's DataViewer](https://github.com/TheAngryRaven/DovesDataViewer) by
+TheAngryRaven. The VBO, NMEA, MoTeC and AiM parsers, the lap-crossing detection, the sector and
+optimal-lap mathematics, and the map and chart layers originate there.
+
+Licensed GPL-3.0-or-later. See [LICENSE](LICENSE) and [NOTICE](NOTICE) for the full statement of
+changes.

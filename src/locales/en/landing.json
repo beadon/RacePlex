@@ -132,23 +132,23 @@
       },
       "raceboxCsv": {
         "name": "RaceBox CSV",
-        "body": "The default export from the RaceBox app (Mini, Mini S, Micro): GPS, speed, G-force and gyro. If the export includes RaceBox's lap numbering, RacePlex reconstructs the start and finish lines from it, so lap times appear without any setup. Note that RaceBox writes the speed column with <em>no unit</em>; RacePlex measures it against your positions to work out whether it's kph, mph or m/s. Extension: <code>.csv</code>"
+        "body": "The default export from the RaceBox app (Mini, Mini S, Micro): GPS, speed, G-force and gyro. If the export includes RaceBox's lap numbering, lap times appear automatically — you don't need to draw a start line. Extension: <code>.csv</code>"
       },
       "gpx": {
         "name": "GPX",
-        "body": "The standard GPS track format, exported by most loggers, phone apps and watches. GPX carries no speed channel, so speed is derived from position and smoothed. If the file contains Start and Finish waypoints — RaceBox writes them — RacePlex rebuilds the timing lines and times your run automatically. Extension: <code>.gpx</code>"
+        "body": "The standard GPS track format, exported by most loggers, phone apps and watches. If the file contains Start and Finish waypoints, lap times appear automatically. GPX carries no speed channel, so speed is calculated from position. Extension: <code>.gpx</code>"
       },
       "gopro": {
         "name": "GoPro Video (GPMF)",
-        "body": "<em>Drop the video in.</em> If you filmed your run on a GPS-capable GoPro, the telemetry is already inside the file — HERO5–HERO11 and HERO13 write 10–18 Hz GPS, plus accelerometer and gyro, into the video's GPMF metadata track. RacePlex reads it directly in your browser with <gpmf>gpmf-extract</gpmf> and <gpmfTelemetry>gopro-telemetry</gpmfTelemetry>; nothing is uploaded and no conversion step is needed. Note: the <em>HERO12 has no GPS at all</em>, and on older cameras GPS must be switched on in Preferences before recording. Extension: <code>.mp4</code>"
+        "body": "Drop in an `.mp4` from a GPS-capable GoPro (HERO5–11 or HERO13) and RacePlex reads the GPS from the video. Large files take a few moments to scan. <em>The HERO12 has no GPS</em> and won't work. Extension: <code>.mp4</code>"
       },
       "vescCsv": {
         "name": "VESC Tool CSV",
-        "body": "A VESC ride log. It brings the ESC channels with it: <em>motor current, battery sag, duty cycle, ERPM and temperatures are charted on the same timeline as your GPS trace</em>. A nosedive shows up as a duty-cycle spike. The ESC logs at about 12 Hz and the GNSS at about 1 Hz, so RacePlex keeps every ESC row at full rate and interpolates position between GPS fixes. Extension: <code>.csv</code>"
+        "body": "Export a ride log from VESC Tool and import the CSV. Alongside GPS, you get the ESC channels: <em>motor current, battery current, battery voltage, duty cycle, ERPM and temperatures</em>, all charted on the same timeline. Extension: <code>.csv</code>"
       },
       "genericCsv": {
         "name": "Any other CSV",
-        "body": "Most delimited logs containing a latitude and a longitude will import — Float Control, pOnewheel, Metr, TrackAddict, Qstarz, or a logger we haven't seen. RacePlex detects the delimiter, maps the columns by name, and <em>shows you the mapping so you can correct it</em> before importing. Time and speed units are inferred and displayed, because a wrong unit produces a chart that looks fine and is wrong. Your correction is saved against that device's column layout, so you're only asked once. Extensions: <code>.csv</code>, <code>.txt</code>"
+        "body": "If your logger isn't listed above, try importing its CSV anyway. RacePlex will read the columns and show you which it thinks are latitude, longitude, time and speed. <em>Check the preview before importing</em> — if the session duration or top speed look wrong, correct the column or unit from the dropdown. Your choice is saved, so you're only asked once per logger. Known to work with Float Control, pOnewheel, Metr, TrackAddict and Qstarz. Extensions: <code>.csv</code>, <code>.txt</code>"
       }
     },
     "secondary": {
