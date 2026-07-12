@@ -48,7 +48,7 @@ jobs:
       run:
         working-directory: beta-proxy
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: npx --yes wrangler@${{ env.WRANGLER_VERSION }} deploy --dry-run --config ./wrangler.toml
 
   deploy:
@@ -56,7 +56,7 @@ jobs:
     name: Deploy Worker
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
