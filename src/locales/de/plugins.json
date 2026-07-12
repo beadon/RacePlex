@@ -201,7 +201,6 @@
     "alreadySubmitted": "Bereits in den Bestenlisten.",
     "loadFailed": "Deine Einträge konnten nicht geladen werden.",
     "close": "Schließen",
-    "customTrackNotice": "Diese Strecke ist nicht in der integrierten Liste – ihr Layout und ihre Sektoren werden mit deinem Snapshot übermittelt, und die Strecke wird zur Überprüfung der Community-Datenbank hinzugefügt.",
-    "trackAdded": "Strecke zur Überprüfung an die Community-Datenbank gesendet."
+    "customTrackNotice": "Diese Strecke ist nicht in der integrierten Liste – ihr Layout und ihre Sektoren werden mit deinem Snapshot übermittelt, und die Strecke wird zur Überprüfung der Community-Datenbank hinzugefügt."
   }
 }

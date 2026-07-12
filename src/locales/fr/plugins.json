@@ -201,7 +201,6 @@
     "alreadySubmitted": "Déjà dans les classements.",
     "loadFailed": "Impossible de charger vos envois.",
     "close": "Fermer",
-    "customTrackNotice": "Ce circuit n'est pas dans la liste intégrée : son tracé et ses secteurs sont envoyés avec votre instantané, et le circuit est ajouté à la base de données communautaire pour révision.",
-    "trackAdded": "Circuit envoyé à la base de données communautaire pour révision."
+    "customTrackNotice": "Ce circuit n'est pas dans la liste intégrée : son tracé et ses secteurs sont envoyés avec votre instantané, et le circuit est ajouté à la base de données communautaire pour révision."
   }
 }

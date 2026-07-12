@@ -1,6 +1,8 @@
 # 0008 — Git-native community track collection
 
-**Status:** proposed
+**Status:** in progress — `tracks/` + build + CI landed; submit-button rewire landed.
+Remaining: seed the collection (OSM import), delete the dead `supabase/` submission
+function, fix the stale backend prose in `CLAUDE.md`.
 **Supersedes (for RacePlex):** upstream's Supabase `submit-track` → `submissions`
 table → admin-approve → hand-commit `tracks.json` loop.
 
@@ -175,6 +177,38 @@ scale that is not a bottleneck, and it can wait for volume to justify it).
 
 `submittedTracksStorage.ts` (localStorage `racing-datalog-submitted-v1`) keeps
 working unchanged: it dedupes on content hash, and it does not care what the sink is.
+
+## Seeding the collection — there is nothing to import
+
+The obvious first move is to bulk-import an existing track set. **There isn't one.**
+Checked, so nobody has to check again:
+
+- **Upstream's `public/tracks.json` ships exactly the same single track we do** —
+  Orlando Kart Center, 5 courses, byte-identical (`git show upstream/main:public/tracks.json`,
+  at 307 merged PRs). They built the whole submission apparatus — form, CAPTCHA, rate
+  limiting, `submissions` table, admin review queue, materialization, export button —
+  and what actually reaches users is still the one track a developer hand-entered.
+  Their publish loop ends in a manual step (*admin clicks "Build tracks.json", downloads
+  it, commits it*), and that step has evidently never been run. A PR is the review **and**
+  the publish, so it cannot stall in a queue nobody drains — this is the failure mode
+  the git-native design removes.
+- **Their `tracks`/`courses`/`submissions` tables are `SELECT`-gated to
+  `has_role(auth.uid(), 'admin')`** (`supabase/migrations/20260213182724_*.sql:45-101`).
+  No anon read path, and no credential in this repo. Reading it would mean getting
+  around RLS on a database owned by an individual — do not.
+- GPL-3 covers upstream's **code**, not their users' submitted **data**. Even with
+  access, bulk-copying it here is not clearly ours to do.
+
+So the seed has to come from elsewhere:
+
+1. **OpenStreetMap** (ODbL) — `leisure=track`, `sport=karting`. Gives real outlines by
+   bounding box. Cannot give a start/finish line (that's a judgment call about where a
+   lap begins), so these land as stubs a rider finishes in the editor.
+2. **Riders.** Upstream's one track is a *kart circuit*. RacePlex is for hill runs,
+   slalom, and drag — point-to-point courses (`finishA`/`finishB`) upstream does not
+   even model. The tracks our users want are a stretch of road somebody rides; they are
+   in nobody's database. They only come from riders, which makes the cost of submitting
+   the thing that actually matters.
 
 ## Scope
 

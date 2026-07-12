@@ -28,6 +28,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Track Submission issue template**, so a rider who has never used git can paste the
   JSON the app gives them and let a maintainer open the PR.
 
+### Fixed
+- **Submitting a track works again.** The "Submit to DB" button was live but broken — it
+  called a backend RacePlex has never had, so it always failed. It now builds the track
+  file for you and opens a prefilled submission, with a **Copy JSON** button if you'd
+  rather open the pull request yourself.
+
+### Removed
+- **Track submission no longer touches a server.** The Supabase upload, the CAPTCHA, and
+  the IP logging that came with them are gone — contributing a track is a pull request
+  now, so there is nothing to rate-limit and nothing personal to store.
+- **Leaderboard snapshots no longer auto-submit your track.** Posting a lap on a custom
+  track used to silently push that track to a review queue. Contributing is now something
+  you choose to do.
+
 ## [3.0.0] - 2026-06-30
 
 ### Added
