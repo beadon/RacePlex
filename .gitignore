@@ -1,0 +1,50 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+
+# This project uses Bun as its sole package manager (bun.lock is committed).
+# Don't commit an npm/yarn/pnpm lockfile — a second lockfile drifts out of sync
+# and breaks the Cloudflare deploy's `bun install --frozen-lockfile`.
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+dist
+dist-ssr
+*.local
+
+# TypeScript incremental build info (created by `tsc -b`)
+*.tsbuildinfo
+
+# Test coverage output (created by `npm run test:coverage`)
+coverage
+
+# Environment — see .env.example for the schema
+.env
+.env.local
+.env.*.local
+
+# Local dev slot for the private AI coach plugin. Production loads the coach as
+# an npm package (see src/plugins/README.md); this folder lets you iterate on it
+# locally without publishing. Absent in the public repo and on Lovable.
+src/plugins/coaching/
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Claude Code local permissions (machine-specific, not for the public repo)
+.claude/settings.local.json

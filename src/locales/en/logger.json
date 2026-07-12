@@ -1,0 +1,74 @@
+{
+  "title": "Download from logger",
+  "subtitle": "Choose your logger to start a download.",
+  "comingSoon": "Coming soon",
+  "close": "Close",
+  "requestLogger": "Request additional dataloggers",
+  "trademarks": "MyChron is a trademark of AiM Tech S.r.l. and Alfano is a trademark of Alfano S.A. LapWing is independent and not affiliated with or endorsed by them; all product names, logos, and brands are the property of their respective owners.",
+  "tags": {
+    "fledgling": "DIY logger · Bluetooth LE",
+    "mychron": "Wi-Fi · native app required",
+    "alfano": "Bluetooth serial · native app required"
+  },
+  "fledglingUnsupported": "Web Bluetooth isn't supported here — use Chrome, Edge or Opera on desktop.",
+  "mychron": {
+    "nativeTitle": "MyChron download",
+    "nativeBody": "TBD",
+    "webTitle": "Native app required",
+    "webBody": "MyChron loggers transfer over Wi-Fi, which web browsers can't access directly. A dedicated native app to download from MyChron is in active development and is slated to launch around July 2026.",
+    "flow": {
+      "connecting": "Connecting to your MyChron…",
+      "wifiSelecting": "Waiting for you to pick your MyChron in the Wi-Fi list…",
+      "wifiHint": "Approve the connection in the system dialog to continue.",
+      "fetching": "Fetching sessions…",
+      "selectFile": "Select a session to download",
+      "downloading": "Downloading…",
+      "errorTitle": "Connection error",
+      "instructions": "Tap a session to download and load it:",
+      "empty": "No sessions on this device",
+      "savedHint": " — the file was saved and can be found in Browse Files.",
+      "retry": "Try again",
+      "cancel": "Cancel"
+    }
+  },
+  "doveslogger": {
+    "flow": {
+      "scanning": "Scanning for loggers…",
+      "selectDevice": "Select your logger",
+      "deviceInstructions": "Tap your logger to connect:",
+      "noDevices": "No loggers found. Make sure yours is powered on, Bluetooth is enabled, then rescan.",
+      "rescan": "Rescan",
+      "connecting": "Connecting…",
+      "fetching": "Fetching sessions…",
+      "selectFile": "Select a session to download",
+      "downloading": "Downloading…",
+      "errorTitle": "Connection error",
+      "instructions": "Tap a session to download and load it:",
+      "empty": "No sessions on this device",
+      "savedHint": " — the file was saved and can be found in Browse Files.",
+      "retry": "Try again",
+      "cancel": "Cancel"
+    }
+  },
+  "alfano": {
+    "title": "Native app required",
+    "body": "Alfano uses Bluetooth serial, which web browsers can't access in-browser — it will also require the native app. A dedicated native app to download from Alfano is in development.",
+    "flow": {
+      "scanning": "Scanning for Alfano loggers…",
+      "selectDevice": "Select your Alfano",
+      "deviceInstructions": "Tap your Alfano to connect:",
+      "noDevices": "No Alfano loggers found. Make sure yours is powered on, Bluetooth is enabled, then rescan.",
+      "rescan": "Rescan",
+      "connecting": "Connecting…",
+      "fetching": "Fetching sessions…",
+      "selectFile": "Select a session to download",
+      "downloading": "Downloading…",
+      "errorTitle": "Connection error",
+      "instructions": "Tap a session to download and load it:",
+      "empty": "No sessions on this device",
+      "savedHint": " — the file was saved and can be found in Browse Files.",
+      "retry": "Try again",
+      "cancel": "Cancel"
+    }
+  }
+}

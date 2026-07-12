@@ -1,0 +1,297 @@
+import { useState, useCallback, useMemo } from "react";
+import { useTranslation } from "react-i18next";
+import { Plus, Trash2, Eye, EyeOff, ChevronDown, ChevronUp } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Slider } from "@/components/ui/slider";
+import { Input } from "@/components/ui/input";
+import type { OverlayInstance, OverlaySettings, OverlayType, ThemeId, DataSourceDef } from "./types";
+import { OVERLAY_TYPES, getOverlayTypeDef, generateOverlayId } from "./registry";
+import { THEMES } from "./themes";
+
+interface OverlaySettingsPanelProps {
+  settings: OverlaySettings;
+  onUpdate: (settings: OverlaySettings) => void;
+  dataSources: DataSourceDef[];
+  hasReference: boolean;
+  hasSectors: boolean;
+}
+
+export function OverlaySettingsPanel({ settings, onUpdate, dataSources, hasReference, hasSectors }: OverlaySettingsPanelProps) {
+  const { t } = useTranslation("video");
+  // Overlay-type + theme display names: registry/themes hold the English
+  // defaults (data); translate them at the UI boundary, keyed by stable id.
+  const typeLabel = useCallback((type: OverlayType): string => {
+    const map: Record<OverlayType, string> = {
+      digital: t("overlayTypes.digital"),
+      analog: t("overlayTypes.analog"),
+      graph: t("overlayTypes.graph"),
+      bar: t("overlayTypes.bar"),
+      bubble: t("overlayTypes.bubble"),
+      map: t("overlayTypes.map"),
+      pace: t("overlayTypes.pace"),
+      sector: t("overlayTypes.sector"),
+      laptime: t("overlayTypes.laptime"),
+    };
+    return map[type] ?? type;
+  }, [t]);
+  const themeLabel = useCallback((id: ThemeId): string => {
+    if (id === "classic") return t("themes.classic");
+    if (id === "neon") return t("themes.neon");
+    return id;
+  }, [t]);
+  const safeSettings: OverlaySettings = useMemo(() => ({
+    overlaysLocked: settings?.overlaysLocked ?? true,
+    overlays: settings?.overlays ?? [],
+  }), [settings?.overlaysLocked, settings?.overlays]);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [addType, setAddType] = useState<OverlayType | "">("");
+
+  const availableTypes = useMemo(() => {
+    return OVERLAY_TYPES.filter(t => {
+      if (t.type === "pace" && !hasReference) return false;
+      if (t.type === "sector" && !hasSectors) return false;
+      return true;
+    });
+  }, [hasReference, hasSectors]);
+
+  const handleAdd = useCallback(() => {
+    if (!addType) return;
+    const typeDef = getOverlayTypeDef(addType as OverlayType);
+    if (!typeDef) return;
+
+    const defaultSource = typeDef.isSpecial
+      ? (addType === "pace" ? "__pace__" : addType === "sector" ? "__sector__" : addType === "laptime" ? "__laptime__" : "__map__")
+      : (dataSources[0]?.id ?? "speed");
+
+    const newOverlay: OverlayInstance = {
+      id: generateOverlayId(),
+      type: addType as OverlayType,
+      dataSource: defaultSource,
+      theme: "classic",
+      colorMode: "dark",
+      opacity: 1,
+      position: { x: 5, y: 5 + safeSettings.overlays.length * 12 },
+      visible: true,
+      ...(typeDef.defaultConfig as Partial<OverlayInstance>),
+    };
+
+    onUpdate({ ...safeSettings, overlays: [...safeSettings.overlays, newOverlay] });
+    setAddType("");
+    setExpandedId(newOverlay.id);
+  }, [addType, safeSettings, onUpdate, dataSources]);
+
+  const updateOverlay = useCallback((id: string, patch: Partial<OverlayInstance>) => {
+    onUpdate({
+      ...safeSettings,
+      overlays: safeSettings.overlays.map(o => o.id === id ? { ...o, ...patch } : o),
+    });
+  }, [safeSettings, onUpdate]);
+
+  const removeOverlay = useCallback((id: string) => {
+    onUpdate({
+      ...safeSettings,
+      overlays: safeSettings.overlays.filter(o => o.id !== id),
+    });
+  }, [safeSettings, onUpdate]);
+
+  return (
+    <div className="space-y-4">
+      {/* Add overlay section */}
+      <div className="space-y-2">
+        <h3 className="text-sm font-medium">{t("settings.addOverlay")}</h3>
+        <div className="flex gap-2">
+          <Select value={addType} onValueChange={(v) => setAddType(v as OverlayType)}>
+            <SelectTrigger className="flex-1 h-8 text-sm">
+              <SelectValue placeholder={t("settings.selectType")} />
+            </SelectTrigger>
+            <SelectContent>
+              {availableTypes.map(td => (
+                <SelectItem key={td.type} value={td.type}>
+                  {typeLabel(td.type)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button size="sm" className="h-8 gap-1" onClick={handleAdd} disabled={!addType}>
+            <Plus className="w-3.5 h-3.5" /> {t("settings.add")}
+          </Button>
+        </div>
+      </div>
+
+      {/* Overlay list */}
+      {safeSettings.overlays.length === 0 ? (
+        <p className="text-xs text-muted-foreground text-center py-4">{t("settings.empty")}</p>
+      ) : (
+        <div className="space-y-1">
+          {safeSettings.overlays.map(overlay => {
+            const typeDef = getOverlayTypeDef(overlay.type);
+            const isExpanded = expandedId === overlay.id;
+
+            return (
+              <div key={overlay.id} className="border border-border rounded-md overflow-hidden">
+                {/* Header */}
+                <div className="flex items-center gap-2 px-3 py-2 bg-muted/30">
+                  <button onClick={() => setExpandedId(isExpanded ? null : overlay.id)} className="flex-1 flex items-center gap-2 text-left">
+                    {isExpanded ? <ChevronUp className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />}
+                    <span className="text-sm font-medium">{typeDef ? typeLabel(overlay.type) : overlay.type}</span>
+                    {!typeDef?.isSpecial && (
+                      <span className="text-xs text-muted-foreground">
+                        — {dataSources.find(d => d.id === overlay.dataSource)?.label ?? overlay.dataSource}
+                      </span>
+                    )}
+                  </button>
+                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => updateOverlay(overlay.id, { visible: !overlay.visible })}>
+                    {overlay.visible ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5 text-muted-foreground" />}
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => removeOverlay(overlay.id)}>
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
+
+                {/* Expanded config */}
+                {isExpanded && (
+                  <div className="px-3 py-3 space-y-3 border-t border-border">
+                    {/* Data source */}
+                    {!typeDef?.isSpecial && (
+                      <div className="space-y-1">
+                        <Label className="text-xs">{t("settings.dataSource")}</Label>
+                        <Select value={overlay.dataSource} onValueChange={(v) => updateOverlay(overlay.id, { dataSource: v })}>
+                          <SelectTrigger className="h-8 text-sm">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {dataSources.map(s => (
+                              <SelectItem key={s.id} value={s.id}>{s.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
+                    {/* Secondary source for bubble */}
+                    {typeDef?.needsSecondarySource && (
+                      <div className="space-y-1">
+                        <Label className="text-xs">{t("settings.secondarySource")}</Label>
+                        <Select value={overlay.dataSourceSecondary ?? ""} onValueChange={(v) => updateOverlay(overlay.id, { dataSourceSecondary: v })}>
+                          <SelectTrigger className="h-8 text-sm">
+                            <SelectValue placeholder={t("settings.sameAsPrimary")} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {dataSources.map(s => (
+                              <SelectItem key={s.id} value={s.id}>{s.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
+                    {/* Theme */}
+                    <div className="flex gap-4">
+                      <div className="space-y-1 flex-1">
+                        <Label className="text-xs">{t("settings.theme")}</Label>
+                        <Select value={overlay.theme} onValueChange={(v) => updateOverlay(overlay.id, { theme: v as ThemeId })}>
+                          <SelectTrigger className="h-8 text-sm">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Object.values(THEMES).map(th => (
+                              <SelectItem key={th.id} value={th.id}>{themeLabel(th.id)}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">{t("settings.mode")}</Label>
+                        <div className="flex items-center gap-2 h-8">
+                          <span className="text-xs text-muted-foreground">{t("settings.light")}</span>
+                          <Switch
+                            checked={overlay.colorMode === "dark"}
+                            onCheckedChange={(v) => updateOverlay(overlay.id, { colorMode: v ? "dark" : "light" })}
+                          />
+                          <span className="text-xs text-muted-foreground">{t("settings.dark")}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Opacity */}
+                    <div className="space-y-1">
+                      <Label className="text-xs">{t("settings.opacity", { value: Math.round(overlay.opacity * 100) })}</Label>
+                      <Slider
+                        value={[overlay.opacity]}
+                        onValueChange={([v]) => updateOverlay(overlay.id, { opacity: v })}
+                        min={0.1}
+                        max={1}
+                        step={0.05}
+                        className="w-full"
+                      />
+                    </div>
+
+                    {/* Type-specific config */}
+                    {(overlay.type === "graph" || overlay.type === "bar") && (
+                      <div className="space-y-1">
+                        <Label className="text-xs">{t("settings.color")}</Label>
+                        <Input
+                          type="color"
+                          value={overlay.color ?? "#00ccaa"}
+                          onChange={(e) => updateOverlay(overlay.id, { color: e.target.value })}
+                          className="h-8 w-16 p-1 cursor-pointer"
+                        />
+                      </div>
+                    )}
+
+                    {overlay.type === "graph" && (
+                      <div className="space-y-1">
+                        <Label className="text-xs">{t("settings.historyLength", { samples: overlay.graphLength ?? 100 })}</Label>
+                        <Slider
+                          value={[overlay.graphLength ?? 100]}
+                          onValueChange={([v]) => updateOverlay(overlay.id, { graphLength: v })}
+                          min={20}
+                          max={500}
+                          step={10}
+                          className="w-full"
+                        />
+                      </div>
+                    )}
+
+                    {overlay.type === "sector" && (
+                      <div className="flex items-center justify-between">
+                        <Label className="text-xs">{t("settings.animations")}</Label>
+                        <Switch
+                          checked={overlay.showAnimation !== false}
+                          onCheckedChange={(v) => updateOverlay(overlay.id, { showAnimation: v })}
+                        />
+                      </div>
+                    )}
+
+                    {overlay.type === "laptime" && (
+                      <div className="flex items-center justify-between">
+                        <Label className="text-xs">{t("settings.paceMode")}</Label>
+                        <Switch
+                          checked={overlay.showPaceMode === true}
+                          onCheckedChange={(v) => updateOverlay(overlay.id, { showPaceMode: v })}
+                        />
+                      </div>
+                    )}
+
+                    {overlay.type === "map" && hasSectors && (
+                      <div className="flex items-center justify-between">
+                        <Label className="text-xs">{t("settings.sectorColors")}</Label>
+                        <Switch
+                          checked={overlay.showSectors === true}
+                          onCheckedChange={(v) => updateOverlay(overlay.id, { showSectors: v })}
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}

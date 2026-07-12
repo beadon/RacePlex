@@ -1,0 +1,521 @@
+import { supabase } from '@/integrations/supabase/client';
+import type { ITrackDatabase, DbTrack, DbCourse, DbSubmission, DbBannedIp, DbCourseLayout, DbProfile } from './types';
+import { buildCourseColumnsFromSubmission } from './submissionMaterialize';
+import { calculatePolylineLength } from '@/lib/trackUtils';
+import { METERS_TO_FEET } from '@/lib/parserUtils';
+
+export class SupabaseTrackDatabase implements ITrackDatabase {
+  // Tracks
+  async getTracks(): Promise<DbTrack[]> {
+    const { data, error } = await supabase.from('tracks').select('*').order('name');
+    if (error) throw error;
+    return (data ?? []) as DbTrack[];
+  }
+
+  async getTrack(id: string): Promise<DbTrack | null> {
+    const { data, error } = await supabase.from('tracks').select('*').eq('id', id).maybeSingle();
+    if (error) throw error;
+    return data as DbTrack | null;
+  }
+
+  async createTrack(input: { name: string; short_name: string; enabled?: boolean }): Promise<DbTrack> {
+    const { data, error } = await supabase.from('tracks').insert({
+      name: input.name.trim(),
+      short_name: input.short_name.trim(),
+      enabled: input.enabled ?? true,
+    }).select().single();
+    if (error) throw error;
+    return data as DbTrack;
+  }
+
+  async updateTrack(id: string, updates: Partial<Pick<DbTrack, 'name' | 'short_name' | 'enabled' | 'default_course_id'>>): Promise<DbTrack> {
+    const clean: Record<string, unknown> = {};
+    if (updates.name !== undefined) clean.name = updates.name.trim();
+    if (updates.short_name !== undefined) clean.short_name = updates.short_name.trim();
+    if (updates.enabled !== undefined) clean.enabled = updates.enabled;
+    if (updates.default_course_id !== undefined) clean.default_course_id = updates.default_course_id;
+    const { data, error } = await supabase.from('tracks').update(clean).eq('id', id).select().single();
+    if (error) throw error;
+    return data as DbTrack;
+  }
+
+  async deleteTrack(id: string): Promise<void> {
+    const { error } = await supabase.from('tracks').delete().eq('id', id);
+    if (error) throw error;
+  }
+
+  // Courses
+  async getCourses(trackId: string): Promise<DbCourse[]> {
+    const { data, error } = await supabase.from('courses').select('*').eq('track_id', trackId).order('name');
+    if (error) throw error;
+    return (data ?? []) as DbCourse[];
+  }
+
+  async getAllCourses(): Promise<DbCourse[]> {
+    const { data, error } = await supabase.from('courses').select('*').order('name');
+    if (error) throw error;
+    return (data ?? []) as DbCourse[];
+  }
+
+  async createCourse(input: Omit<DbCourse, 'id' | 'created_at' | 'updated_at'>): Promise<DbCourse> {
+    // Built as a variable (not an object literal) so the extra `sectors_data`
+    // column — not yet in the generated Supabase types — isn't flagged as an
+    // excess property. Generated types are regenerated after the migration.
+    const payload = {
+      track_id: input.track_id,
+      name: input.name.trim(),
+      enabled: input.enabled,
+      start_a_lat: input.start_a_lat,
+      start_a_lng: input.start_a_lng,
+      start_b_lat: input.start_b_lat,
+      start_b_lng: input.start_b_lng,
+      sector_2_a_lat: input.sector_2_a_lat,
+      sector_2_a_lng: input.sector_2_a_lng,
+      sector_2_b_lat: input.sector_2_b_lat,
+      sector_2_b_lng: input.sector_2_b_lng,
+      sector_3_a_lat: input.sector_3_a_lat,
+      sector_3_a_lng: input.sector_3_a_lng,
+      sector_3_b_lat: input.sector_3_b_lat,
+      sector_3_b_lng: input.sector_3_b_lng,
+      sectors_data: input.sectors_data ?? null,
+      superseded_by: input.superseded_by,
+    };
+    const { data, error } = await supabase.from('courses').insert(payload).select().single();
+    if (error) throw error;
+    return data as DbCourse;
+  }
+
+  async updateCourse(id: string, updates: Partial<Omit<DbCourse, 'id' | 'created_at' | 'updated_at'>>): Promise<DbCourse> {
+    const clean: Record<string, unknown> = { ...updates };
+    if (typeof clean.name === 'string') clean.name = (clean.name as string).trim();
+    const { data, error } = await supabase.from('courses').update(clean).eq('id', id).select().single();
+    if (error) throw error;
+    return data as DbCourse;
+  }
+
+  async toggleCourse(id: string, enabled: boolean): Promise<void> {
+    const { error } = await supabase.from('courses').update({ enabled }).eq('id', id);
+    if (error) throw error;
+  }
+
+  // Submissions
+  async getSubmissions(status?: string): Promise<DbSubmission[]> {
+    let query = supabase.from('submissions').select('*').order('created_at', { ascending: false });
+    if (status) query = query.eq('status', status);
+    const { data, error } = await query;
+    if (error) throw error;
+    return (data ?? []) as unknown as DbSubmission[];
+  }
+
+  async updateSubmission(id: string, status: string, reviewNotes?: string): Promise<void> {
+    const { data: { user } } = await supabase.auth.getUser();
+    const { error } = await supabase.from('submissions').update({
+      status,
+      review_notes: reviewNotes ?? null,
+      reviewed_at: new Date().toISOString(),
+      reviewed_by: user?.id ?? null,
+    }).eq('id', id);
+    if (error) throw error;
+  }
+
+  // Materialize an approved submission into the live tracks/courses tables.
+  // Upserts the track (creating it for a new_track submission), then upserts the
+  // course by (track, name) — covering new_track / new_course / course_modification
+  // alike — and attaches any submitted drawn outline. Updating the submission's
+  // status is the caller's job; this is the step that was previously missing, so
+  // an approved track/course never reached the live tables.
+  async applySubmission(sub: DbSubmission): Promise<void> {
+    const columns = buildCourseColumnsFromSubmission(sub);
+    const trackName = sub.track_name.trim();
+    const shortName = (sub.track_short_name?.trim() || trackName.split(/\s+/).map(w => w[0]).join('').slice(0, 8).toUpperCase()).slice(0, 8);
+
+    // Upsert the track, matched by name first, then short name.
+    let track: DbTrack;
+    const { data: byName } = await supabase.from('tracks').select('*').eq('name', trackName).maybeSingle();
+    const existingTrack = byName
+      ?? (sub.track_short_name
+        ? (await supabase.from('tracks').select('*').eq('short_name', sub.track_short_name).maybeSingle()).data
+        : null);
+    if (existingTrack) {
+      track = existingTrack as DbTrack;
+      await supabase.from('tracks').update({ enabled: true }).eq('id', track.id);
+    } else {
+      track = await this.createTrack({ name: trackName, short_name: shortName, enabled: true });
+    }
+
+    // Upsert the course by (track, name).
+    const { data: existingCourse } = await supabase.from('courses')
+      .select('id').eq('track_id', track.id).eq('name', columns.name).maybeSingle();
+    let courseId: string;
+    if (existingCourse) {
+      courseId = (existingCourse as { id: string }).id;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase types lag schema; remove on next type regen
+      const { error } = await supabase.from('courses').update(columns as any).eq('id', courseId);
+      if (error) throw error;
+    } else {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase types lag schema; remove on next type regen
+      const { data, error } = await supabase.from('courses').insert({ ...columns, track_id: track.id } as any).select('id').single();
+      if (error) throw error;
+      courseId = (data as { id: string }).id;
+    }
+
+    // A brand-new track with no default course points at this first course.
+    if (!track.default_course_id) {
+      await supabase.from('tracks').update({ default_course_id: courseId }).eq('id', track.id);
+    }
+
+    // Attach the submitted drawn outline, when present.
+    if (Array.isArray(sub.layout_data) && sub.layout_data.length >= 2) {
+      await this.saveLayout(courseId, sub.layout_data);
+    }
+  }
+
+  // Profiles — resolve user ids to display names (e.g. submission attribution).
+  // profiles is readable by any authenticated user (admins included).
+  async getProfiles(userIds: string[]): Promise<DbProfile[]> {
+    const ids = Array.from(new Set(userIds.filter(Boolean)));
+    if (ids.length === 0) return [];
+    const { data, error } = await supabase.from('profiles').select('user_id, display_name').in('user_id', ids);
+    if (error) throw error;
+    return (data ?? []) as DbProfile[];
+  }
+
+  // Banned IPs
+  async getBannedIps(): Promise<DbBannedIp[]> {
+    const { data, error } = await supabase.from('banned_ips').select('*').order('banned_at', { ascending: false });
+    if (error) throw error;
+    return (data ?? []) as DbBannedIp[];
+  }
+
+  async banIp(ip: string, reason?: string, expiresAt?: string): Promise<void> {
+    const { error } = await supabase.from('banned_ips').insert({
+      ip_address: ip.trim(),
+      reason: reason ?? null,
+      expires_at: expiresAt ?? null,
+    });
+    if (error) throw error;
+  }
+
+  async unbanIp(id: string): Promise<void> {
+    const { error } = await supabase.from('banned_ips').delete().eq('id', id);
+    if (error) throw error;
+  }
+
+  // Course Layouts — table may not be in auto-generated types yet, use .from() with type assertion
+  async getLayout(courseId: string): Promise<DbCourseLayout | null> {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase types lag schema; remove on next type regen
+    const { data, error } = await (supabase as unknown as { from: (t: string) => any }).from('course_layouts')
+      .select('*')
+      .eq('course_id', courseId)
+      .maybeSingle();
+    if (error) throw error;
+    return data as DbCourseLayout | null;
+  }
+
+  async getLayoutsForCourses(courseIds: string[]): Promise<DbCourseLayout[]> {
+    if (courseIds.length === 0) return [];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase types lag schema; remove on next type regen
+    const { data, error } = await (supabase as unknown as { from: (t: string) => any }).from('course_layouts')
+      .select('*')
+      .in('course_id', courseIds);
+    if (error) throw error;
+    return (data ?? []) as DbCourseLayout[];
+  }
+
+  async saveLayout(courseId: string, layoutData: Array<{ lat: number; lon: number }>): Promise<void> {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase types lag schema; remove on next type regen
+    const { error } = await (supabase as unknown as { from: (t: string) => any }).from('course_layouts')
+      .upsert(
+        { course_id: courseId, layout_data: layoutData },
+        { onConflict: 'course_id' }
+      );
+    if (error) throw error;
+  }
+
+  async deleteLayout(courseId: string): Promise<void> {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase types lag schema; remove on next type regen
+    const { error } = await (supabase as unknown as { from: (t: string) => any }).from('course_layouts')
+      .delete()
+      .eq('course_id', courseId);
+    if (error) throw error;
+  }
+
+  // Build tracks.json from DB — new format with longName, shortName, defaultCourse, lengthFt
+  async buildTracksJson(): Promise<string> {
+    const tracks = await this.getTracks();
+    const courses = await this.getAllCourses();
+
+    // Fetch all layouts for length calculation
+    const allCourseIds = courses.filter(c => c.enabled).map(c => c.id);
+    const layouts = await this.getLayoutsForCourses(allCourseIds);
+    const layoutMap = new Map(layouts.map(l => [l.course_id, l]));
+
+    const result: Record<string, unknown> = {};
+    for (const track of tracks) {
+      if (!track.enabled) continue;
+      const trackCourses = courses.filter(c => c.track_id === track.id && c.enabled);
+
+      // Determine default course name
+      const defaultCourse = trackCourses.find(c => c.id === track.default_course_id);
+      const defaultCourseName = defaultCourse?.name ?? trackCourses[0]?.name ?? '';
+
+      const courseList = trackCourses.map(c => {
+        const layout = layoutMap.get(c.id);
+        const lengthFt = c.length_ft_override != null
+          ? c.length_ft_override
+          : (layout && layout.layout_data.length >= 2
+            ? Math.round(calculatePolylineLength(layout.layout_data) * METERS_TO_FEET)
+            : 0);
+
+        const obj: Record<string, unknown> = {
+          name: c.name,
+          lengthFt,
+          start_a_lat: c.start_a_lat,
+          start_a_lng: c.start_a_lng,
+          start_b_lat: c.start_b_lat,
+          start_b_lng: c.start_b_lng,
+        };
+        if (c.sector_2_a_lat != null) {
+          obj.sector_2_a_lat = c.sector_2_a_lat;
+          obj.sector_2_a_lng = c.sector_2_a_lng;
+          obj.sector_2_b_lat = c.sector_2_b_lat;
+          obj.sector_2_b_lng = c.sector_2_b_lng;
+        }
+        if (c.sector_3_a_lat != null) {
+          obj.sector_3_a_lat = c.sector_3_a_lat;
+          obj.sector_3_a_lng = c.sector_3_a_lng;
+          obj.sector_3_b_lat = c.sector_3_b_lat;
+          obj.sector_3_b_lng = c.sector_3_b_lng;
+        }
+        // Canonical ordered sector list (incl. sub-sectors), when present.
+        if (Array.isArray(c.sectors_data) && c.sectors_data.length > 0) {
+          obj.sectors = c.sectors_data;
+        }
+        return obj;
+      });
+      result[track.name] = {
+        shortName: track.short_name,
+        defaultCourse: defaultCourseName,
+        courses: courseList,
+      };
+    }
+    return JSON.stringify(result, null, 2);
+  }
+
+  // Build course drawings JSON
+  async buildDrawingsJson(): Promise<string> {
+    const tracks = await this.getTracks();
+    const courses = await this.getAllCourses();
+    const allCourseIds = courses.filter(c => c.enabled).map(c => c.id);
+    const layouts = await this.getLayoutsForCourses(allCourseIds);
+    const layoutMap = new Map(layouts.map(l => [l.course_id, l]));
+
+    const result: Record<string, Array<{ lat: number; lon: number }>> = {};
+
+    for (const track of tracks) {
+      if (!track.enabled) continue;
+      const trackCourses = courses.filter(c => c.track_id === track.id && c.enabled);
+      for (const c of trackCourses) {
+        // Skip courses with manual length override — drawing isn't source of truth
+        if (c.length_ft_override != null) continue;
+        const layout = layoutMap.get(c.id);
+        if (layout && Array.isArray(layout.layout_data) && layout.layout_data.length >= 2) {
+          const key = `${track.short_name}/${c.name}`;
+          result[key] = layout.layout_data as Array<{ lat: number; lon: number }>;
+        }
+      }
+    }
+
+    return JSON.stringify(result, null, 2);
+  }
+
+  // Import course drawings JSON
+  async importDrawingsJson(json: string): Promise<void> {
+    let parsed: Record<string, Array<{ lat: number; lon: number }>>;
+    try {
+      parsed = JSON.parse(json);
+    } catch {
+      throw new Error('Invalid JSON format');
+    }
+
+    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+      throw new Error('Expected a JSON object with "shortName/courseName" keys');
+    }
+
+    const tracks = await this.getTracks();
+    const courses = await this.getAllCourses();
+
+    const trackByShortName = new Map(tracks.map(t => [t.short_name, t]));
+
+    for (const [key, layoutData] of Object.entries(parsed)) {
+      const slashIdx = key.indexOf('/');
+      if (slashIdx < 0) continue;
+      const shortName = key.substring(0, slashIdx);
+      const courseName = key.substring(slashIdx + 1);
+
+      const track = trackByShortName.get(shortName);
+      if (!track) {
+        console.warn(`Import drawings: track with shortName "${shortName}" not found, skipping`);
+        continue;
+      }
+
+      const course = courses.find(c => c.track_id === track.id && c.name === courseName);
+      if (!course) {
+        console.warn(`Import drawings: course "${courseName}" not found in track "${track.name}", skipping`);
+        continue;
+      }
+
+      if (!Array.isArray(layoutData) || layoutData.length < 2) continue;
+
+      // Save the drawing
+      await this.saveLayout(course.id, layoutData);
+
+      // Clear length_ft_override — drawing is now the source of truth
+      if (course.length_ft_override != null) {
+        await supabase.from('courses').update({ length_ft_override: null }).eq('id', course.id);
+      }
+    }
+  }
+
+  // Import tracks.json into DB (rebuilds DB from JSON)
+  async importFromTracksJson(json: string): Promise<void> {
+    let parsed: Record<string, { short_name?: string; shortName?: string; defaultCourse?: string; courses: Array<Record<string, unknown>> }>;
+    try {
+      parsed = JSON.parse(json);
+    } catch {
+      throw new Error('Invalid JSON format');
+    }
+
+    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+      throw new Error('Expected a JSON object with track names as keys');
+    }
+
+    for (const [trackName, trackData] of Object.entries(parsed)) {
+      // Validate track entry structure
+      if (!trackName.trim() || trackName.length > 100) {
+        throw new Error(`Invalid track name: "${trackName}"`);
+      }
+      if (!trackData || !Array.isArray(trackData.courses)) {
+        throw new Error(`Track "${trackName}" must have a courses array`);
+      }
+
+      const shortName = (trackData.shortName || trackData.short_name || trackName.split(/\s+/).map(w => w[0]).join('').slice(0, 8).toUpperCase()).slice(0, 8);
+      
+      // Upsert track
+      let track: DbTrack;
+      const { data: existing } = await supabase.from('tracks').select('*').eq('name', trackName.trim()).maybeSingle();
+      if (existing) {
+        track = existing as DbTrack;
+        await supabase.from('tracks').update({ short_name: shortName, enabled: true }).eq('id', track.id);
+      } else {
+        const { data, error } = await supabase.from('tracks').insert({
+          name: trackName.trim(),
+          short_name: shortName,
+          enabled: true,
+        }).select().single();
+        if (error) throw error;
+        track = data as DbTrack;
+      }
+
+      // Add courses
+      for (const c of trackData.courses) {
+        const courseName = String(c.name || 'Main').trim();
+        if (!courseName || courseName.length > 100) {
+          throw new Error(`Invalid course name in track "${trackName}"`);
+        }
+
+        // Validate coordinate is a finite number within GPS bounds
+        const validateLat = (v: unknown, label: string): number => {
+          const n = Number(v);
+          if (isNaN(n) || !isFinite(n) || n < -90 || n > 90) {
+            throw new Error(`Invalid latitude ${label} in course "${courseName}" of track "${trackName}": must be between -90 and 90`);
+          }
+          return n;
+        };
+        const validateLng = (v: unknown, label: string): number => {
+          const n = Number(v);
+          if (isNaN(n) || !isFinite(n) || n < -180 || n > 180) {
+            throw new Error(`Invalid longitude ${label} in course "${courseName}" of track "${trackName}": must be between -180 and 180`);
+          }
+          return n;
+        };
+
+        // Validate required coordinates
+        const startALat = validateLat(c.start_a_lat, 'start_a_lat');
+        const startALng = validateLng(c.start_a_lng, 'start_a_lng');
+        const startBLat = validateLat(c.start_b_lat, 'start_b_lat');
+        const startBLng = validateLng(c.start_b_lng, 'start_b_lng');
+
+        // Validate optional sector coordinates
+        const toNumLat = (v: unknown, label: string): number | null => {
+          if (v === undefined || v === null) return null;
+          return validateLat(v, label);
+        };
+        const toNumLng = (v: unknown, label: string): number | null => {
+          if (v === undefined || v === null) return null;
+          return validateLng(v, label);
+        };
+
+        const { data: existingCourse } = await supabase.from('courses').select('id').eq('track_id', track.id).eq('name', courseName).maybeSingle();
+        
+        const courseData: Record<string, unknown> = {
+          track_id: track.id,
+          name: courseName,
+          enabled: true,
+          start_a_lat: startALat,
+          start_a_lng: startALng,
+          start_b_lat: startBLat,
+          start_b_lng: startBLng,
+          sector_2_a_lat: toNumLat(c.sector_2_a_lat, 'sector_2_a_lat'),
+          sector_2_a_lng: toNumLng(c.sector_2_a_lng, 'sector_2_a_lng'),
+          sector_2_b_lat: toNumLat(c.sector_2_b_lat, 'sector_2_b_lat'),
+          sector_2_b_lng: toNumLng(c.sector_2_b_lng, 'sector_2_b_lng'),
+          sector_3_a_lat: toNumLat(c.sector_3_a_lat, 'sector_3_a_lat'),
+          sector_3_a_lng: toNumLng(c.sector_3_a_lng, 'sector_3_a_lng'),
+          sector_3_b_lat: toNumLat(c.sector_3_b_lat, 'sector_3_b_lat'),
+          sector_3_b_lng: toNumLng(c.sector_3_b_lng, 'sector_3_b_lng'),
+        };
+
+        // Import the canonical ordered sector list, when present.
+        if (Array.isArray(c.sectors) && c.sectors.length > 0) {
+          courseData.sectors_data = (c.sectors as Array<Record<string, unknown>>).map((s) => ({
+            a_lat: validateLat(s.a_lat, 'sector a_lat'),
+            a_lng: validateLng(s.a_lng, 'sector a_lng'),
+            b_lat: validateLat(s.b_lat, 'sector b_lat'),
+            b_lng: validateLng(s.b_lng, 'sector b_lng'),
+            major: Boolean(s.major),
+          }));
+        }
+
+        // Import lengthFt as length_ft_override
+        if (c.lengthFt !== undefined && c.lengthFt !== null) {
+          const lengthFt = Number(c.lengthFt);
+          if (!isNaN(lengthFt) && lengthFt > 0) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase types lag schema; remove on next type regen
+            (courseData as any).length_ft_override = Math.round(lengthFt);
+          }
+        }
+
+        if (existingCourse) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase types lag schema; remove on next type regen
+          await supabase.from('courses').update(courseData as any).eq('id', existingCourse.id);
+        } else {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase types lag schema; remove on next type regen
+          await supabase.from('courses').insert({ ...courseData, superseded_by: null } as any);
+        }
+      }
+
+      // Set default_course_id based on defaultCourse name
+      if (trackData.defaultCourse) {
+        const { data: defaultCourseRow } = await supabase.from('courses')
+          .select('id')
+          .eq('track_id', track.id)
+          .eq('name', trackData.defaultCourse.trim())
+          .maybeSingle();
+        if (defaultCourseRow) {
+          await supabase.from('tracks').update({ default_course_id: defaultCourseRow.id }).eq('id', track.id);
+        }
+      }
+    }
+  }
+}

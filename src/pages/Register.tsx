@@ -1,0 +1,163 @@
+import { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { useTranslation, Trans } from 'react-i18next';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from '@/hooks/use-toast';
+import { ArrowLeft } from 'lucide-react';
+import { BrandHeader } from "@/components/BrandHeader";
+import { useDocumentHead } from '@/hooks/useDocumentHead';
+import { Turnstile, turnstileEnabled } from '@/components/Turnstile';
+import { PricingCards } from '@/components/PricingCards';
+import { PlanCheckout, PlanCheckoutSummary, type PlanSelection } from '@/components/PlanCheckout';
+import { useStripePrices } from '@/hooks/useStripePrices';
+import { isDisposableEmail, looksLikeEmail } from '@/lib/emailValidation';
+import { evaluatePassword } from '@/lib/passwordStrength';
+import { PasswordStrengthMeter } from '@/components/PasswordStrengthMeter';
+import { isPaidTier } from '@/lib/billing';
+import { setPendingCheckout } from '@/lib/pendingCheckout';
+import { isNativeApp } from '@/lib/platform';
+
+export default function Register() {
+  const { t } = useTranslation('auth');
+  useDocumentHead({
+    title: t('register.metaTitle'),
+    description: t('register.metaDescription'),
+    canonical: 'https://lapwingdata.com/register',
+  });
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [plan, setPlan] = useState<PlanSelection>({ tier: 'free', interval: 'monthly' });
+  const [confirmAge, setConfirmAge] = useState(false);
+  const { signUp } = useAuth();
+  const { config } = useStripePrices();
+  const navigate = useNavigate();
+  // The native (Android) app signs up on the free tier only — paid plans are
+  // bought on the web (Google Play billing policy), so the plan picker is hidden.
+  const native = isNativeApp();
+
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!looksLikeEmail(email)) {
+      toast({ title: t('register.invalidEmail'), variant: 'destructive' });
+      return;
+    }
+    if (isDisposableEmail(email)) {
+      toast({ title: t('register.disposableEmail'), description: t('register.disposableEmailDesc'), variant: 'destructive' });
+      return;
+    }
+    if (password !== confirmPassword) {
+      toast({ title: t('register.passwordsNoMatch'), variant: 'destructive' });
+      return;
+    }
+    if (!evaluatePassword(password).meetsRequirements) {
+      toast({ title: t('register.passwordTooWeak'), description: t('register.passwordTooWeakDesc'), variant: 'destructive' });
+      return;
+    }
+    if (turnstileEnabled && !captchaToken) {
+      toast({ title: t('register.completeCaptcha'), variant: 'destructive' });
+      return;
+    }
+    if (!confirmAge) {
+      toast({ title: t('register.confirmAgeRequired'), variant: 'destructive' });
+      return;
+    }
+    setIsLoading(true);
+    // No display name at sign-up — the server auto-assigns a free random name the
+    // user can change (and reserve) later from their profile.
+    const { error } = await signUp(email, password, undefined, captchaToken ?? undefined);
+    setIsLoading(false);
+    if (error) {
+      toast({ title: t('register.failed'), description: error.message, variant: 'destructive' });
+    } else {
+      // Account-first paid flow: stash the chosen plan so checkout resumes on
+      // the user's first sign-in after confirming their email. Never on native —
+      // there's no in-app checkout to resume.
+      if (!native && isPaidTier(plan.tier)) {
+        setPendingCheckout(plan.tier, plan.interval);
+        toast({
+          title: t('register.accountCreated'),
+          description: t('register.accountCreatedCheckout'),
+        });
+      } else {
+        toast({ title: t('register.accountCreated'), description: t('register.accountCreatedConfirm') });
+      }
+      navigate('/login');
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-background flex flex-col safe-area-x">
+      <BrandHeader />
+
+      <div className="flex flex-1 flex-col items-center p-8 gap-12">
+        {/* Paid plans aren't sold in-app (Google Play policy), so the whole
+            pricing section is hidden on native — just the sign-up form shows. */}
+        {!native && <PricingCards className="w-full max-w-3xl" variant="register" />}
+
+        <div className="w-full max-w-sm space-y-6">
+        <div className="racing-card p-6 space-y-4">
+          <h2 className="text-lg font-semibold text-foreground">{t('register.heading')}</h2>
+
+          <form onSubmit={handleRegister} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">{t('email')}</Label>
+              <Input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">{t('password')}</Label>
+              <Input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} required />
+              <PasswordStrengthMeter password={password} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword">{t('register.confirmPassword')}</Label>
+              <Input id="confirmPassword" type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required />
+            </div>
+            {!native && <PlanCheckout value={plan} onChange={setPlan} config={config} />}
+            <Turnstile onToken={setCaptchaToken} className="flex justify-center" />
+            <label htmlFor="confirmAge" className="flex items-start gap-2 text-xs text-muted-foreground">
+              <input
+                id="confirmAge"
+                type="checkbox"
+                checked={confirmAge}
+                onChange={e => setConfirmAge(e.target.checked)}
+                className="mt-0.5 h-4 w-4 shrink-0 rounded border-input accent-primary"
+              />
+              <span>
+                <Trans
+                  t={t}
+                  i18nKey="register.ageConfirm"
+                  components={{
+                    terms: <Link to="/terms" className="text-primary hover:underline" />,
+                    privacy: <Link to="/privacy" className="text-primary hover:underline" />,
+                  }}
+                />
+              </span>
+            </label>
+            <div className="flex items-center gap-3">
+              {!native && <PlanCheckoutSummary value={plan} config={config} />}
+              <Button type="submit" className="flex-1" disabled={isLoading || !confirmAge}>
+                {isLoading ? t('pleaseWait') : t('register.submit')}
+              </Button>
+            </div>
+          </form>
+
+          <p className="text-sm text-muted-foreground text-center">
+            {t('register.alreadyHaveAccount')}{' '}
+            <Link to="/login" className="text-primary hover:underline">{t('register.signIn')}</Link>
+          </p>
+        </div>
+
+        <Button variant="ghost" className="w-full gap-2" onClick={() => navigate('/')}>
+          <ArrowLeft className="w-4 h-4" /> {t('backToHome')}
+        </Button>
+        </div>
+      </div>
+    </div>
+  );
+}

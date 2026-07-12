@@ -1,0 +1,417 @@
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Plus } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { GraphRangeControl } from './GraphRangeControl';
+import { SingleSeriesChart } from './SingleSeriesChart';
+import { GGDiagram } from './GGDiagram';
+import { PanelCard } from './PanelCard';
+import { GpsSample, FieldMapping, Course, Lap } from '@/types/racing';
+import type { OverlayLine } from '@/lib/lapOverlays';
+import { calculatePace, calculateReferenceSpeed, calculateDistanceArray } from '@/lib/referenceUtils';
+import { computeBrakingGSeriesSG, gToBrakePercent } from '@/lib/brakingZones';
+import { isDistanceUnitChannel, distanceChannelUnit } from '@/lib/units';
+import { useSettingsContext } from '@/contexts/SettingsContext';
+import { saveGraphPrefs, loadGraphPrefs } from '@/lib/graphPrefsStorage';
+
+const SERIES_COLORS = [
+  'hsl(180, 70%, 55%)', 'hsl(45, 85%, 55%)', 'hsl(0, 70%, 55%)',
+  'hsl(280, 60%, 60%)', 'hsl(120, 60%, 50%)', 'hsl(30, 80%, 55%)',
+  'hsl(200, 80%, 60%)', 'hsl(340, 80%, 55%)',
+];
+
+/** Synthetic source keys for panels relocated into the graph stack (mobile). */
+const VIDEO_KEY = '__video__';
+const MINIMAP_KEY = '__minimap__';
+const VIDEO_DEFAULT_HEIGHT = 300;
+const MINIMAP_DEFAULT_HEIGHT = 280;
+
+interface GraphPanelProps {
+  samples: GpsSample[];
+  filteredSamples: GpsSample[];
+  referenceSamples: GpsSample[];
+  fieldMappings: FieldMapping[];
+  onScrub: (index: number) => void;
+  visibleRange: [number, number];
+  onRangeChange: (range: [number, number]) => void;
+  minRange: number;
+  formatRangeLabel: (idx: number) => string;
+  sessionFileName: string | null;
+  overlayLines?: OverlayLine[];
+  course?: Course | null;
+  laps?: Lap[];
+  selectedLapNumber?: number | null;
+  /** When set, the video/mini-map can be relocated here as resizable panels
+   *  (mobile: lets the user collapse the left panel and still reach them). */
+  enableMobilePanels?: boolean;
+  renderVideo?: () => React.ReactNode;
+  renderMiniMap?: () => React.ReactNode;
+  /** Reports which relocated panels are active, so the host can avoid mounting
+   *  a duplicate (the video player binds a single shared element ref). */
+  onMobilePanelsChange?: (active: { video: boolean; miniMap: boolean }) => void;
+  /** Mirrored secondary stack (split-graphs): render this exact graph set
+   *  instead of the panel's own, read-only — no picker, slider, or persistence. */
+  controlledActiveGraphs?: string[];
+  controlledGraphHeights?: Record<string, number>;
+  secondary?: boolean;
+  /** Main stack → host: report the active graph set + heights so a mirrored
+   *  secondary stack can match it. */
+  onActiveGraphsChange?: (activeGraphs: string[], graphHeights: Record<string, number>) => void;
+  /** Slim header bar content (split-graphs: per-panel lap label/legend). When
+   *  set, both stacks share a fixed-height bar so their graph rows line up. */
+  header?: React.ReactNode;
+  /** Hide the bottom range/crop control (split-graphs renders one shared control
+   *  spanning both panels instead). */
+  hideRangeControl?: boolean;
+}
+
+export function GraphPanel({
+  samples, filteredSamples, referenceSamples, fieldMappings, onScrub,
+  visibleRange, onRangeChange, minRange, formatRangeLabel, sessionFileName, overlayLines = [],
+  course = null, laps = [], selectedLapNumber = null,
+  enableMobilePanels = false, renderVideo, renderMiniMap, onMobilePanelsChange,
+  controlledActiveGraphs, controlledGraphHeights, secondary = false, onActiveGraphsChange,
+  header, hideRangeControl = false,
+}: GraphPanelProps) {
+  const { t } = useTranslation('session');
+  const { useKph, useMetricDistance, brakingZoneSettings } = useSettingsContext();
+  const [internalActiveGraphs, setActiveGraphs] = useState<string[]>([]);
+  const [internalGraphHeights, setGraphHeights] = useState<Record<string, number>>({});
+  const loadedFileRef = useRef<string | null>(null);
+
+  // A mirrored secondary stack renders a controlled set (no own state/persistence).
+  const activeGraphs = controlledActiveGraphs ?? internalActiveGraphs;
+  const graphHeights = controlledGraphHeights ?? internalGraphHeights;
+
+  // Load saved graph prefs when session changes (main stack only)
+  useEffect(() => {
+    if (secondary) return;
+    if (!sessionFileName || sessionFileName === loadedFileRef.current) return;
+    loadedFileRef.current = sessionFileName;
+    loadGraphPrefs(sessionFileName).then(saved => {
+      if (saved.activeGraphs.length > 0) setActiveGraphs(saved.activeGraphs);
+      setGraphHeights(saved.graphHeights);
+    }).catch(() => {});
+  }, [sessionFileName, secondary]);
+
+  // Persist whenever active graphs or their heights change (skip initial empty
+  // state before load).
+  useEffect(() => {
+    if (secondary) return;
+    if (!sessionFileName || loadedFileRef.current !== sessionFileName) return;
+    saveGraphPrefs(sessionFileName, internalActiveGraphs, internalGraphHeights).catch(() => {});
+  }, [internalActiveGraphs, internalGraphHeights, sessionFileName, secondary]);
+
+  // Report the active graph set up so a mirrored secondary stack can match it.
+  useEffect(() => {
+    if (secondary) return;
+    onActiveGraphsChange?.(internalActiveGraphs, internalGraphHeights);
+  }, [internalActiveGraphs, internalGraphHeights, secondary, onActiveGraphsChange]);
+
+  const setGraphHeight = useCallback((key: string, height: number) => {
+    setGraphHeights(prev => ({ ...prev, [key]: height }));
+  }, []);
+
+  const hasReference = referenceSamples.length > 0;
+
+  // Compute braking G series from FULL dataset using SG filter for smooth graph
+  const brakingGFull = useMemo(() => {
+    if (filteredSamples.length < 3) return [];
+    return gToBrakePercent(computeBrakingGSeriesSG(filteredSamples, brakingZoneSettings.graphWindow), brakingZoneSettings.brakeMaxG);
+  }, [filteredSamples, brakingZoneSettings.graphWindow, brakingZoneSettings.brakeMaxG]);
+
+  // Compute braking G for reference samples using SG filter
+  const brakingGRefFull = useMemo(() => {
+    if (!hasReference || referenceSamples.length < 3) return [];
+    return gToBrakePercent(computeBrakingGSeriesSG(referenceSamples, brakingZoneSettings.graphWindow), brakingZoneSettings.brakeMaxG);
+  }, [referenceSamples, brakingZoneSettings.graphWindow, hasReference, brakingZoneSettings.brakeMaxG]);
+
+  // Precompute reference values for each channel from FULL dataset, then slice for visible range
+  const referenceValuesByKey = useMemo(() => {
+    if (!hasReference || filteredSamples.length === 0) return {};
+
+    const result: Record<string, (number | null)[]> = {};
+
+    // Reference speed (computed from full filteredSamples)
+    result['speed'] = calculateReferenceSpeed(filteredSamples, referenceSamples, useKph);
+
+    // Pace
+    result['__pace__'] = calculatePace(filteredSamples, referenceSamples);
+
+    // Braking G reference - interpolated by distance
+    if (brakingGRefFull.length > 0) {
+      const currentDistances = calculateDistanceArray(filteredSamples);
+      const refDistances = calculateDistanceArray(referenceSamples);
+      const refBrakingG: (number | null)[] = [];
+      for (let i = 0; i < filteredSamples.length; i++) {
+        const targetDist = currentDistances[i];
+        let lo = 0, hi = refDistances.length - 1;
+        while (lo < hi - 1) {
+          const mid = Math.floor((lo + hi) / 2);
+          if (refDistances[mid] <= targetDist) lo = mid; else hi = mid;
+        }
+        if (targetDist > refDistances[refDistances.length - 1]) { refBrakingG.push(null); continue; }
+        const d1 = refDistances[lo], d2 = refDistances[hi];
+        if (d2 === d1) { refBrakingG.push(brakingGRefFull[lo]); continue; }
+        const t = (targetDist - d1) / (d2 - d1);
+        refBrakingG.push(brakingGRefFull[lo] + t * (brakingGRefFull[hi] - brakingGRefFull[lo]));
+      }
+      result['__braking_g__'] = refBrakingG;
+    }
+
+    // For extra fields, interpolate by distance using full dataset
+    const currentDistances = calculateDistanceArray(filteredSamples);
+    const refDistances = calculateDistanceArray(referenceSamples);
+
+    fieldMappings.forEach(f => {
+      const refValues: (number | null)[] = [];
+      for (let i = 0; i < filteredSamples.length; i++) {
+        const targetDist = currentDistances[i];
+        let lo = 0, hi = refDistances.length - 1;
+        while (lo < hi - 1) {
+          const mid = Math.floor((lo + hi) / 2);
+          if (refDistances[mid] <= targetDist) lo = mid; else hi = mid;
+        }
+        const d1 = refDistances[lo], d2 = refDistances[hi];
+        if (targetDist > refDistances[refDistances.length - 1]) { refValues.push(null); continue; }
+        if (d2 === d1) { refValues.push(referenceSamples[lo].extraFields[f.name] ?? null); continue; }
+        const t = (targetDist - d1) / (d2 - d1);
+        const v1 = referenceSamples[lo].extraFields[f.name];
+        const v2 = referenceSamples[hi].extraFields[f.name];
+        if (v1 === undefined || v2 === undefined) { refValues.push(null); continue; }
+        refValues.push(v1 + t * (v2 - v1));
+      }
+      result[f.name] = refValues;
+    });
+
+    return result;
+  }, [filteredSamples, referenceSamples, fieldMappings, useKph, hasReference, brakingGRefFull]);
+
+  // Check if both GPS and HW G-force data are available
+  const hasHwAccel = useMemo(() => {
+    return filteredSamples.some(s => s.extraFields['accel_x'] !== undefined);
+  }, [filteredSamples]);
+
+  const hasGpsG = useMemo(() => {
+    return filteredSamples.some(s => s.extraFields['lat_g'] !== undefined);
+  }, [filteredSamples]);
+
+  const hasNativeG = useMemo(() => {
+    return filteredSamples.some(s => s.extraFields['lat_g_native'] !== undefined);
+  }, [filteredSamples]);
+
+  // The G-G diagram needs a lateral/longitudinal g pair (GPS-derived or native).
+  const hasGForce = hasGpsG || hasNativeG;
+
+  const hasBothSources = hasHwAccel && hasGpsG;
+
+  const hasVideoPanel = (enableMobilePanels || secondary) && !!renderVideo;
+  const hasMiniMapPanel = (enableMobilePanels || secondary) && !!renderMiniMap;
+
+  // Available data sources
+  const availableSources = useMemo(() => {
+    const sources: { key: string; label: string }[] = [];
+    // Relocated panels sit at the top of the picker on mobile.
+    if (hasVideoPanel) sources.push({ key: VIDEO_KEY, label: t('infoBox.tabVideo') });
+    if (hasMiniMapPanel) sources.push({ key: MINIMAP_KEY, label: t('graphs.miniMap') });
+    sources.push(
+      { key: 'speed', label: t('graphs.speed', { unit: useKph ? 'KPH' : 'MPH' }) },
+    );
+    if (hasReference) {
+      sources.push({ key: '__pace__', label: t('graphs.pace') });
+    }
+    sources.push({ key: '__braking_g__', label: hasBothSources ? t('graphs.brakeGps') : t('graphs.brakeComputed') });
+    if (hasGForce) {
+      sources.push({ key: '__gg__', label: t('graphs.ggDiagram') });
+    }
+    fieldMappings.forEach(f => {
+      const display = f.label ?? f.name;
+      // Distance-family channels (distance, altitude) follow the distance unit toggle.
+      const unit = isDistanceUnitChannel(f.name) ? distanceChannelUnit(useMetricDistance) : f.unit;
+      let label = display + (unit ? ` (${unit})` : '');
+      // Add source indicator when both GPS and HW G-force data exist
+      if (hasBothSources) {
+        if (f.name === 'lat_g') label = 'Lat G (GPS)';
+        else if (f.name === 'lon_g') label = 'Lon G (GPS)';
+        else if (f.name === 'accel_x') label = 'Accel X (HW)';
+        else if (f.name === 'accel_y') label = 'Accel Y (HW)';
+        else if (f.name === 'accel_z') label = 'Accel Z (HW)';
+      }
+      sources.push({ key: f.name, label });
+    });
+    return sources;
+  }, [fieldMappings, useKph, useMetricDistance, hasReference, hasBothSources, hasGForce, hasVideoPanel, hasMiniMapPanel, t]);
+
+  const unusedSources = useMemo(() => {
+    return availableSources.filter(s => !activeGraphs.includes(s.key));
+  }, [availableSources, activeGraphs]);
+
+  // Report which relocated panels are live so the host can drop its own copy
+  // (the video player binds a single shared element ref — two would collide).
+  // The mirrored secondary stack runs its own passive video, so it never reports.
+  useEffect(() => {
+    if (secondary) return;
+    onMobilePanelsChange?.({
+      video: hasVideoPanel && activeGraphs.includes(VIDEO_KEY),
+      miniMap: hasMiniMapPanel && activeGraphs.includes(MINIMAP_KEY),
+    });
+  }, [activeGraphs, hasVideoPanel, hasMiniMapPanel, onMobilePanelsChange, secondary]);
+
+  const addGraph = useCallback((key: string) => {
+    if (key && !activeGraphs.includes(key)) {
+      setActiveGraphs(prev => [...prev, key]);
+    }
+  }, [activeGraphs]);
+
+  const removeGraph = useCallback((key: string) => {
+    setActiveGraphs(prev => prev.filter(k => k !== key));
+    setGraphHeights(prev => {
+      if (!(key in prev)) return prev;
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  }, []);
+
+  const getColor = (key: string) => {
+    if (key === '__pace__') return 'hsl(50, 85%, 55%)';
+    if (key === '__braking_g__') return 'hsl(15, 80%, 55%)';
+    const idx = availableSources.findIndex(s => s.key === key);
+    return SERIES_COLORS[idx % SERIES_COLORS.length];
+  };
+
+  const getLabel = (key: string) => {
+    return availableSources.find(s => s.key === key)?.label ?? key;
+  };
+
+  return (
+    <div className="flex flex-col h-full min-h-0">
+      {header && (
+        <div className="shrink-0 flex items-center border-b border-border bg-muted/30 px-2 py-1 h-7">
+          {header}
+        </div>
+      )}
+      {/* Scrollable graph area */}
+      <div className="flex-1 min-h-0 overflow-y-auto">
+        {activeGraphs.length === 0 ? (
+          <div className="h-full flex flex-col items-center justify-center text-muted-foreground gap-4">
+            <p className="text-sm">{secondary ? t('graphs.splitMirrorEmpty') : t('graphs.addSourcePrompt')}</p>
+            {!secondary && unusedSources.length > 0 && (
+              <Select onValueChange={addGraph}>
+                <SelectTrigger className="w-[200px] h-9">
+                  <div className="flex items-center gap-2">
+                    <Plus className="w-4 h-4" />
+                    <SelectValue placeholder={t('graphs.addGraph')} />
+                  </div>
+                </SelectTrigger>
+                <SelectContent>
+                  {unusedSources.map(s => (
+                    <SelectItem key={s.key} value={s.key}>{s.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+        ) : (
+          <>
+            {activeGraphs.map(key => (
+              key === VIDEO_KEY ? (
+                hasVideoPanel ? (
+                  <PanelCard
+                    key={key}
+                    label={t('infoBox.tabVideo')}
+                    onDelete={() => removeGraph(key)}
+                    height={graphHeights[key]}
+                    defaultHeight={VIDEO_DEFAULT_HEIGHT}
+                    onHeightChange={(h) => setGraphHeight(key, h)}
+                    readOnly={secondary}
+                  >
+                    <div className="h-full">{renderVideo!()}</div>
+                  </PanelCard>
+                ) : null
+              ) : key === MINIMAP_KEY ? (
+                hasMiniMapPanel ? (
+                  <PanelCard
+                    key={key}
+                    label={t('graphs.miniMap')}
+                    onDelete={() => removeGraph(key)}
+                    height={graphHeights[key]}
+                    defaultHeight={MINIMAP_DEFAULT_HEIGHT}
+                    onHeightChange={(h) => setGraphHeight(key, h)}
+                    readOnly={secondary}
+                  >
+                    <div className="h-full">{renderMiniMap!()}</div>
+                  </PanelCard>
+                ) : null
+              ) : key === '__gg__' ? (
+                <GGDiagram
+                  key={key}
+                  samples={samples}
+                  referenceSamples={referenceSamples}
+                  overlayLines={overlayLines}
+                  label={getLabel(key)}
+                  onDelete={() => removeGraph(key)}
+                  height={graphHeights[key]}
+                  onHeightChange={(h) => setGraphHeight(key, h)}
+                  readOnly={secondary}
+                />
+              ) : (
+                <SingleSeriesChart
+                  key={key}
+                  samples={samples}
+                  seriesKey={key}
+                  onScrub={onScrub}
+                  color={getColor(key)}
+                  label={getLabel(key)}
+                  onDelete={() => removeGraph(key)}
+                  referenceValues={referenceValuesByKey[key]?.slice(visibleRange[0], visibleRange[1] + 1) ?? null}
+                  brakingGValues={key === '__braking_g__' ? brakingGFull.slice(visibleRange[0], visibleRange[1] + 1) : undefined}
+                  allSamples={filteredSamples}
+                  rangeStart={visibleRange[0]}
+                  overlayLines={overlayLines}
+                  height={graphHeights[key]}
+                  onHeightChange={(h) => setGraphHeight(key, h)}
+                  readOnly={secondary}
+                />
+              )
+            ))}
+            {/* Add more button */}
+            {!secondary && unusedSources.length > 0 && (
+              <div className="flex justify-center py-3">
+                <Select onValueChange={addGraph}>
+                  <SelectTrigger className="w-[180px] h-8 text-sm">
+                    <div className="flex items-center gap-2">
+                      <Plus className="w-3.5 h-3.5" />
+                      <SelectValue placeholder={t('graphs.addGraph')} />
+                    </div>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {unusedSources.map(s => (
+                      <SelectItem key={s.key} value={s.key}>{s.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* Range slider + crop-to-sector select. The mirrored secondary stack has
+          no own control, and split mode renders one shared control spanning both
+          panels (hideRangeControl) — both follow the single main cursor. */}
+      {!secondary && !hideRangeControl && (
+        <GraphRangeControl
+          filteredSamples={filteredSamples}
+          visibleRange={visibleRange}
+          onRangeChange={onRangeChange}
+          minRange={minRange}
+          formatRangeLabel={formatRangeLabel}
+          course={course}
+          laps={laps}
+          selectedLapNumber={selectedLapNumber}
+        />
+      )}
+    </div>
+  );
+}

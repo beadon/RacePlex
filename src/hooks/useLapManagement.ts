@@ -1,0 +1,212 @@
+import { useState, useCallback, useMemo, useEffect, useRef } from "react";
+import { ParsedData, Lap, GpsSample, TrackCourseSelection, Course } from "@/types/racing";
+import { calculateLaps } from "@/lib/lapCalculation";
+import { updateFileMetadata } from "@/lib/fileStorage";
+
+/**
+ * Manages track/course selection, lap calculation, lap/reference selection,
+ * filtered samples, visible range, and current scrub index.
+ */
+export function useLapManagement(data: ParsedData | null, currentFileName: string | null) {
+  const [selection, setSelection] = useState<TrackCourseSelection | null>(null);
+  const [laps, setLaps] = useState<Lap[]>([]);
+  const [selectedLapNumber, setSelectedLapNumber] = useState<number | null>(null);
+  const [referenceLapNumber, setReferenceLapNumber] = useState<number | null>(null);
+  const [visibleRange, setVisibleRange] = useState<[number, number]>([0, 0]);
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  const selectedCourse: Course | null = selection?.course ?? null;
+
+  // Filter samples to selected lap
+  const filteredSamples = useMemo((): GpsSample[] => {
+    if (!data) return [];
+    if (selectedLapNumber === null) return data.samples;
+    const lap = laps.find((l) => l.lapNumber === selectedLapNumber);
+    if (!lap) return data.samples;
+    return data.samples.slice(lap.startIndex, lap.endIndex + 1);
+  }, [data, laps, selectedLapNumber]);
+
+  // Reset visible range when filtered samples change
+  // In "All Laps" mode with large datasets, crop to first ~1 minute to reduce initial render cost
+  useEffect(() => {
+    if (filteredSamples.length > 0) {
+      if (selectedLapNumber === null && filteredSamples.length > 1500) {
+        setVisibleRange([0, 1499]);
+      } else {
+        setVisibleRange([0, filteredSamples.length - 1]);
+      }
+    }
+  }, [filteredSamples.length, selectedLapNumber]);
+
+  // Visible samples based on range selection
+  const visibleSamples = useMemo((): GpsSample[] => {
+    if (filteredSamples.length === 0) return [];
+    const [start, end] = visibleRange;
+    return filteredSamples.slice(start, end + 1);
+  }, [filteredSamples, visibleRange]);
+
+  // Compute bounds for filtered samples
+  const filteredBounds = useMemo(() => {
+    if (filteredSamples.length === 0) return data?.bounds;
+    let minLat = Infinity, maxLat = -Infinity;
+    let minLon = Infinity, maxLon = -Infinity;
+    for (const s of filteredSamples) {
+      if (s.lat < minLat) minLat = s.lat;
+      if (s.lat > maxLat) maxLat = s.lat;
+      if (s.lon < minLon) minLon = s.lon;
+      if (s.lon > maxLon) maxLon = s.lon;
+    }
+    return { minLat, maxLat, minLon, maxLon };
+  }, [filteredSamples, data?.bounds]);
+
+  const calculateAndSetLaps = useCallback(
+    (course: Course, samples: GpsSample[], fileNameOverride?: string) => {
+      const computedLaps = calculateLaps(samples, course);
+      setLaps(computedLaps);
+      if (computedLaps.length > 0) {
+        const fastest = computedLaps.reduce(
+          (min, lap) => (lap.lapTimeMs < min.lapTimeMs ? lap : min),
+          computedLaps[0]
+        );
+        setSelectedLapNumber(fastest.lapNumber);
+
+        // Persist fastest lap into metadata (preserving all other tags).
+        const targetFileName = fileNameOverride ?? currentFileName;
+        if (targetFileName) {
+          updateFileMetadata(targetFileName, {
+            fastestLapMs: fastest.lapTimeMs,
+            fastestLapNumber: fastest.lapNumber,
+          });
+        }
+      }
+      return computedLaps;
+    },
+    [currentFileName]
+  );
+
+  const handleSelectionChange = useCallback(
+    (newSelection: TrackCourseSelection | null) => {
+      setSelection(newSelection);
+
+      // Persist track/course association for current file (preserving all other
+      // tags), and stamp the session's true start time from the first sample so
+      // the browser can show a date/time display name.
+      if (currentFileName && newSelection) {
+        updateFileMetadata(currentFileName, {
+          trackName: newSelection.trackName,
+          courseName: newSelection.courseName,
+          ...(data?.startDate ? { sessionStartTime: data.startDate.getTime() } : {}),
+        });
+      }
+
+      // Recalculate laps
+      if (newSelection?.course && data) {
+        calculateAndSetLaps(newSelection.course, data.samples);
+      } else {
+        setLaps([]);
+        setSelectedLapNumber(null);
+      }
+    },
+    [data, currentFileName, calculateAndSetLaps]
+  );
+
+  const handleLapSelect = useCallback((lap: Lap) => {
+    setSelectedLapNumber(lap.lapNumber);
+    setCurrentIndex(0);
+  }, []);
+
+  const handleLapDropdownChange = useCallback((value: string) => {
+    if (value === "all") {
+      setSelectedLapNumber(null);
+      setCurrentIndex(0);
+    } else {
+      setSelectedLapNumber(parseInt(value, 10));
+      setCurrentIndex(0);
+    }
+  }, []);
+
+  const handleSetReference = useCallback((lapNumber: number) => {
+    setReferenceLapNumber((prev) => (prev === lapNumber ? null : lapNumber));
+  }, []);
+
+  // rAF-coalesce scrub updates: a fast pointer fires far more than 60×/s, and
+  // every cursor change redraws every graph canvas (+ map + overlays) and seeks
+  // the synced video. Doing that per pointer event saturates the main thread and
+  // stutters the video. Cap to one update per frame — the latest index always
+  // lands, so the resting position stays deterministic. (Playback drives the
+  // cursor through setCurrentIndex directly, so it is unaffected.)
+  const scrubRafRef = useRef<number | null>(null);
+  const scrubPendingRef = useRef<number | null>(null);
+  // Clamp against the *live* range inside the deferred frame: visibleRange can
+  // change (crop / sector-select / resize) between the pointer event and the rAF
+  // callback, so closing over it would clamp to a stale window. The ref also lets
+  // handleScrub keep a stable identity (it rides the memoized SessionContext value).
+  const visibleRangeRef = useRef(visibleRange);
+  visibleRangeRef.current = visibleRange;
+  useEffect(() => () => { if (scrubRafRef.current != null) cancelAnimationFrame(scrubRafRef.current); }, []);
+
+  const handleScrub = useCallback(
+    (index: number) => {
+      scrubPendingRef.current = index;
+      if (scrubRafRef.current != null) return;
+      scrubRafRef.current = requestAnimationFrame(() => {
+        scrubRafRef.current = null;
+        const idx = scrubPendingRef.current;
+        if (idx == null) return;
+        const [start, end] = visibleRangeRef.current;
+        const clampedIndex = Math.max(0, Math.min(idx, end - start));
+        setCurrentIndex(clampedIndex);
+      });
+    },
+    []
+  );
+
+  // Stable identity (functional update): this callback rides the memoized
+  // SessionContext value, and depending on currentIndex would change it —
+  // and with it the whole context — on every playback tick.
+  const handleRangeChange = useCallback((newRange: [number, number]) => {
+    setVisibleRange(newRange);
+    const visibleLength = newRange[1] - newRange[0];
+    setCurrentIndex((prev) => (prev > visibleLength ? visibleLength : prev));
+  }, []);
+
+  // Format range label helper
+  const formatRangeLabel = useCallback(
+    (idx: number) => {
+      const sample = filteredSamples[idx];
+      if (!sample) return "";
+      const totalMs = sample.t - filteredSamples[0].t;
+      const secs = Math.floor(totalMs / 1000);
+      const mins = Math.floor(secs / 60);
+      const remSecs = secs % 60;
+      return `${mins}:${remSecs.toString().padStart(2, "0")}`;
+    },
+    [filteredSamples]
+  );
+
+  return {
+    selection,
+    setSelection,
+    selectedCourse,
+    laps,
+    setLaps,
+    selectedLapNumber,
+    setSelectedLapNumber,
+    referenceLapNumber,
+    setReferenceLapNumber,
+    filteredSamples,
+    visibleSamples,
+    visibleRange,
+    currentIndex,
+    setCurrentIndex,
+    filteredBounds,
+    calculateAndSetLaps,
+    handleSelectionChange,
+    handleLapSelect,
+    handleLapDropdownChange,
+    handleSetReference,
+    handleScrub,
+    handleRangeChange,
+    formatRangeLabel,
+  };
+}

@@ -1,0 +1,14 @@
+{
+  "_machine": true,
+  "loading": "Chargement du profil…",
+  "loadFailed": "Impossible de charger ce profil.",
+  "notFoundTitle": "Pilote introuvable",
+  "notFoundBody": "Aucun pilote nommé “{{name}}” n'existe.",
+  "vehiclesTitle": "Véhicules",
+  "vehiclesEmpty": "Ce pilote n'a partagé aucun véhicule.",
+  "unknownType": "Type inconnu",
+  "snapshotsTitle": "Instantanés du classement",
+  "snapshotsEmpty": "Ce pilote n'a téléversé aucun instantané au classement.",
+  "noWeight": "Aucun poids indiqué",
+  "openSnapshot": "Ouvrir ce tour dans la visionneuse"
+}

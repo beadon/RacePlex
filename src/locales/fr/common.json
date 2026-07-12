@@ -1,0 +1,25 @@
+{
+  "_machine": true,
+  "appName": "LapWing",
+  "actions": {
+    "signIn": "Se connecter",
+    "signOut": "Se déconnecter",
+    "profile": "Profil",
+    "sponsor": "Soutenir",
+    "loading": "Chargement…",
+    "reset": "Réinitialiser les valeurs par défaut",
+    "update": "Mettre à jour",
+    "updating": "Mise à jour…",
+    "backToHome": "Retour à l'accueil"
+  },
+  "language": {
+    "heading": "Langue",
+    "label": "Langue d'affichage"
+  },
+  "updateToast": {
+    "title": "Mise à jour disponible",
+    "description": "Actualisez pour vider les fichiers en cache obsolètes et charger la dernière version de l'application.",
+    "refresh": "Actualiser",
+    "later": "Plus tard"
+  }
+}

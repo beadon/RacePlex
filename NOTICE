@@ -1,0 +1,46 @@
+RacePlex
+========
+
+RacePlex is a fork of Dove's DataViewer.
+
+    Upstream:  Dove's DataViewer  (also published as "LapWing")
+    Author:    TheAngryRaven
+    Source:    https://github.com/TheAngryRaven/DovesDataViewer
+    Licence:   GPL-3.0-or-later
+
+RacePlex is likewise licensed GPL-3.0-or-later. See LICENSE for the full text.
+
+Nearly all of the telemetry engine — the VBO, NMEA, UBX, MoTeC, AiM, Alfano and iRacing parsers,
+the lap-crossing detection, the sector and optimal-lap math, the chart and map layers, the video
+overlay renderer, and the offline-first PWA architecture — is upstream's work. RacePlex would not
+exist without it, and we are grateful for it.
+
+
+Statement of changes (GPL-3.0 §5(a))
+------------------------------------
+
+Fork established 2026-07-12 by the RacePlex contributors.
+
+Changes made by RacePlex relative to upstream:
+
+  * Reoriented the project from cars and karts to electric skateboards: course models suited to
+    point-to-point runs (hill runs, slalom, drag) rather than closed circuits, and telemetry
+    channels specific to electric skateboards (VESC motor current, battery sag, ERPM).
+
+  * Added device support absent upstream: GPX import, RaceBox CSV import (including automatic
+    detection of the speed column's unit, which RaceBox does not record in the file), and
+    RaceChrono CSV v3 import.
+
+  * Added reconstruction of timing lines from GPX waypoints, so a rider gets working lap timing
+    without drawing a start/finish line by hand.
+
+  * Added generic Web Bluetooth support for third-party GPS loggers (RaceBox, Dragy). Upstream's
+    Bluetooth implementation is specific to its own DovesDataLogger hardware.
+
+  * Added docs/research/FORMATS.md, a sourced reference for the telemetry formats involved.
+
+  * Committed to remaining free and fully local: no subscription tiers, no feature gating, no
+    required backend.
+
+Where these changes are useful to upstream, we intend to offer them back as contributions rather
+than keep them here.

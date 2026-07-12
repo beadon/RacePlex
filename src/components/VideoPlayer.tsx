@@ -1,0 +1,812 @@
+import { memo, useCallback, useEffect, useRef, useState, useMemo } from "react";
+import { useTranslation } from "react-i18next";
+import { Play, Pause, Lock, Unlock, Plus, Minus, Video, Crosshair, Volume2, VolumeX, RefreshCw, Sliders, Move, Download } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { useSettingsContext } from "@/contexts/SettingsContext";
+import { usePlaybackContext } from "@/contexts/PlaybackContext";
+import { useVideoTime } from "@/contexts/VideoTimeContext";
+import { GpsSample, FieldMapping, Lap, Course } from "@/types/racing";
+import type { VideoSyncState, VideoSyncActions } from "@/hooks/useVideoSync";
+import type { OverlayPosition, OverlayInstance, OverlayRenderContext, OverlaySettings, DataSourceDef } from "@/components/video-overlays/types";
+import { buildDataSources, resolveValue } from "@/components/video-overlays/dataSourceResolver";
+import { OverlaySettingsPanel } from "@/components/video-overlays/OverlaySettingsPanel";
+import { VideoExportDialog, ExportOptions } from "@/components/video-overlays/VideoExportDialog";
+import { DigitalOverlay } from "@/components/video-overlays/DigitalOverlay";
+import { AnalogOverlay } from "@/components/video-overlays/AnalogOverlay";
+import { GraphOverlay } from "@/components/video-overlays/GraphOverlay";
+import { BarOverlay } from "@/components/video-overlays/BarOverlay";
+import { BubbleOverlay } from "@/components/video-overlays/BubbleOverlay";
+import { MapOverlay } from "@/components/video-overlays/MapOverlay";
+import { PaceOverlay } from "@/components/video-overlays/PaceOverlay";
+import { SectorOverlay } from "@/components/video-overlays/SectorOverlay";
+import { LapTimeOverlay } from "@/components/video-overlays/LapTimeOverlay";
+import { startVideoExport, downloadBlob, ExportContext, ExportSource } from "@/lib/videoExport";
+import { computeBrakingGSeriesSG, gToBrakePercent } from "@/lib/brakingZones";
+import { saveSessionVideo, loadSessionVideo, deleteSessionVideo } from "@/lib/videoFileStorage";
+import { courseHasSectors } from "@/types/racing";
+import { findNearestIndex } from "@/components/video-overlays/overlayUtils";
+
+interface VideoPlayerProps {
+  state: VideoSyncState;
+  actions: VideoSyncActions;
+  onLoadedMetadata: () => void;
+  // New props for overlay system
+  samples?: GpsSample[];
+  allSamples?: GpsSample[];
+  fieldMappings?: FieldMapping[];
+  laps?: Lap[];
+  selectedLapNumber?: number | null;
+  course?: Course | null;
+  referenceSamples?: GpsSample[];
+  paceData?: (number | null)[];
+  sessionFileName?: string | null;
+}
+
+/** Base font size in px when video container is 640px wide */
+const BASE_WIDTH = 640;
+const BASE_FONT_PX = 18;
+
+/** Draggable + resizable overlay wrapper */
+function DraggableOverlay({
+  id,
+  position,
+  locked,
+  onMove,
+  containerRef,
+  children,
+}: {
+  id: string;
+  position: OverlayPosition;
+  locked: boolean;
+  onMove: (id: string, pos: OverlayPosition) => void;
+  containerRef: React.RefObject<HTMLDivElement | null>;
+  children: (scaledFontPx: number) => React.ReactNode;
+}) {
+  const [localPos, setLocalPos] = useState<OverlayPosition>(position);
+  const [selected, setSelected] = useState(false);
+  const dragging = useRef(false);
+  const resizing = useRef(false);
+  const offset = useRef({ x: 0, y: 0 });
+  const resizeStartY = useRef(0);
+  const resizeStartScale = useRef(1);
+
+  useEffect(() => {
+    if (!dragging.current && !resizing.current) setLocalPos(position);
+  }, [position]);
+
+  useEffect(() => {
+    if (locked) setSelected(false);
+  }, [locked]);
+
+  const [containerWidth, setContainerWidth] = useState(BASE_WIDTH);
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver((entries) => {
+      for (const entry of entries) setContainerWidth(entry.contentRect.width || BASE_WIDTH);
+    });
+    ro.observe(el);
+    setContainerWidth(el.clientWidth || BASE_WIDTH);
+    return () => ro.disconnect();
+  }, [containerRef]);
+
+  const scale = localPos.scale ?? 1;
+  const scaledFontPx = (containerWidth / BASE_WIDTH) * BASE_FONT_PX * scale;
+
+  const handlePointerDown = useCallback((e: React.PointerEvent) => {
+    if (locked) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if (!selected) { setSelected(true); return; }
+    dragging.current = true;
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    const container = containerRef.current;
+    if (!container) return;
+    const rect = container.getBoundingClientRect();
+    offset.current = {
+      x: e.clientX - (rect.left + (localPos.x / 100) * rect.width),
+      y: e.clientY - (rect.top + (localPos.y / 100) * rect.height),
+    };
+  }, [locked, selected, localPos, containerRef]);
+
+  const handlePointerMove = useCallback((e: React.PointerEvent) => {
+    if (!dragging.current) return;
+    e.stopPropagation();
+    const container = containerRef.current;
+    if (!container) return;
+    const rect = container.getBoundingClientRect();
+    const x = Math.max(0, Math.min(90, ((e.clientX - offset.current.x - rect.left) / rect.width) * 100));
+    const y = Math.max(0, Math.min(90, ((e.clientY - offset.current.y - rect.top) / rect.height) * 100));
+    setLocalPos(prev => ({ ...prev, x, y }));
+  }, [containerRef]);
+
+  const handlePointerUp = useCallback(() => {
+    if (dragging.current) {
+      dragging.current = false;
+      onMove(id, localPos);
+    }
+  }, [id, onMove, localPos]);
+
+  const handleResizePointerDown = useCallback((e: React.PointerEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    resizing.current = true;
+    resizeStartY.current = e.clientY;
+    resizeStartScale.current = localPos.scale ?? 1;
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  }, [localPos.scale]);
+
+  const handleResizePointerMove = useCallback((e: React.PointerEvent) => {
+    if (!resizing.current) return;
+    e.stopPropagation();
+    const delta = e.clientY - resizeStartY.current;
+    const newScale = Math.max(0.4, Math.min(4, resizeStartScale.current + delta / 100));
+    setLocalPos(prev => ({ ...prev, scale: newScale }));
+  }, []);
+
+  const handleResizePointerUp = useCallback(() => {
+    if (resizing.current) {
+      resizing.current = false;
+      onMove(id, localPos);
+    }
+  }, [id, onMove, localPos]);
+
+  useEffect(() => {
+    if (!selected || locked) return;
+    const handleClick = (e: MouseEvent) => {
+      const el = document.getElementById(`overlay-${id}`);
+      if (el && !el.contains(e.target as Node)) setSelected(false);
+    };
+    const timer = setTimeout(() => document.addEventListener("pointerdown", handleClick), 0);
+    return () => { clearTimeout(timer); document.removeEventListener("pointerdown", handleClick); };
+  }, [selected, locked, id]);
+
+  return (
+    <div
+      id={`overlay-${id}`}
+      className={`absolute pointer-events-auto ${locked ? "pointer-events-none" : selected ? "cursor-grab active:cursor-grabbing" : "cursor-pointer"}`}
+      style={{
+        left: `${localPos.x}%`,
+        top: `${localPos.y}%`,
+        transform: "translate3d(0,0,0)",
+        willChange: dragging.current || resizing.current ? "transform" : "auto",
+        touchAction: "none",
+      }}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerUp}
+    >
+      {!locked && selected && (
+        <div className="absolute inset-0 ring-2 ring-white/60 rounded-md pointer-events-none" style={{ margin: -2 }} />
+      )}
+      {!locked && !selected && (
+        <div className="absolute -top-1 -right-1 w-3 h-3 bg-white/40 rounded-full flex items-center justify-center pointer-events-none">
+          <Move className="w-2 h-2 text-white" />
+        </div>
+      )}
+      {children(scaledFontPx)}
+      {!locked && selected && (
+        <div
+          className="absolute -bottom-2 -right-2 w-5 h-5 bg-white/80 rounded-sm border border-white/40 cursor-ns-resize flex items-center justify-center"
+          style={{ touchAction: "none" }}
+          onPointerDown={handleResizePointerDown}
+          onPointerMove={handleResizePointerMove}
+          onPointerUp={handleResizePointerUp}
+          onPointerCancel={handleResizePointerUp}
+        >
+          <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+            <path d="M0 8L8 0M3 8L8 3M6 8L8 6" stroke="rgba(0,0,0,0.5)" strokeWidth="1" />
+          </svg>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Render the appropriate overlay component for an instance */
+function OverlayRenderer({ instance, ctx, fontSize }: { instance: OverlayInstance; ctx: OverlayRenderContext; fontSize: number }) {
+  switch (instance.type) {
+    case "digital": return <DigitalOverlay instance={instance} ctx={ctx} fontSize={fontSize} />;
+    case "analog": return <AnalogOverlay instance={instance} ctx={ctx} fontSize={fontSize} />;
+    case "graph": return <GraphOverlay instance={instance} ctx={ctx} fontSize={fontSize} />;
+    case "bar": return <BarOverlay instance={instance} ctx={ctx} fontSize={fontSize} />;
+    case "bubble": return <BubbleOverlay instance={instance} ctx={ctx} fontSize={fontSize} />;
+    case "map": return <MapOverlay instance={instance} ctx={ctx} fontSize={fontSize} />;
+    case "pace": return <PaceOverlay instance={instance} ctx={ctx} fontSize={fontSize} />;
+    case "sector": return <SectorOverlay instance={instance} ctx={ctx} fontSize={fontSize} />;
+    case "laptime": return <LapTimeOverlay instance={instance} ctx={ctx} fontSize={fontSize} />;
+    default: return null;
+  }
+}
+
+/**
+ * Prompt shown when a single file selection spans several distinct recordings
+ * (e.g. a mobile "select all" of a whole GoPro card). The user picks the one
+ * recording to load; every other selected file is dropped from memory.
+ */
+function RecordingPicker({ state, actions }: { state: VideoSyncState; actions: VideoSyncActions }) {
+  const { t } = useTranslation("video");
+  const pending = state.pendingRecordings;
+  return (
+    <Dialog open={!!pending && pending.length > 0} onOpenChange={(open) => { if (!open) actions.cancelRecordingChoice(); }}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Video className="w-5 h-5" />
+            {t("player.pickRecordingTitle")}
+          </DialogTitle>
+        </DialogHeader>
+        <p className="text-sm text-muted-foreground">{t("player.pickRecordingDesc")}</p>
+        <div className="flex flex-col gap-2 mt-1">
+          {pending?.map((r) => (
+            <Button
+              key={r.key}
+              variant="outline"
+              className="justify-between h-auto py-2.5"
+              onClick={() => actions.chooseRecording(r.key)}
+            >
+              <span className="font-mono text-sm truncate">{r.label}</span>
+              {r.count > 1 && (
+                <span className="text-xs text-muted-foreground ml-2 shrink-0">
+                  {t("player.pickRecordingCount", { count: r.count })}
+                </span>
+              )}
+            </Button>
+          ))}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+export const VideoPlayer = memo(function VideoPlayer({
+  state, actions, onLoadedMetadata,
+  samples = [], allSamples = [],
+  fieldMappings = [], laps = [], selectedLapNumber = null,
+  course = null, referenceSamples = [], paceData = [],
+  sessionFileName = null,
+}: VideoPlayerProps) {
+  const { t } = useTranslation("video");
+  const { useKph, useMetricDistance, brakingZoneSettings } = useSettingsContext();
+  // Cursor comes from its own context (not props) so only this component —
+  // not the whole InfoBox/GraphViewPanel chain — re-renders per playback tick.
+  const { currentIndex, currentSample } = usePlaybackContext();
+  // Per-frame playhead from its own context (not VideoSyncState) so the per-tick
+  // churn re-renders only this component, not the session tree.
+  const { videoCurrentTime } = useVideoTime();
+  const progressRef = useRef<HTMLDivElement>(null);
+  const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const toolbarRef = useRef<HTMLDivElement>(null);
+  const videoAreaRef = useRef<HTMLDivElement>(null);
+  const videoRectRef = useRef<HTMLDivElement>(null);
+
+  const [isMuted, setIsMuted] = useState(true);
+  const [isDragging, setIsDragging] = useState(false);
+  const [controlsVisible, setControlsVisible] = useState(true);
+  const [showOverlayDialog, setShowOverlayDialog] = useState(false);
+  const [showExportDialog, setShowExportDialog] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportProgress, setExportProgress] = useState(0);
+
+  // Keep refs for export context building
+  const samplesRef = useRef(samples);
+  samplesRef.current = samples;
+  const allSamplesRef = useRef(allSamples);
+  allSamplesRef.current = allSamples;
+  const paceDataRef = useRef(paceData);
+  paceDataRef.current = paceData;
+
+  // Compute brake % from visible samples for overlays (must match currentIndex which indexes into samples)
+  const brakingGData = useMemo(() => {
+    if (samples.length < 3) return [];
+    return gToBrakePercent(computeBrakingGSeriesSG(samples, brakingZoneSettings.graphWindow), brakingZoneSettings.brakeMaxG);
+  }, [samples, brakingZoneSettings.graphWindow, brakingZoneSettings.brakeMaxG]);
+  const brakingGDataRef = useRef(brakingGData);
+  brakingGDataRef.current = brakingGData;
+
+  const overlaysLocked = state.overlaySettings.overlaysLocked ?? true;
+  const overlays = state.overlaySettings.overlays ?? [];
+
+  // Build data sources for overlays
+  const hasReference = referenceSamples.length > 0;
+  const dataSources = useMemo(() =>
+    buildDataSources(fieldMappings, useKph, hasReference, useMetricDistance),
+    [fieldMappings, useKph, hasReference, useMetricDistance]
+  );
+
+  // Build render context
+  const renderCtx: OverlayRenderContext | null = useMemo(() => {
+    if (!currentSample) return null;
+    return {
+      currentSample,
+      currentIndex,
+      samples,
+      allSamples,
+      dataSources,
+      fieldMappings,
+      laps,
+      selectedLapNumber,
+      course,
+      referenceSamples,
+      paceData,
+      brakingGData,
+      useKph,
+      containerWidth: 0,
+      containerHeight: 0,
+    };
+  }, [currentSample, currentIndex, samples, allSamples, dataSources, fieldMappings, laps, selectedLapNumber, course, referenceSamples, paceData, brakingGData, useKph]);
+
+  const handleOverlayMove = useCallback((id: string, pos: OverlayPosition) => {
+    const updated = {
+      ...state.overlaySettings,
+      overlays: (state.overlaySettings.overlays ?? []).map(o =>
+        o.id === id ? { ...o, position: pos } : o
+      ),
+    };
+    actions.updateOverlaySettings(updated);
+  }, [actions, state.overlaySettings]);
+
+  // Auto-hide logic
+  const resetHideTimer = useCallback(() => {
+    if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+    setControlsVisible(true);
+    if (state.isPlaying && overlaysLocked) {
+      hideTimerRef.current = setTimeout(() => setControlsVisible(false), 3000);
+    }
+  }, [state.isPlaying, overlaysLocked]);
+
+  useEffect(() => {
+    // When overlays are unlocked, always keep controls visible
+    if (!overlaysLocked) {
+      if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+      setControlsVisible(true);
+      return;
+    }
+
+    if (state.isPlaying) {
+      hideTimerRef.current = setTimeout(() => setControlsVisible(false), 3000);
+    } else {
+      if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+      setControlsVisible(true);
+    }
+    return () => { if (hideTimerRef.current) clearTimeout(hideTimerRef.current); };
+  }, [state.isPlaying, overlaysLocked]);
+
+  // Video rect tracking
+  const [videoRect, setVideoRect] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
+  useEffect(() => {
+    const videoEl = actions.videoRef?.current;
+    const containerEl = videoAreaRef.current;
+    if (!videoEl || !containerEl) return;
+    const updateRect = () => {
+      const vw = videoEl.videoWidth;
+      const vh = videoEl.videoHeight;
+      if (!vw || !vh) return;
+      const cw = containerEl.clientWidth;
+      const ch = containerEl.clientHeight;
+      const scale = Math.min(cw / vw, ch / vh);
+      const rw = vw * scale;
+      const rh = vh * scale;
+      setVideoRect({ left: (cw - rw) / 2, top: (ch - rh) / 2, width: rw, height: rh });
+    };
+    updateRect();
+    const ro = new ResizeObserver(updateRect);
+    ro.observe(containerEl);
+    videoEl.addEventListener("loadedmetadata", updateRect);
+    return () => { ro.disconnect(); videoEl.removeEventListener("loadedmetadata", updateRect); };
+  }, [actions.videoRef, state.videoUrl]);
+
+  const handleVideoClick = useCallback((e: React.MouseEvent) => {
+    if (toolbarRef.current?.contains(e.target as Node)) return;
+    // Don't toggle controls when overlays are unlocked (user is repositioning)
+    if (!overlaysLocked) return;
+    setControlsVisible(v => !v);
+    if (state.isPlaying) {
+      if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+      hideTimerRef.current = setTimeout(() => setControlsVisible(false), 3000);
+    }
+  }, [state.isPlaying, overlaysLocked]);
+
+  // Progress bar
+  const seekFromPointer = useCallback((clientX: number) => {
+    if (state.isLocked || !progressRef.current || state.videoDuration <= 0) return;
+    const rect = progressRef.current.getBoundingClientRect();
+    const fraction = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+    actions.seekVideo(fraction * state.videoDuration);
+  }, [state.isLocked, state.videoDuration, actions]);
+
+  const handlePointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (state.isLocked) return;
+    setIsDragging(true);
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    seekFromPointer(e.clientX);
+  }, [state.isLocked, seekFromPointer]);
+
+  const handlePointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isDragging) return;
+    seekFromPointer(e.clientX);
+  }, [isDragging, seekFromPointer]);
+
+  const handlePointerUp = useCallback(() => setIsDragging(false), []);
+
+  const progressFraction = state.videoDuration > 0
+    ? Math.max(0, Math.min(1, videoCurrentTime / state.videoDuration))
+    : 0;
+
+  // Build export context that resolves overlay data from video time
+  const buildExportRenderCtx = useCallback((videoTime: number): OverlayRenderContext | null => {
+    // `videoTime` is the virtual (whole-recording) time of the frame being
+    // exported; map it to the telemetry timeline using the sync offset. (Reading
+    // the live element's currentTime would be wrong for multi-chunk exports,
+    // which seek a separate offscreen element.)
+    const videoMs = videoTime * 1000;
+    const telemetryMs = videoMs + state.syncOffsetMs;
+    const all = allSamplesRef.current;
+    const vis = samplesRef.current;
+    if (all.length === 0) return null;
+    // Use visible-range samples for index so paceData/brakingGData align
+    const idx = vis.length > 0 ? findNearestIndex(vis, telemetryMs) : findNearestIndex(all, telemetryMs);
+    const sample = vis.length > 0 ? vis[idx] : all[idx];
+    
+    if (!sample) return null;
+
+    return {
+      currentSample: sample,
+      currentIndex: idx,
+      samples: samplesRef.current,
+      allSamples: allSamplesRef.current,
+      dataSources,
+      fieldMappings,
+      laps,
+      selectedLapNumber,
+      course,
+      referenceSamples,
+      paceData: paceDataRef.current,
+      brakingGData: brakingGDataRef.current,
+      useKph,
+      containerWidth: 0,
+      containerHeight: 0,
+    };
+  }, [state.syncOffsetMs, dataSources, fieldMappings, laps, selectedLapNumber, course, referenceSamples, useKph]);
+
+  // Export
+  const handleExport = useCallback((options: ExportOptions) => {
+    const video = actions.videoRef.current;
+    if (!video) return;
+    setIsExporting(true);
+    setExportProgress(0);
+
+    // Whole-recording (virtual) duration; falls back to the element's own
+    // duration when no playlist is present.
+    const totalDuration = state.videoDuration || video.duration;
+
+    // Compute time range for lap export (in virtual time across all chunks)
+    let startTime: number | undefined;
+    let endTime: number | undefined;
+    if (options.range === "lap" && selectedLapNumber !== null) {
+      const lap = laps.find(l => l.lapNumber === selectedLapNumber);
+      if (lap) {
+        // Convert telemetry time to video time using sync offset
+        startTime = Math.max(0, (lap.startTime - state.syncOffsetMs) / 1000);
+        endTime = Math.min(totalDuration, (lap.endTime - state.syncOffsetMs) / 1000);
+      }
+    }
+
+    const exportOptions: ExportOptions = {
+      ...options,
+      startTime,
+      endTime,
+    };
+
+    const exportContext: ExportContext = {
+      overlays: overlays.filter(o => o.visible),
+      buildRenderCtx: buildExportRenderCtx,
+    };
+
+    const destination = options.destination;
+
+    // Single file → 1-chunk playlist so the exporter has one code path.
+    const chunks = state.exportChunks.length > 0
+      ? state.exportChunks
+      : [{ url: video.currentSrc || video.src, startOffsetSec: 0, durationSec: totalDuration }];
+    const exportSource: ExportSource = { liveVideo: video, chunks, totalDuration };
+
+    startVideoExport(exportSource, exportContext, exportOptions, {
+      onProgress: (p) => setExportProgress(p),
+      onComplete: (blob) => {
+        setIsExporting(false);
+        setShowExportDialog(false);
+
+        if (destination === "app" && sessionFileName) {
+          // Save to IndexedDB with metadata
+          const vidName = state.videoFileName ?? "export.mp4";
+          const exportType = options.range === "lap" ? "lap" as const : "session" as const;
+          const lapNum = options.range === "lap" && selectedLapNumber != null ? selectedLapNumber : undefined;
+          saveSessionVideo(sessionFileName, blob, vidName, exportType, options.includeOverlays, lapNum).then(() => {
+            console.log("Video saved to app storage");
+            actions.refreshStoredMeta();
+          }).catch(err => {
+            console.error("Failed to save video:", err);
+            // Fallback to download
+            const baseName = state.videoFileName?.replace(/\.[^.]+$/, "") ?? "export";
+            downloadBlob(blob, `${baseName}-overlay.mp4`);
+          });
+        } else {
+          const baseName = state.videoFileName?.replace(/\.[^.]+$/, "") ?? "export";
+          downloadBlob(blob, `${baseName}-overlay.mp4`);
+        }
+      },
+      onError: (err) => {
+        setIsExporting(false);
+        console.error("Export error:", err);
+      },
+    });
+    // `actions.videoRef` is a stable RefObject from useVideoSync; depending on
+    // the whole `actions` object would invalidate handleExport on every parent
+    // render, defeating the memoization.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [actions.videoRef, state.videoFileName, state.syncOffsetMs, state.videoDuration, state.exportChunks, overlays, buildExportRenderCtx, sessionFileName, selectedLapNumber, laps]);
+
+  // Download existing stored video
+  const handleSaveExisting = useCallback(async () => {
+    if (!sessionFileName) return;
+    const stored = await loadSessionVideo(sessionFileName);
+    if (stored) {
+      downloadBlob(stored.blob, stored.videoFileName);
+    }
+  }, [sessionFileName]);
+
+  // Delete stored video
+  const handleDeleteStored = useCallback(async () => {
+    if (!sessionFileName) return;
+    await actions.deleteStoredVideo();
+  }, [sessionFileName, actions]);
+
+  const hasSectors = courseHasSectors(course);
+
+  // No video loaded
+  if (!state.videoUrl) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center bg-muted/20 gap-4 px-6 text-center">
+        <Video className="w-12 h-12 text-muted-foreground/50" />
+        <p className="text-muted-foreground text-sm">{t("player.noVideo")}</p>
+        {state.videoFileName && (
+          <p className="text-xs text-muted-foreground max-w-xs break-words">{t("player.lastUsed", { name: state.videoFileName })}</p>
+        )}
+        <Button variant="outline" size="sm" onClick={actions.loadVideo} className="gap-2">
+          <Video className="w-4 h-4" /> {t("player.loadVideo")}
+        </Button>
+        <p className="text-xs text-muted-foreground/70 max-w-xs">{t("player.goproHint")}</p>
+        <p className="text-xs text-muted-foreground/70 max-w-xs">{t("player.bulkSelectHint")}</p>
+        <RecordingPicker state={state} actions={actions} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-full flex flex-col relative bg-black">
+      {/* Video element + click target */}
+      <div ref={videoAreaRef} className="flex-1 min-h-0 relative overflow-hidden" onClick={handleVideoClick}>
+        <video
+          ref={actions.videoRef}
+          src={state.videoUrl}
+          onLoadedMetadata={onLoadedMetadata}
+          className="w-full h-full object-contain"
+          playsInline
+          preload="auto"
+          muted={isMuted}
+        />
+
+        {/* Hidden element that buffers the next chunk so the boundary swap is near-seamless. */}
+        {state.preloadUrl && (
+          <video
+            ref={actions.preloadVideoRef}
+            src={state.preloadUrl}
+            className="hidden"
+            preload="auto"
+            muted
+          />
+        )}
+
+        {/* Out of range overlay — coverage-aware for partial videos. */}
+        {state.isOutOfRange && (
+          <div className="absolute inset-0 bg-black/80 flex items-center justify-center">
+            <p className="text-white/70 text-sm font-medium">
+              {state.coverage === "before"
+                ? t("player.videoStartsLater")
+                : state.coverage === "after"
+                  ? t("player.videoEnded")
+                  : t("player.noVideoForPortion")}
+            </p>
+          </div>
+        )}
+
+        {/* Overlay container positioned over the actual video */}
+        {videoRect && renderCtx && !state.isOutOfRange && (
+          <div
+            ref={videoRectRef}
+            className="absolute pointer-events-none"
+            style={{
+              left: videoRect.left,
+              top: videoRect.top,
+              width: videoRect.width,
+              height: videoRect.height,
+            }}
+          >
+            {overlays.filter(o => o.visible).map(overlay => (
+              <DraggableOverlay
+                key={overlay.id}
+                id={overlay.id}
+                position={overlay.position}
+                locked={overlaysLocked}
+                onMove={handleOverlayMove}
+                containerRef={videoRectRef}
+              >
+                {(fontSize) => (
+                  <OverlayRenderer instance={overlay} ctx={renderCtx} fontSize={fontSize} />
+                )}
+              </DraggableOverlay>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Overlay Settings Dialog */}
+      <Dialog open={showOverlayDialog} onOpenChange={setShowOverlayDialog}>
+        <DialogContent className="sm:max-w-md max-h-[85vh] flex flex-col">
+          <DialogHeader className="flex-shrink-0">
+            <DialogTitle className="flex items-center gap-2">
+              <Sliders className="w-5 h-5" />
+              {t("player.overlaySettingsTitle")}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 min-h-0 overflow-y-auto pr-3 scrollbar-thin">
+            <OverlaySettingsPanel
+              settings={state.overlaySettings}
+              onUpdate={actions.updateOverlaySettings}
+              dataSources={dataSources}
+              hasReference={hasReference}
+              hasSectors={hasSectors}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Video Export Dialog */}
+      <VideoExportDialog
+        open={showExportDialog}
+        onOpenChange={setShowExportDialog}
+        onExport={handleExport}
+        isExporting={isExporting}
+        progress={exportProgress}
+        videoFileName={state.videoFileName}
+        storedVideoMeta={state.storedVideoMeta}
+        hasLapSelected={selectedLapNumber !== null}
+        onSaveExisting={handleSaveExisting}
+        onDeleteStored={handleDeleteStored}
+      />
+
+      {/* Recording picker (multi-recording selection) */}
+      <RecordingPicker state={state} actions={actions} />
+
+      {/* Unified bottom toolbar + progress bar */}
+      <div
+        ref={toolbarRef}
+        onPointerMove={resetHideTimer}
+        onClick={e => e.stopPropagation()}
+        className={`absolute bottom-0 left-0 right-0 transition-opacity duration-300 ${
+          controlsVisible ? "opacity-100" : "opacity-0 pointer-events-none"
+        }`}
+      >
+        <div className="flex items-center gap-1 px-3 py-1.5 bg-black/70 backdrop-blur-sm">
+          <Button variant="ghost" size="icon" className="h-7 w-7 bg-white/15 backdrop-blur-sm text-white hover:bg-white/30 active:bg-white/25" onClick={actions.togglePlay}>
+            {state.isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+          </Button>
+          <Button variant="ghost" size="icon" className="h-7 w-7 bg-white/15 backdrop-blur-sm text-white hover:bg-white/30 active:bg-white/25" onClick={() => setIsMuted(m => !m)} title={isMuted ? t("player.unmute") : t("player.mute")}>
+            {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+          </Button>
+
+          <div className="w-px h-5 bg-white/20 mx-1" />
+
+          <Button
+            variant="ghost" size="icon"
+            className={`h-7 w-7 backdrop-blur-sm text-white ${state.isLocked ? "bg-primary/70 hover:bg-primary/50" : "bg-white/15 hover:bg-white/30"}`}
+            onClick={actions.toggleLock}
+            title={state.isLocked ? t("player.unlockSync") : t("player.lockSync")}
+          >
+            {state.isLocked ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
+          </Button>
+          {!state.isLocked && (
+            <>
+              <Button variant="ghost" size="icon" className="h-7 w-7 bg-white/15 backdrop-blur-sm text-white hover:bg-white/30" onClick={() => actions.stepFrame(-1)} title={t("player.previousFrame")}>
+                <Minus className="w-3.5 h-3.5" />
+              </Button>
+              <Button variant="ghost" size="icon" className="h-7 w-7 bg-white/15 backdrop-blur-sm text-white hover:bg-white/30" onClick={() => actions.stepFrame(1)} title={t("player.nextFrame")}>
+                <Plus className="w-3.5 h-3.5" />
+              </Button>
+              <Button variant="ghost" size="sm" className="h-7 bg-white/15 backdrop-blur-sm text-white hover:bg-white/30 text-xs gap-1.5" onClick={actions.setSyncPoint} title={t("player.setSyncPoint")}>
+                <Crosshair className="w-3.5 h-3.5" /> {t("player.sync")}
+              </Button>
+            </>
+          )}
+
+          <div className="flex-1" />
+
+          {/* Overlay position lock */}
+          <Button
+            variant="ghost" size="icon"
+            className={`h-7 w-7 backdrop-blur-sm text-white ${!overlaysLocked ? "bg-amber-500/60 hover:bg-amber-500/40" : "bg-white/15 hover:bg-white/30"}`}
+            onClick={() => actions.updateOverlaySettings({ ...state.overlaySettings, overlaysLocked: !overlaysLocked })}
+            title={overlaysLocked ? t("player.unlockOverlays") : t("player.lockOverlays")}
+          >
+            {overlaysLocked ? <Lock className="w-3.5 h-3.5" /> : <Move className="w-3.5 h-3.5" />}
+          </Button>
+
+          {/* Overlay config */}
+          <Button
+            variant="ghost" size="icon"
+            className={`h-7 w-7 backdrop-blur-sm text-white ${showOverlayDialog ? "bg-white/30" : "bg-white/15"} hover:bg-white/30`}
+            onClick={() => setShowOverlayDialog(v => !v)}
+            title={t("player.overlaySettings")}
+          >
+            <Sliders className="w-3.5 h-3.5" />
+          </Button>
+
+          {/* Export */}
+          {(
+            <Button
+              variant="ghost" size="icon"
+              className="h-7 w-7 bg-white/15 backdrop-blur-sm text-white hover:bg-white/30"
+              onClick={() => setShowExportDialog(true)}
+              title={t("player.exportVideo")}
+            >
+              <Download className="w-3.5 h-3.5" />
+            </Button>
+          )}
+        </div>
+
+        {/* Progress bar row */}
+        <div className="flex items-center gap-2 px-3 py-1.5 bg-black/70 backdrop-blur-sm">
+          <div
+            ref={progressRef}
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerUp}
+            className={`flex-1 h-2 rounded-full overflow-hidden touch-none ${state.isLocked ? "bg-white/10 cursor-not-allowed" : "bg-white/20 cursor-pointer"}`}
+          >
+            <div
+              className={`h-full rounded-full ${state.isLocked ? "bg-primary/60" : "bg-primary"}`}
+              style={{ width: `${progressFraction * 100}%` }}
+            />
+          </div>
+          {state.chunkCount > 1 && (
+            <span className="text-white/50 text-xs font-mono whitespace-nowrap" title={t("player.chapterOf", { current: state.currentChunkIndex + 1, total: state.chunkCount })}>
+              {t("player.chapterShort", { current: state.currentChunkIndex + 1, total: state.chunkCount })}
+            </span>
+          )}
+          <span className="text-white/60 text-xs font-mono min-w-[80px] text-right">
+            {formatTime(videoCurrentTime)} / {formatTime(state.videoDuration)}
+          </span>
+          <Button variant="ghost" size="icon" className="h-7 w-7 bg-white/15 backdrop-blur-sm text-white hover:bg-white/30" onClick={actions.loadVideo} title={t("player.replaceVideo")}>
+            <RefreshCw className="w-3.5 h-3.5" />
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+});
+
+function formatTime(sec: number): string {
+  if (!isFinite(sec) || sec < 0) return "0:00";
+  const m = Math.floor(sec / 60);
+  const s = Math.floor(sec % 60);
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}

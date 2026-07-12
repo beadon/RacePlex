@@ -1,0 +1,75 @@
+{
+  "_machine": true,
+  "title": "Scarica dal logger",
+  "subtitle": "Scegli il tuo logger per avviare un download.",
+  "comingSoon": "Prossimamente",
+  "close": "Chiudi",
+  "trademarks": "MyChron è un marchio di AiM Tech S.r.l. e Alfano è un marchio di Alfano S.A. LapWing è indipendente e non è affiliata né approvata da loro; tutti i nomi di prodotti, loghi e marchi sono di proprietà dei rispettivi titolari.",
+  "tags": {
+    "fledgling": "Logger DIY · Bluetooth LE",
+    "mychron": "Wi-Fi · richiede app nativa",
+    "alfano": "Bluetooth seriale · richiede app nativa"
+  },
+  "fledglingUnsupported": "Web Bluetooth non è supportato qui: usa Chrome, Edge o Opera su computer.",
+  "mychron": {
+    "nativeTitle": "Download MyChron",
+    "nativeBody": "Da definire",
+    "webTitle": "App nativa richiesta",
+    "webBody": "I logger MyChron trasferiscono via Wi-Fi, a cui i browser web non possono accedere direttamente. Un'app nativa dedicata al download da MyChron è in fase di sviluppo e il lancio è previsto intorno a luglio 2026.",
+    "flow": {
+      "connecting": "Connessione al tuo MyChron…",
+      "wifiSelecting": "In attesa che tu selezioni il tuo MyChron nell'elenco Wi-Fi…",
+      "wifiHint": "Approva la connessione nella finestra di dialogo di sistema per continuare.",
+      "fetching": "Recupero delle sessioni…",
+      "selectFile": "Seleziona una sessione da scaricare",
+      "downloading": "Download in corso…",
+      "errorTitle": "Errore di connessione",
+      "instructions": "Tocca una sessione per scaricarla e caricarla:",
+      "empty": "Nessuna sessione su questo dispositivo",
+      "savedHint": " — il file è stato salvato e si trova in Sfoglia file.",
+      "retry": "Riprova",
+      "cancel": "Annulla"
+    }
+  },
+  "doveslogger": {
+    "flow": {
+      "scanning": "Ricerca dei logger…",
+      "selectDevice": "Seleziona il tuo logger",
+      "deviceInstructions": "Tocca il tuo logger per connetterti:",
+      "noDevices": "Nessun logger trovato. Assicurati che il tuo sia acceso e che il Bluetooth sia attivo, poi riavvia la ricerca.",
+      "rescan": "Cerca di nuovo",
+      "connecting": "Connessione…",
+      "fetching": "Recupero delle sessioni…",
+      "selectFile": "Seleziona una sessione da scaricare",
+      "downloading": "Download in corso…",
+      "errorTitle": "Errore di connessione",
+      "instructions": "Tocca una sessione per scaricarla e caricarla:",
+      "empty": "Nessuna sessione su questo dispositivo",
+      "savedHint": " — il file è stato salvato e si trova in Sfoglia file.",
+      "retry": "Riprova",
+      "cancel": "Annulla"
+    }
+  },
+  "alfano": {
+    "title": "App nativa richiesta",
+    "body": "Alfano usa il Bluetooth seriale, a cui i browser web non possono accedere nel browser e richiederà anche l'app nativa. Un'app nativa dedicata al download da Alfano è in fase di sviluppo.",
+    "flow": {
+      "scanning": "Ricerca dei logger Alfano…",
+      "selectDevice": "Seleziona il tuo Alfano",
+      "deviceInstructions": "Tocca il tuo Alfano per connetterti:",
+      "noDevices": "Nessun logger Alfano trovato. Assicurati che il tuo sia acceso e che il Bluetooth sia attivo, poi riavvia la ricerca.",
+      "rescan": "Cerca di nuovo",
+      "connecting": "Connessione…",
+      "fetching": "Recupero delle sessioni…",
+      "selectFile": "Seleziona una sessione da scaricare",
+      "downloading": "Download in corso…",
+      "errorTitle": "Errore di connessione",
+      "instructions": "Tocca una sessione per scaricarla e caricarla:",
+      "empty": "Nessuna sessione su questo dispositivo",
+      "savedHint": " — il file è stato salvato e si trova in Sfoglia file.",
+      "retry": "Riprova",
+      "cancel": "Annulla"
+    }
+  },
+  "requestLogger": "Richiedi altri data logger"
+}

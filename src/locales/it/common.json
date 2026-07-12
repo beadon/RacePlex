@@ -1,0 +1,25 @@
+{
+  "_machine": true,
+  "appName": "LapWing",
+  "actions": {
+    "signIn": "Accedi",
+    "signOut": "Esci",
+    "profile": "Profilo",
+    "sponsor": "Sostieni",
+    "loading": "Caricamento…",
+    "reset": "Ripristina valori predefiniti",
+    "update": "Aggiorna",
+    "updating": "Aggiornamento…",
+    "backToHome": "Torna alla home"
+  },
+  "language": {
+    "heading": "Lingua",
+    "label": "Lingua di visualizzazione"
+  },
+  "updateToast": {
+    "title": "Aggiornamento disponibile",
+    "description": "Aggiorna per cancellare i file memorizzati nella cache obsoleti e caricare l'ultima versione dell'app.",
+    "refresh": "Aggiorna",
+    "later": "Più tardi"
+  }
+}

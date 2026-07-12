@@ -1,0 +1,75 @@
+{
+  "_machine": true,
+  "title": "Baixar do registrador",
+  "subtitle": "Escolha seu registrador para iniciar um download.",
+  "comingSoon": "Em breve",
+  "close": "Fechar",
+  "trademarks": "MyChron é uma marca registrada da AiM Tech S.r.l. e Alfano é uma marca registrada da Alfano S.A. O LapWing é independente e não é afiliado nem endossado por elas; todos os nomes de produtos, logotipos e marcas são propriedade de seus respectivos donos.",
+  "tags": {
+    "fledgling": "Registrador DIY · Bluetooth LE",
+    "mychron": "Wi-Fi · app nativo necessário",
+    "alfano": "Bluetooth serial · app nativo necessário"
+  },
+  "fledglingUnsupported": "Web Bluetooth não é compatível aqui — use Chrome, Edge ou Opera no computador.",
+  "mychron": {
+    "nativeTitle": "Download do MyChron",
+    "nativeBody": "A definir",
+    "webTitle": "App nativo necessário",
+    "webBody": "Os registradores MyChron transferem por Wi-Fi, que os navegadores web não conseguem acessar diretamente. Um app nativo dedicado para baixar do MyChron está em desenvolvimento e tem lançamento previsto para cerca de julho de 2026.",
+    "flow": {
+      "connecting": "Conectando ao seu MyChron…",
+      "wifiSelecting": "Aguardando você escolher o seu MyChron na lista de Wi-Fi…",
+      "wifiHint": "Aprove a conexão na caixa de diálogo do sistema para continuar.",
+      "fetching": "Buscando sessões…",
+      "selectFile": "Selecione uma sessão para baixar",
+      "downloading": "Baixando…",
+      "errorTitle": "Erro de conexão",
+      "instructions": "Toque em uma sessão para baixá-la e carregá-la:",
+      "empty": "Nenhuma sessão neste dispositivo",
+      "savedHint": " — o arquivo foi salvo e pode ser encontrado em Procurar arquivos.",
+      "retry": "Tentar novamente",
+      "cancel": "Cancelar"
+    }
+  },
+  "doveslogger": {
+    "flow": {
+      "scanning": "Procurando registradores…",
+      "selectDevice": "Selecione seu registrador",
+      "deviceInstructions": "Toque no seu registrador para conectar:",
+      "noDevices": "Nenhum registrador encontrado. Verifique se o seu está ligado e o Bluetooth ativado e procure novamente.",
+      "rescan": "Procurar novamente",
+      "connecting": "Conectando…",
+      "fetching": "Buscando sessões…",
+      "selectFile": "Selecione uma sessão para baixar",
+      "downloading": "Baixando…",
+      "errorTitle": "Erro de conexão",
+      "instructions": "Toque em uma sessão para baixá-la e carregá-la:",
+      "empty": "Nenhuma sessão neste dispositivo",
+      "savedHint": " — o arquivo foi salvo e pode ser encontrado em Procurar arquivos.",
+      "retry": "Tentar novamente",
+      "cancel": "Cancelar"
+    }
+  },
+  "alfano": {
+    "title": "App nativo necessário",
+    "body": "O Alfano usa Bluetooth serial, que os navegadores web não conseguem acessar no navegador — também exigirá o app nativo. Um app nativo dedicado para baixar do Alfano está em desenvolvimento.",
+    "flow": {
+      "scanning": "Procurando registradores Alfano…",
+      "selectDevice": "Selecione seu Alfano",
+      "deviceInstructions": "Toque no seu Alfano para conectar:",
+      "noDevices": "Nenhum registrador Alfano encontrado. Verifique se o seu está ligado e o Bluetooth ativado e procure novamente.",
+      "rescan": "Procurar novamente",
+      "connecting": "Conectando…",
+      "fetching": "Buscando sessões…",
+      "selectFile": "Selecione uma sessão para baixar",
+      "downloading": "Baixando…",
+      "errorTitle": "Erro de conexão",
+      "instructions": "Toque em uma sessão para baixá-la e carregá-la:",
+      "empty": "Nenhuma sessão neste dispositivo",
+      "savedHint": " — o arquivo foi salvo e pode ser encontrado em Procurar arquivos.",
+      "retry": "Tentar novamente",
+      "cancel": "Cancelar"
+    }
+  },
+  "requestLogger": "Solicitar mais dataloggers"
+}

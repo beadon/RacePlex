@@ -1,0 +1,75 @@
+{
+  "_machine": true,
+  "title": "ロガーからダウンロード",
+  "subtitle": "ダウンロードを開始するロガーを選択してください。",
+  "comingSoon": "近日公開",
+  "close": "閉じる",
+  "trademarks": "MyChron は AiM Tech S.r.l. の、Alfano は Alfano S.A. の商標です。LapWing は独立しており、これらの企業と提携も推奨もされていません。すべての製品名、ロゴ、ブランドはそれぞれの所有者に帰属します。",
+  "tags": {
+    "fledgling": "DIYロガー · Bluetooth LE",
+    "mychron": "Wi-Fi · ネイティブアプリが必要",
+    "alfano": "Bluetooth シリアル · ネイティブアプリが必要"
+  },
+  "fledglingUnsupported": "Web Bluetooth はこの環境では非対応です。デスクトップの Chrome、Edge、または Opera をご利用ください。",
+  "mychron": {
+    "nativeTitle": "MyChron のダウンロード",
+    "nativeBody": "未定",
+    "webTitle": "ネイティブアプリが必要です",
+    "webBody": "MyChron ロガーは Wi-Fi で転送するため、Web ブラウザーから直接アクセスできません。MyChron からダウンロードするための専用ネイティブアプリを開発中で、2026年7月頃のリリースを予定しています。",
+    "flow": {
+      "connecting": "MyChron に接続中…",
+      "wifiSelecting": "Wi-Fi リストで MyChron を選択するのを待っています…",
+      "wifiHint": "続行するには、システムのダイアログで接続を承認してください。",
+      "fetching": "セッションを取得中…",
+      "selectFile": "ダウンロードするセッションを選択",
+      "downloading": "ダウンロード中…",
+      "errorTitle": "接続エラー",
+      "instructions": "セッションをタップしてダウンロードして読み込みます：",
+      "empty": "このデバイスにセッションはありません",
+      "savedHint": " — ファイルは保存され、「ファイルを参照」で見つけられます。",
+      "retry": "再試行",
+      "cancel": "キャンセル"
+    }
+  },
+  "doveslogger": {
+    "flow": {
+      "scanning": "ロガーを検索中…",
+      "selectDevice": "ロガーを選択",
+      "deviceInstructions": "接続するロガーをタップしてください：",
+      "noDevices": "ロガーが見つかりません。電源が入っていて Bluetooth が有効になっていることを確認し、再検索してください。",
+      "rescan": "再検索",
+      "connecting": "接続中…",
+      "fetching": "セッションを取得中…",
+      "selectFile": "ダウンロードするセッションを選択",
+      "downloading": "ダウンロード中…",
+      "errorTitle": "接続エラー",
+      "instructions": "セッションをタップしてダウンロードして読み込みます：",
+      "empty": "このデバイスにセッションはありません",
+      "savedHint": " — ファイルは保存され、「ファイルを参照」で見つけられます。",
+      "retry": "再試行",
+      "cancel": "キャンセル"
+    }
+  },
+  "alfano": {
+    "title": "ネイティブアプリが必要です",
+    "body": "Alfano は Bluetooth シリアルを使用しており、Web ブラウザーからは直接アクセスできず、ネイティブアプリも必要になります。Alfano からダウンロードするための専用ネイティブアプリを開発中です。",
+    "flow": {
+      "scanning": "Alfano ロガーを検索中…",
+      "selectDevice": "Alfano を選択",
+      "deviceInstructions": "接続する Alfano をタップしてください：",
+      "noDevices": "Alfano ロガーが見つかりません。電源が入っていて Bluetooth が有効になっていることを確認し、再検索してください。",
+      "rescan": "再検索",
+      "connecting": "接続中…",
+      "fetching": "セッションを取得中…",
+      "selectFile": "ダウンロードするセッションを選択",
+      "downloading": "ダウンロード中…",
+      "errorTitle": "接続エラー",
+      "instructions": "セッションをタップしてダウンロードして読み込みます：",
+      "empty": "このデバイスにセッションはありません",
+      "savedHint": " — ファイルは保存され、「ファイルを参照」で見つけられます。",
+      "retry": "再試行",
+      "cancel": "キャンセル"
+    }
+  },
+  "requestLogger": "他のデータロガーをリクエスト"
+}

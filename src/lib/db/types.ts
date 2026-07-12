@@ -1,0 +1,130 @@
+// Modular database layer types — swap implementations for different backends
+
+export interface DbTrack {
+  id: string;
+  name: string;
+  short_name: string;
+  enabled: boolean;
+  default_course_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DbCourse {
+  id: string;
+  track_id: string;
+  name: string;
+  enabled: boolean;
+  start_a_lat: number;
+  start_a_lng: number;
+  start_b_lat: number;
+  start_b_lng: number;
+  sector_2_a_lat: number | null;
+  sector_2_a_lng: number | null;
+  sector_2_b_lat: number | null;
+  sector_2_b_lng: number | null;
+  sector_3_a_lat: number | null;
+  sector_3_a_lng: number | null;
+  sector_3_b_lat: number | null;
+  sector_3_b_lng: number | null;
+  /**
+   * Canonical ordered sector list (start/finish excluded), each entry
+   * `{a_lat,a_lng,b_lat,b_lng,major}`. The legacy `sector_2/3` columns mirror
+   * the two majors for back-compat + device export. Null on legacy rows.
+   */
+  sectors_data: Array<{ a_lat: number; a_lng: number; b_lat: number; b_lng: number; major: boolean }> | null;
+  superseded_by: string | null;
+  length_ft_override: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DbSubmission {
+  id: string;
+  type: 'new_track' | 'new_course' | 'course_modification';
+  track_name: string;
+  track_short_name: string | null;
+  course_name: string;
+  course_data: Record<string, unknown>;
+  status: 'pending' | 'approved' | 'denied';
+  submitted_by_ip: string | null;
+  /** The signed-in user who submitted, when they were logged in. NULL = anonymous. */
+  submitted_by_user_id: string | null;
+  /** True when the submitter included a drawn track outline. */
+  has_layout?: boolean;
+  /** The drawn outline polyline, when `has_layout`. */
+  layout_data?: Array<{ lat: number; lon: number }> | null;
+  /** Submitted ordered sector list (mirrors courses.sectors_data), when present. */
+  sectors_data?: Array<{ a_lat: number; a_lng: number; b_lat: number; b_lng: number; major: boolean }> | null;
+  /** Ties courses uploaded together in one bulk submit. NULL for legacy rows. */
+  batch_id: string | null;
+  created_at: string;
+  reviewed_at: string | null;
+  reviewed_by: string | null;
+  review_notes: string | null;
+}
+
+export interface DbBannedIp {
+  id: string;
+  ip_address: string;
+  reason: string | null;
+  banned_at: string;
+  expires_at: string | null;
+}
+
+export interface DbCourseLayout {
+  id: string;
+  course_id: string;
+  layout_data: Array<{ lat: number; lon: number }>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DbProfile {
+  user_id: string;
+  display_name: string;
+}
+
+export interface ITrackDatabase {
+  // Tracks
+  getTracks(): Promise<DbTrack[]>;
+  getTrack(id: string): Promise<DbTrack | null>;
+  createTrack(data: { name: string; short_name: string; enabled?: boolean }): Promise<DbTrack>;
+  updateTrack(id: string, data: Partial<Pick<DbTrack, 'name' | 'short_name' | 'enabled' | 'default_course_id'>>): Promise<DbTrack>;
+  deleteTrack(id: string): Promise<void>;
+
+  // Courses
+  getCourses(trackId: string): Promise<DbCourse[]>;
+  getAllCourses(): Promise<DbCourse[]>;
+  createCourse(data: Omit<DbCourse, 'id' | 'created_at' | 'updated_at'>): Promise<DbCourse>;
+  updateCourse(id: string, data: Partial<Omit<DbCourse, 'id' | 'created_at' | 'updated_at'>>): Promise<DbCourse>;
+  toggleCourse(id: string, enabled: boolean): Promise<void>;
+
+  // Course Layouts
+  getLayout(courseId: string): Promise<DbCourseLayout | null>;
+  getLayoutsForCourses(courseIds: string[]): Promise<DbCourseLayout[]>;
+  saveLayout(courseId: string, layoutData: Array<{ lat: number; lon: number }>): Promise<void>;
+  deleteLayout(courseId: string): Promise<void>;
+
+  // Submissions
+  getSubmissions(status?: string): Promise<DbSubmission[]>;
+  updateSubmission(id: string, status: string, reviewNotes?: string): Promise<void>;
+  /** Materialize an approved submission into the live tracks/courses tables. */
+  applySubmission(sub: DbSubmission): Promise<void>;
+
+  // Profiles (display-name lookup, e.g. to show who submitted a track)
+  getProfiles(userIds: string[]): Promise<DbProfile[]>;
+
+  // Banned IPs
+  getBannedIps(): Promise<DbBannedIp[]>;
+  banIp(ip: string, reason?: string, expiresAt?: string): Promise<void>;
+  unbanIp(id: string): Promise<void>;
+
+  // Build
+  buildTracksJson(): Promise<string>;
+  importFromTracksJson(json: string): Promise<void>;
+
+  // Course Drawings
+  buildDrawingsJson(): Promise<string>;
+  importDrawingsJson(json: string): Promise<void>;
+}

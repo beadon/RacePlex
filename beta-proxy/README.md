@@ -1,0 +1,87 @@
+# beta-proxy
+
+A minimal Cloudflare Worker that reverse-proxies **https://beta.lapwingdata.com**
+to the stable `beta` branch preview of the `lapwing` Worker.
+
+## Why this exists
+
+The `lapwing` Worker has non-production branch builds enabled. Pushes to
+the `beta` branch publish a **stable Branch Preview URL**:
+
+```
+https://beta-lapwing.perchwerks.workers.dev
+```
+
+that always serves the latest `beta` push. Cloudflare **custom domains cannot be
+attached directly to a preview URL**, so this thin proxy Worker owns
+`beta.lapwingdata.com` and forwards every request to the preview URL, returning
+the upstream response unchanged (it also rewrites the `Location` header on 3xx
+redirects so the preview hostname never leaks to the client).
+
+The upstream host is a single top-level constant (`UPSTREAM_HOST`) in
+[`src/index.ts`](src/index.ts) — change it there if the target ever moves. (It
+stays on `perchwerks.workers.dev` because the preview URL is derived from the
+Worker name + the account's workers.dev subdomain, which the new public domain
+doesn't change.)
+
+## Prerequisites
+
+- The zone **lapwingdata.com** is already managed in this Cloudflare account.
+- Node.js installed locally.
+
+## Deploy
+
+### Automatic (CI)
+
+The `.github/workflows/deploy-beta-proxy.yml` workflow deploys this Worker
+automatically on every push to **`BETA`** that touches `beta-proxy/**` (and can
+be run on demand via *workflow_dispatch*). PRs that touch it get a `wrangler
+deploy --dry-run` validation instead. The deploy job needs two repo secrets:
+
+| Secret | What |
+|--------|------|
+| `CLOUDFLARE_API_TOKEN` | A token with **Edit Cloudflare Workers** on the account |
+| `CLOUDFLARE_ACCOUNT_ID` | The account that owns the `lapwingdata.com` zone |
+
+The wrangler version is pinned in the workflow (`WRANGLER_VERSION`) so CI runs
+are reproducible — there is no committed lockfile here.
+
+### Manual
+
+```bash
+cd beta-proxy
+npm install
+
+# Authenticate (opens a browser; one-time per machine)
+npx wrangler login
+
+# Validate config + bundle without deploying
+npm run dry-run
+
+# Deploy for real
+npm run deploy
+```
+
+> **Note:** this project lives inside the `DovesDataViewer` repo, which has its
+> own root `wrangler.jsonc`. Wrangler's config discovery walks *up* the tree and
+> would otherwise pick up that parent config, so the npm scripts (and any direct
+> invocation) must pass `--config ./wrangler.toml`. The `npm run deploy` /
+> `npm run dry-run` scripts already do this — if you call wrangler directly, run
+> `npx wrangler deploy --config ./wrangler.toml`.
+
+The `custom_domain` route in [`wrangler.toml`](wrangler.toml) makes Cloudflare
+**automatically provision the DNS record and TLS certificate** for
+`beta.lapwingdata.com` on first deploy. **Do not create any DNS records by hand** —
+doing so will conflict with the custom-domain binding.
+
+## ⚠️ Cloudflare Access must be OFF on the upstream preview URL
+
+This proxy makes a server-side `fetch()` to
+`beta-lapwing.perchwerks.workers.dev`. If **Cloudflare Access** (Zero
+Trust) is enabled on that preview hostname (or on the `*.workers.dev` route),
+the proxy's `fetch` will be redirected to an Access login wall and your users
+will see a Cloudflare login page instead of the app.
+
+**Keep Cloudflare Access disabled on the upstream preview URL** for this proxy
+to work. If you need to gate `beta.lapwingdata.com`, add Access on *this* proxy's
+custom domain instead, not on the upstream.

@@ -1,0 +1,324 @@
+/* Self-hosted fonts (latin subset, weights 400-700) so they ship in the SW
+   precache and render offline from first paint — no fonts.googleapis.com
+   round-trip. Family names match the Google Fonts originals, so the Tailwind
+   `font-sans`/`font-mono` tokens stay unchanged. */
+@import '@fontsource/inter/latin-400.css';
+@import '@fontsource/inter/latin-500.css';
+@import '@fontsource/inter/latin-600.css';
+@import '@fontsource/inter/latin-700.css';
+@import '@fontsource/jetbrains-mono/latin-400.css';
+@import '@fontsource/jetbrains-mono/latin-500.css';
+@import '@fontsource/jetbrains-mono/latin-600.css';
+@import '@fontsource/jetbrains-mono/latin-700.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 98%;
+    --foreground: 220 20% 12%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 220 20% 12%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 20% 12%;
+
+    --primary: 276 44% 49%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 15% 92%;
+    --secondary-foreground: 220 15% 25%;
+
+    --muted: 220 15% 93%;
+    --muted-foreground: 220 10% 45%;
+
+    --accent: 45 90% 48%;
+    --accent-foreground: 220 20% 10%;
+
+    --destructive: 0 70% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Warning / preview state — amber that pops in light mode */
+    --warning: 32 95% 44%;
+    --warning-foreground: 0 0% 100%;
+
+    /* Success / positive state — green (e.g. faster-than-best delta, saved) */
+    --success: 142 60% 38%;
+    --success-foreground: 0 0% 100%;
+
+    --border: 220 15% 85%;
+    --input: 220 15% 88%;
+    --ring: 276 44% 49%;
+
+    --radius: 0.5rem;
+
+    /* Racing-specific colors */
+    --speed-slow: 120 60% 38%;
+    --speed-medium: 45 90% 45%;
+    --speed-fast: 15 85% 50%;
+    --speed-max: 0 75% 48%;
+
+    --start-finish: 0 75% 50%;
+    --lap-best: 120 60% 40%;
+    --telemetry-speed: 180 70% 40%;
+    --telemetry-rpm: 45 85% 45%;
+    --telemetry-temp: 0 70% 50%;
+    --scrub-cursor: 0 75% 50%;
+
+    --chart-grid: 220 15% 88%;
+    --chart-axis: 220 10% 45%;
+
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 220 20% 12%;
+    --sidebar-primary: 276 44% 49%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 15% 92%;
+    --sidebar-accent-foreground: 220 15% 25%;
+    --sidebar-border: 220 15% 85%;
+    --sidebar-ring: 276 44% 49%;
+  }
+
+  .dark {
+    --background: 220 20% 6%;
+    --foreground: 210 20% 92%;
+
+    --card: 220 18% 10%;
+    --card-foreground: 210 20% 92%;
+
+    --popover: 220 18% 8%;
+    --popover-foreground: 210 20% 92%;
+
+    --primary: 276 44% 59%;
+    --primary-foreground: 220 20% 6%;
+
+    --secondary: 220 15% 18%;
+    --secondary-foreground: 210 20% 85%;
+
+    --muted: 220 15% 15%;
+    --muted-foreground: 220 10% 55%;
+
+    --accent: 45 90% 55%;
+    --accent-foreground: 220 20% 6%;
+
+    --destructive: 0 70% 50%;
+    --destructive-foreground: 210 20% 98%;
+
+    /* Warning / preview state — brighter amber that pops in dark mode */
+    --warning: 38 96% 56%;
+    --warning-foreground: 220 20% 6%;
+
+    /* Success / positive state — brighter green for dark mode */
+    --success: 142 65% 45%;
+    --success-foreground: 220 20% 6%;
+
+    --border: 220 15% 20%;
+    --input: 220 15% 18%;
+    --ring: 276 44% 59%;
+
+    /* Racing-specific colors */
+    --speed-slow: 120 60% 45%;
+    --speed-medium: 45 90% 55%;
+    --speed-fast: 15 85% 55%;
+    --speed-max: 0 75% 50%;
+
+    --start-finish: 0 75% 55%;
+    --lap-best: 120 60% 50%;
+    --telemetry-speed: 180 70% 55%;
+    --telemetry-rpm: 45 85% 55%;
+    --telemetry-temp: 0 70% 55%;
+    --scrub-cursor: 0 75% 55%;
+
+    --chart-grid: 220 15% 25%;
+    --chart-axis: 220 10% 45%;
+
+    --sidebar-background: 220 18% 10%;
+    --sidebar-foreground: 210 20% 92%;
+    --sidebar-primary: 276 44% 59%;
+    --sidebar-primary-foreground: 220 20% 6%;
+    --sidebar-accent: 220 15% 18%;
+    --sidebar-accent-foreground: 210 20% 85%;
+    --sidebar-border: 220 15% 20%;
+    --sidebar-ring: 276 44% 59%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--muted)) transparent;
+  }
+
+  *::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted));
+    border-radius: 3px;
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground));
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+  
+  .font-mono {
+    font-family: 'JetBrains Mono', monospace;
+  }
+}
+
+@layer components {
+  .racing-card {
+    @apply bg-card border border-border rounded-lg;
+  }
+  
+  .data-display {
+    @apply font-mono text-sm tabular-nums;
+  }
+  
+  .speed-gradient {
+    background: linear-gradient(90deg, 
+      hsl(var(--speed-slow)), 
+      hsl(var(--speed-medium)), 
+      hsl(var(--speed-fast)),
+      hsl(var(--speed-max))
+    );
+  }
+  
+  /* Leaflet map styling overrides */
+  .leaflet-container {
+    background: hsl(var(--background));
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+  
+  .leaflet-control-attribution {
+    background: hsl(var(--card) / 0.8) !important;
+    color: hsl(var(--muted-foreground)) !important;
+    font-size: 10px;
+  }
+  
+  .leaflet-control-attribution a {
+    color: hsl(var(--primary)) !important;
+  }
+}
+
+@layer utilities {
+  /* Keep app chrome clear of device notches / status bars on native (Android
+     WebView / iOS) and installed PWAs, which draw edge-to-edge. Requires
+     `viewport-fit=cover` (set in index.html). Insets resolve to 0 on browsers
+     and desktops without a safe area, so this is a no-op everywhere else.
+     Applied to every full-screen surface — the app shell + landing, full-page
+     routes (login/register/admin/legal), and portal overlays like the file-
+     manager drawer — whose `border-box` sizing keeps the padding inside
+     `h-screen`/`min-h-screen` (no overflow) while the surface's background
+     fills the inset region behind the status bar. */
+  .safe-area-inset {
+    padding-top: env(safe-area-inset-top);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+
+  /* The horizontal (left/right) inset on its own — for surfaces whose top inset
+     is owned by a sticky header (which carries `.safe-area-top`), so we don't
+     double-pad the top. */
+  .safe-area-x {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+
+  /* The top inset on its own — for a sticky/fixed header so its background fills
+     behind the status bar while its content stays clear of the notch. */
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  /* Modal/dialog padding that also clears device notches: never less than the
+     base 1.5rem (so it doesn't collapse to 0 on un-notched devices the way a
+     bare `env()` inset would), growing to the safe-area inset where present. */
+  .safe-area-modal {
+    padding-top: max(1.5rem, env(safe-area-inset-top));
+    padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
+    padding-left: max(1.5rem, env(safe-area-inset-left));
+    padding-right: max(1.5rem, env(safe-area-inset-right));
+  }
+
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--muted)) transparent;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted));
+    border-radius: 3px;
+  }
+
+  /* Hide default number input spinners — custom component handles step buttons */
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    appearance: none;
+    margin: 0;
+  }
+
+  input[type="number"] {
+    -moz-appearance: textfield;
+  }
+
+  /* Video overlay animations */
+  @keyframes overlay-sparkle {
+    0%, 100% {
+      background-position: -200% 0;
+    }
+    50% {
+      background-position: 200% 0;
+    }
+  }
+
+  @keyframes overlay-sector-sweep {
+    0% {
+      transform: translateX(-100%);
+    }
+    100% {
+      transform: translateX(100%);
+    }
+  }
+
+  .overlay-sparkle {
+    background-image: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.15) 40%,
+      rgba(255, 255, 255, 0.3) 50%,
+      rgba(255, 255, 255, 0.15) 60%,
+      transparent 100%
+    );
+    background-size: 200% 100%;
+    animation: overlay-sparkle 1.2s ease-in-out;
+  }
+
+  .overlay-sector-sweep {
+    animation: overlay-sector-sweep 0.6s ease-out forwards;
+  }
+}

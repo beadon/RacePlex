@@ -1,0 +1,75 @@
+{
+  "_machine": true,
+  "title": "Descargar del registrador",
+  "subtitle": "Elige tu registrador para iniciar una descarga.",
+  "comingSoon": "Próximamente",
+  "close": "Cerrar",
+  "trademarks": "MyChron es una marca registrada de AiM Tech S.r.l. y Alfano es una marca registrada de Alfano S.A. LapWing es independiente y no está afiliada ni respaldada por ellas; todos los nombres de productos, logotipos y marcas son propiedad de sus respectivos dueños.",
+  "tags": {
+    "fledgling": "Registrador DIY · Bluetooth LE",
+    "mychron": "Wi-Fi · requiere app nativa",
+    "alfano": "Bluetooth serie · requiere app nativa"
+  },
+  "fledglingUnsupported": "Web Bluetooth no es compatible aquí: usa Chrome, Edge u Opera en ordenador.",
+  "mychron": {
+    "nativeTitle": "Descarga de MyChron",
+    "nativeBody": "Por determinar",
+    "webTitle": "Se necesita app nativa",
+    "webBody": "Los registradores MyChron transfieren por Wi-Fi, a lo que los navegadores web no pueden acceder directamente. Hay una app nativa específica para descargar de MyChron en pleno desarrollo, con lanzamiento previsto en torno a julio de 2026.",
+    "flow": {
+      "connecting": "Conectando con tu MyChron…",
+      "wifiSelecting": "Esperando a que elijas tu MyChron en la lista de Wi-Fi…",
+      "wifiHint": "Aprueba la conexión en el cuadro de diálogo del sistema para continuar.",
+      "fetching": "Obteniendo sesiones…",
+      "selectFile": "Selecciona una sesión para descargar",
+      "downloading": "Descargando…",
+      "errorTitle": "Error de conexión",
+      "instructions": "Toca una sesión para descargarla y cargarla:",
+      "empty": "No hay sesiones en este dispositivo",
+      "savedHint": " — el archivo se guardó y puedes encontrarlo en Explorar archivos.",
+      "retry": "Reintentar",
+      "cancel": "Cancelar"
+    }
+  },
+  "doveslogger": {
+    "flow": {
+      "scanning": "Buscando registradores…",
+      "selectDevice": "Selecciona tu registrador",
+      "deviceInstructions": "Toca tu registrador para conectar:",
+      "noDevices": "No se encontraron registradores. Asegúrate de que el tuyo esté encendido y el Bluetooth activado, luego vuelve a buscar.",
+      "rescan": "Buscar de nuevo",
+      "connecting": "Conectando…",
+      "fetching": "Obteniendo sesiones…",
+      "selectFile": "Selecciona una sesión para descargar",
+      "downloading": "Descargando…",
+      "errorTitle": "Error de conexión",
+      "instructions": "Toca una sesión para descargarla y cargarla:",
+      "empty": "No hay sesiones en este dispositivo",
+      "savedHint": " — el archivo se guardó y puedes encontrarlo en Explorar archivos.",
+      "retry": "Reintentar",
+      "cancel": "Cancelar"
+    }
+  },
+  "alfano": {
+    "title": "Se necesita app nativa",
+    "body": "Alfano usa Bluetooth serie, al que los navegadores web no pueden acceder en el navegador, y también requerirá la app nativa. Hay una app nativa específica para descargar de Alfano en desarrollo.",
+    "flow": {
+      "scanning": "Buscando registradores Alfano…",
+      "selectDevice": "Selecciona tu Alfano",
+      "deviceInstructions": "Toca tu Alfano para conectar:",
+      "noDevices": "No se encontraron registradores Alfano. Asegúrate de que el tuyo esté encendido y el Bluetooth activado, luego vuelve a buscar.",
+      "rescan": "Buscar de nuevo",
+      "connecting": "Conectando…",
+      "fetching": "Obteniendo sesiones…",
+      "selectFile": "Selecciona una sesión para descargar",
+      "downloading": "Descargando…",
+      "errorTitle": "Error de conexión",
+      "instructions": "Toca una sesión para descargarla y cargarla:",
+      "empty": "No hay sesiones en este dispositivo",
+      "savedHint": " — el archivo se guardó y puedes encontrarlo en Explorar archivos.",
+      "retry": "Reintentar",
+      "cancel": "Cancelar"
+    }
+  },
+  "requestLogger": "Solicitar más registradores de datos"
+}
