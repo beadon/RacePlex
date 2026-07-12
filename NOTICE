@@ -45,3 +45,19 @@ Changes made by RacePlex relative to upstream:
 RacePlex is an independent project and makes no commitment to contribute these changes upstream.
 Where they are useful to upstream, upstream is welcome to take them — that is what the licence is
 for.
+
+Third-party test fixtures
+-------------------------
+
+src/lib/__fixtures__/vesc-tool.csv
+
+    A real VESC Tool ride log, trimmed to 400 rows. Taken from:
+
+        https://github.com/lachlanhurst/esc-log-video   (MIT licence)
+
+    Copyright (c) Lachlan Hurst. Used under the MIT licence, which permits use and
+    redistribution provided the copyright notice and permission notice travel with it —
+    hence this entry.
+
+    Used to develop and test the VESC CSV importer. Nothing in RacePlex's own code is
+    derived from that project; only the data file is theirs.

@@ -11,6 +11,7 @@ import { isMotecLdFormat, parseMotecLdFile, isMotecCsvFormat, parseMotecCsvFile 
 import { isIracingFormat, parseIracingFile } from './iracingParser';
 import { isGpxFormat, parseGpxFile } from './gpxParser';
 import { isRaceBoxCsvFormat, parseRaceBoxCsvFile } from './raceboxCsvParser';
+import { isVescCsvFormat, parseVescCsvFile } from './vescCsvParser';
 import { isXrkFile, parseXrkFile, type XrkProgressCallback } from './xrk/xrkImporter';
 import { beginFileLoading, updateFileLoading, endFileLoading } from './fileLoadingState';
 
@@ -96,6 +97,12 @@ async function routeDatalogFile(
     return parseGpxFile(text);
   }
 
+  // VESC first: its gnss_lat/gnss_lon signature is unambiguous, and it is semicolon-delimited,
+  // which the loose comma-oriented matchers below would mangle.
+  if (isVescCsvFormat(text)) {
+    return parseVescCsvFile(text);
+  }
+
   // RaceBox CSV must be claimed before the loose CSV matchers below (Alfano's and AiM's header
   // checks are broad enough to grab it and then fail to parse the layout).
   if (isRaceBoxCsvFormat(text)) {
@@ -170,6 +177,10 @@ function routeDatalogContent(content: string | ArrayBuffer): ParsedData {
       return parseGpxFile(text);
     }
 
+    if (isVescCsvFormat(text)) {
+      return parseVescCsvFile(text);
+    }
+
     if (isRaceBoxCsvFormat(text)) {
       return parseRaceBoxCsvFile(text);
     }
@@ -208,6 +219,10 @@ function routeDatalogContent(content: string | ArrayBuffer): ParsedData {
   // String content
   if (isGpxFormat(content)) {
     return parseGpxFile(content);
+  }
+
+  if (isVescCsvFormat(content)) {
+    return parseVescCsvFile(content);
   }
 
   if (isRaceBoxCsvFormat(content)) {
