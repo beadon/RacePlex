@@ -1,6 +1,6 @@
 /**
  * IndexedDB CRUD for "vehicle-types" and "setup-templates" object stores.
- * Also handles seeding the default Kart template on first load.
+ * Also handles seeding the built-in templates (eSkateboard, Kart) on first load.
  */
 
 import { openDB, STORE_NAMES } from './dbUtils';
@@ -47,10 +47,16 @@ export interface VehicleType {
   updatedAt?: number;
 }
 
-// ── Default Kart Template ──
+// ── Built-in templates ──
+//
+// `isDefault` on these records means "built-in" — the vehicle-type editor uses
+// it to block deletion, and nothing else reads it. Which type a *new vehicle*
+// starts on is a separate question, answered by `defaultVehicleTypeId()` below.
 
 export const DEFAULT_KART_VEHICLE_TYPE_ID = "default-kart-type";
 export const DEFAULT_KART_TEMPLATE_ID = "default-kart-template";
+export const DEFAULT_ESKATE_VEHICLE_TYPE_ID = "default-eskate-type";
+export const DEFAULT_ESKATE_TEMPLATE_ID = "default-eskate-template";
 
 const makeId = () => crypto.randomUUID();
 
@@ -111,23 +117,156 @@ export const DEFAULT_KART_VEHICLE_TYPE: VehicleType = {
   createdAt: 0,
 };
 
+/**
+ * eSkateboard — RacePlex's home discipline, and the type new vehicles start on.
+ *
+ * Wheel diameter/width, wheel brand and (for pneumatics) pressure deliberately
+ * live in the built-in tire block rather than in a section here: that block
+ * already models per-corner values and feeds setup diffs and history, and many
+ * belt-drive builds do run different front/rear wheels. So `includeTires` is on,
+ * and the Wheels section below only carries what the tire block has no slot for.
+ */
+export const DEFAULT_ESKATE_TEMPLATE: SetupTemplate = {
+  id: DEFAULT_ESKATE_TEMPLATE_ID,
+  vehicleTypeId: DEFAULT_ESKATE_VEHICLE_TYPE_ID,
+  name: "eSkateboard",
+  sections: [
+    {
+      id: "sec-deck",
+      name: "Deck",
+      fields: [
+        { id: "f-deck-length", name: "Deck Length", type: "number", unit: "mm", min: 600, max: 1400, step: 5 },
+        // Truck-to-truck (kingpin/axle centres) — the number the Stance tool wants.
+        { id: "f-wheelbase", name: "Wheelbase (truck to truck)", type: "number", unit: "mm", min: 400, max: 1000, step: 5 },
+        { id: "f-deck-flex", name: "Flex", type: "string" },
+        { id: "f-deck-concave", name: "Concave", type: "string" },
+      ],
+    },
+    {
+      id: "sec-trucks",
+      name: "Trucks",
+      fields: [
+        { id: "f-truck-type", name: "Type", type: "string" },
+        { id: "f-truck-width", name: "Hanger Width", type: "number", unit: "mm", min: 100, max: 350, step: 5 },
+        { id: "f-baseplate-angle", name: "Baseplate Angle", type: "number", unit: "degrees", min: 20, max: 60, step: 1 },
+        { id: "f-bushing-front", name: "Bushing Duro (front)", type: "number", unit: "A", min: 60, max: 100, step: 0.5 },
+        { id: "f-bushing-rear", name: "Bushing Duro (rear)", type: "number", unit: "A", min: 60, max: 100, step: 0.5 },
+      ],
+    },
+    {
+      id: "sec-wheels",
+      name: "Wheels",
+      fields: [
+        { id: "f-wheel-type", name: "Type (urethane / pneumatic)", type: "string" },
+        { id: "f-wheel-duro-front", name: "Durometer (front)", type: "number", unit: "A", min: 60, max: 100, step: 1 },
+        { id: "f-wheel-duro-rear", name: "Durometer (rear)", type: "number", unit: "A", min: 60, max: 100, step: 1 },
+      ],
+    },
+    {
+      id: "sec-drive",
+      name: "Drive",
+      fields: [
+        { id: "f-drive-type", name: "Drive (belt / gear / hub / direct)", type: "string" },
+        { id: "f-motor-kv", name: "Motor kV", type: "number", unit: "kV", min: 40, max: 300, step: 1 },
+        // Pulley teeth rather than a ratio: teeth are what you count on the bench.
+        { id: "f-motor-pulley", name: "Motor Pulley", type: "number", unit: "teeth", min: 8, max: 40, step: 1 },
+        { id: "f-wheel-pulley", name: "Wheel Pulley", type: "number", unit: "teeth", min: 20, max: 100, step: 1 },
+      ],
+    },
+    {
+      id: "sec-battery",
+      name: "Battery",
+      fields: [
+        { id: "f-cell-config", name: "Cell Config (e.g. 12S4P)", type: "string" },
+        { id: "f-capacity-wh", name: "Capacity", type: "number", unit: "Wh", min: 50, max: 3000, step: 10 },
+      ],
+    },
+    {
+      id: "sec-rider",
+      name: "Rider",
+      fields: [
+        // Rider + gear + backpack: on an eskate this is ~85% of the moving mass,
+        // so it belongs on the setup sheet, not just in the rider's head.
+        { id: "f-ride-weight", name: "Total Ride Weight", type: "number", unit: "kg", min: 30, max: 200, step: 0.5 },
+      ],
+    },
+  ],
+  wheelCount: 4,
+  includeTires: true,
+  isDefault: true,
+  createdAt: 0,
+  updatedAt: 0,
+};
+
+export const DEFAULT_ESKATE_VEHICLE_TYPE: VehicleType = {
+  id: DEFAULT_ESKATE_VEHICLE_TYPE_ID,
+  name: "eSkateboard",
+  templateId: DEFAULT_ESKATE_TEMPLATE_ID,
+  wheelCount: 4,
+  isDefault: true,
+  createdAt: 0,
+};
+
+/** The type a brand-new vehicle starts on. RacePlex is an eskate app. */
+export const NEW_VEHICLE_DEFAULT_TYPE_ID = DEFAULT_ESKATE_VEHICLE_TYPE_ID;
+
+/**
+ * Which vehicle type a new vehicle should default to, given what's in the
+ * garage. Prefers eSkateboard, then any built-in, then whatever exists — so a
+ * user who has deleted or renamed things still gets a sane pre-selection.
+ */
+export function defaultVehicleTypeId(types: VehicleType[]): string {
+  return (
+    types.find(t => t.id === NEW_VEHICLE_DEFAULT_TYPE_ID)?.id ??
+    types.find(t => t.isDefault)?.id ??
+    types[0]?.id ??
+    ""
+  );
+}
+
 // ── Seeding ──
 
-export async function ensureDefaults(): Promise<void> {
-  const db = await openDB();
+const BUILT_INS: Array<{ type: VehicleType; template: SetupTemplate }> = [
+  { type: DEFAULT_ESKATE_VEHICLE_TYPE, template: DEFAULT_ESKATE_TEMPLATE },
+  { type: DEFAULT_KART_VEHICLE_TYPE, template: DEFAULT_KART_TEMPLATE },
+];
 
-  // Check if default vehicle type exists
-  const vtTx = db.transaction(STORE_NAMES.VEHICLE_TYPES, "readonly");
-  const existing = await new Promise<VehicleType | undefined>((resolve, reject) => {
-    const req = vtTx.objectStore(STORE_NAMES.VEHICLE_TYPES).get(DEFAULT_KART_VEHICLE_TYPE_ID);
+function idbGetAll<T>(store: IDBObjectStore): Promise<T[]> {
+  return new Promise((resolve, reject) => {
+    const req = store.getAll();
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
   });
+}
 
-  if (!existing) {
+/**
+ * Seed any built-in type/template that isn't already in the database.
+ *
+ * Records are only *added*, never overwritten: an existing garage keeps its Kart
+ * type (and any edits the user made to the Kart template) untouched, and simply
+ * gains the eSkateboard type alongside it. Vehicles keep the `vehicleTypeId`
+ * they already have — only the pre-selection for *new* vehicles changes.
+ */
+export async function ensureDefaults(): Promise<void> {
+  const db = await openDB();
+
+  // Both reads are issued before the first await, so the transaction can't
+  // auto-commit out from under us.
+  const readTx = db.transaction([STORE_NAMES.VEHICLE_TYPES, STORE_NAMES.SETUP_TEMPLATES], "readonly");
+  const [types, templates] = await Promise.all([
+    idbGetAll<VehicleType>(readTx.objectStore(STORE_NAMES.VEHICLE_TYPES)),
+    idbGetAll<SetupTemplate>(readTx.objectStore(STORE_NAMES.SETUP_TEMPLATES)),
+  ]);
+  const haveType = new Set(types.map((t) => t.id));
+  const haveTemplate = new Set(templates.map((t) => t.id));
+
+  const missing = BUILT_INS.filter((b) => !haveType.has(b.type.id) || !haveTemplate.has(b.template.id));
+  if (missing.length) {
     const tx = db.transaction([STORE_NAMES.VEHICLE_TYPES, STORE_NAMES.SETUP_TEMPLATES], "readwrite");
-    tx.objectStore(STORE_NAMES.VEHICLE_TYPES).put(DEFAULT_KART_VEHICLE_TYPE);
-    tx.objectStore(STORE_NAMES.SETUP_TEMPLATES).put(DEFAULT_KART_TEMPLATE);
+    for (const b of missing) {
+      if (!haveType.has(b.type.id)) tx.objectStore(STORE_NAMES.VEHICLE_TYPES).put(b.type);
+      if (!haveTemplate.has(b.template.id)) tx.objectStore(STORE_NAMES.SETUP_TEMPLATES).put(b.template);
+    }
     await new Promise<void>((resolve, reject) => {
       tx.oncomplete = () => resolve();
       tx.onerror = () => reject(tx.error);

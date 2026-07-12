@@ -4,7 +4,7 @@
 // the loaded session, but most are standalone calculators that ignore it.
 
 import { lazy, type ComponentType } from "react";
-import { Armchair, Satellite } from "lucide-react";
+import { Armchair, Footprints, Satellite } from "lucide-react";
 import type { PluginPanelProps } from "@/plugins/panels";
 
 import type { ToolsKey } from "./i18n";
@@ -23,6 +23,14 @@ export interface ToolDef {
 }
 
 export const TOOLS: ToolDef[] = [
+  {
+    id: "stance",
+    nameKey: "stancePosition.name",
+    descriptionKey: "stancePosition.description",
+    badgeKey: "stancePosition.badge",
+    icon: Footprints,
+    component: lazy(() => import("./stance/StanceTool")),
+  },
   {
     id: "seat-position",
     nameKey: "seatPosition.name",

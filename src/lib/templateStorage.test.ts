@@ -20,7 +20,11 @@ import {
   updateVehicleTypeWithTemplate,
   DEFAULT_KART_VEHICLE_TYPE_ID,
   DEFAULT_KART_TEMPLATE_ID,
+  DEFAULT_ESKATE_VEHICLE_TYPE_ID,
+  DEFAULT_ESKATE_TEMPLATE_ID,
+  defaultVehicleTypeId,
   type TemplateSection,
+  type VehicleType,
 } from "./templateStorage";
 import { onGarageChange } from "./garageEvents";
 
@@ -31,8 +35,10 @@ const sections: TemplateSection[] = [
 ];
 
 describe("ensureDefaults", () => {
-  it("seeds the default kart vehicle type + template on first run", async () => {
+  it("seeds both built-in vehicle types + templates on first run", async () => {
     await ensureDefaults();
+    expect(await getVehicleType(DEFAULT_ESKATE_VEHICLE_TYPE_ID)).not.toBeNull();
+    expect(await getTemplate(DEFAULT_ESKATE_TEMPLATE_ID)).not.toBeNull();
     expect(await getVehicleType(DEFAULT_KART_VEHICLE_TYPE_ID)).not.toBeNull();
     expect(await getTemplate(DEFAULT_KART_TEMPLATE_ID)).not.toBeNull();
   });
@@ -40,8 +46,57 @@ describe("ensureDefaults", () => {
   it("is idempotent — a second run doesn't duplicate the defaults", async () => {
     await ensureDefaults();
     await ensureDefaults();
-    expect(await listVehicleTypes()).toHaveLength(1);
-    expect(await listTemplates()).toHaveLength(1);
+    expect(await listVehicleTypes()).toHaveLength(2);
+    expect(await listTemplates()).toHaveLength(2);
+  });
+
+  // Migration safety: an existing garage (Kart already seeded, possibly edited)
+  // must gain the eSkateboard type WITHOUT its Kart records being rewritten.
+  it("adds the eskate type to an existing kart-only garage without clobbering it", async () => {
+    await saveVehicleType({
+      id: DEFAULT_KART_VEHICLE_TYPE_ID,
+      name: "My Renamed Kart",
+      templateId: DEFAULT_KART_TEMPLATE_ID,
+      wheelCount: 4,
+      isDefault: true,
+      createdAt: 0,
+    });
+    await saveTemplate({
+      id: DEFAULT_KART_TEMPLATE_ID,
+      vehicleTypeId: DEFAULT_KART_VEHICLE_TYPE_ID,
+      name: "My Renamed Kart",
+      sections,
+      wheelCount: 4,
+      includeTires: true,
+      isDefault: true,
+      createdAt: 0,
+      updatedAt: 0,
+    });
+
+    await ensureDefaults();
+
+    expect((await getVehicleType(DEFAULT_KART_VEHICLE_TYPE_ID))!.name).toBe("My Renamed Kart");
+    expect((await getTemplate(DEFAULT_KART_TEMPLATE_ID))!.sections).toHaveLength(1);
+    expect(await getVehicleType(DEFAULT_ESKATE_VEHICLE_TYPE_ID)).not.toBeNull();
+    expect(await getTemplate(DEFAULT_ESKATE_TEMPLATE_ID)).not.toBeNull();
+  });
+});
+
+describe("defaultVehicleTypeId", () => {
+  const vt = (id: string, isDefault = false): VehicleType =>
+    ({ id, name: id, templateId: `${id}-tpl`, wheelCount: 4, isDefault, createdAt: 0 });
+
+  it("prefers the eskate type whatever the store order", async () => {
+    await ensureDefaults();
+    expect(defaultVehicleTypeId(await listVehicleTypes())).toBe(DEFAULT_ESKATE_VEHICLE_TYPE_ID);
+    expect(defaultVehicleTypeId([vt(DEFAULT_KART_VEHICLE_TYPE_ID, true), vt(DEFAULT_ESKATE_VEHICLE_TYPE_ID, true)]))
+      .toBe(DEFAULT_ESKATE_VEHICLE_TYPE_ID);
+  });
+
+  it("falls back to a built-in, then to anything, then to empty", () => {
+    expect(defaultVehicleTypeId([vt("custom"), vt(DEFAULT_KART_VEHICLE_TYPE_ID, true)])).toBe(DEFAULT_KART_VEHICLE_TYPE_ID);
+    expect(defaultVehicleTypeId([vt("custom")])).toBe("custom");
+    expect(defaultVehicleTypeId([])).toBe("");
   });
 });
 

@@ -53,7 +53,7 @@
     "groupBy": "Raggruppa per",
     "filterNone": "Nessuno",
     "filterEngine": "Motore",
-    "filterKart": "Kart",
+    "filterKart": "Veicolo",
     "emptyDefault": "Nessuna sessione qui"
   },
   "vehicles": {
@@ -143,7 +143,7 @@
     "loading": "Caricamento cronologia…",
     "empty": "Nessuna cronologia",
     "emptyHint": "Assegna questo assetto a una sessione per iniziare a creare la sua cronologia.",
-    "allKarts": "Tutti i kart",
+    "allKarts": "Tutti i veicoli",
     "allCourses": "Tutti i circuiti",
     "original": "Originale",
     "revision": "Revisione",

@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Vehicle } from "@/lib/vehicleStorage";
-import { VehicleType } from "@/lib/templateStorage";
+import { VehicleType, defaultVehicleTypeId } from "@/lib/templateStorage";
 import { useEngineManager } from "@/hooks/useEngineManager";
 import { EngineCombobox } from "./EngineCombobox";
 import { VehicleHistoryPanel } from "./VehicleHistoryPanel";
@@ -36,7 +36,9 @@ const emptyForm = (defaultTypeId: string): Omit<Vehicle, "id"> => ({
 
 export function VehiclesTab({ vehicles, vehicleTypes, onAdd, onUpdate, onRemove, onOpenFile, onCreateVehicleType }: VehiclesTabProps) {
   const { t } = useTranslation("drawer");
-  const defaultTypeId = vehicleTypes[0]?.id ?? "";
+  // New vehicles start on the app's default type (eSkateboard), not on whatever
+  // IndexedDB happened to hand back first.
+  const defaultTypeId = useMemo(() => defaultVehicleTypeId(vehicleTypes), [vehicleTypes]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm(defaultTypeId));
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);

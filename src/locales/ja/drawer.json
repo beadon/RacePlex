@@ -53,7 +53,7 @@
     "groupBy": "グループ化",
     "filterNone": "なし",
     "filterEngine": "エンジン",
-    "filterKart": "カート",
+    "filterKart": "車両",
     "emptyDefault": "ここにはセッションがありません"
   },
   "vehicles": {
@@ -143,7 +143,7 @@
     "loading": "履歴を読み込み中…",
     "empty": "まだ履歴がありません",
     "emptyHint": "このセットアップをセッションに割り当てると履歴の作成が始まります。",
-    "allKarts": "すべてのカート",
+    "allKarts": "すべての車両",
     "allCourses": "すべてのコース",
     "original": "オリジナル",
     "revision": "リビジョン",

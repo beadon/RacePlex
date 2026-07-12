@@ -259,19 +259,23 @@ export function SetupsTab({
     }
   }, [vehicleTypes, templates]);
 
-  // New-setup defaults: with a single vehicle type, pre-select it; with a single
-  // candidate vehicle, pre-select that too (which also preloads its latest
-  // setup). Both pickers stay visible — these are convenience defaults, not locks.
+  // New-setup defaults: pre-select the one type the garage actually uses (there
+  // are always ≥2 built-in types now, so "only one type exists" no longer works
+  // as the signal); with a single candidate vehicle, pre-select that too (which
+  // also preloads its latest setup). Both pickers stay visible — these are
+  // convenience defaults, not locks.
   useEffect(() => {
     if (mode !== "new") return;
-    if (!selectedTypeId && vehicleTypes.length === 1) {
-      handleTypeChange(vehicleTypes[0].id);
+    if (!selectedTypeId) {
+      const typesInUse = [...new Set(vehicles.map(v => v.vehicleTypeId).filter(Boolean))];
+      const only = typesInUse.length === 1 ? typesInUse[0] : vehicleTypes.length === 1 ? vehicleTypes[0].id : "";
+      if (only && vehicleTypes.some(vt => vt.id === only)) handleTypeChange(only);
       return;
     }
-    if (selectedTypeId && filteredVehicles.length === 1 && form.vehicleId !== filteredVehicles[0].id) {
+    if (filteredVehicles.length === 1 && form.vehicleId !== filteredVehicles[0].id) {
       handleVehicleChange(filteredVehicles[0].id);
     }
-  }, [mode, selectedTypeId, vehicleTypes, filteredVehicles, form.vehicleId, handleTypeChange, handleVehicleChange]);
+  }, [mode, selectedTypeId, vehicles, vehicleTypes, filteredVehicles, form.vehicleId, handleTypeChange, handleVehicleChange]);
 
   // External shortcut (the Vehicles tab's "New type" button) drops the user
   // straight into the vehicle-type creator. The parent clears the request once

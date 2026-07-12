@@ -52,7 +52,7 @@
     "groupBy": "Group by",
     "filterNone": "None",
     "filterEngine": "Engine",
-    "filterKart": "Kart",
+    "filterKart": "Vehicle",
     "emptyDefault": "No sessions here"
   },
   "vehicles": {
@@ -142,7 +142,7 @@
     "loading": "Loading history…",
     "empty": "No history yet",
     "emptyHint": "Assign this setup to a session to start building its history.",
-    "allKarts": "All karts",
+    "allKarts": "All vehicles",
     "allCourses": "All courses",
     "original": "Original",
     "revision": "Revision",
