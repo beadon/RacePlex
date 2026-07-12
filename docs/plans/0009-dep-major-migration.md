@@ -46,12 +46,12 @@ guessing required.
 
 **Branch:** `chore/deps-major-migration`
 **Worktree:** `/Users/beadon/work/RacePlex-deps`
-**Latest commit:** `89b0886` — ESLint 10 + plugins bump + partial refactor pass (WIP)
+**Latest commit:** `53cb4c5` — ESLint 10 refactor pass complete (121 → 0 lint errors)
 
 **Suite state:**
-- lint: **62 errors remaining**, all `react-hooks/set-state-in-effect`
+- lint: **0 errors, 0 warnings** — the ESLint 10 migration is finished
 - typecheck: green
-- test:run: green (2247/2247)
+- test:run: green (2255/2255 — includes the 8 useAsyncSnapshot tests)
 - build: green (Rolldown, ~1.3s)
 - verify:import: green (both samples, correct lap times)
 
@@ -61,7 +61,19 @@ guessing required.
 3. `55d14e7` — `chore(deps): bump Tailwind 3 → 4 (CSS-first config + @tailwindcss/postcss)`
 4. `eaf2ef5` — `chore(deps): bump Vite 5→8 + TypeScript 5→6 + @types/node 22→26`
 5. `6f4e72b` — `fix: repair typecheck + tests broken by React 19 / TS 6 / Tailwind 4 codemod`
-6. `89b0886` — `chore(deps): ESLint 10 + plugins bump + partial refactor pass (WIP)`
+6. `89b0886` — `chore(deps): ESLint 10 + plugins bump + partial refactor pass (WIP)` — 121 lint errors surfaced, deps bump landed
+7. `661eea6` — `plan 0009: dep-major-migration design record`
+8. `b02c3e4` — `feat(hooks): add useAsyncSnapshot — React 19 shared async cache`
+9. `6a5a193` — `refactor(hooks): convert 4 garage managers to useAsyncSnapshot`
+10. `ac2da0e` — `refactor(hooks): convert 4 more async loaders to useAsyncSnapshot`
+11. `6e379ed` — `refactor(admin): convert 7 admin/device tabs to useAsyncSnapshot`
+12. `dda013b` — `refactor(cloud-sync): convert 5 panels to useAsyncSnapshot`
+13. `fca8161` — `refactor: drop 5 more set-state-in-effect sites (Group D + WeatherPanel)`
+14. `d178ea1` — `refactor: drop 6 more set-state-in-effect (TrackPromptDialog, TrackEditor, DataloggerDownload)`
+15. `7a04b7a` — `refactor(drawer): drop 4 set-state-in-effect (SetupsTab, FilesTab, FileManagerDrawer)`
+16. `3367b2f` — `refactor(graphview): drop 7 set-state-in-effect via derived+override pattern`
+17. `e29a12f` — `refactor: 7 more set-state-in-effect (VideoPlayer, usePlayback, useLapManagement, useSessionData, useFirmwareUpdate, FileManagerDrawer)`
+18. `53cb4c5` — `refactor: eliminate the last 11 react-hooks/set-state-in-effect errors` — **lint fully green**
 
 ## Overall progress (checklist)
 
@@ -73,10 +85,9 @@ guessing required.
 - [x] Fix typecheck + test regressions from the above three (Tailwind codemod
       false-positives, TS lib target, Uint8Array<ArrayBufferLike>, React 19
       RefObject nullability)
-- [~] Bump ESLint 9 → 10 + eslint-plugin-react-hooks 5 → 7 + friends
+- [x] Bump ESLint 9 → 10 + eslint-plugin-react-hooks 5 → 7 + friends
   - [x] Install stack, keep rules at v7-recommended (NOT downgraded/suppressed)
-  - [x] Clean 59 of 121 initial errors (all six smaller buckets — see below)
-  - [ ] Clean the remaining 62 `react-hooks/set-state-in-effect` errors
+  - [x] All 121 initially-flagged sites cleared (0 errors, 0 warnings on lint)
 - [ ] Bump react-router-dom 6 → 7
 - [ ] Bump react-resizable-panels 2 → 4
 - [ ] Bump sonner 1 → 2, tailwind-merge 2 → 3, lucide-react 0.462 → 1.24
