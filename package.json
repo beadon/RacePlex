@@ -64,7 +64,7 @@
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-i18next": "^17.0.8",
-    "react-resizable-panels": "^2.1.9",
+    "react-resizable-panels": "^4",
     "react-router-dom": "^7",
     "sonner": "^1.7.4",
     "tailwind-merge": "^2.6.0",

@@ -16,7 +16,7 @@ import { formatLapTime } from '@/lib/lapCalculation';
 import { VideoPlayer } from '@/components/VideoPlayer';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 import { Map as MapIcon, EyeOff, ChevronLeft, ChevronRight } from 'lucide-react';
-import { ImperativePanelHandle } from 'react-resizable-panels';
+import type { PanelImperativeHandle } from 'react-resizable-panels';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 export interface GraphViewPanelProps {
@@ -88,13 +88,13 @@ export function GraphViewPanel(props: GraphViewPanelProps) {
   const { t } = useTranslation('session');
   const isMobile = useIsMobile();
   const [mapVisible, setMapVisible] = useState(true);
-  const mapPanelRef = useRef<ImperativePanelHandle>(null);
+  const mapPanelRef = useRef<PanelImperativeHandle>(null);
   const savedSizeRef = useRef(30);
 
   // The left InfoBox/MiniMap column can be collapsed (any screen size) so the
   // graphs get the full width. Video + mini-map are then reachable as graph
   // panels. Split-graphs also collapses it (the comparison needs the width).
-  const leftPanelRef = useRef<ImperativePanelHandle>(null);
+  const leftPanelRef = useRef<PanelImperativeHandle>(null);
   const [leftCollapsed, setLeftCollapsed] = useState(false);
   // Relocated panels active in the graph stack (reported by GraphPanel) — used
   // to avoid mounting a duplicate VideoPlayer (it binds a single shared ref).
@@ -116,7 +116,9 @@ export function GraphViewPanel(props: GraphViewPanelProps) {
     const panel = mapPanelRef.current;
     if (!panel) return;
     if (mapVisible) {
-      savedSizeRef.current = panel.getSize();
+      // v4 returns { asPercentage, inPixels } from getSize(); we track and
+      // restore by percentage since it's stable across window resizes.
+      savedSizeRef.current = panel.getSize().asPercentage;
       panel.collapse();
       setMapVisible(false);
     } else {
@@ -359,13 +361,13 @@ export function GraphViewPanel(props: GraphViewPanelProps) {
               graph state) stays put. */}
           <div className="flex-1 min-h-0">
             <ResizablePanelGroup direction="horizontal" className="h-full">
-              <ResizablePanel id="graph-main" order={1} defaultSize={showSplit ? 50 : 100} minSize={25}>
+              <ResizablePanel id="graph-main" defaultSize={showSplit ? 50 : 100} minSize={25}>
                 {mainGraphPanel}
               </ResizablePanel>
               {showSplit && (
                 <>
                   <ResizableHandle />
-                  <ResizablePanel id="graph-secondary" order={2} defaultSize={50} minSize={25}>
+                  <ResizablePanel id="graph-secondary" defaultSize={50} minSize={25}>
                     <SecondaryGraphStack
                       overlay={selectedOverlay!}
                       activeGraphs={mirror.activeGraphs}
