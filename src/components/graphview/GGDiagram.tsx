@@ -38,9 +38,9 @@ const CURRENT_COLOR = 'hsl(0, 75%, 55%)';   // red current point
 
 export function GGDiagram({ samples, referenceSamples, overlayLines = [], label, onDelete, height, onHeightChange, readOnly = false }: GGDiagramProps) {
   const { t } = useTranslation('session');
-  const { gForceSmoothing, gForceSmoothingStrength, gForceSource, darkMode } = useSettingsContext();
+  const { gForceSmoothing, gForceSmoothingStrength, gForceSource, darkMode, palette } = useSettingsContext();
   const { currentIndex } = usePlaybackContext();
-  const chartColors = useMemo(() => getChartColors(darkMode), [darkMode]);
+  const chartColors = useMemo(() => getChartColors(darkMode, palette), [darkMode, palette]);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const cursorCanvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Settings, Eye, EyeOff, Gauge, Activity, Circle, HardDrive, Languages, Sun, Moon, RefreshCw, Timer, Ruler, ChevronDown, Map, CloudSun, Wifi } from "lucide-react";
+import { Settings, Eye, EyeOff, Gauge, Activity, Circle, HardDrive, Languages, Sun, Moon, Palette, RefreshCw, Timer, Ruler, ChevronDown, Map, CloudSun, Wifi } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -25,6 +25,7 @@ import { AppSettings } from "@/hooks/useSettings";
 import { isNativeApp } from "@/lib/platform";
 import { SUPPORTED_LANGUAGES, type SupportedLanguage } from "@/lib/i18n/config";
 import { FIELD_CATEGORIES, CanonicalFieldId } from "@/lib/fieldResolver";
+import { PALETTES } from "@/lib/palettes";
 import { cn } from "@/lib/utils";
 
 interface SettingsModalProps {
@@ -121,6 +122,46 @@ export function SettingsModal({
                 />
                 <Moon className={`w-3.5 h-3.5 ${settings.darkMode ? "text-foreground" : "text-muted-foreground"}`} />
               </div>
+            </div>
+          </div>
+
+          {/* Colour Palette */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Palette className="w-4 h-4 text-muted-foreground" />
+              <h3 className="font-medium">{t("settings:palette.heading")}</h3>
+            </div>
+            <div className="pl-6 space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <Label className="text-sm text-muted-foreground">{t("settings:palette.label")}</Label>
+                <span className="text-xs font-medium">{t(`settings:palette.names.${settings.palette}`)}</span>
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                {PALETTES.map(({ id, swatch }) => {
+                  const name = t(`settings:palette.names.${id}`);
+                  const selected = settings.palette === id;
+                  return (
+                    <button
+                      key={id}
+                      onClick={() => onSettingsChange({ palette: id })}
+                      className={cn(
+                        "flex w-8 h-8 overflow-hidden rounded-md border-2 transition-all",
+                        selected
+                          ? "border-foreground scale-110"
+                          : "border-transparent hover:border-muted-foreground/50",
+                      )}
+                      title={name}
+                      aria-label={name}
+                      aria-pressed={selected}
+                    >
+                      {swatch.map((color) => (
+                        <span key={color} className="flex-1" style={{ backgroundColor: color }} />
+                      ))}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-muted-foreground/70">{t("settings:palette.hint")}</p>
             </div>
           </div>
 

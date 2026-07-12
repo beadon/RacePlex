@@ -3,12 +3,15 @@ import { readFileSync } from 'fs';
 import { resolve } from 'path';
 
 import {
+  courseFromDeviceLaps,
   detectSpeedUnit,
   isRaceBoxCsvFormat,
   parseRaceBoxCsvFile,
 } from './raceboxCsvParser';
 import { parseDatalogContent } from './datalogParser';
-import { MPS_TO_KPH, haversineDistance } from './parserUtils';
+import { calculateLaps } from './lapCalculation';
+import { MPS_TO_KPH, haversineDistance, speedTriple } from './parserUtils';
+import { GpsSample } from '@/types/racing';
 
 const realCsv = readFileSync(resolve(__dirname, '__fixtures__/racebox-session.csv'), 'utf-8');
 
@@ -111,6 +114,163 @@ describe('parseRaceBoxCsvFile — real RaceBox export', () => {
     const timed = parsed.samples.filter((s) => s.extraFields['Device Lap'] === 1);
     const durationSec = (timed[timed.length - 1].t - timed[0].t) / 1000;
     expect(durationSec).toBeCloseTo(36.48, 1);
+  });
+});
+
+/**
+ * The CSV has no waypoints, so the only record of where the timing lines were is the device's own
+ * `Lap` column: it says WHEN the device thought a line was crossed, and the GPS columns say WHERE.
+ *
+ * The real fixture is point-to-point and single-run, so the circuit path is exercised with a
+ * synthetic ride round a circle instead.
+ */
+describe('courseFromDeviceLaps', () => {
+  const M_PER_DEG_LAT = 111_320;
+  const CENTER = { lat: 40, lon: -105 };
+  const M_PER_DEG_LON = M_PER_DEG_LAT * Math.cos((CENTER.lat * Math.PI) / 180);
+
+  const sample = (t: number, lat: number, lon: number, lap?: number): GpsSample => ({
+    t,
+    lat,
+    lon,
+    ...speedTriple(30),
+    extraFields: lap === undefined ? {} : { 'Device Lap': lap },
+  });
+
+  /**
+   * Three laps of a 100 m-radius circle at 2° per 100 ms — one lap every 18.0 s — after most of an
+   * out-lap. The device's lap counter ticks over each time the rider passes due east of the centre
+   * (angle 0), which is therefore where the start/finish line must land.
+   *
+   * The tail deliberately drops back to lap 0 in the middle of a corner, which is what leaving the
+   * track looks like: nowhere near a timing line, and emphatically not a finish line.
+   */
+  const circuitRide = (): GpsSample[] => {
+    const out: GpsSample[] = [];
+    for (let deg = -60, i = 0; deg < 1000; deg += 2, i++) {
+      const rad = (deg * Math.PI) / 180;
+      const lap = deg < 0 ? 0 : Math.floor(deg / 360) + 1;
+      out.push(
+        sample(
+          i * 100,
+          CENTER.lat + (100 * Math.sin(rad)) / M_PER_DEG_LAT,
+          CENTER.lon + (100 * Math.cos(rad)) / M_PER_DEG_LON,
+          deg >= 940 ? 0 : lap, // rider peels off mid-corner and the counter resets
+        ),
+      );
+    }
+    return out;
+  };
+
+  it('puts the start/finish line where the lap counter ticked over', () => {
+    const course = courseFromDeviceLaps(circuitRide(), 'Circle')!;
+
+    expect(course).not.toBeNull();
+    const mid = {
+      lat: (course.startFinishA.lat + course.startFinishB.lat) / 2,
+      lon: (course.startFinishA.lon + course.startFinishB.lon) / 2,
+    };
+    // Angle 0 = due east of the centre. Samples are 3.5 m apart there, so the midpoint estimate
+    // cannot be more than a couple of metres out.
+    const eastPoint = { lat: CENTER.lat, lon: CENTER.lon + 100 / M_PER_DEG_LON };
+    expect(haversineDistance(mid.lat, mid.lon, eastPoint.lat, eastPoint.lon)).toBeLessThan(4);
+  });
+
+  it('calls a multi-lap session a circuit, and does not invent a finish line where the rider left the track', () => {
+    const course = courseFromDeviceLaps(circuitRide(), 'Circle')!;
+
+    // The lap number climbing 1→2→3 with no return to 0 in between is the signature of one line
+    // crossed repeatedly. The single trailing drop to 0 is the rider going home.
+    expect(course.finishA).toBeUndefined();
+    expect(course.finishB).toBeUndefined();
+  });
+
+  it('times the circuit laps the rider actually did', () => {
+    const laps = calculateLaps(circuitRide(), courseFromDeviceLaps(circuitRide(), 'Circle')!);
+
+    // Three crossings of the line (laps 1, 2 and 3 beginning) bound two complete laps.
+    expect(laps).toHaveLength(2);
+    for (const lap of laps) expect(lap.lapTimeMs).toBeCloseTo(18_000, -2);
+  });
+
+  it('reads a point-to-point course out of a single timed run', () => {
+    // Due north at 10 m/s: start line at 100 m, finish at 300 m, so the run must take 20.0 s.
+    const ride = Array.from({ length: 500 }, (_, i) => {
+      const metres = i * 1;
+      const lap = metres >= 100 && metres < 300 ? 1 : 0;
+      return sample(i * 100, CENTER.lat + metres / M_PER_DEG_LAT, CENTER.lon, lap);
+    });
+
+    const course = courseFromDeviceLaps(ride, 'Hill run')!;
+    expect(course.finishA).toBeDefined();
+
+    const laps = calculateLaps(ride, course);
+    expect(laps).toHaveLength(1);
+    expect(laps[0].lapTimeMs).toBeCloseTo(20_000, -2);
+  });
+
+  it('returns nothing when the file has no Lap column', () => {
+    const ride = Array.from({ length: 100 }, (_, i) =>
+      sample(i * 100, CENTER.lat + i / M_PER_DEG_LAT, CENTER.lon),
+    );
+    expect(courseFromDeviceLaps(ride, 'x')).toBeNull();
+  });
+
+  it('returns nothing when the rider never armed a run (Lap is all zeros)', () => {
+    const ride = Array.from({ length: 100 }, (_, i) =>
+      sample(i * 100, CENTER.lat + i / M_PER_DEG_LAT, CENTER.lon, 0),
+    );
+    expect(courseFromDeviceLaps(ride, 'x')).toBeNull();
+  });
+
+  it('returns nothing for the out-lap portion of the real session', () => {
+    // Real data, sliced before the rider ever crossed the start line: the Lap column is all zeros
+    // and there is nothing to reconstruct. Must not fabricate a course out of it.
+    const outLap = parseRaceBoxCsvFile(realCsv).samples.filter(
+      (s) => s.extraFields['Device Lap'] === 0,
+    );
+    expect(outLap.length).toBeGreaterThan(100);
+    expect(courseFromDeviceLaps(outLap, 'x')).toBeNull();
+  });
+
+  it('returns nothing for a log that begins mid-run', () => {
+    // Lap 1 from the first sample, then a drop to 0: we saw the finish but never the start, so we
+    // have no idea where the start line is. Guessing one would fabricate a lap time.
+    const ride = Array.from({ length: 100 }, (_, i) =>
+      sample(i * 100, CENTER.lat + i / M_PER_DEG_LAT, CENTER.lon, i < 50 ? 1 : 0),
+    );
+    expect(courseFromDeviceLaps(ride, 'x')).toBeNull();
+  });
+
+  it('returns nothing when the device changed lap while the rider was stationary', () => {
+    // No movement means no heading, and a timing line laid on a heading of pure GPS noise points
+    // in an arbitrary direction.
+    const parked = Array.from({ length: 100 }, (_, i) =>
+      sample(i * 100, CENTER.lat, CENTER.lon, i < 50 ? 0 : 1),
+    );
+    expect(courseFromDeviceLaps(parked, 'x')).toBeNull();
+  });
+});
+
+describe('parseRaceBoxCsvFile — embedded course', () => {
+  it('hands the reconstructed course out with the parsed data', () => {
+    expect(parseRaceBoxCsvFile(realCsv).embeddedCourse?.finishA).toBeDefined();
+  });
+
+  it('parses a Lap-less export without inventing one', () => {
+    // Not every RaceBox preset emits a Lap column. Those files simply have no course in them, and
+    // the rider is asked to pick one — exactly as before.
+    const csv = [
+      'Time,Latitude,Longitude,Speed',
+      ...Array.from(
+        { length: 60 },
+        (_, i) => `${i * 0.1},${40 + i / 111_320},-105,36`,
+      ),
+    ].join('\n');
+
+    const parsed = parseRaceBoxCsvFile(csv);
+    expect(parsed.samples).toHaveLength(60);
+    expect(parsed.embeddedCourse).toBeUndefined();
   });
 });
 

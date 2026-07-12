@@ -4,6 +4,18 @@
     "heading": "Theme",
     "darkMode": "Dark mode"
   },
+  "palette": {
+    "heading": "Colour Palette",
+    "label": "Accent & surface colours",
+    "hint": "Changes the app's colours only. Speed, delta and best-lap colours keep their meaning in every palette.",
+    "names": {
+      "raceplex": "RacePlex",
+      "classic": "Classic High-Contrast",
+      "retro": "Retro Racing",
+      "neon": "Neon",
+      "original": "Original"
+    }
+  },
   "fileStorage": {
     "heading": "File Storage",
     "autoSave": "Auto-save imported/uploaded files to device",

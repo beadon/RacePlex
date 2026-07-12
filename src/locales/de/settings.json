@@ -5,6 +5,18 @@
     "heading": "Design",
     "darkMode": "Dunkelmodus"
   },
+  "palette": {
+    "heading": "Farbpalette",
+    "label": "Akzent- & Oberflächenfarben",
+    "hint": "Ändert nur die App-Farben. Farben für Geschwindigkeit, Delta und schnellste Runde behalten in jeder Palette ihre Bedeutung.",
+    "names": {
+      "raceplex": "RacePlex",
+      "classic": "Klassisch kontrastreich",
+      "retro": "Retro Racing",
+      "neon": "Neon",
+      "original": "Original"
+    }
+  },
   "fileStorage": {
     "heading": "Dateispeicher",
     "autoSave": "Importierte/hochgeladene Dateien automatisch auf dem Gerät speichern",

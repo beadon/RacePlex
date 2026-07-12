@@ -48,9 +48,9 @@ export function SingleSeriesChart({
   height, onHeightChange, readOnly = false,
 }: SingleSeriesChartProps) {
   const { t } = useTranslation('session');
-  const { useKph, useMetricDistance, gForceSmoothing, gForceSmoothingStrength, darkMode, chartXAxis, brakingZoneSettings } = useSettingsContext();
+  const { useKph, useMetricDistance, gForceSmoothing, gForceSmoothingStrength, darkMode, palette, chartXAxis, brakingZoneSettings } = useSettingsContext();
   const { currentIndex } = usePlaybackContext();
-  const chartColors = useMemo(() => getChartColors(darkMode), [darkMode]);
+  const chartColors = useMemo(() => getChartColors(darkMode, palette), [darkMode, palette]);
   const axis = useMemo(
     () => buildChartAxis(samples, chartXAxis, { useMetricDistance, fullSamples: allSamples, rangeStart }),
     [samples, chartXAxis, useMetricDistance, allSamples, rangeStart],

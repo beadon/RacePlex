@@ -46,6 +46,7 @@ import { ParsedData } from "@/types/racing";
 import { parseDatalogFile } from "@/lib/datalogParser";
 import { calculateDistanceArray } from "@/lib/referenceUtils";
 import { formatAxisDistance } from "@/lib/chartAxis";
+import { applyPalette } from "@/lib/palettes";
 import { cn } from "@/lib/utils";
 import { usePanelsForSlot, PanelSlot } from "@/plugins/panels";
 import { TrackPromptDialog } from "@/components/TrackPromptDialog";
@@ -105,6 +106,11 @@ export default function Index() {
   useEffect(() => {
     document.documentElement.classList.toggle('dark', settings.darkMode);
   }, [settings.darkMode]);
+
+  // Same for the palette's `data-palette` attribute (global init is in App.tsx)
+  useEffect(() => {
+    applyPalette(settings.palette);
+  }, [settings.palette]);
 
   // Seed the bundled sample log into IndexedDB as a real file so it's always
   // available in the browser and opens through the normal path. Idempotent;
@@ -466,9 +472,10 @@ export default function Index() {
     gForceSmoothingStrength: settings.gForceSmoothingStrength,
     brakingZoneSettings,
     darkMode: settings.darkMode,
+    palette: settings.palette,
     gForceSource: settings.gForceSource,
     chartXAxis: settings.chartXAxis,
-  }), [useKph, useMetricDistance, settings.useMetricWeather, settings.gForceSmoothing, settings.gForceSmoothingStrength, brakingZoneSettings, settings.darkMode, settings.gForceSource, settings.chartXAxis]);
+  }), [useKph, useMetricDistance, settings.useMetricWeather, settings.gForceSmoothing, settings.gForceSmoothingStrength, brakingZoneSettings, settings.darkMode, settings.palette, settings.gForceSource, settings.chartXAxis]);
 
   // Memoize sliced data arrays to avoid recreating on every render
   const slicedPaceData = useMemo(

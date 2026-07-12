@@ -16,7 +16,7 @@ import { calculateLaps } from './lapCalculation';
 import { autoDetectCourse } from './courseDetection';
 import { courseFromGpxWaypoints, extractGpxWaypoints, parseGpxFile } from './gpxParser';
 import { parseRaceBoxCsvFile } from './raceboxCsvParser';
-import { speedTriple } from './parserUtils';
+import { haversineDistance, speedTriple } from './parserUtils';
 
 const gpxText = readFileSync(resolve(__dirname, '__fixtures__/racebox-session.gpx'), 'utf-8');
 const csvText = readFileSync(resolve(__dirname, '__fixtures__/racebox-session.csv'), 'utf-8');
@@ -132,6 +132,73 @@ describe('the real RaceBox session', () => {
     // Our interpolated time should land within a sample interval (40 ms) of the device's, which
     // is quantised to whole samples.
     expect(Math.abs(laps[0].lapTimeMs / 1000 - deviceSeconds)).toBeLessThan(0.5);
+  });
+});
+
+/**
+ * The same session, imported as CSV instead of GPX.
+ *
+ * The CSV carries no waypoints — nothing says where the course is except the device's own `Lap`
+ * column. Reconstructing the timing lines from where the rider WAS when that column changed has to
+ * put us in the same place, and give the same run time, as the GPX's explicit Start/Finish
+ * waypoints do. If it doesn't, the reconstruction is wrong.
+ */
+describe('the same RaceBox session, from the CSV', () => {
+  const csv = parseRaceBoxCsvFile(csvText);
+  const gpx = parseGpxFile(gpxText);
+
+  const midOf = (a: { lat: number; lon: number }, b: { lat: number; lon: number }) => ({
+    lat: (a.lat + b.lat) / 2,
+    lon: (a.lon + b.lon) / 2,
+  });
+
+  it('reconstructs a course from the Lap column alone', () => {
+    expect(csv.embeddedCourse).toBeDefined();
+    // Start and finish came out ~85 m apart, so this must be point-to-point, same as the GPX.
+    expect(csv.embeddedCourse!.finishA).toBeDefined();
+  });
+
+  it('puts both timing lines where the GPX says they are', () => {
+    const wpts = extractGpxWaypoints(gpxText);
+    const start = wpts.find((w) => w.name === 'Start')!;
+    const finish = wpts.find((w) => w.name === 'Finish')!;
+
+    const course = csv.embeddedCourse!;
+    const ourStart = midOf(course.startFinishA, course.startFinishB);
+    const ourFinish = midOf(course.finishA!, course.finishB!);
+
+    // Within the width of the racing line. The reconstruction can only place the line between the
+    // two samples that straddle the crossing, and at 100 km/h those are ~1 m apart; the rest of the
+    // gap is where on the (50 m wide) line the rider happened to cross it.
+    expect(haversineDistance(ourStart.lat, ourStart.lon, start.lat, start.lon)).toBeLessThan(10);
+    expect(haversineDistance(ourFinish.lat, ourFinish.lon, finish.lat, finish.lon)).toBeLessThan(10);
+  });
+
+  /**
+   * The headline. Three independent measurements of the same run:
+   *   36.480 s — the device's own, quantised to whole samples
+   *   36.547 s — ours, from the GPX's Start/Finish waypoints
+   *   ~36.52 s — ours, from the CSV's Lap column and nothing else
+   */
+  it('reproduces the 36.480s run that the device itself timed', () => {
+    const laps = calculateLaps(csv.samples, csv.embeddedCourse!);
+    expect(laps).toHaveLength(1);
+
+    const seconds = laps[0].lapTimeMs / 1000;
+    expect(seconds).toBeCloseTo(36.48, 1); // within 50 ms of the device
+
+    const gpxSeconds = calculateLaps(gpx.samples, gpx.embeddedCourse!)[0].lapTimeMs / 1000;
+    expect(Math.abs(seconds - gpxSeconds)).toBeLessThan(0.1);
+  });
+
+  it('gives a rider with an empty garage lap times on import', () => {
+    // This is the whole point: importing this CSV used to say "No Track Detected".
+    const result = autoDetectCourse(csv.samples, [], csv.embeddedCourse);
+
+    expect(result).not.toBeNull();
+    expect(result!.isWaypointMode).toBe(false);
+    expect(result!.laps).toHaveLength(1);
+    expect(result!.laps[0].lapTimeMs / 1000).toBeCloseTo(36.48, 1);
   });
 });
 

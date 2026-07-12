@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { isFieldHiddenByCanonical, CanonicalFieldId } from "@/lib/fieldResolver";
 import i18n, { initialLanguage } from "@/lib/i18n";
 import type { SupportedLanguage } from "@/lib/i18n/config";
+import { DEFAULT_PALETTE, type PaletteId } from "@/lib/palettes";
 
 export interface AppSettings {
   useKph: boolean;                  // Speed unit: false = MPH, true = KPH
@@ -22,6 +23,7 @@ export interface AppSettings {
   autoSaveFiles: boolean;           // Auto-save imported/uploaded files to device (default: true)
   showSampleFiles: boolean;         // Show the bundled sample log in the file browser (default: true)
   darkMode: boolean;                // Dark mode enabled (default: true)
+  palette: PaletteId;               // Colour palette (CSS-var override set, default: 'raceplex')
   gForceSource: 'gps' | 'hw';      // Which G-force source to show in simple mode (default: 'hw')
   deltaMethod: 'position' | 'distance'; // Lap delta algorithm (default: 'position')
   deltaSampleMeters: number;        // Arc-length resample spacing for position delta (default: 2)
@@ -51,6 +53,7 @@ const defaultSettings: AppSettings = {
   autoSaveFiles: true,
   showSampleFiles: true,
   darkMode: false,
+  palette: DEFAULT_PALETTE,
   gForceSource: 'hw',
   deltaMethod: 'position',
   deltaSampleMeters: 2,

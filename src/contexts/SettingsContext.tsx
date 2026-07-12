@@ -1,4 +1,5 @@
 import { createContext, useContext } from 'react';
+import type { PaletteId } from '@/lib/palettes';
 
 export interface BrakingZoneSettings {
   entryThresholdG: number;
@@ -19,6 +20,9 @@ export interface SettingsContextValue {
   gForceSmoothingStrength: number;
   brakingZoneSettings: BrakingZoneSettings;
   darkMode: boolean;
+  /** Active palette — canvas-drawn charts can't read CSS vars, so they select
+   *  their chrome from it via `getChartColors` (see lib/chartColors.ts). */
+  palette: PaletteId;
   gForceSource: 'gps' | 'hw';
   chartXAxis: 'time' | 'distance';
 }

@@ -23,16 +23,18 @@
 
 import { Course, GpsSample, ParsedData, SectorLine } from '@/types/racing';
 import {
-  EARTH_RADIUS_M,
-  calculateBearing,
   calculateBounds,
   haversineDistance,
   speedTriple,
   validateGpsCoords,
 } from './parserUtils';
+import {
+  COINCIDENT_LINE_M,
+  DEFAULT_TIMING_LINE_WIDTH_M,
+  timingLineAtPoint,
+} from './timingLines';
 
-/** Default total length of a timing line reconstructed from a waypoint, in metres. */
-export const DEFAULT_TIMING_LINE_WIDTH_M = 50;
+export { DEFAULT_TIMING_LINE_WIDTH_M };
 
 export interface GpxWaypoint {
   lat: number;
@@ -203,57 +205,6 @@ export function parseGpxFile(content: string): ParsedData {
 }
 
 /**
- * Turn a waypoint into a timing line.
- *
- * A waypoint is a bare point; a timing line needs a direction and a length. We recover the
- * direction from the ride itself: the rider's heading as they passed closest to the waypoint is,
- * by definition, the direction that line is meant to be crossed in. The line is then laid
- * perpendicular to that heading, half its width to each side.
- *
- * Heading is taken across a few samples rather than one, because at 25 Hz a single-sample heading
- * is mostly GPS noise.
- */
-function timingLineAt(
-  wp: GpxWaypoint,
-  samples: GpsSample[],
-  widthM: number,
-): SectorLine | null {
-  if (samples.length < 2) return null;
-
-  let nearest = -1;
-  let nearestDist = Infinity;
-  for (let i = 0; i < samples.length; i++) {
-    const d = haversineDistance(wp.lat, wp.lon, samples[i].lat, samples[i].lon);
-    if (d < nearestDist) {
-      nearestDist = d;
-      nearest = i;
-    }
-  }
-  if (nearest === -1) return null;
-
-  const a = samples[Math.max(0, nearest - 2)];
-  const b = samples[Math.min(samples.length - 1, nearest + 2)];
-  if (haversineDistance(a.lat, a.lon, b.lat, b.lon) < 0.5) return null; // stationary: no heading
-
-  const heading = calculateBearing(a.lat, a.lon, b.lat, b.lon);
-
-  // Endpoints lie perpendicular to the direction of travel: heading ± 90°.
-  const half = widthM / 2;
-  const project = (bearingDeg: number) => {
-    const rad = (bearingDeg * Math.PI) / 180;
-    const dNorth = Math.cos(rad) * half;
-    const dEast = Math.sin(rad) * half;
-    const latRad = (wp.lat * Math.PI) / 180;
-    return {
-      lat: wp.lat + (dNorth / EARTH_RADIUS_M) * (180 / Math.PI),
-      lon: wp.lon + (dEast / (EARTH_RADIUS_M * Math.cos(latRad))) * (180 / Math.PI),
-    };
-  };
-
-  return { a: project(heading - 90), b: project(heading + 90) };
-}
-
-/**
  * Reconstruct a Course from a GPX's timing waypoints, so a rider who imports a RaceBox GPX gets
  * lap times immediately instead of having to draw a start/finish line by hand.
  *
@@ -271,8 +222,6 @@ function timingLineAt(
  * COINCIDENT_LINE_M of each other they're the same line under two names, which is how a lot of
  * loop courses get exported.
  */
-const COINCIDENT_LINE_M = 20;
-
 export function courseFromGpxWaypoints(
   waypoints: GpxWaypoint[],
   samples: GpsSample[],
@@ -289,7 +238,7 @@ export function courseFromGpxWaypoints(
   const anchor = startFinish ?? start ?? finish;
   if (!anchor) return null;
 
-  const startLine = timingLineAt(anchor, samples, widthM);
+  const startLine = timingLineAtPoint(anchor, samples, widthM);
   if (!startLine) return null;
 
   // A distinct finish line makes this point-to-point.
@@ -297,7 +246,7 @@ export function courseFromGpxWaypoints(
   if (!startFinish && start && finish) {
     const apart = haversineDistance(start.lat, start.lon, finish.lat, finish.lon);
     if (apart > COINCIDENT_LINE_M) {
-      finishLine = timingLineAt(finish, samples, widthM);
+      finishLine = timingLineAtPoint(finish, samples, widthM);
     }
   }
 
@@ -307,7 +256,7 @@ export function courseFromGpxWaypoints(
   });
 
   const sectors = splits
-    .map((w) => timingLineAt(w, samples, widthM))
+    .map((w) => timingLineAtPoint(w, samples, widthM))
     .filter((l): l is SectorLine => l !== null)
     .map((l) => ({ line: l, major: true }));
 

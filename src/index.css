@@ -143,6 +143,442 @@
     --sidebar-border: 220 15% 20%;
     --sidebar-ring: 276 44% 59%;
   }
+
+  /* ─── Selectable colour palettes ────────────────────────────────────────────
+     Each palette is a block of overrides on the tokens above, selected by
+     `data-palette` on <html> (set in App.tsx before first paint, kept in sync by
+     Index.tsx; see lib/palettes.ts). Palettes compose with the `.dark` class:
+     `[data-palette="x"]` is the light variant, `.dark[data-palette="x"]` the dark
+     one. Both variants must declare the *same* set of vars — the light block sits
+     after `.dark` at equal specificity, so it is only outranked in dark mode by
+     the `.dark[data-palette]` block (0,2,0) re-declaring each of them.
+
+     `data-palette="original"` is the upstream DataViewer look, so it needs no
+     block at all — it is exactly `:root`/`.dark` above, untouched.
+
+     Two rules hold across every palette:
+       1. `--speed-*` is never overridden. Those drive the `.speed-gradient`
+          legend, which must keep matching the map heatmap's hard-coded gradient
+          (`getSpeedColor` in lib/speedHeatmap.ts).
+       2. Data-encoding tokens (`--lap-best`, `--success`, `--warning`,
+          `--destructive`) stay green / amber / red and are tuned per palette to
+          clear WCAG AA (4.5:1) against that palette's card and background —
+          asserted in lib/palettes.test.ts. A palette restyles chrome; it never
+          restyles what a colour *means*. */
+
+  /* RacePlex — core brand: Racing Red #BD162C on carbon black, Electric Yellow. */
+  [data-palette="raceplex"] {
+    --background: 0 0% 98%;
+    --foreground: 240 10% 8%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 8%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 8%;
+
+    --primary: 351 79% 41%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 240 6% 92%;
+    --secondary-foreground: 240 8% 24%;
+
+    --muted: 240 6% 93%;
+    --muted-foreground: 240 5% 40%;
+
+    --accent: 56 96% 48%;
+    --accent-foreground: 240 10% 8%;
+
+    --destructive: 0 72% 41%;
+    --destructive-foreground: 0 0% 100%;
+
+    --warning: 30 98% 32%;
+    --warning-foreground: 0 0% 100%;
+
+    --success: 142 72% 26%;
+    --success-foreground: 0 0% 100%;
+
+    --border: 240 6% 85%;
+    --input: 240 6% 88%;
+    --ring: 351 79% 41%;
+
+    --lap-best: 142 70% 28%;
+
+    --chart-grid: 240 6% 88%;
+    --chart-axis: 240 5% 40%;
+
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 240 10% 8%;
+    --sidebar-primary: 351 79% 41%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 6% 92%;
+    --sidebar-accent-foreground: 240 8% 24%;
+    --sidebar-border: 240 6% 85%;
+    --sidebar-ring: 351 79% 41%;
+  }
+
+  .dark[data-palette="raceplex"] {
+    --background: 240 8% 5%;
+    --foreground: 0 0% 95%;
+
+    --card: 240 8% 9%;
+    --card-foreground: 0 0% 95%;
+
+    --popover: 240 8% 7%;
+    --popover-foreground: 0 0% 95%;
+
+    /* Racing Red brightened for carbon surfaces — the exact brand red (41% L)
+       only reaches 3.0:1 as `text-primary` on this background. Same move the
+       upstream violet makes (49% → 59% L in dark). */
+    --primary: 351 88% 57%;
+    --primary-foreground: 240 8% 5%;
+
+    --secondary: 240 6% 16%;
+    --secondary-foreground: 0 0% 88%;
+
+    --muted: 240 6% 14%;
+    --muted-foreground: 240 6% 64%;
+
+    --accent: 56 96% 52%;
+    --accent-foreground: 240 10% 8%;
+
+    --destructive: 0 80% 64%;
+    --destructive-foreground: 240 8% 5%;
+
+    --warning: 38 96% 56%;
+    --warning-foreground: 240 8% 5%;
+
+    --success: 142 65% 48%;
+    --success-foreground: 240 8% 5%;
+
+    --border: 240 6% 18%;
+    --input: 240 6% 16%;
+    --ring: 351 88% 57%;
+
+    --lap-best: 142 65% 50%;
+
+    --chart-grid: 240 6% 18%;
+    --chart-axis: 240 6% 64%;
+
+    --sidebar-background: 240 8% 9%;
+    --sidebar-foreground: 0 0% 95%;
+    --sidebar-primary: 351 88% 57%;
+    --sidebar-primary-foreground: 240 8% 5%;
+    --sidebar-accent: 240 6% 16%;
+    --sidebar-accent-foreground: 0 0% 88%;
+    --sidebar-border: 240 6% 18%;
+    --sidebar-ring: 351 88% 57%;
+  }
+
+  /* Classic High-Contrast — flag-and-curbing: Racing Red, white, deep flag blue. */
+  [data-palette="classic"] {
+    --background: 0 0% 100%;
+    --foreground: 220 45% 9%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 220 45% 9%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 45% 9%;
+
+    --primary: 351 79% 41%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 22% 93%;
+    --secondary-foreground: 220 40% 18%;
+
+    --muted: 220 20% 94%;
+    --muted-foreground: 220 18% 36%;
+
+    --accent: 220 85% 33%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 72% 41%;
+    --destructive-foreground: 0 0% 100%;
+
+    --warning: 30 98% 32%;
+    --warning-foreground: 0 0% 100%;
+
+    --success: 142 72% 26%;
+    --success-foreground: 0 0% 100%;
+
+    --border: 220 20% 80%;
+    --input: 220 20% 84%;
+    --ring: 351 79% 41%;
+
+    --lap-best: 142 70% 28%;
+
+    --chart-grid: 220 20% 86%;
+    --chart-axis: 220 18% 36%;
+
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 220 45% 9%;
+    --sidebar-primary: 351 79% 41%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 22% 93%;
+    --sidebar-accent-foreground: 220 40% 18%;
+    --sidebar-border: 220 20% 80%;
+    --sidebar-ring: 351 79% 41%;
+  }
+
+  .dark[data-palette="classic"] {
+    --background: 220 32% 7%;
+    --foreground: 0 0% 98%;
+
+    --card: 220 30% 11%;
+    --card-foreground: 0 0% 98%;
+
+    --popover: 220 30% 9%;
+    --popover-foreground: 0 0% 98%;
+
+    --primary: 351 88% 59%;
+    --primary-foreground: 220 32% 7%;
+
+    --secondary: 220 25% 20%;
+    --secondary-foreground: 0 0% 92%;
+
+    --muted: 220 25% 17%;
+    --muted-foreground: 215 18% 68%;
+
+    --accent: 214 92% 64%;
+    --accent-foreground: 220 32% 7%;
+
+    --destructive: 0 80% 64%;
+    --destructive-foreground: 220 32% 7%;
+
+    --warning: 38 96% 56%;
+    --warning-foreground: 220 32% 7%;
+
+    --success: 142 65% 48%;
+    --success-foreground: 220 32% 7%;
+
+    --border: 220 22% 24%;
+    --input: 220 25% 20%;
+    --ring: 351 88% 59%;
+
+    --lap-best: 142 65% 50%;
+
+    --chart-grid: 220 22% 24%;
+    --chart-axis: 215 18% 68%;
+
+    --sidebar-background: 220 30% 11%;
+    --sidebar-foreground: 0 0% 98%;
+    --sidebar-primary: 351 88% 59%;
+    --sidebar-primary-foreground: 220 32% 7%;
+    --sidebar-accent: 220 25% 20%;
+    --sidebar-accent-foreground: 0 0% 92%;
+    --sidebar-border: 220 22% 24%;
+    --sidebar-ring: 351 88% 59%;
+  }
+
+  /* Retro Racing — heritage: navy blue, mustard yellow, cherry red (a deeper,
+     bluer red than the brand's Racing Red, so the two never read as the same). */
+  [data-palette="retro"] {
+    --background: 42 34% 95%;
+    --foreground: 219 58% 13%;
+
+    --card: 44 40% 97%;
+    --card-foreground: 219 58% 13%;
+
+    --popover: 44 40% 97%;
+    --popover-foreground: 219 58% 13%;
+
+    --primary: 345 72% 36%;
+    --primary-foreground: 44 40% 97%;
+
+    --secondary: 42 26% 87%;
+    --secondary-foreground: 219 42% 20%;
+
+    --muted: 42 24% 89%;
+    --muted-foreground: 219 24% 34%;
+
+    --accent: 45 88% 48%;
+    --accent-foreground: 219 58% 13%;
+
+    --destructive: 0 72% 40%;
+    --destructive-foreground: 44 40% 97%;
+
+    --warning: 30 98% 31%;
+    --warning-foreground: 44 40% 97%;
+
+    --success: 142 72% 25%;
+    --success-foreground: 44 40% 97%;
+
+    --border: 40 22% 78%;
+    --input: 40 22% 82%;
+    --ring: 345 72% 36%;
+
+    --lap-best: 142 70% 27%;
+
+    --chart-grid: 40 22% 82%;
+    --chart-axis: 219 24% 34%;
+
+    --sidebar-background: 44 40% 97%;
+    --sidebar-foreground: 219 58% 13%;
+    --sidebar-primary: 345 72% 36%;
+    --sidebar-primary-foreground: 44 40% 97%;
+    --sidebar-accent: 42 26% 87%;
+    --sidebar-accent-foreground: 219 42% 20%;
+    --sidebar-border: 40 22% 78%;
+    --sidebar-ring: 345 72% 36%;
+  }
+
+  .dark[data-palette="retro"] {
+    --background: 219 52% 10%;
+    --foreground: 42 32% 92%;
+
+    --card: 219 46% 13%;
+    --card-foreground: 42 32% 92%;
+
+    --popover: 219 48% 11%;
+    --popover-foreground: 42 32% 92%;
+
+    --primary: 345 88% 61%;
+    --primary-foreground: 219 52% 10%;
+
+    --secondary: 219 34% 22%;
+    --secondary-foreground: 42 28% 88%;
+
+    --muted: 219 32% 20%;
+    --muted-foreground: 42 20% 72%;
+
+    --accent: 45 90% 56%;
+    --accent-foreground: 219 52% 10%;
+
+    --destructive: 0 80% 66%;
+    --destructive-foreground: 219 52% 10%;
+
+    --warning: 38 96% 58%;
+    --warning-foreground: 219 52% 10%;
+
+    --success: 142 62% 52%;
+    --success-foreground: 219 52% 10%;
+
+    --border: 219 30% 26%;
+    --input: 219 34% 22%;
+    --ring: 345 88% 61%;
+
+    --lap-best: 142 62% 52%;
+
+    --chart-grid: 219 30% 26%;
+    --chart-axis: 42 20% 72%;
+
+    --sidebar-background: 219 46% 13%;
+    --sidebar-foreground: 42 32% 92%;
+    --sidebar-primary: 345 88% 61%;
+    --sidebar-primary-foreground: 219 52% 10%;
+    --sidebar-accent: 219 34% 22%;
+    --sidebar-accent-foreground: 42 28% 88%;
+    --sidebar-border: 219 30% 26%;
+    --sidebar-ring: 345 88% 61%;
+  }
+
+  /* Neon / Modern High-Tech — fluorescent neon green and hologram blue on
+     near-black grey. In dark mode `--lap-best` moves to lime so the fastest-lap
+     data colour never collides with the neon-green brand colour. */
+  [data-palette="neon"] {
+    --background: 200 18% 96%;
+    --foreground: 200 40% 9%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 200 40% 9%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 200 40% 9%;
+
+    /* Light mode flips the pair: hologram blue leads and the green becomes the
+       accent. Neon green can't be the primary here — dark enough to be legible on
+       white, it lands on the same hue as `--lap-best`, and a highlighted fastest
+       lap would read as brand chrome rather than as data (palettes.test.ts). */
+    --primary: 193 95% 26%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 200 16% 91%;
+    --secondary-foreground: 200 30% 20%;
+
+    --muted: 200 16% 92%;
+    --muted-foreground: 200 14% 36%;
+
+    --accent: 158 92% 24%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 72% 41%;
+    --destructive-foreground: 0 0% 100%;
+
+    --warning: 30 98% 32%;
+    --warning-foreground: 0 0% 100%;
+
+    --success: 142 72% 26%;
+    --success-foreground: 0 0% 100%;
+
+    --border: 200 16% 84%;
+    --input: 200 16% 87%;
+    --ring: 193 95% 26%;
+
+    --lap-best: 142 70% 28%;
+
+    --chart-grid: 200 16% 88%;
+    --chart-axis: 200 14% 36%;
+
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 200 40% 9%;
+    --sidebar-primary: 193 95% 26%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 200 16% 91%;
+    --sidebar-accent-foreground: 200 30% 20%;
+    --sidebar-border: 200 16% 84%;
+    --sidebar-ring: 193 95% 26%;
+  }
+
+  .dark[data-palette="neon"] {
+    --background: 220 12% 5%;
+    --foreground: 150 12% 95%;
+
+    --card: 220 11% 9%;
+    --card-foreground: 150 12% 95%;
+
+    --popover: 220 12% 7%;
+    --popover-foreground: 150 12% 95%;
+
+    --primary: 145 92% 56%;
+    --primary-foreground: 220 12% 5%;
+
+    --secondary: 220 10% 16%;
+    --secondary-foreground: 150 10% 90%;
+
+    --muted: 220 10% 14%;
+    --muted-foreground: 195 12% 66%;
+
+    --accent: 190 96% 62%;
+    --accent-foreground: 220 12% 5%;
+
+    --destructive: 0 85% 66%;
+    --destructive-foreground: 220 12% 5%;
+
+    --warning: 38 96% 58%;
+    --warning-foreground: 220 12% 5%;
+
+    --success: 142 70% 52%;
+    --success-foreground: 220 12% 5%;
+
+    --border: 190 30% 20%;
+    --input: 220 10% 16%;
+    --ring: 145 92% 56%;
+
+    --lap-best: 80 80% 58%;
+
+    --chart-grid: 220 10% 18%;
+    --chart-axis: 195 12% 66%;
+
+    --sidebar-background: 220 11% 9%;
+    --sidebar-foreground: 150 12% 95%;
+    --sidebar-primary: 145 92% 56%;
+    --sidebar-primary-foreground: 220 12% 5%;
+    --sidebar-accent: 220 10% 16%;
+    --sidebar-accent-foreground: 150 10% 90%;
+    --sidebar-border: 190 30% 20%;
+    --sidebar-ring: 145 92% 56%;
+  }
 }
 
 @layer base {

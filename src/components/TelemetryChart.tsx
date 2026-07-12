@@ -57,9 +57,9 @@ export function TelemetryChart({
   showLegend = true,
 }: TelemetryChartProps) {
   const { t } = useTranslation('session');
-  const { useKph, useMetricDistance, gForceSmoothing, gForceSmoothingStrength, darkMode, gForceSource, chartXAxis } = useSettingsContext();
+  const { useKph, useMetricDistance, gForceSmoothing, gForceSmoothingStrength, darkMode, palette, gForceSource, chartXAxis } = useSettingsContext();
   const { currentIndex } = usePlaybackContext();
-  const chartColors = useMemo(() => getChartColors(darkMode), [darkMode]);
+  const chartColors = useMemo(() => getChartColors(darkMode, palette), [darkMode, palette]);
   const axis = useMemo(
     () => buildChartAxis(samples, chartXAxis, { useMetricDistance, fullSamples: allSamples, rangeStart }),
     [samples, chartXAxis, useMetricDistance, allSamples, rangeStart],

@@ -19,13 +19,18 @@
  * │ ratio of 3.588 -> kph, which is correct.                                                    │
  * └────────────────────────────────────────────────────────────────────────────────────────────┘
  *
+ * The other thing this parser does that the format does not hand it for free is recover the course
+ * geometry from the `Lap` column — see courseFromDeviceLaps. The CSV has no waypoints, so without
+ * that a rider importing the CSV of a session gets no lap timing while the GPX of the *same*
+ * session times it fine.
+ *
  * Everything else is header-driven, because there is no single "RaceBox CSV": six export presets
  * (custom, seriousracing, telemetryoverlay, racerenderer, fastlap) emit six different column sets,
  * bike mode swaps GForceY for LeanAngle, and the mobile app adds Gyro columns the cloud exporter
  * does not. Fixed column indices would break on most real files.
  */
 
-import { GpsSample, ParsedData } from '@/types/racing';
+import { Course, GpsSample, ParsedData, SectorLine } from '@/types/racing';
 import {
   KNOTS_TO_MPS,
   KPH_TO_MPS,
@@ -36,6 +41,12 @@ import {
   speedTriple,
   validateGpsCoords,
 } from './parserUtils';
+import {
+  COINCIDENT_LINE_M,
+  DEFAULT_TIMING_LINE_WIDTH_M,
+  LatLon,
+  timingLineBetween,
+} from './timingLines';
 
 export type RaceBoxSpeedUnit = 'mps' | 'kph' | 'mph' | 'knots';
 
@@ -174,6 +185,108 @@ function parseRaceBoxTime(raw: string | undefined): number | undefined {
 
   const ms = Date.parse(v);
   return Number.isFinite(ms) ? ms : undefined;
+}
+
+/** A change in the device's lap number, and the sample index it first shows up on. */
+interface LapTransition {
+  /** A lap number going UP is the rider crossing the START line. Going to 0 is the FINISH. */
+  kind: 'start' | 'finish';
+  /** Index of the first sample carrying the NEW lap number; the crossing is just before it. */
+  index: number;
+}
+
+/**
+ * Reconstruct the course geometry from the device's own `Lap` column.
+ *
+ * The CSV has no waypoints — unlike the GPX of the very same session, which is why importing the
+ * CSV used to give "No Track Detected" while the GPX gave lap times. But the `Lap` column is a
+ * record of the device's own timing decisions: it tells us exactly WHEN RaceBox considered a
+ * timing line to have been crossed, and the GPS columns tell us WHERE the rider was at that
+ * moment. That is enough to rebuild the lines.
+ *
+ * On the real session in sample_race_files/, the two crossings recovered this way land 3.6 m and
+ * 3.4 m from the Start / Finish waypoints that the GPX of the same session carries — i.e. within
+ * the width of the racing line. Timing agrees to ~40 ms (see pointToPoint.test.ts).
+ *
+ * Telling a circuit from a point-to-point course is the one genuinely ambiguous part, because the
+ * device uses the same column for both:
+ *
+ *   circuit          0 1 1 1 2 2 2 3 3 3 0     laps count up at one line, crossed over and over
+ *   point-to-point   0 1 1 1 0 0 0 2 2 2 0     each run starts at one line and ends at another
+ *
+ * The tell is the SHAPE, not the distance: on a circuit the lap number climbs straight from one
+ * lap to the next with no return to 0 in between, so a course is only point-to-point when starts
+ * and finishes strictly alternate (every run that began also ended). This matters — a rider who
+ * simply leaves the track after three circuit laps also produces one drop to 0, at a position
+ * nowhere near any timing line, and treating that as a finish line would fabricate a lap time
+ * spanning all three laps. The COINCIDENT_LINE_M distance check then still collapses the
+ * degenerate single-lap loop, whose one crossing pair sits at the same place.
+ *
+ * Returns null whenever the column gives us no honest evidence of a start line — no `Lap` column,
+ * an all-zero column (the rider never armed a run), or a log that only ever counts DOWN because it
+ * began mid-run. A wrong course is worse than no course: downstream, no course simply means the
+ * rider is asked to pick one.
+ */
+export function courseFromDeviceLaps(
+  samples: GpsSample[],
+  name: string,
+  widthM: number = DEFAULT_TIMING_LINE_WIDTH_M,
+): Course | null {
+  const transitions: LapTransition[] = [];
+
+  for (let i = 1; i < samples.length; i++) {
+    const prev = samples[i - 1].extraFields['Device Lap'];
+    const cur = samples[i].extraFields['Device Lap'];
+    if (prev === undefined || cur === undefined || prev === cur) continue;
+
+    if (cur > prev) transitions.push({ kind: 'start', index: i });
+    else if (cur === 0) transitions.push({ kind: 'finish', index: i });
+    // A drop to a lower but non-zero lap number is not a thing the device does; ignore it rather
+    // than reading geometry out of a corrupt column.
+  }
+
+  const firstStart = transitions.find((t) => t.kind === 'start');
+  if (!firstStart) return null;
+
+  // All the "start" transitions describe the same physical line (that is what a lap counter IS),
+  // so one is enough — and the first is the one whose geometry we can most safely trust, since it
+  // is a crossing the device actually acted on rather than an average of several racing lines that
+  // would drag the line's centre off the track.
+  const start = timingLineBetween(samples, firstStart.index, widthM);
+  if (!start) return null; // stationary at the transition: no heading, so no line
+
+  const finishLine = pointToPointFinish(samples, transitions, start.at, widthM);
+
+  return {
+    name,
+    startFinishA: start.line.a,
+    startFinishB: start.line.b,
+    ...(finishLine ? { finishA: finishLine.a, finishB: finishLine.b } : {}),
+    isUserDefined: false,
+  };
+}
+
+/**
+ * The separate finish line of a point-to-point course, or null when this is a circuit.
+ * See courseFromDeviceLaps for why alternation — not distance alone — decides.
+ */
+function pointToPointFinish(
+  samples: GpsSample[],
+  transitions: LapTransition[],
+  startAt: LatLon,
+  widthM: number,
+): SectorLine | null {
+  const alternates = transitions.every((t, i) => t.kind === (i % 2 === 0 ? 'start' : 'finish'));
+  if (!alternates) return null;
+
+  const firstFinish = transitions.find((t) => t.kind === 'finish');
+  if (!firstFinish) return null; // the run never ended — the log stops mid-run
+
+  const finish = timingLineBetween(samples, firstFinish.index, widthM);
+  if (!finish) return null;
+
+  const apart = haversineDistance(startAt.lat, startAt.lon, finish.at.lat, finish.at.lon);
+  return apart > COINCIDENT_LINE_M ? finish.line : null;
 }
 
 export function parseRaceBoxCsvFile(content: string): ParsedData {
@@ -341,7 +454,10 @@ export function parseRaceBoxCsvFile(content: string): ParsedData {
   const isAbsolute = !/^-?\d+(\.\d+)?$/.test(firstTimeCell);
   const startDate = isAbsolute ? new Date(baseMs) : undefined;
 
-  void trackName; // parsed for future session naming; ParsedData has no title field today
+  // The CSV carries no waypoints, but its Lap column records where the device's own timing lines
+  // are. Rebuild them and hand the course out exactly as the GPX parser does, so importing either
+  // export of the same session gives the same lap times.
+  const embeddedCourse = courseFromDeviceLaps(samples, trackName ?? 'Imported course') ?? undefined;
 
   return {
     samples,
@@ -349,5 +465,6 @@ export function parseRaceBoxCsvFile(content: string): ParsedData {
     bounds: calculateBounds(samples),
     duration: samples[samples.length - 1].t,
     startDate,
+    ...(embeddedCourse ? { embeddedCourse } : {}),
   };
 }

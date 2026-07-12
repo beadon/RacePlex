@@ -10,6 +10,7 @@ import { I18nextProvider } from "react-i18next";
 import i18n from "@/lib/i18n";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { isNativeApp } from "@/lib/platform";
+import { applyPalette } from "@/lib/palettes";
 import { MigrationBanner } from "@/components/MigrationBanner";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
@@ -42,14 +43,20 @@ const PendingCheckoutRedirect = lazy(() =>
 const SETTINGS_KEY = "dove-dataviewer-settings";
 
 const App = () => {
-  // Apply dark/light mode globally so Admin and all routes respect the theme
+  // Apply dark/light mode and the colour palette globally so Admin and all routes
+  // respect the theme. index.html ships `data-palette="raceplex"` so first paint
+  // is already branded; this only has to correct it for a user who picked another.
   useEffect(() => {
     const apply = () => {
       try {
         const stored = localStorage.getItem(SETTINGS_KEY);
-        const dark = stored ? JSON.parse(stored).darkMode : false;
-        document.documentElement.classList.toggle('dark', !!dark);
-      } catch { /* malformed settings; fall through to default light mode */ }
+        const parsed = stored ? JSON.parse(stored) : null;
+        document.documentElement.classList.toggle('dark', !!parsed?.darkMode);
+        applyPalette(parsed?.palette);
+      } catch {
+        /* malformed settings; fall through to the default light mode + palette */
+        applyPalette(undefined);
+      }
     };
     apply();
     window.addEventListener('storage', apply);
