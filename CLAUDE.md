@@ -28,19 +28,18 @@ What is **ours** (see `NOTICE` for the full statement of changes):
   `vescCsvParser.ts`, `genericCsvParser.ts` (+ `csvTable.ts`, the by-NAME table
   engine every CSV profile sits on), `gopro/` (GPMF — the GPS inside an .mp4),
   and `timingLines.ts`.
-- **`vescCsvParser.ts` is the flagship.** It is the only format carrying the ESC
-  channels (motor current, battery sag, duty cycle, ERPM) alongside GPS — the one
-  thing no car-oriented lap timer can do. ⚠️ Two traps, both documented in the
-  file: `gnss_gVel` is **m/s** (there is no `kmh_gnss` column on disk, whatever
-  the internet says), and the ESC logs ~12x faster than the GNSS — keep every ESC
-  row and *interpolate position*, never decimate to the GPS rate, or a 0.2 s
-  duty-cycle spike (2 samples at 12 Hz, 0.2 at 1 Hz) disappears.
-- **`genericCsvParser.ts` is the LAST resort in the dispatcher.** Any delimited log
-  with a lat/lon, with a user-correctable, remembered column mapping. It exists
-  because these formats have *unstable column sets* — pOnewheel generates its
-  columns per-ride, so a fixed parser for it is impossible by construction. ⚠️ Its
-  speed-unit measurement must run on the **distinct GPS fixes, not raw rows**, or a
-  kph column is confidently misread as m/s.
+- **`vescCsvParser.ts`** carries the ESC channels (motor current, battery sag,
+  duty cycle, ERPM) alongside GPS. Two details, both documented in the file:
+  `gnss_gVel` is in **m/s**, and there is no `kmh_gnss` column on disk despite the
+  name being widely cited. The ESC logs about 12× faster than the GNSS, so keep
+  every ESC row and interpolate position between fixes; sampling down to the GPS
+  rate loses a 0.2 s duty-cycle spike.
+- **`genericCsvParser.ts`** is the last entry in the dispatcher: any delimited log
+  with a lat/lon, with a column mapping the user can correct and which is
+  remembered. These formats have unstable column sets — pOnewheel generates its
+  columns per ride — so the mapping is by name. Its speed-unit measurement runs on
+  the **distinct GPS fixes**; measured against raw rows, a kph column is misread as
+  m/s.
 - **Point-to-point courses** (`Course.finishA/finishB`) — a run from a start line
   to a *different* finish line. Upstream models circuits only. Eskate runs (hill
   runs, slalom, drag) are usually not circuits.
@@ -81,10 +80,10 @@ for RaceBox/Dragy does not exist yet.
    suite: (a) the GPX parser was perfect but `.gpx` was missing from the file
    picker's `accept` list, so no user could select a GPX file; (b)
    `courseFromGpxWaypoints()` was written and unit-tested and **never called**, so
-   lap timing silently did not exist; (c) the VESC parser deduped GPS fixes for a
-   clean track — and thereby downsampled the ESC channels from 12 Hz to 1 Hz,
-   destroying the very resolution a nosedive lives in. Caught by *looking at the
-   rendered chart*, not by any test. None were logic errors.
+   lap timing silently did not exist; (c) the VESC parser deduplicated GPS fixes for a
+   clean track, which also dropped the ESC channels from 12 Hz to 1 Hz and lost the
+   resolution a nosedive appears in. That one was found by looking at the rendered
+   chart. None of the three were logic errors.
    → After any change to import, parsing, or lap detection, run
    **`bun run verify:import`** (`scripts/verify-import.mjs`): it drives a real
    browser, feeds the files in `sample_race_files/` through the app's own file
@@ -105,12 +104,20 @@ for RaceBox/Dragy does not exist yet.
    agree. Update Credits when adding a FOSS dependency.
 6. **Green before merge.** `bun run lint`, `bun run typecheck`, `bun run test:run`,
    and `bun run build` all pass — CI runs them as separate workflows on every PR.
-7. **Keep it professional.** Public, released OSS (v1.5.0+). No dead code (delete,
+7. **Write plainly. No "it's not X, it's Y".** Documentation, release notes, issues,
+   in-app copy, comments and commit messages all state the fact and move on. Avoid
+   antithesis ("a nosedive is a duty-cycle event, not a GPS event"), rhetorical
+   contrast ("that's not telemetry, it's a doodle"), and bolded punchlines. The
+   contrast carries no information and makes the reader hold a wrong idea in mind
+   just to discard it. It also reads as persuasion, which makes technical claims
+   look less trustworthy. Lead with what the reader can do, then what to watch out
+   for. Reserve emphasis for real warnings, such as a unit that will corrupt data.
+8. **Keep it professional.** Public, released OSS (v1.5.0+). No dead code (delete,
    don't comment out), no leftover `console.log`, no scaffolding cruft. Comments
    explain *why*, not *what*, only where non-obvious. Small, focused PRs with clear
    commit messages explaining the *why* — prefer a topic branch + PR over committing
    to `main`. Respect the bundle budget and the conventions below.
-8. **Plans are numbered design records.** Plans live in `docs/plans/`, each prefixed
+9. **Plans are numbered design records.** Plans live in `docs/plans/`, each prefixed
    with a zero-padded sequence number (`0000-`, `0001-`, …). A **new plan takes the
    next number after the highest existing one** — glance at the folder, increment.
    Keep a plan updated *as you execute it*; only revisit an older plan later when
@@ -465,14 +472,14 @@ git push origin refs/tags/v0.3.0     # NOT --tags: that would publish upstream's
 gh release create v0.3.0 --title "…" --notes-file notes.md --latest
 ```
 
-A build with no tags visible (a shallow CI clone, a fresh fork) shows the **commit hash alone**
-rather than inventing a version. That is deliberate: a stale number is worse than no number.
+A build with no tags visible (a shallow CI clone, a fresh fork) shows the commit hash on its own.
+The hash still identifies the build exactly.
 
 `--latest` is not optional: without it GitHub may pick an inherited `v3.x` tag as "latest" by
 semver, making our newest release look like a regression.
 
-Write the release notes for a **rider**, not a maintainer: what they can now do that they couldn't,
-and what is still broken. `v0.2.0` is the model.
+Write the release notes for a rider: what they can now do, and what is still broken. `v0.2.0` is
+the model.
 
 ---
 
@@ -491,13 +498,12 @@ locales — hand-writing six translations for every new string is friction with 
 other end.
 
 - **Add the English key and move on.** `fallbackLng: en` means an untranslated key renders in
-  English, which is a fine outcome, not a defect.
+  English.
 - **Do NOT block a feature on translating it**, and do not report an English-only surface as a gap.
 - Translate when it's cheap (`bun run i18n:seed`, needs `ANTHROPIC_API_KEY`); never gate on it.
-- The tools-plugin parity test no longer fails a lagging locale. It still catches the two things
-  that are genuinely *broken* rather than merely untranslated: a key English doesn't have (dead
-  string — it can never render, so nobody would notice it was wrong), and a dropped `{{placeholder}}`
-  in a string that *has* been translated (that doesn't fall back — it renders broken text).
+- The tools-plugin parity test no longer fails a lagging locale. It still catches a key English
+  doesn't have (a dead string, which never renders) and a dropped `{{placeholder}}` in a translated
+  string (which doesn't fall back, and renders broken text).
 
 **Adding a string:** put it in `src/locales/en/<ns>.json` (new namespace → register in `config.ts` +
 the typing) and use `t("ns:key")`. Other locales are optional. Mechanics and the seeder:

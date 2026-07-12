@@ -132,11 +132,11 @@
       },
       "raceboxCsv": {
         "name": "RaceBox CSV",
-        "body": "The default export from the RaceBox app (Mini / Mini S / Micro): GPS, speed, G-force and gyro. If the export carries RaceBox's own lap numbering, RacePlex reconstructs the start/finish lines from it, so you get lap times with no setup at all. Note: RaceBox writes the speed column with <em>no unit</em> — RacePlex measures it against your positions to work out whether it's kph, mph or m/s. Extension: <code>.csv</code>"
+        "body": "The default export from the RaceBox app (Mini, Mini S, Micro): GPS, speed, G-force and gyro. If the export includes RaceBox's lap numbering, RacePlex reconstructs the start and finish lines from it, so lap times appear without any setup. Note that RaceBox writes the speed column with <em>no unit</em>; RacePlex measures it against your positions to work out whether it's kph, mph or m/s. Extension: <code>.csv</code>"
       },
       "gpx": {
         "name": "GPX",
-        "body": "The universal GPS track format — emitted by nearly every logger, phone app and watch. GPX carries no speed channel, so speed is derived from position and smoothed. If the file contains Start/Finish waypoints (RaceBox writes them), RacePlex rebuilds the timing lines from them and times your run automatically. Extension: <code>.gpx</code>"
+        "body": "The standard GPS track format, exported by most loggers, phone apps and watches. GPX carries no speed channel, so speed is derived from position and smoothed. If the file contains Start and Finish waypoints — RaceBox writes them — RacePlex rebuilds the timing lines and times your run automatically. Extension: <code>.gpx</code>"
       },
       "gopro": {
         "name": "GoPro Video (GPMF)",
@@ -144,11 +144,11 @@
       },
       "vescCsv": {
         "name": "VESC Tool CSV",
-        "body": "A VESC ride log — and the reason to use RacePlex on an eskate at all. It brings the ESC channels with it: <em>motor current, battery sag, duty cycle, ERPM and temps land on the same chart as your GPS trace</em>. A nosedive is a duty-cycle event, not a GPS event — a GPS trace only ever shows you the aftermath. The ESC logs about 12x faster than the GNSS, so we keep every ESC row at full rate and interpolate position between fixes, rather than decimating the log to 1 Hz and throwing that resolution away. Extension: <code>.csv</code>"
+        "body": "A VESC ride log. It brings the ESC channels with it: <em>motor current, battery sag, duty cycle, ERPM and temperatures are charted on the same timeline as your GPS trace</em>. A nosedive shows up as a duty-cycle spike. The ESC logs at about 12 Hz and the GNSS at about 1 Hz, so RacePlex keeps every ESC row at full rate and interpolates position between GPS fixes. Extension: <code>.csv</code>"
       },
       "genericCsv": {
         "name": "Any other CSV",
-        "body": "Almost any delimited log with a latitude and a longitude in it will import — Float Control, pOnewheel, Metr, TrackAddict, Qstarz, or a logger we have never heard of. RacePlex sniffs the delimiter, maps the columns by name, and then <em>shows you what it decided and lets you fix it</em> before importing. The units it cannot read from a column name — time and speed — are inferred and put in front of you, because a wrong one produces a ride that charts beautifully and is wrong. Your correction is remembered against that device's column layout, so you are only asked once. Extensions: <code>.csv</code>, <code>.txt</code>"
+        "body": "Most delimited logs containing a latitude and a longitude will import — Float Control, pOnewheel, Metr, TrackAddict, Qstarz, or a logger we haven't seen. RacePlex detects the delimiter, maps the columns by name, and <em>shows you the mapping so you can correct it</em> before importing. Time and speed units are inferred and displayed, because a wrong unit produces a chart that looks fine and is wrong. Your correction is saved against that device's column layout, so you're only asked once. Extensions: <code>.csv</code>, <code>.txt</code>"
       }
     },
     "secondary": {
@@ -184,7 +184,7 @@
   },
   "supportedDevices": {
     "title": "Supported Devices",
-    "description": "Anything that exports GPX, CSV, VBO, NMEA or UBX works — and so does a GoPro .mp4, because the GPS is already inside the video. An unrecognised CSV still imports: RacePlex maps the columns and lets you correct it. RacePlex sells no hardware and is affiliated with none of these vendors — a device is listed because it works.",
+    "description": "Anything that exports GPX, CSV, VBO, NMEA or UBX will work, as will a GoPro .mp4, which stores GPS inside the video. An unrecognised CSV still imports: RacePlex maps the columns and lets you correct the mapping. RacePlex sells no hardware and has no affiliation with these vendors.",
     "rate": "GPS",
     "imu": "IMU",
     "via": "via",
