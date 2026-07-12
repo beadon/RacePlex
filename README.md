@@ -42,21 +42,63 @@ RacePlex stays open. See [LICENSE](LICENSE) and [NOTICE](NOTICE).
 
 | | Status |
 |---|---|
-| **GPX import** — no upstream parser exists | in progress |
-| **RaceBox CSV import**, with automatic speed-unit detection | in progress |
-| **RaceChrono CSV v3 import** | planned |
-| **Point-to-point courses** (start ≠ finish) — hill runs, slalom, drag | in progress |
-| **Timing lines auto-derived from GPX waypoints** — lap timing with zero setup | in progress |
-| **Generic Web Bluetooth** live capture for RaceBox / Dragy (upstream's BLE is locked to its own hardware) | planned |
-| **VESC channels** — motor current, battery sag, ERPM alongside GPS | planned |
+| **GPX import** — no upstream parser exists | ✅ done |
+| **RaceBox CSV import**, with automatic speed-unit detection | ✅ done |
+| **Point-to-point courses** (start ≠ finish) — hill runs, slalom, drag | ✅ done |
+| **Lap timing with zero setup** — timing lines recovered from the datalog itself | ✅ done |
+| **VESC / eskate telemetry** — motor current, battery sag, ERPM alongside GPS | 🔨 help wanted |
+| **Generic Web Bluetooth** live capture for RaceBox / Dragy | 📋 planned |
+| **RaceChrono CSV v3 import** | 📋 planned |
 
-## Supported hardware
+## Supported devices
 
-RaceBox (Mini / Mini S / Micro), Dragy, RaceChrono exports, and anything emitting GPX, NMEA or VBO —
-which is most GPS loggers.
+The full list — with sample rates, prices and the exact format to export — lives in
+**[`src/data/supported-devices.json`](src/data/supported-devices.json)** and is shown in-app under
+**Supported Devices**. It's plain data: add a device, open a PR.
 
-⚠️ **Dragy does not export CSV.** This is a widespread misconception; the vendor confirms it. Use the
-*dragy·Lap* app's `.vbo` export instead. See [docs/research/FORMATS.md](docs/research/FORMATS.md).
+RacePlex sells no hardware and is affiliated with none of these vendors. A device is listed because
+it works.
+
+### The short version
+
+| | |
+|---|---|
+| **Best buy for eskate** | **RaceBox Micro (~$129)** — 25 Hz, IMU, records standalone with a hardware button, and exports GPX/VBO/CSV, all of which we read. Our test fixtures come from one. |
+| **Best software** | **RaceChrono Pro (~$20)** driving a RaceBox or Dragy over Bluetooth at 25 Hz. Export **VBO, NMEA or GPX** — *not* its CSV. |
+| **Cheapest** | A bare **u-blox module (~$25)** logging raw NMEA or UBX to an SD card. Drops straight in. |
+| **Already own a GoPro?** | HERO5–11/13 log GPS in the video. Convert to GPX with [gopro-telemetry](https://github.com/JuanIrache/gopro-telemetry) first. (The HERO12 has **no GPS at all**.) |
+
+### Why sample rate is the number that matters
+
+An eskate run may last 20 seconds. At 40 km/h:
+
+| Rate | A fix every… | |
+|---|---|---|
+| 1 Hz (phone GPS, Garmin, Strava) | **11 metres** | can't see a gate, a braking point or an apex |
+| 10 Hz | 1.1 metres | usable |
+| 25 Hz | **44 cm** | what you want |
+
+A 20-second run at 1 Hz is 20 data points. That's not telemetry, it's a doodle. **An external
+Bluetooth receiver — not a better app — is the fix.**
+
+### Two things people get wrong
+
+⚠️ **Dragy does not export CSV.** The vendor confirms it. Use the *dragy·Lap* app's `.vbo` export, or
+run it as a Bluetooth source for RaceChrono.
+
+⚠️ **"It exports CSV" does not mean it works.** RacePlex reads GPX, VBO, NMEA, UBX and a few
+*specific* CSV dialects (RaceBox, MoTeC, AiM, Alfano, Dove). There is no generic "CSV with lat/lon"
+parser — an unrecognised CSV is rejected. See [docs/research/FORMATS.md](docs/research/FORMATS.md).
+
+### If you ride a VESC board, read this
+
+**None of the eskate apps can currently produce a file RacePlex can open.** Not VESC Tool, not
+FreeSK8, not Metr, not Float Control, not the official Onewheel app. Every one of them logs GPS into
+its own bespoke layout.
+
+That's the gap this project exists to close, and it's the top of our help-wanted list — a **VESC Tool
+CSV parser** would unlock every VESC rider *and* let us put motor current and battery sag next to
+GPS on the same chart, which no car-oriented lap timer can do. See the open issues.
 
 ## Documentation
 

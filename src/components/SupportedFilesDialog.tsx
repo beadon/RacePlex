@@ -6,23 +6,26 @@ import {
 } from "@/components/ui/dialog";
 import { interceptExternal } from "@/lib/platform";
 
-const LOGGER_URL = "https://github.com/TheAngryRaven/DovesDataLogger";
 const LIBXRK_URL = "https://github.com/m3rlin45/libxrk";
 
 // Format ids in display order; their name/body text lives in the `landing`
 // locale (supportedFiles.primary.<id> / .secondary.<id>). Format names,
 // extensions and brand/library links stay literal inside the locale strings.
-const PRIMARY_IDS = ["dove", "dovex", "xrk", "iracing", "nmea"] as const;
-const SECONDARY_IDS = ["ubx", "vbo", "motecLd", "motecCsv", "alfano", "aimCsv"] as const;
+// Ordered by what an eskate rider is actually likely to have, which is not the order upstream
+// used (its own DovesDataLogger formats came first). RaceBox is the common GPS logger in this
+// class; GPX comes out of nearly every other logger, phone app and watch; VBO is the one format
+// Dragy·Lap, RaceChrono and RaceBox all emit. Upstream's own formats stay fully supported, just
+// further down the list.
+const PRIMARY_IDS = ["raceboxCsv", "gpx", "vbo", "nmea", "dove", "dovex"] as const;
+const SECONDARY_IDS = ["ubx", "xrk", "iracing", "motecLd", "motecCsv", "alfano", "aimCsv"] as const;
 const EXPERIMENTAL = new Set(["motecLd", "motecCsv", "alfano", "aimCsv"]);
 
 // Shared rich-text components for the format bodies. `<Trans>` only uses the
 // tags a given string references, so one map covers every format.
 const FORMAT_COMPONENTS = {
   code: <code className="text-primary" />,
-  logger: (
-    <a href={LOGGER_URL} target="_blank" rel="noopener noreferrer" onClick={(e) => interceptExternal(e, LOGGER_URL)} className="text-primary hover:underline" />
-  ),
+  em: <em className="font-medium text-foreground not-italic" />,
+  logger: <span className="text-foreground" />,
   libxrk: (
     <a href={LIBXRK_URL} target="_blank" rel="noopener noreferrer" onClick={(e) => interceptExternal(e, LIBXRK_URL)} className="text-primary hover:underline" />
   ),

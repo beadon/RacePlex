@@ -17,6 +17,7 @@ import { FileImport } from "@/components/FileImport";
 import { ActionTile } from "@/components/ActionTile";
 import { TrackEditor } from "@/components/TrackEditor";
 import { LocalWeatherDialog } from "@/components/LocalWeatherDialog";
+import { SupportedDevicesDialog } from "@/components/SupportedDevicesDialog";
 import { PluginMount } from "@/plugins/PluginMount";
 import { MountSlot } from "@/plugins/mounts";
 import { useAuth } from "@/contexts/AuthContext";
@@ -174,11 +175,19 @@ export function LandingPage({
               />
             )}
 
-            <ActionTile
-              icon={Cpu}
-              title={t("landing:tiles.build.title")}
-              description={t("landing:tiles.build.description")}
-              href="https://github.com/TheAngryRaven/DovesDataLogger"
+            {/* Which devices work with RacePlex. This replaced upstream's "build your own
+                DovesDataLogger" tile, which pointed at one specific piece of hardware belonging
+                to the project's author. Telling riders what works is useful; steering them at a
+                product is advertising, and RacePlex sells nothing. The list lives in
+                src/data/supported-devices.json — data, editable by anyone, no TS required. */}
+            <SupportedDevicesDialog
+              trigger={
+                <ActionTile
+                  icon={Cpu}
+                  title={t("landing:tiles.devices.title")}
+                  description={t("landing:tiles.devices.description")}
+                />
+              }
             />
 
             {/* Plugin-contributed landing tiles (e.g. the Tools plugin). Renders

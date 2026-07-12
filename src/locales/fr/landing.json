@@ -23,13 +23,13 @@
       "title": "Gérer les circuits",
       "description": "Créez, dessinez et modifiez les tracés de circuits et de parcours"
     },
-    "build": {
-      "title": "Construisez votre propre enregistreur",
-      "description": "Matériel et firmware GPS open source : le DovesDataLogger"
-    },
     "leaderboards": {
       "title": "Classements",
       "description": "Comparez les tours les plus rapides par circuit, tracé et catégorie de moteur"
+    },
+    "devices": {
+      "title": "Appareils compatibles",
+      "description": "Quels enregistreurs GPS et applis fonctionnent avec RacePlex"
     }
   },
   "links": {
@@ -62,7 +62,9 @@
       }
     },
     "features": [
-      "Prise en charge de plusieurs formats (NMEA, UBX, VBO, MoTeC, AiM CSV + XRK/XRZ, Alfano, Dove, Dovex)",
+      "Prise en charge multi-formats (RaceBox CSV, GPX, VBO, NMEA, UBX, MoTeC, AiM CSV + XRK/XRZ, Alfano, iRacing, Dove, Dovex)",
+      "Parcours point à point (descentes, slalom, accélération), pas seulement des circuits",
+      "Chronométrage sans configuration : les lignes sont récupérées depuis le fichier",
       "Détection automatique du circuit et du parcours dans un rayon de 5 miles",
       "Détection automatique du sens de conduite (normal/inverse)",
       "Mode waypoint — chronométrage des tours partout, sans circuit",
@@ -111,27 +113,27 @@
         "name": "Dovex (Dove étendu)",
         "body": "Format Dove étendu avec un en-tête de métadonnées de 4096 octets contenant les infos de session (pilote, circuit, temps au tour) suivi de données GPS au format CSV Dove standard. Extension : <code>.dovex</code>"
       },
-      "xrk": {
-        "name": "AiM XRK / XRZ (binaire)",
-        "body": "Télémétrie binaire native d'AiM des loggers MyChron / SoloDL, y compris la variante <code>.xrz</code> compressée en zlib. Analysée entièrement dans votre navigateur par <libxrk>libxrk</libxrk> compilé en WebAssembly — rapide et entièrement hors ligne, comme tous les autres formats. Extensions : <code>.xrk</code>, <code>.xrz</code>"
-      },
-      "iracing": {
-        "name": "Télémétrie iRacing (binaire)",
-        "body": "Export de télémétrie binaire natif d'iRacing — les mêmes données que l'API irsdk en direct du simulateur, sans conversion CSV/MoTeC tierce. Lu directement dans votre navigateur (entièrement hors ligne) : la position GPS, la vitesse et l'altitude alimentent la carte et les tours, avec l'accélérateur, le frein, le rapport, la direction, le régime, la température eau/huile et le g latéral/longitudinal natif. Extension : <code>.ibt</code>"
-      },
       "nmea": {
         "name": "NMEA / CSV (délimité par tabulations)",
         "body": "CSV délimité par tabulations avec phrases NMEA — l'ancien format utilisé par nos précédents dataloggers personnalisés. Extensions : <code>.nmea</code>, <code>.csv</code>, <code>.txt</code>"
+      },
+      "vbo": {
+        "name": "Racelogic VBO",
+        "body": "Format d'export Racelogic VBOX et RaceBox. Extension : <code>.vbo</code>"
+      },
+      "raceboxCsv": {
+        "name": "RaceBox CSV",
+        "body": "L’export par défaut de l’app RaceBox (Mini / Mini S / Micro) : GPS, vitesse, force G et gyroscope. Si l’export contient le numérotage des tours de RaceBox, RacePlex en reconstruit les lignes de départ/arrivée. Note : RaceBox écrit la colonne de vitesse <em>sans unité</em> — RacePlex la déduit à partir de vos positions. Extension : <code>.csv</code>"
+      },
+      "gpx": {
+        "name": "GPX",
+        "body": "Le format universel de traces GPS. GPX ne contient pas de vitesse : elle est dérivée de la position puis lissée. Si le fichier contient des waypoints Départ/Arrivée, RacePlex reconstruit les lignes de chronométrage automatiquement. Extension : <code>.gpx</code>"
       }
     },
     "secondary": {
       "ubx": {
         "name": "u-blox UBX binaire",
         "body": "Messages binaires NAV-PVT des récepteurs GPS u-blox. Extension : <code>.ubx</code>"
-      },
-      "vbo": {
-        "name": "Racelogic VBO",
-        "body": "Format d'export Racelogic VBOX et RaceBox. Extension : <code>.vbo</code>"
       },
       "motecLd": {
         "name": "MoTeC LD binaire",
@@ -148,6 +150,14 @@
       "aimCsv": {
         "name": "AiM MyChron CSV",
         "body": "Exports CSV de Race Studio 3 (style RS2Analysis) pour MyChron 5/6. Extension : <code>.csv</code>"
+      },
+      "xrk": {
+        "name": "AiM XRK / XRZ (binaire)",
+        "body": "Télémétrie binaire native d'AiM des loggers MyChron / SoloDL, y compris la variante <code>.xrz</code> compressée en zlib. Analysée entièrement dans votre navigateur par <libxrk>libxrk</libxrk> compilé en WebAssembly — rapide et entièrement hors ligne, comme tous les autres formats. Extensions : <code>.xrk</code>, <code>.xrz</code>"
+      },
+      "iracing": {
+        "name": "Télémétrie iRacing (binaire)",
+        "body": "Export de télémétrie binaire natif d'iRacing — les mêmes données que l'API irsdk en direct du simulateur, sans conversion CSV/MoTeC tierce. Lu directement dans votre navigateur (entièrement hors ligne) : la position GPS, la vitesse et l'altitude alimentent la carte et les tours, avec l'accélérateur, le frein, le rapport, la direction, le régime, la température eau/huile et le g latéral/longitudinal natif. Extension : <code>.ibt</code>"
       }
     }
   },
@@ -160,5 +170,19 @@
     "parseErrorSaved": "{{message}} — le fichier a été enregistré et se trouve dans Parcourir les fichiers.",
     "loaded": "Chargé : {{name}}",
     "errorLine": "Erreur : {{error}}"
+  },
+  "supportedDevices": {
+    "title": "Appareils compatibles",
+    "description": "Tout appareil capable d’exporter du GPX, CSV, VBO, NMEA ou UBX fonctionne. RacePlex ne vend aucun matériel et n’est affilié à aucune de ces marques : un appareil est listé parce qu’il fonctionne.",
+    "rate": "GPS",
+    "imu": "IMU",
+    "via": "via",
+    "status": {
+      "verified": "Vérifié",
+      "expected": "Devrait marcher",
+      "partial": "Partiel",
+      "no": "Pas encore"
+    },
+    "footer": "Un appareil manque ? La liste est dans src/data/supported-devices.json — ouvrez une pull request. Si vous possédez du matériel que nous n’avons pas testé, nous envoyer un fichier d’exemple est la contribution la plus utile."
   }
 }

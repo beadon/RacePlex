@@ -1,15 +1,26 @@
-# LapWing
+# RacePlex
 
-> Free, open-source, offline-first motorsport telemetry viewer. Analyze GPS lap data, sectors, braking zones, and reference laps directly in your browser — no upload required.
+> Open-source, offline-first lap timing and telemetry analysis for electric skateboards. Import GPS logs, get lap and sector times, speed-coloured track maps and lap comparisons — entirely in your browser, with no upload and no account.
 
-LapWing (aka Dove's DataViewer) is a privacy-first Progressive Web App for motorsport drivers, coaches, and karting teams. All telemetry parsing, lap detection, and visualization happen locally in the browser via IndexedDB — no server processes your data. The viewer supports a wide range of formats including NMEA, UBX, VBO (Racelogic), Alfano, AiM MyChron, MoTeC i2, and the native Dove/Dovex formats produced by the companion DovesDataLogger ESP32 hardware. Features include automatic track/course detection, lap timing with sector splits, reference-lap overlays, speed heatmaps on a Leaflet map, braking-zone analysis, G-force visualization, video-with-overlay export via WebCodecs, and Web Bluetooth integration for downloading sessions directly from supported dataloggers.
+RacePlex is a Progressive Web App for electric skateboard riders. All telemetry parsing, lap detection and visualisation happen locally in the browser (IndexedDB); no server ever processes your data, and there is no paid tier or feature gating.
+
+Supported formats: **RaceBox CSV** (Mini / Mini S / Micro), **GPX** (emitted by nearly every GPS logger, phone app and watch), **VBO** (RaceLogic VBOX — the format Dragy·Lap, RaceChrono and RaceBox all export), **NMEA 0183**, **UBX**, plus the car/kart formats inherited from upstream: MoTeC i2, AiM MyChron (CSV and XRK/XRZ), Alfano, iRacing, and Dove/Dovex.
+
+Two things RacePlex does that car-oriented tools do not:
+
+- **Point-to-point courses.** A hill run, a slalom or a drag pass starts in one place and ends in another. Most lap timers only model a circuit — one line crossed repeatedly — and find zero laps in such a session.
+- **Lap timing with no setup.** If a datalog already knows where its timing lines were, RacePlex reads them back out and times the run immediately: from GPX Start/Finish waypoints, or by reconstructing the lines from RaceBox's own lap-number column.
+
+Other features: automatic track/course detection, sector splits and optimal lap, reference-lap overlays and pace delta, speed heatmaps on a Leaflet map, braking-zone analysis, G-force visualisation, video-with-overlay export via WebCodecs, and Web Bluetooth session download from supported loggers.
+
+Note: **Dragy does not export CSV** (the vendor confirms this) — use the dragy·Lap app's `.vbo` export instead.
 
 ## Pages
 
-- [Home](/): Main viewer — import telemetry files, view race line maps, charts, lap times, and reference comparisons.
-- [Privacy Policy](/privacy): How the app handles data (everything stays in your browser).
+- [Home](/): Import a datalog, then explore the race-line map, charts, lap times and lap comparisons.
 
 ## Optional
 
-- [GitHub — LapWing](https://github.com/TheAngryRaven/DovesDataViewer): Source code for the web viewer.
-- [GitHub — DovesDataLogger](https://github.com/TheAngryRaven/DovesDataLogger): Companion ESP32 GPS datalogger firmware.
+- [GitHub — RacePlex](https://github.com/beadon/RacePlex): Source code (GPL-3.0).
+- [Telemetry format reference](https://github.com/beadon/RacePlex/blob/main/docs/research/FORMATS.md): A sourced write-up of every format RacePlex ingests, including the places the conventional wisdom is wrong (VBO stores coordinates in minutes, positive-west; RaceBox's CSV speed column records no unit and is not m/s).
+- [GitHub — Dove's DataViewer](https://github.com/TheAngryRaven/DovesDataViewer): The upstream project RacePlex is forked from.

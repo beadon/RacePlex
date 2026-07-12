@@ -23,13 +23,13 @@
       "title": "コースを管理",
       "description": "コースやレイアウトの作成・描画・編集"
     },
-    "build": {
-      "title": "自分だけのロガーを作る",
-      "description": "オープンソースの GPS ハードウェアとファームウェア — DovesDataLogger"
-    },
     "leaderboards": {
       "title": "リーダーボード",
       "description": "コース、レイアウト、エンジンクラスごとに最速ラップを比較"
+    },
+    "devices": {
+      "title": "対応デバイス",
+      "description": "RacePlex で使える GPS ロガーとアプリ"
     }
   },
   "links": {
@@ -62,7 +62,9 @@
       }
     },
     "features": [
-      "複数フォーマット対応（NMEA, UBX, VBO, MoTeC, AiM CSV + XRK/XRZ, Alfano, Dove, Dovex）",
+      "マルチフォーマット対応（RaceBox CSV、GPX、VBO、NMEA、UBX、MoTeC、AiM CSV + XRK/XRZ、Alfano、iRacing、Dove、Dovex）",
+      "ポイント・トゥ・ポイントのコース（ヒルラン、スラローム、ドラッグ）にも対応",
+      "設定不要のラップ計測：計測ラインをデータログ自体から復元",
       "5マイル以内のトラック・コース自動検出",
       "走行方向の自動検出（正方向/逆方向）",
       "ウェイポイントモード — トラック不要でどこでもラップ計測",
@@ -111,27 +113,27 @@
         "name": "Dovex（拡張 Dove）",
         "body": "セッション情報（ドライバー、コース、ラップタイム）を含む4096バイトのメタデータヘッダーに、標準的な Dove CSV の GPS データが続く拡張 Dove 形式。拡張子: <code>.dovex</code>"
       },
-      "xrk": {
-        "name": "AiM XRK / XRZ（バイナリ）",
-        "body": "MyChron / SoloDL ロガーからの AiM のネイティブバイナリテレメトリー。zlib 圧縮された <code>.xrz</code> バリアントを含みます。WebAssembly にコンパイルされた <libxrk>libxrk</libxrk> によりブラウザ内で完全に解析され、他のすべての形式と同様に高速かつ完全オフラインです。拡張子: <code>.xrk</code>, <code>.xrz</code>"
-      },
-      "iracing": {
-        "name": "iRacing テレメトリー（バイナリ）",
-        "body": "iRacing のネイティブバイナリテレメトリー書き出し — シムのライブ irsdk API が提供するのと同じデータで、サードパーティの CSV/MoTeC 変換は不要です。ブラウザ内で直接読み込み（完全オフライン）: GPS 位置・速度・高度がマップとラップを駆動し、スロットル、ブレーキ、ギア、ステアリング、RPM、水温/油温、ネイティブの横/縦 g も含まれます。拡張子: <code>.ibt</code>"
-      },
       "nmea": {
         "name": "NMEA / CSV（タブ区切り）",
         "body": "NMEA センテンスを含むタブ区切り CSV — 以前の自作データロガーで使われていたレガシー形式です。拡張子: <code>.nmea</code>, <code>.csv</code>, <code>.txt</code>"
+      },
+      "vbo": {
+        "name": "Racelogic VBO",
+        "body": "Racelogic VBOX および RaceBox の書き出し形式。拡張子: <code>.vbo</code>"
+      },
+      "raceboxCsv": {
+        "name": "RaceBox CSV",
+        "body": "RaceBox アプリ（Mini / Mini S / Micro）の標準エクスポート。GPS、速度、G、ジャイロを含みます。RaceBox 自身のラップ番号が含まれていれば、RacePlex はそこからスタート/フィニッシュラインを復元し、設定なしでラップタイムが出ます。注意: RaceBox は速度列に<em>単位を書きません</em>。RacePlex は位置情報と照合して単位を判定します。拡張子: <code>.csv</code>"
+      },
+      "gpx": {
+        "name": "GPX",
+        "body": "GPS トラックの汎用フォーマット。GPX には速度チャンネルがないため、位置から算出して平滑化します。ファイルにスタート/フィニッシュのウェイポイントがあれば、RacePlex が自動的に計測ラインを復元します。拡張子: <code>.gpx</code>"
       }
     },
     "secondary": {
       "ubx": {
         "name": "u-blox UBX バイナリ",
         "body": "u-blox GPS 受信機からのバイナリ NAV-PVT メッセージ。拡張子: <code>.ubx</code>"
-      },
-      "vbo": {
-        "name": "Racelogic VBO",
-        "body": "Racelogic VBOX および RaceBox の書き出し形式。拡張子: <code>.vbo</code>"
       },
       "motecLd": {
         "name": "MoTeC LD バイナリ",
@@ -148,6 +150,14 @@
       "aimCsv": {
         "name": "AiM MyChron CSV",
         "body": "MyChron 5/6 向けの Race Studio 3（RS2Analysis 形式）からの CSV 書き出し。拡張子: <code>.csv</code>"
+      },
+      "xrk": {
+        "name": "AiM XRK / XRZ（バイナリ）",
+        "body": "MyChron / SoloDL ロガーからの AiM のネイティブバイナリテレメトリー。zlib 圧縮された <code>.xrz</code> バリアントを含みます。WebAssembly にコンパイルされた <libxrk>libxrk</libxrk> によりブラウザ内で完全に解析され、他のすべての形式と同様に高速かつ完全オフラインです。拡張子: <code>.xrk</code>, <code>.xrz</code>"
+      },
+      "iracing": {
+        "name": "iRacing テレメトリー（バイナリ）",
+        "body": "iRacing のネイティブバイナリテレメトリー書き出し — シムのライブ irsdk API が提供するのと同じデータで、サードパーティの CSV/MoTeC 変換は不要です。ブラウザ内で直接読み込み（完全オフライン）: GPS 位置・速度・高度がマップとラップを駆動し、スロットル、ブレーキ、ギア、ステアリング、RPM、水温/油温、ネイティブの横/縦 g も含まれます。拡張子: <code>.ibt</code>"
       }
     }
   },
@@ -160,5 +170,19 @@
     "parseErrorSaved": "{{message}} — ファイルは保存され、「ファイルを参照」で見つけられます。",
     "loaded": "読み込み済み: {{name}}",
     "errorLine": "エラー: {{error}}"
+  },
+  "supportedDevices": {
+    "title": "対応デバイス",
+    "description": "GPX、CSV、VBO、NMEA、UBX のいずれかを書き出せるデバイスなら動作します。RacePlex はハードウェアを販売しておらず、これらのメーカーとは無関係です。動作するから掲載しています。",
+    "rate": "GPS",
+    "imu": "IMU",
+    "via": "形式",
+    "status": {
+      "verified": "検証済み",
+      "expected": "動作するはず",
+      "partial": "一部対応",
+      "no": "未対応"
+    },
+    "footer": "デバイスが見当たりませんか？ 一覧は src/data/supported-devices.json にあります。プルリクエストを送ってください。未検証のハードウェアをお持ちなら、サンプルファイルを送っていただくのが最も助かります。"
   }
 }

@@ -22,13 +22,13 @@
       "title": "Manage tracks",
       "description": "Create, draw and edit track & course layouts"
     },
-    "build": {
-      "title": "Build your own logger",
-      "description": "Open-source GPS hardware & firmware — the DovesDataLogger"
-    },
     "leaderboards": {
       "title": "Leaderboards",
       "description": "Compare fastest laps by track, course and engine class"
+    },
+    "devices": {
+      "title": "Supported Devices",
+      "description": "Which GPS loggers and apps work with RacePlex"
     }
   },
   "links": {
@@ -61,7 +61,9 @@
       }
     },
     "features": [
-      "Multi-format file support (NMEA, UBX, VBO, MoTeC, AiM CSV + XRK/XRZ, Alfano, Dove, Dovex)",
+      "Multi-format file support (RaceBox CSV, GPX, VBO, NMEA, UBX, MoTeC, AiM CSV + XRK/XRZ, Alfano, iRacing, Dove, Dovex)",
+      "Point-to-point courses (hill runs, slalom, drag) — not just circuits",
+      "Lap timing with zero setup: timing lines recovered from the datalog itself",
       "Automatic track & course detection within 5 miles",
       "Automatic driving direction detection (forward/reverse)",
       "Waypoint mode — lap timing anywhere, no track needed",
@@ -120,27 +122,27 @@
         "name": "Dovex (Extended Dove)",
         "body": "Extended Dove format with a 4096-byte metadata header containing session info (driver, course, lap times) followed by standard Dove CSV GPS data. Extension: <code>.dovex</code>"
       },
-      "xrk": {
-        "name": "AiM XRK / XRZ (Binary)",
-        "body": "AiM's native binary telemetry from MyChron / SoloDL loggers, including the zlib-compressed <code>.xrz</code> variant. Parsed entirely in your browser by <libxrk>libxrk</libxrk> compiled to WebAssembly — fast and fully offline, like every other format. Extensions: <code>.xrk</code>, <code>.xrz</code>"
-      },
-      "iracing": {
-        "name": "iRacing Telemetry (Binary)",
-        "body": "iRacing's native binary telemetry export — the same data the sim's live irsdk API serves, no third-party CSV/MoTeC conversion needed. Read directly in your browser (fully offline): GPS position, speed and altitude drive the map and laps, with throttle, brake, gear, steering, RPM, water/oil temp and native lateral/longitudinal g along for the ride. Extension: <code>.ibt</code>"
-      },
       "nmea": {
         "name": "NMEA / CSV (Tab-Delimited)",
         "body": "Tab-delimited CSV with NMEA sentences — the legacy format used by our earlier custom dataloggers. Extensions: <code>.nmea</code>, <code>.csv</code>, <code>.txt</code>"
+      },
+      "vbo": {
+        "name": "Racelogic VBO",
+        "body": "Racelogic VBOX and RaceBox export format. Extension: <code>.vbo</code>"
+      },
+      "raceboxCsv": {
+        "name": "RaceBox CSV",
+        "body": "The default export from the RaceBox app (Mini / Mini S / Micro): GPS, speed, G-force and gyro. If the export carries RaceBox's own lap numbering, RacePlex reconstructs the start/finish lines from it, so you get lap times with no setup at all. Note: RaceBox writes the speed column with <em>no unit</em> — RacePlex measures it against your positions to work out whether it's kph, mph or m/s. Extension: <code>.csv</code>"
+      },
+      "gpx": {
+        "name": "GPX",
+        "body": "The universal GPS track format — emitted by nearly every logger, phone app and watch. GPX carries no speed channel, so speed is derived from position and smoothed. If the file contains Start/Finish waypoints (RaceBox writes them), RacePlex rebuilds the timing lines from them and times your run automatically. Extension: <code>.gpx</code>"
       }
     },
     "secondary": {
       "ubx": {
         "name": "u-blox UBX Binary",
         "body": "Binary NAV-PVT messages from u-blox GPS receivers. Extension: <code>.ubx</code>"
-      },
-      "vbo": {
-        "name": "Racelogic VBO",
-        "body": "Racelogic VBOX and RaceBox export format. Extension: <code>.vbo</code>"
       },
       "motecLd": {
         "name": "MoTeC LD Binary",
@@ -157,7 +159,29 @@
       "aimCsv": {
         "name": "AiM MyChron CSV",
         "body": "CSV exports from Race Studio 3 (RS2Analysis style) for MyChron 5/6. Extension: <code>.csv</code>"
+      },
+      "xrk": {
+        "name": "AiM XRK / XRZ (Binary)",
+        "body": "AiM's native binary telemetry from MyChron / SoloDL loggers, including the zlib-compressed <code>.xrz</code> variant. Parsed entirely in your browser by <libxrk>libxrk</libxrk> compiled to WebAssembly — fast and fully offline, like every other format. Extensions: <code>.xrk</code>, <code>.xrz</code>"
+      },
+      "iracing": {
+        "name": "iRacing Telemetry (Binary)",
+        "body": "iRacing's native binary telemetry export — the same data the sim's live irsdk API serves, no third-party CSV/MoTeC conversion needed. Read directly in your browser (fully offline): GPS position, speed and altitude drive the map and laps, with throttle, brake, gear, steering, RPM, water/oil temp and native lateral/longitudinal g along for the ride. Extension: <code>.ibt</code>"
       }
     }
+  },
+  "supportedDevices": {
+    "title": "Supported Devices",
+    "description": "Anything that can export GPX, CSV, VBO, NMEA or UBX works. RacePlex sells no hardware and is affiliated with none of these vendors — a device is listed because it works.",
+    "rate": "GPS",
+    "imu": "IMU",
+    "via": "via",
+    "status": {
+      "verified": "Verified",
+      "expected": "Should work",
+      "partial": "Partial",
+      "no": "Not yet"
+    },
+    "footer": "Missing a device? The list lives in src/data/supported-devices.json — open a pull request. If you own hardware we haven’t tested, sending us a sample export file is the single most useful contribution you can make."
   }
 }

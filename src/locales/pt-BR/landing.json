@@ -23,13 +23,13 @@
       "title": "Gerenciar pistas",
       "description": "Crie, desenhe e edite traçados de pistas e percursos"
     },
-    "build": {
-      "title": "Monte seu próprio registrador",
-      "description": "Hardware e firmware GPS de código aberto: o DovesDataLogger"
-    },
     "leaderboards": {
       "title": "Rankings",
       "description": "Compare as voltas mais rápidas por pista, traçado e classe de motor"
+    },
+    "devices": {
+      "title": "Dispositivos compatíveis",
+      "description": "Quais loggers GPS e apps funcionam com o RacePlex"
     }
   },
   "links": {
@@ -62,7 +62,9 @@
       }
     },
     "features": [
-      "Suporte a vários formatos (NMEA, UBX, VBO, MoTeC, AiM CSV + XRK/XRZ, Alfano, Dove, Dovex)",
+      "Suporte a vários formatos (RaceBox CSV, GPX, VBO, NMEA, UBX, MoTeC, AiM CSV + XRK/XRZ, Alfano, iRacing, Dove, Dovex)",
+      "Percursos ponto a ponto (descidas, slalom, arrancada) — não só circuitos",
+      "Cronometragem sem configuração: as linhas são recuperadas do próprio arquivo",
       "Detecção automática de pista e circuito num raio de 5 milhas",
       "Detecção automática do sentido de condução (normal/inverso)",
       "Modo waypoint — cronometragem de voltas em qualquer lugar, sem pista",
@@ -111,27 +113,27 @@
         "name": "Dovex (Dove estendido)",
         "body": "Formato Dove estendido com um cabeçalho de metadados de 4096 bytes contendo informações da sessão (piloto, circuito, tempos de volta) seguido de dados de GPS em CSV Dove padrão. Extensão: <code>.dovex</code>"
       },
-      "xrk": {
-        "name": "AiM XRK / XRZ (binário)",
-        "body": "Telemetria binária nativa da AiM dos loggers MyChron / SoloDL, incluindo a variante <code>.xrz</code> compactada com zlib. Analisada inteiramente no seu navegador pelo <libxrk>libxrk</libxrk> compilado para WebAssembly — rápido e totalmente offline, como todos os outros formatos. Extensões: <code>.xrk</code>, <code>.xrz</code>"
-      },
-      "iracing": {
-        "name": "Telemetria do iRacing (binário)",
-        "body": "Exportação de telemetria binária nativa do iRacing — os mesmos dados que a API irsdk ao vivo do simulador fornece, sem conversão CSV/MoTeC de terceiros. Lida diretamente no seu navegador (totalmente offline): posição GPS, velocidade e altitude alimentam o mapa e as voltas, junto com acelerador, freio, marcha, direção, RPM, temperatura de água/óleo e g lateral/longitudinal nativo. Extensão: <code>.ibt</code>"
-      },
       "nmea": {
         "name": "NMEA / CSV (delimitado por tabulação)",
         "body": "CSV delimitado por tabulação com sentenças NMEA — o formato legado usado pelos nossos dataloggers personalizados anteriores. Extensões: <code>.nmea</code>, <code>.csv</code>, <code>.txt</code>"
+      },
+      "vbo": {
+        "name": "Racelogic VBO",
+        "body": "Formato de exportação Racelogic VBOX e RaceBox. Extensão: <code>.vbo</code>"
+      },
+      "raceboxCsv": {
+        "name": "RaceBox CSV",
+        "body": "A exportação padrão do app RaceBox (Mini / Mini S / Micro): GPS, velocidade, força G e giroscópio. Se incluir a numeração de voltas do RaceBox, o RacePlex reconstrói as linhas de largada/chegada a partir dela. Nota: o RaceBox grava a coluna de velocidade <em>sem unidade</em> — o RacePlex a deduz comparando com suas posições. Extensão: <code>.csv</code>"
+      },
+      "gpx": {
+        "name": "GPX",
+        "body": "O formato universal de trilhas GPS. O GPX não traz velocidade, então ela é derivada da posição e suavizada. Se o arquivo tiver waypoints de largada/chegada, o RacePlex reconstrói as linhas de cronometragem automaticamente. Extensão: <code>.gpx</code>"
       }
     },
     "secondary": {
       "ubx": {
         "name": "u-blox UBX binário",
         "body": "Mensagens binárias NAV-PVT de receptores GPS u-blox. Extensão: <code>.ubx</code>"
-      },
-      "vbo": {
-        "name": "Racelogic VBO",
-        "body": "Formato de exportação Racelogic VBOX e RaceBox. Extensão: <code>.vbo</code>"
       },
       "motecLd": {
         "name": "MoTeC LD binário",
@@ -148,6 +150,14 @@
       "aimCsv": {
         "name": "AiM MyChron CSV",
         "body": "Exportações CSV do Race Studio 3 (estilo RS2Analysis) para MyChron 5/6. Extensão: <code>.csv</code>"
+      },
+      "xrk": {
+        "name": "AiM XRK / XRZ (binário)",
+        "body": "Telemetria binária nativa da AiM dos loggers MyChron / SoloDL, incluindo a variante <code>.xrz</code> compactada com zlib. Analisada inteiramente no seu navegador pelo <libxrk>libxrk</libxrk> compilado para WebAssembly — rápido e totalmente offline, como todos os outros formatos. Extensões: <code>.xrk</code>, <code>.xrz</code>"
+      },
+      "iracing": {
+        "name": "Telemetria do iRacing (binário)",
+        "body": "Exportação de telemetria binária nativa do iRacing — os mesmos dados que a API irsdk ao vivo do simulador fornece, sem conversão CSV/MoTeC de terceiros. Lida diretamente no seu navegador (totalmente offline): posição GPS, velocidade e altitude alimentam o mapa e as voltas, junto com acelerador, freio, marcha, direção, RPM, temperatura de água/óleo e g lateral/longitudinal nativo. Extensão: <code>.ibt</code>"
       }
     }
   },
@@ -160,5 +170,19 @@
     "parseErrorSaved": "{{message}} — o arquivo foi salvo e pode ser encontrado em Procurar arquivos.",
     "loaded": "Carregado: {{name}}",
     "errorLine": "Erro: {{error}}"
+  },
+  "supportedDevices": {
+    "title": "Dispositivos compatíveis",
+    "description": "Qualquer dispositivo que exporte GPX, CSV, VBO, NMEA ou UBX funciona. O RacePlex não vende hardware e não tem vínculo com nenhuma dessas marcas — um dispositivo é listado porque funciona.",
+    "rate": "GPS",
+    "imu": "IMU",
+    "via": "via",
+    "status": {
+      "verified": "Verificado",
+      "expected": "Deve funcionar",
+      "partial": "Parcial",
+      "no": "Ainda não"
+    },
+    "footer": "Falta um dispositivo? A lista está em src/data/supported-devices.json — abra um pull request. Se você tem hardware que ainda não testamos, enviar um arquivo de exemplo é a contribuição mais útil."
   }
 }

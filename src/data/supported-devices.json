@@ -1,0 +1,271 @@
+{
+  "$comment": [
+    "Telemetry collectors known to work with RacePlex, and how.",
+    "",
+    "This file is deliberately data, not code: it is the single source of truth for the in-app",
+    "'Supported Devices' dialog AND for the table in the README. Anyone can edit it — no TypeScript",
+    "required. Add a device, open a PR.",
+    "",
+    "THE COMPATIBILITY TEST is narrower than it sounds. RacePlex reads GPX, VBO, NMEA, UBX, and a",
+    "handful of *specific* CSV dialects (RaceBox, MoTeC, AiM, Alfano, Dove). There is NO generic",
+    "'CSV with lat/lon' parser — an unrecognised CSV falls through to the NMEA parser and fails.",
+    "So 'it exports CSV' does NOT mean it works. See docs/research/FORMATS.md.",
+    "",
+    "RacePlex sells no hardware and is affiliated with none of these vendors. A device is listed",
+    "because it works, not because anyone paid to be here. Prices are approximate, in USD, and will",
+    "go stale — sample rate is the number that actually matters.",
+    "",
+    "status: 'verified'  — we have parsed a real file from this device",
+    "        'expected'  — it emits a format we read, but nobody has sent us a file yet",
+    "        'partial'   — works only via a conversion step or a companion app; see notes",
+    "        'no'        — cannot be imported today. These are the help-wanted items."
+  ],
+
+  "formats": {
+    "gpx": "GPX",
+    "raceboxCsv": "RaceBox CSV",
+    "vbo": "VBO",
+    "nmea": "NMEA",
+    "ubx": "UBX",
+    "dove": "Dove / Dovex",
+    "motec": "MoTeC i2",
+    "aim": "AiM",
+    "alfano": "Alfano",
+    "iracing": "iRacing"
+  },
+
+  "categories": [
+    {
+      "id": "gps-meters",
+      "name": "Dedicated GPS performance meters",
+      "blurb": "What you actually want. Sample rate dominates everything else for eskate: a run may only last 20 seconds, and at 40 km/h a 1 Hz fix lands every 11 metres — you cannot see a slalom gate, a braking point or an apex. 25 Hz puts a fix every 44 cm.",
+      "devices": [
+        {
+          "name": "RaceBox Micro",
+          "vendor": "RaceBox",
+          "price": "~$129",
+          "rateHz": "25 Hz",
+          "imu": true,
+          "exports": ["gpx", "vbo", "raceboxCsv"],
+          "status": "verified",
+          "notes": "The best buy for eskate, and it isn't close. Records standalone with a hardware button — no phone bouncing around in your pocket — and it is small and light enough to tape to a deck. Exports all three formats we read best. Our own test fixtures come from a RaceBox.",
+          "url": "https://www.racebox.pro/products/racebox-micro"
+        },
+        {
+          "name": "RaceBox Mini / Mini S",
+          "vendor": "RaceBox",
+          "price": "~$219 / ~$289",
+          "rateHz": "25 Hz",
+          "imu": true,
+          "exports": ["gpx", "vbo", "raceboxCsv"],
+          "status": "verified",
+          "notes": "Same data as the Micro; you are paying for form factor, battery and mounts. Needs the phone app to record. Export goes through RaceBox's cloud, so you need an account and internet to get the file out.",
+          "url": "https://www.racebox.pro/store/"
+        },
+        {
+          "name": "Dragy DRG70 / DRG70-C / Pro",
+          "vendor": "Dragy",
+          "price": "~$179–$249",
+          "rateHz": "up to 25 Hz",
+          "imu": true,
+          "exports": ["gpx", "vbo", "nmea"],
+          "status": "partial",
+          "notes": "Dragy does NOT export CSV — the vendor confirms this, and it is the single most common misconception about the device. The reliable path is to use it as a Bluetooth GPS source for RaceChrono and export from there. The dragy·Lap app can also export .vbo directly. Note the original 2018 Dragy was 10 Hz; the current DRG70 is up to 25 Hz.",
+          "url": "https://www.godragy.com/dragy-70/"
+        },
+        {
+          "name": "Qstarz LT-6000S",
+          "vendor": "Qstarz",
+          "rateHz": "10 Hz",
+          "imu": true,
+          "exports": ["gpx"],
+          "status": "expected",
+          "notes": "Export GPX from the QRacing desktop software (Windows only). Its CSV is its own layout and will NOT parse — use GPX.",
+          "url": "https://racing.qstarz.com/Products/LT-6000S.html"
+        },
+        {
+          "name": "VBOX Sport",
+          "vendor": "Racelogic",
+          "price": "~$540+",
+          "rateHz": "20 Hz",
+          "exports": ["vbo"],
+          "status": "expected",
+          "notes": "Emits .vbo natively, which we read. But it is three times the price of a RaceBox for a lower sample rate, and availability is poor in 2026. Hard to recommend unless you already own one.",
+          "url": "https://en.racelogic.support/Knowledge_Base/.VBO_Files"
+        },
+        {
+          "name": "Bare u-blox module (DIY)",
+          "price": "~$25",
+          "rateHz": "10–25 Hz",
+          "exports": ["nmea", "ubx"],
+          "status": "expected",
+          "notes": "The cheapest RacePlex-compatible logger there is. Any u-blox M8/M10 dumping raw NMEA or UBX to an SD card drops straight in — both parsers already exist, no conversion needed."
+        }
+      ]
+    },
+    {
+      "id": "phone-apps",
+      "name": "Phone apps",
+      "blurb": "A phone costs nothing if you already have one — but its built-in GPS is about 1 Hz, which is far too coarse for a short eskate run. The fix is not a better app; it is an external Bluetooth GPS receiver. Pair one with the apps below and they become genuinely good.",
+      "devices": [
+        {
+          "name": "RaceChrono Pro",
+          "price": "~$20",
+          "rateHz": "1 Hz on phone GPS · 25 Hz with an external receiver",
+          "imu": true,
+          "exports": ["vbo", "nmea", "gpx"],
+          "status": "expected",
+          "notes": "The best software path, and it drives a RaceBox or Dragy over Bluetooth at full rate. Export VBO, NMEA or GPX — NOT its CSV, which is RaceChrono's own layout and will not parse.",
+          "url": "https://racechrono.com/"
+        },
+        {
+          "name": "Harry's LapTimer",
+          "rateHz": "1 Hz on phone GPS · higher with an external receiver",
+          "imu": true,
+          "exports": ["gpx", "vbo"],
+          "status": "expected",
+          "notes": "GPX from any edition; VBO from the Petrolhead edition up.",
+          "url": "https://www.gps-laptimer.de/"
+        },
+        {
+          "name": "Strava / generic GPX loggers",
+          "price": "Free",
+          "rateHz": "1 Hz",
+          "exports": ["gpx"],
+          "status": "expected",
+          "notes": "Works, and it is a fine way to check RacePlex runs at all — but at 40 km/h a 1 Hz fix is one point every 11 metres. Good for a route trace, useless for lap deltas."
+        },
+        {
+          "name": "TrackAddict",
+          "vendor": "HP Tuners",
+          "exports": [],
+          "status": "no",
+          "notes": "Exports its own CSV layout, which we do not recognise. A parser would be a good contribution — it has a large user base.",
+          "url": "https://racerender.com/TrackAddict/docs/Interop.html"
+        }
+      ]
+    },
+    {
+      "id": "ble-receivers",
+      "name": "External Bluetooth GPS receivers",
+      "blurb": "Feed a phone app a proper 10–25 Hz fix instead of the phone's own 1 Hz. This is the single biggest upgrade available to anyone logging with a phone.",
+      "devices": [
+        {
+          "name": "RaceBox Mini / Micro (as a receiver)",
+          "price": "~$129–$289",
+          "rateHz": "25 Hz",
+          "imu": true,
+          "exports": ["gpx", "vbo", "raceboxCsv", "nmea"],
+          "status": "verified",
+          "notes": "Does both jobs: logs standalone, or streams to RaceChrono at 25 Hz. Best of both."
+        },
+        {
+          "name": "Garmin GLO 2",
+          "vendor": "Garmin",
+          "price": "~$120",
+          "rateHz": "10 Hz",
+          "exports": ["gpx", "vbo", "nmea"],
+          "status": "expected",
+          "notes": "Streams only — it has no memory of its own, so it must be paired with a logging app.",
+          "url": "https://www.garmin.com/en-US/p/645104/"
+        },
+        {
+          "name": "Dual XGPS160 SkyPro",
+          "rateHz": "10 Hz",
+          "exports": ["gpx", "vbo", "nmea"],
+          "status": "expected",
+          "notes": "Use with RaceChrono or Harry's LapTimer."
+        }
+      ]
+    },
+    {
+      "id": "action-cams",
+      "name": "Action cameras with GPS",
+      "blurb": "If you were filming the run anyway, the camera may have logged the GPS too. RacePlex cannot read video files directly — you convert the telemetry track to GPX first, with a free tool.",
+      "devices": [
+        {
+          "name": "GoPro HERO5–11, HERO13, MAX",
+          "vendor": "GoPro",
+          "rateHz": "~10–18 Hz",
+          "exports": ["gpx"],
+          "status": "partial",
+          "notes": "GPS rides along in the video's GPMF metadata track. Extract it to GPX with the open-source gopro-telemetry or gopro2gpx, then import that. Reading GPMF directly in the browser is on our wish list — the libraries are JavaScript, so it could work entirely locally.",
+          "url": "https://github.com/JuanIrache/gopro-telemetry"
+        },
+        {
+          "name": "GoPro HERO12",
+          "vendor": "GoPro",
+          "exports": [],
+          "status": "no",
+          "notes": "Has NO GPS. GoPro removed it in the HERO12, and this trips people up constantly. Do not buy one for telemetry."
+        },
+        {
+          "name": "Insta360 (with GPS remote)",
+          "vendor": "Insta360",
+          "exports": ["gpx"],
+          "status": "partial",
+          "notes": "Only records GPS with a GPS Action Remote / Smart Remote (or the phone app). Insta360 Studio then has an 'Export GPX File' option.",
+          "url": "https://onlinemanual.insta360.com/x3/en-us/operating-tutorials/clips/gps"
+        }
+      ]
+    },
+    {
+      "id": "watches",
+      "name": "Watches & bike computers",
+      "blurb": "Fine for proving RacePlex works with a file you already own. Not fine for lap timing: they all log at about 1 Hz.",
+      "devices": [
+        {
+          "name": "Garmin / Wahoo / Coros",
+          "rateHz": "1 Hz",
+          "exports": ["gpx"],
+          "status": "partial",
+          "notes": "Export GPX (not FIT) from the vendor's website. FIT is their native format and carries far more data — but we cannot read it yet. See the help-wanted list; note that even with a FIT parser these devices are still 1 Hz, so it buys reach, not precision."
+        }
+      ]
+    },
+    {
+      "id": "eskate",
+      "name": "Eskate & VESC — the honest answer",
+      "blurb": "If you ride a VESC board, none of your existing apps produce a file RacePlex can open today. Not one. Every eskate app logs GPS into its own bespoke layout. That is the gap this project exists to close — and it is the top of our help-wanted list.",
+      "devices": [
+        {
+          "name": "VESC Tool",
+          "vendor": "Benjamin Vedder",
+          "exports": [],
+          "status": "no",
+          "notes": "Logs GPS (gnss_lat / gnss_lon / kmh_gnss) but writes a SEMICOLON-delimited CSV we do not recognise. This is the highest-leverage parser anyone could contribute: it would unlock every VESC rider, and let us fuse motor current and battery sag with GPS — the one thing no car-oriented lap timer can do.",
+          "url": "https://github.com/vedderb/vesc_tool"
+        },
+        {
+          "name": "FreeSK8 / Robogotchi",
+          "vendor": "Derelict Robot",
+          "rateHz": "~1 Hz",
+          "exports": [],
+          "status": "no",
+          "notes": "The only purpose-built eskate GPS logger there is. Shares a row-typed CSV (each line prefixed with its record type) that we cannot read. The schema is open, so a parser is small work. Caveat: ~1 Hz GPS, and the project has been quiet since 2022.",
+          "url": "https://github.com/FreeSK8/freesk8_mobile"
+        },
+        {
+          "name": "Metr Pro",
+          "exports": [],
+          "status": "no",
+          "notes": "Logs phone GPS alongside VESC data and can export CSV, or JSON by appending ?format=json to a ride URL. The JSON stores latitude/longitude as column arrays. Officially documented — an easy parser to add.",
+          "url": "https://github.com/rpasichnyk/metr-guide"
+        },
+        {
+          "name": "Float Control / pOnewheel",
+          "exports": [],
+          "status": "no",
+          "notes": "OneWheel and PEV companion apps. Both export CSV in their own layouts; schemas are discoverable but unconfirmed."
+        },
+        {
+          "name": "Official Onewheel app",
+          "vendor": "Future Motion",
+          "exports": [],
+          "status": "no",
+          "notes": "Records GPS but offers no export of any kind. A dead end — use a separate GPS logger."
+        }
+      ]
+    }
+  ]
+}
