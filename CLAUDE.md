@@ -168,7 +168,8 @@ src/
 │   ├── setupRevision*.ts  # ★ Content-addressed setup history + IndexedDB CRUD (→ docs/subsystems.md)
 │   ├── setupHistory.ts    # ★ Pure setup-history view-model (diff + fastest-lap aggregation) → drawer/SetupHistoryPanel (→ docs/subsystems.md)
 │   ├── vehicleHistory.ts  # ★ Pure vehicle-history view-model (per-vehicle setup revisions, fastest-lap first, course filter) → drawer/VehicleHistoryPanel; reuses setupHistory primitives; shared card chrome in drawer/HistoryCard.tsx
-│   ├── trackSubmission.ts # ★ Community-DB upload plan (→ docs/subsystems.md)
+│   ├── trackSubmission.ts # ★ Pure: diff local vs built-in tracks, classify, content-hash for dedupe
+│   ├── trackContribution.ts # ★ Submission plan → tracks/<slug>.json record + prefilled GitHub-issue URL (plan 0008)
 │   ├── dbUtils.ts         # ★ Shared IndexedDB: DB_NAME, DB_VERSION, openDB(), tx helpers
 │   ├── garageEvents.ts    # ★ Host pub/sub: storage emits {store,key,put|delete}; cloud-sync syncs off it
 │   ├── fileLoadingState.ts # ★ Host pub/sub for the global file-load overlay
@@ -354,12 +355,18 @@ unless noted.
 - **Course layouts / drawing**: user-drawn polyline outlines persist on
   `Course.layout`; built-ins come from `public/drawings.json`. Draw/Generate tools
   in `VisualEditor`, available to all users.
-- **Community submission** (`trackSubmission.ts`): bulk diff of local vs built-in
-  tracks → one `submit-track` call per batch; content-hash dedupe. Signed-in
-  submits are attributed (`submissions.submitted_by_user_id`, from the verified
-  JWT) and the dialog shows a "contributions earn free cloud storage" note. The
-  admin **Users** tab (`admin-users` edge fn) lists accounts + can **comp** free
-  premium months (auto-expiring) → `docs/backend.md` → *User management*.
+- **Community track collection — git IS the database** (plan 0008): `tracks/`, one
+  JSON file per track, is the canonical store; `public/tracks.json` +
+  `public/drawings.json` are **generated** (`bun run build:tracks`, wired as
+  `prebuild` — never hand-edit them). A submission is a **pull request**; there is
+  no server. `.github/workflows/tracks.yml` validates every record — schema, coord
+  ranges, no timing line wider than 500 m (this is what catches a transposed digit,
+  which is otherwise a valid coordinate), every line crosses the drawn outline, no
+  duplicate name/shortName, and the committed artifacts match what `tracks/`
+  regenerates. `trackSubmission.ts` (pure: diff local vs built-in, classify,
+  content-hash for dedupe) feeds `trackContribution.ts`, which renders the record +
+  a prefilled GitHub-issue link so a rider never needs git.
+  → `CONTRIBUTING.md` → *Adding a Track*, `scripts/tracks-*.mjs`.
 - **File browser** (`fileBrowserTree.ts` + `SessionBrowser`): Track→Course→logs
   hierarchy; display name = the session's date/time (or `FileMetadata.displayName`
   override); smart collapse; cloud rows merged inline. The bundled **sample log**
@@ -427,7 +434,7 @@ and the seeder: **→ `docs/i18n.md`**.
 
 | Variable | Client/Server | Description |
 |----------|--------------|-------------|
-| `VITE_SUPABASE_URL` / `VITE_SUPABASE_PUBLISHABLE_KEY` / `VITE_SUPABASE_PROJECT_ID` | Client | Backend creds (auto-set; `vite.config.ts` has public fallbacks) |
+| `VITE_SUPABASE_URL` / `VITE_SUPABASE_PUBLISHABLE_KEY` / `VITE_SUPABASE_PROJECT_ID` | Client | Backend creds. **RacePlex bakes in none** — the `vite.config.ts` fallbacks are empty strings, so a build has no backend and the app runs fully local (see ⚠️ below). Set them only if you stand up *your own* Supabase project. |
 | `VITE_ENABLE_ADMIN` | Client | `"true"` enables admin UI + `/admin`. `/login` is mounted when this OR `VITE_ENABLE_CLOUD` is on. |
 | `VITE_ENABLE_CLOUD` | Client | `"true"` enables public accounts (Cloud Sync + email sign-in + `/register` etc.). Default `"false"`. |
 | `VITE_IS_NATIVE` | Client/Build | `"true"` ONLY for the native (Tauri/Android) shell build. Gates `isNativeApp()` (`lib/platform.ts`): no service worker, no in-app purchases (web-only billing — Google Play policy), external links via the system browser. Default `"false"`. → `docs/android.md`. |
@@ -454,6 +461,25 @@ hosting is Cloudflare Workers (static-assets-only, `wrangler.jsonc`,
 > rest of this paragraph describes **upstream's** deploy topology (beta proxy,
 > per-branch preview backends) and is retained as reference — none of it is
 > currently wired up for RacePlex.
+
+> ## ⚠️ RacePlex has NO backend. Do not wire one up by accident.
+>
+> `vite.config.ts` blanks every backend credential (`VITE_SUPABASE_URL: ""`,
+> `VITE_ENABLE_CLOUD: "false"`), there is no `.env`, and `NOTICE` states plainly:
+> **no required backend**. A fresh build talks to nothing, and that is the design.
+>
+> **`supabase/config.toml` still carries upstream's `project_id`
+> (`svjlieovpyiffbqwhtgk`)**, inherited with the fork. Anything that "turns the
+> backend on" without replacing that ref would be reading and writing
+> **someone else's private database** — on their billing, revocable at their
+> discretion. Their `tracks`/`courses`/`submissions` tables are `SELECT`-gated to
+> admins, so there is nothing legitimately readable there anyway.
+>
+> **The community track database is git** (`tracks/`, plan 0008) — not Supabase.
+> The `supabase/functions/submit-track` edge function is dead code awaiting removal.
+>
+> Everything below this warning describes **upstream's** deploy topology and is
+> retained as reference. None of it is wired up here.
 
 Backend by branch (`vite.config.ts` `pick()`, keyed on
 `WORKERS_CI_BRANCH`/`CF_PAGES_BRANCH`): **`main`** → base/production vars;
@@ -496,7 +522,9 @@ bun run test:coverage  # Vitest + v8 coverage (enforces thresholds in vitest.con
 > stays in scope. Don't widen the include to pull view code back in, and don't
 > exclude `hooks/`/`lib/` to inflate it. Thresholds are floors — ratchet up.
 
-CI is five parallel workflows (`lint`, `typecheck`, `test`, `build`, `coverage`).
+CI is six parallel workflows (`lint`, `typecheck`, `test`, `build`, `coverage`,
+`tracks`). `tracks` validates `tracks/*.json` and asserts the generated
+`public/tracks.json` + `drawings.json` are current (`bun run check:tracks`).
 `coverage.yml` enforces thresholds and posts a per-PR comment. **No badge** — upstream
 pushed one to a GitHub Gist needing a `GIST_TOKEN` this fork never had, so it failed
 every push for a picture the README never showed. The threshold is the gate; don't
@@ -537,8 +565,11 @@ menu still opens instantly; `CourseSectorEditor` (carries
 - **Hooks are composable** — each does one thing; `Index.tsx` orchestrates.
 - **Parsers** export `isXxxFormat()` + `parseXxxFile()`, registered in `datalogParser.ts`.
 - **IndexedDB stores** are registered in `dbUtils.ts`; modules use the tx helpers.
-- **Tracks**: `public/tracks.json` is the runtime source of truth; admin DB builds
-  it. Export includes `longName`, `shortName`, `defaultCourse`, per-course `lengthFt`.
+- **Tracks**: **`tracks/` is the source of truth** (one JSON per track, plan 0008).
+  `public/tracks.json` + `public/drawings.json` are **generated artifacts** —
+  `bun run build:tracks`, committed, never hand-edited. The runtime still reads
+  `public/tracks.json` (`trackStorage.loadDefaultTracks()`), so it is the *runtime*
+  input but not the store. Adding a track = a PR against `tracks/`.
 - **CSS**: use Tailwind semantic tokens from `index.css`, never hardcode colors
   (e.g. `--warning`/`warning` for the preview-build footer).
 - **Admin/cloud code** is fully optional and env-gated — the core app has zero
