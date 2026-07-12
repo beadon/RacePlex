@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useCallback } from "react";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import type { StripeConfig } from "@/lib/billing";
+import { useAsyncSnapshot } from "./useAsyncSnapshot";
 
 const enableCloud = import.meta.env.VITE_ENABLE_CLOUD === "true";
 
@@ -11,6 +12,13 @@ export interface StripePricesState {
 
 const UNCONFIGURED: StripeConfig = { configured: false, prices: [] };
 
+interface Snapshot {
+  config: StripeConfig;
+  loaded: boolean;
+}
+
+const EMPTY: Snapshot = { config: UNCONFIGURED, loaded: false };
+
 /**
  * Reads the live Stripe pricing catalogue (monthly/annual prices per paid tier)
  * for the pricing UI. Online-only and cloud-gated; never throws into render —
@@ -19,34 +27,26 @@ const UNCONFIGURED: StripeConfig = { configured: false, prices: [] };
  */
 export function useStripePrices(): StripePricesState {
   const online = useOnlineStatus();
-  const [config, setConfig] = useState<StripeConfig>(UNCONFIGURED);
-  const [loading, setLoading] = useState(enableCloud);
 
-  useEffect(() => {
-    if (!enableCloud) {
-      setConfig(UNCONFIGURED);
-      setLoading(false);
-      return;
+  const load = useCallback(async (): Promise<Snapshot> => {
+    if (!enableCloud) return { config: UNCONFIGURED, loaded: true };
+    try {
+      // Dynamic import: billingClient pulls the Supabase client, which must
+      // stay off the eager graph (keep the offline-first payload Supabase-free).
+      const { fetchStripeConfig } = await import("@/lib/billingClient");
+      const config = await fetchStripeConfig();
+      return { config, loaded: true };
+    } catch {
+      return { config: UNCONFIGURED, loaded: true };
     }
-    let cancelled = false;
-    setLoading(true);
-    // Dynamic import: billingClient pulls the Supabase client, which must
-    // stay off the eager graph (keep the offline-first payload Supabase-free).
-    import("@/lib/billingClient")
-      .then(({ fetchStripeConfig }) => fetchStripeConfig())
-      .then((c) => {
-        if (!cancelled) setConfig(c);
-      })
-      .catch(() => {
-        if (!cancelled) setConfig(UNCONFIGURED);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [online]);
+  }, []);
 
-  return { loading, config };
+  const key = `stripe-prices:${online ? "on" : "off"}`;
+
+  const { data } = useAsyncSnapshot({ key, initial: EMPTY, load });
+
+  return {
+    loading: enableCloud && !data.loaded,
+    config: data.config,
+  };
 }
