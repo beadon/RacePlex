@@ -128,6 +128,10 @@
       "gpx": {
         "name": "GPX",
         "body": "El formato universal de trazas GPS. GPX no incluye velocidad, así que se deriva de la posición y se suaviza. Si el archivo tiene waypoints de salida/meta, RacePlex reconstruye las líneas de cronometraje automáticamente. Extensión: <code>.gpx</code>"
+      },
+      "gopro": {
+        "name": "Vídeo GoPro (GPMF)",
+        "body": "<em>Arrastra el vídeo y ya está.</em> Si grabaste tu recorrido con una GoPro con GPS, la telemetría ya está dentro del archivo: las HERO5–HERO11, HERO13 y MAX escriben GPS a 10–18 Hz, además de acelerómetro y giroscopio, en la pista de metadatos GPMF del vídeo. RacePlex la lee directamente en tu navegador con <gpmf>gpmf-extract</gpmf> y <gpmfTelemetry>gopro-telemetry</gpmfTelemetry>; no se sube nada y no hace falta ningún paso de conversión. Nota: la <em>HERO12 no tiene GPS</em>, y en las cámaras más antiguas hay que activar el GPS en Preferencias antes de grabar. Extensión: <code>.mp4</code>"
       }
     },
     "secondary": {
@@ -165,7 +169,7 @@
     "title": "Abrir un datalog",
     "processing": "Procesando...",
     "dragDrop": "Arrastra y suelta un archivo aquí, o haz clic para explorar",
-    "formats": "NMEA, UBX, VBO, Dove, Alfano, AiM (CSV + XRK/XRZ), iRacing, MoTeC CSV/LD y más — <i>todo procesado localmente en tu dispositivo.</i>",
+    "formats": "GPX, vídeo GoPro (.mp4), NMEA, UBX, VBO, Dove, Alfano, AiM (CSV + XRK/XRZ), iRacing, MoTeC CSV/LD y más — <i>todo procesado localmente en tu dispositivo.</i>",
     "parseFailed": "No se pudo analizar el archivo",
     "parseErrorSaved": "{{message}} — el archivo se guardó y puedes encontrarlo en Explorar archivos.",
     "loaded": "Cargado: {{name}}",

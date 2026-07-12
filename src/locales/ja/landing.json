@@ -128,6 +128,10 @@
       "gpx": {
         "name": "GPX",
         "body": "GPS トラックの汎用フォーマット。GPX には速度チャンネルがないため、位置から算出して平滑化します。ファイルにスタート/フィニッシュのウェイポイントがあれば、RacePlex が自動的に計測ラインを復元します。拡張子: <code>.gpx</code>"
+      },
+      "gopro": {
+        "name": "GoPro動画 (GPMF)",
+        "body": "<em>動画をドロップするだけ。</em> GPS搭載のGoProで走行を撮影していれば、テレメトリーはすでに動画ファイルの中にあります。HERO5〜HERO11、HERO13、MAXは、10〜18HzのGPSに加えて加速度センサーとジャイロを、動画のGPMFメタデータトラックに記録しています。RacePlexは<gpmf>gpmf-extract</gpmf>と<gpmfTelemetry>gopro-telemetry</gpmfTelemetry>を使ってブラウザ内で直接読み取ります。アップロードは一切なく、変換作業も不要です。注意: <em>HERO12にはGPSが搭載されていません</em>。また、それ以前のカメラでは撮影前に環境設定でGPSをオンにしておく必要があります。拡張子: <code>.mp4</code>"
       }
     },
     "secondary": {
@@ -165,7 +169,7 @@
     "title": "データログを開く",
     "processing": "処理中...",
     "dragDrop": "ここにファイルをドラッグ＆ドロップ、またはクリックして参照",
-    "formats": "NMEA, UBX, VBO, Dove, Alfano, AiM (CSV + XRK/XRZ), iRacing, MoTeC CSV/LD など — <i>すべて端末内でローカルに処理されます。</i>",
+    "formats": "GPX、GoPro動画 (.mp4)、NMEA, UBX, VBO, Dove, Alfano, AiM (CSV + XRK/XRZ), iRacing, MoTeC CSV/LD など — <i>すべて端末内でローカルに処理されます。</i>",
     "parseFailed": "ファイルの解析に失敗しました",
     "parseErrorSaved": "{{message}} — ファイルは保存され、「ファイルを参照」で見つけられます。",
     "loaded": "読み込み済み: {{name}}",

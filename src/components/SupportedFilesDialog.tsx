@@ -7,6 +7,8 @@ import {
 import { interceptExternal } from "@/lib/platform";
 
 const LIBXRK_URL = "https://github.com/m3rlin45/libxrk";
+const GPMF_EXTRACT_URL = "https://github.com/JuanIrache/gpmf-extract";
+const GOPRO_TELEMETRY_URL = "https://github.com/JuanIrache/gopro-telemetry";
 
 // Format ids in display order; their name/body text lives in the `landing`
 // locale (supportedFiles.primary.<id> / .secondary.<id>). Format names,
@@ -16,7 +18,7 @@ const LIBXRK_URL = "https://github.com/m3rlin45/libxrk";
 // class; GPX comes out of nearly every other logger, phone app and watch; VBO is the one format
 // Dragy·Lap, RaceChrono and RaceBox all emit. Upstream's own formats stay fully supported, just
 // further down the list.
-const PRIMARY_IDS = ["raceboxCsv", "gpx", "vbo", "nmea", "dove", "dovex"] as const;
+const PRIMARY_IDS = ["raceboxCsv", "gpx", "gopro", "vbo", "nmea", "dove", "dovex"] as const;
 const SECONDARY_IDS = ["ubx", "xrk", "iracing", "motecLd", "motecCsv", "alfano", "aimCsv"] as const;
 const EXPERIMENTAL = new Set(["motecLd", "motecCsv", "alfano", "aimCsv"]);
 
@@ -28,6 +30,12 @@ const FORMAT_COMPONENTS = {
   logger: <span className="text-foreground" />,
   libxrk: (
     <a href={LIBXRK_URL} target="_blank" rel="noopener noreferrer" onClick={(e) => interceptExternal(e, LIBXRK_URL)} className="text-primary hover:underline" />
+  ),
+  gpmf: (
+    <a href={GPMF_EXTRACT_URL} target="_blank" rel="noopener noreferrer" onClick={(e) => interceptExternal(e, GPMF_EXTRACT_URL)} className="text-primary hover:underline" />
+  ),
+  gpmfTelemetry: (
+    <a href={GOPRO_TELEMETRY_URL} target="_blank" rel="noopener noreferrer" onClick={(e) => interceptExternal(e, GOPRO_TELEMETRY_URL)} className="text-primary hover:underline" />
   ),
 };
 

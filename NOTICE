@@ -61,3 +61,22 @@ src/lib/__fixtures__/vesc-tool.csv
 
     Used to develop and test the VESC CSV importer. Nothing in RacePlex's own code is
     derived from that project; only the data file is theirs.
+
+src/lib/__fixtures__/gopro-hero5.raw
+src/lib/__fixtures__/gopro-hero11.raw
+
+    Pre-extracted GPMF metadata payloads (the raw bytes of the `gpmd` track) from a GoPro
+    HERO5 and a GoPro HERO11. Taken from:
+
+        https://github.com/JuanIrache/gopro-telemetry   (MIT licence)
+        (samples/hero5.raw and samples/hero11.raw)
+
+    Copyright (c) 2019 Juan Irache Duesca. Used under the MIT licence, which permits use
+    and redistribution provided the copyright notice and permission notice travel with it —
+    hence this entry.
+
+    Used to develop and test the GoPro GPMF importer (src/lib/gopro/). They are the raw
+    telemetry payloads only, not video: they let the decoder be unit-tested without
+    committing a multi-megabyte MP4. Nothing in RacePlex's own code is derived from that
+    project; only the data files are theirs. RacePlex does depend on the `gopro-telemetry`
+    and `gpmf-extract` packages at runtime (both MIT, both by the same author).

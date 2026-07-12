@@ -66,7 +66,7 @@ it works.
 | **Best buy for eskate** | **RaceBox Micro (~$129)** — 25 Hz, IMU, records standalone with a hardware button, and exports GPX/VBO/CSV, all of which we read. Our test fixtures come from one. |
 | **Best software** | **RaceChrono Pro (~$20)** driving a RaceBox or Dragy over Bluetooth at 25 Hz. Export **VBO, NMEA or GPX** — *not* its CSV. |
 | **Cheapest** | A bare **u-blox module (~$25)** logging raw NMEA or UBX to an SD card. Drops straight in. |
-| **Already own a GoPro?** | HERO5–11/13 log GPS in the video. Convert to GPX with [gopro-telemetry](https://github.com/JuanIrache/gopro-telemetry) first. (The HERO12 has **no GPS at all**.) |
+| **Already own a GoPro?** | **Just drop the `.mp4` in.** HERO5–11/13 log 10–18 Hz GPS inside the video's GPMF metadata track, and RacePlex reads it directly in your browser — no conversion step, nothing uploaded. (The HERO12 has **no GPS at all**.) |
 
 ### Why sample rate is the number that matters
 

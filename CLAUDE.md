@@ -157,6 +157,7 @@ src/
 │   ├── speedUnit.ts       # ★ Recover a speed column's unit by MEASURING it against position-derived speed (never from the magnitude — 25 is plausible in m/s, km/h and mph alike)
 │   ├── gpsFixes.ts        # ★ Distinct GPS fixes + position interpolation between them — keep every row, never decimate to the GPS rate (shared by vesc + generic CSV)
 │   ├── xrk/               # ★ AiM .xrk/.xrz importer — libxrk (Rust→WASM) in a Web Worker (→ docs/subsystems.md)
+│   ├── gopro/             # ★ GoPro .mp4 importer — GPMF telemetry track pulled out of the video in-browser (gpmf-extract + gopro-telemetry, both dynamic-imported so they stay out of the main bundle). gpmfDetect = the only eagerly-imported piece (ftyp sniff, no imports of its own); gpmfImporter orchestrates + falls back to useWorker:false when the library's worker is unusable; gpmfMapping = pure GPS9/GPS5 → ParsedData
 │   ├── channels.ts        # ★ Canonical channel registry + normalizeChannels()
 │   ├── courseDetection.ts # ★ Auto track/course/direction detection + waypoint mode (→ docs/subsystems.md)
 │   ├── courseSectors.ts   # ★ Pure sector model: caps, normalizeCourseSectors, majorSectorLines (→ docs/subsystems.md)
@@ -259,12 +260,17 @@ ParsedData` (full parse). **To add one:**
 4. Add Vitest coverage.
 
 **Detection order matters:** AiM XRK/XRZ first (binary, by extension/`<h` magic),
-then other binary (MoTeC LD → UBX → iRacing `.ibt`), then text most-specific to
-least (VBO → MoTeC CSV → Dovex → Dove → Alfano → AiM CSV → NMEA fallback).
+then GoPro MP4 (by extension/`ftyp` magic), then other binary (MoTeC LD → UBX →
+iRacing `.ibt`), then text most-specific to least (VBO → MoTeC CSV → Dovex → Dove
+→ Alfano → AiM CSV → NMEA fallback).
 
-Two parsers break the simple sync contract — the async **AiM XRK/XRZ** (Rust→WASM
-Web Worker) and the binary **iRacing `.ibt`**. Details, plus the **.dovex/.dovep**
-8 KB-header format: **→ `docs/subsystems.md`**.
+Three parsers break the simple sync contract — the async **AiM XRK/XRZ**
+(Rust→WASM Web Worker), the async **GoPro `.mp4`** (`lib/gopro/`: mp4 demux + GPMF
+decode, both libraries dynamic-imported), and the binary **iRacing `.ibt`**. The two
+async ones are the only formats that report progress (via `lib/importProgress.ts` →
+the file-loading overlay), and the only ones `parseDatalogContent` (sync) refuses
+outright. Details, plus the **.dovex/.dovep** 8 KB-header format:
+**→ `docs/subsystems.md`**.
 
 ---
 

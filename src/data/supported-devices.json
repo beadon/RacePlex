@@ -23,6 +23,7 @@
 
   "formats": {
     "gpx": "GPX",
+    "mp4": "GoPro .mp4 (GPMF)",
     "raceboxCsv": "RaceBox CSV",
     "vbo": "VBO",
     "nmea": "NMEA",
@@ -181,15 +182,15 @@
     {
       "id": "action-cams",
       "name": "Action cameras with GPS",
-      "blurb": "If you were filming the run anyway, the camera may have logged the GPS too. RacePlex cannot read video files directly — you convert the telemetry track to GPX first, with a free tool.",
+      "blurb": "If you were filming the run anyway, the camera may have logged the GPS too. GoPro videos import directly — drop the .mp4 in and RacePlex reads the telemetry track out of it in your browser. Other cameras still need their telemetry converted to GPX first, with a free tool.",
       "devices": [
         {
           "name": "GoPro HERO5–11, HERO13, MAX",
           "vendor": "GoPro",
           "rateHz": "~10–18 Hz",
-          "exports": ["gpx"],
-          "status": "partial",
-          "notes": "GPS rides along in the video's GPMF metadata track. Extract it to GPX with the open-source gopro-telemetry or gopro2gpx, then import that. Reading GPMF directly in the browser is on our wish list — the libraries are JavaScript, so it could work entirely locally.",
+          "exports": ["mp4", "gpx"],
+          "status": "verified",
+          "notes": "Import the .mp4 straight into RacePlex — the GPS rides along in the video's GPMF metadata track and we read it in the browser (nothing is uploaded, no conversion step). Accelerometer and gyro come along too. GPS must have been switched on in Preferences > Regional > GPS before recording, and the camera needs a lock before you hit record.",
           "url": "https://github.com/JuanIrache/gopro-telemetry"
         },
         {

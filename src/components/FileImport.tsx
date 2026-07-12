@@ -37,8 +37,9 @@ export function FileImport({ onDataLoaded, autoSave, autoSaveFile }: FileImportP
         if (autoSave && autoSaveFile) {
           try { await autoSaveFile(file.name, file); } catch (e) { console.warn("Auto-save failed:", e); }
         }
-        // The progress callback only fires for the AiM XRK/XRZ path (wasm parse
-        // runs in a worker); other formats parse instantly.
+        // The progress callback only fires for the two slow paths — AiM XRK/XRZ
+        // (wasm parse in a worker) and GoPro .mp4 (GPMF extraction reads the whole
+        // video). Other formats parse instantly.
         const data = await parseDatalogFile(file, (p) => setProgress(p.message));
         onDataLoaded(data, file.name);
       } catch (e) {
@@ -96,7 +97,7 @@ export function FileImport({ onDataLoaded, autoSave, autoSaveFile }: FileImportP
       >
         <input
           type="file"
-          accept=".csv,.gpx,.nmea,.txt,.ubx,.vbo,.dove,.dovex,.ld,.xrk,.xrz,.ibt"
+          accept=".csv,.gpx,.nmea,.txt,.ubx,.vbo,.dove,.dovex,.ld,.xrk,.xrz,.ibt,.mp4"
           onChange={handleFileChange}
           className="hidden"
           disabled={isLoading}

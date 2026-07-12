@@ -128,6 +128,10 @@
       "gpx": {
         "name": "GPX",
         "body": "Das universelle GPS-Track-Format. GPX enthält keine Geschwindigkeit; sie wird aus der Position abgeleitet und geglättet. Enthält die Datei Start-/Ziel-Wegpunkte, rekonstruiert RacePlex die Zeitmesslinien automatisch. Endung: <code>.gpx</code>"
+      },
+      "gopro": {
+        "name": "GoPro-Video (GPMF)",
+        "body": "<em>Einfach das Video hineinziehen.</em> Wenn du deinen Run mit einer GoPro mit GPS gefilmt hast, steckt die Telemetrie bereits in der Datei: HERO5–HERO11, HERO13 und MAX schreiben GPS mit 10–18 Hz sowie Beschleunigungs- und Gyrosensor in die GPMF-Metadatenspur des Videos. RacePlex liest sie direkt in deinem Browser mit <gpmf>gpmf-extract</gpmf> und <gpmfTelemetry>gopro-telemetry</gpmfTelemetry>; nichts wird hochgeladen, und ein Konvertierungsschritt entfällt. Hinweis: Die <em>HERO12 hat überhaupt kein GPS</em>, und bei älteren Kameras muss GPS vor der Aufnahme in den Einstellungen aktiviert werden. Erweiterung: <code>.mp4</code>"
       }
     },
     "secondary": {
@@ -165,7 +169,7 @@
     "title": "Datalog öffnen",
     "processing": "Wird verarbeitet...",
     "dragDrop": "Datei hierher ziehen und ablegen oder zum Durchsuchen klicken",
-    "formats": "NMEA, UBX, VBO, Dove, Alfano, AiM (CSV + XRK/XRZ), iRacing, MoTeC CSV/LD und mehr — <i>alles lokal auf deinem Gerät verarbeitet.</i>",
+    "formats": "GPX, GoPro-Video (.mp4), NMEA, UBX, VBO, Dove, Alfano, AiM (CSV + XRK/XRZ), iRacing, MoTeC CSV/LD und mehr — <i>alles lokal auf deinem Gerät verarbeitet.</i>",
     "parseFailed": "Datei konnte nicht verarbeitet werden",
     "parseErrorSaved": "{{message}} — die Datei wurde gespeichert und ist unter „Dateien durchsuchen“ zu finden.",
     "loaded": "Geladen: {{name}}",
