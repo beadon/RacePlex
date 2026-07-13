@@ -360,10 +360,15 @@ export function VisualEditor({
     return [28.4120, -81.3797];
   };
 
-  // Use device geolocation to center the map
-  const handleUseMyLocation = useCallback(() => {
+  // Use device geolocation to center the map. `silent` skips the "denied"
+  // / "unavailable" toasts — used by the auto-open-with-my-location flow so
+  // a rider who declines the permission just sees the default view, not an
+  // error they didn't ask for.
+  const tryLocate = useCallback((opts: { silent?: boolean } = {}) => {
     if (!mapRef.current || !navigator.geolocation) {
-      toast({ title: t('visual.geoUnavailable'), description: t('visual.geoUnavailableDesc'), variant: 'destructive' });
+      if (!opts.silent) {
+        toast({ title: t('visual.geoUnavailable'), description: t('visual.geoUnavailableDesc'), variant: 'destructive' });
+      }
       return;
     }
     setIsLocating(true);
@@ -374,12 +379,15 @@ export function VisualEditor({
         setIsLocating(false);
       },
       (err) => {
-        toast({ title: t('visual.locError'), description: err.message, variant: 'destructive' });
+        if (!opts.silent) {
+          toast({ title: t('visual.locError'), description: err.message, variant: 'destructive' });
+        }
         setIsLocating(false);
       },
       { enableHighAccuracy: true, timeout: 10000 }
     );
   }, [t, maybeDropStartFinish]);
+  const handleUseMyLocation = useCallback(() => tryLocate(), [tryLocate]);
 
   // Clear interactive editing layers
   const clearEditingLayers = () => {
@@ -683,6 +691,21 @@ export function VisualEditor({
     if (!mapReady || !initialCenterProp) return;
     maybeDropStartFinish(initialCenterProp);
   }, [mapReady, initialCenterProp, maybeDropStartFinish]);
+
+  // On a fresh new-track open with no other starting hint, try the device's
+  // location silently. The rider is often standing at the track when they
+  // open the builder; auto-locating drops the map + start/finish line right
+  // there. If they deny the permission or the browser can't resolve it, we
+  // fall back to the address-search field in the toolbar (which is always
+  // available). No toast on failure — the user didn't ask for this attempt.
+  const autoLocateFiredRef = useRef(false);
+  useEffect(() => {
+    if (autoLocateFiredRef.current) return;
+    if (!mapReady || !isNewTrack) return;
+    if (initialCenterProp || startFinishA) return;
+    autoLocateFiredRef.current = true;
+    tryLocate({ silent: true });
+  }, [mapReady, isNewTrack, initialCenterProp, startFinishA, tryLocate]);
 
   // Handle resize
   useEffect(() => {
