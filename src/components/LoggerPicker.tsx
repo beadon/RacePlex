@@ -17,6 +17,8 @@ import { cn } from "@/lib/utils";
 const FLEDGLING_NAME = "PerchWerks Fledgling";
 const MYCHRON_NAME = "AiM MyChron 5+";
 const ALFANO_NAME = "Alfano 6+";
+const RACEBOX_NAME = "RaceBox Mini / Micro";
+const DRAGY_NAME = "Dragy";
 const PHONE_GPS_NAME = "This phone (GPS)";
 
 interface LoggerPickerProps {
@@ -43,6 +45,17 @@ interface LoggerPickerProps {
    * flow actually starts.
    */
   onSelectPhoneGps?: () => void;
+  /**
+   * Begin the RaceBox live capture flow — Web Bluetooth to the device's
+   * Nordic UART Service, sample stream into a growing session. Only offered
+   * on Chromium/Android (Web Bluetooth doesn't exist on iOS Safari).
+   */
+  onSelectRaceBoxLive?: () => void;
+  /**
+   * Begin the Dragy live capture flow — Web Bluetooth on FD00, handshake +
+   * NAV-PVT telemetry. Same Chromium-only constraint as RaceBox.
+   */
+  onSelectDragyLive?: () => void;
 }
 
 type Availability =
@@ -111,6 +124,8 @@ export function LoggerPicker({
   onSelectMychron,
   onSelectAlfano,
   onSelectPhoneGps,
+  onSelectRaceBoxLive,
+  onSelectDragyLive,
 }: LoggerPickerProps) {
   const { t } = useTranslation("logger");
   const [info, setInfo] = useState<"mychron" | "alfano" | null>(null);
@@ -138,6 +153,16 @@ export function LoggerPicker({
       ? { kind: "ready", label: "Live", icon: phoneIcon }
       : { kind: "unavailable", label: "No GPS", hint: "This device has no geolocation available.", icon: phoneIcon };
 
+  // Web Bluetooth only exists on Chromium (desktop + Android). iOS Safari and
+  // Firefox return `undefined` for `navigator.bluetooth`. See issue #32.
+  const webBluetoothAvailable = typeof navigator !== "undefined" && "bluetooth" in navigator;
+  const raceBoxAvailability: Availability = webBluetoothAvailable
+    ? { kind: "ready", label: "Bluetooth", icon: bluetoothIcon }
+    : { kind: "unavailable", label: "Chrome/Edge", hint: "RaceBox live capture needs Web Bluetooth (Chrome/Edge on desktop or Android).", icon: bluetoothIcon };
+  const dragyAvailability: Availability = webBluetoothAvailable
+    ? { kind: "ready", label: "Bluetooth", icon: bluetoothIcon }
+    : { kind: "unavailable", label: "Chrome/Edge", hint: "Dragy live capture needs Web Bluetooth (Chrome/Edge on desktop or Android).", icon: bluetoothIcon };
+
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -159,6 +184,18 @@ export function LoggerPicker({
               tag={t("tags.fledgling")}
               availability={fledglingAvailability}
               onClick={onSelectFledgling}
+            />
+            <LoggerRow
+              name={RACEBOX_NAME}
+              tag="Live capture over Bluetooth — the sample stream lands in a session as it records."
+              availability={raceBoxAvailability}
+              onClick={() => onSelectRaceBoxLive?.()}
+            />
+            <LoggerRow
+              name={DRAGY_NAME}
+              tag="Live NAV-PVT stream over Bluetooth — reverse-engineered protocol, firmware-dependent."
+              availability={dragyAvailability}
+              onClick={() => onSelectDragyLive?.()}
             />
             <LoggerRow
               name={MYCHRON_NAME}
