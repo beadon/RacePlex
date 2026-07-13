@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { X, Gauge, Cpu, User, Bluetooth, BluetoothOff, Loader2, Settings, MapPin, Battery, BatteryLow, BatteryMedium, BatteryFull, BatteryWarning } from "lucide-react";
+import { X, Gauge, Cpu, User, Bluetooth, Loader2, Settings, MapPin, Battery, BatteryLow, BatteryMedium, BatteryFull, BatteryWarning } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FileEntry, FileMetadata } from "@/lib/fileStorage";
 import { Vehicle } from "@/lib/vehicleStorage";
@@ -11,6 +11,7 @@ import { VehiclesTab } from "./drawer/VehiclesTab";
 import { DeviceSettingsTab } from "./drawer/DeviceSettingsTab";
 import { DeviceTracksTab } from "./drawer/DeviceTracksTab";
 import { ProfileTab } from "./tabs/ProfileTab";
+import { LoggerDownload } from "./LoggerDownload";
 import { useDeviceContext } from "@/contexts/DeviceContext";
 import { isBleSupported, requestBatteryLevel, type BatteryInfo } from "@/lib/bleDatalogger";
 
@@ -243,20 +244,29 @@ export function FileManagerDrawer({
         {/* Device Panel */}
         {topTab === "device" && (
           <>
-            {!bleAvailable ? (
-              <div className="flex-1 flex flex-col items-center justify-center p-8 gap-4 text-center">
-                <BluetoothOff className="w-12 h-12 text-muted-foreground" />
-                <h3 className="font-semibold text-foreground">{t("shell.btNotAvailable")}</h3>
-                <p className="text-sm text-muted-foreground max-w-[260px]">{t("shell.btNotAvailableDesc")}</p>
-              </div>
-            ) : !device.connection ? (
+            {!device.connection ? (
+              // Every supported logger, through the same picker the Files tab and
+              // the dashboard use — not just the Fledgling. The picker gates each
+              // row on its own transport (Web Bluetooth, Wi-Fi, native shell), so
+              // a browser without Web Bluetooth still reaches the loggers that
+              // don't need it rather than hitting a dead end here.
               <div className="flex-1 flex flex-col items-center justify-center p-8 gap-4 text-center">
                 <Bluetooth className="w-12 h-12 text-muted-foreground" />
                 <h3 className="font-semibold text-foreground">{t("shell.connectTitle")}</h3>
                 <p className="text-sm text-muted-foreground max-w-[260px]">{t("shell.connectDesc")}</p>
-                <Button onClick={() => device.connect()} disabled={device.isConnecting} className="gap-2">
-                  {device.isConnecting ? (<><Loader2 className="w-4 h-4 animate-spin" /> {t("shell.connecting")}</>) : (<><Bluetooth className="w-4 h-4" /> {t("shell.connect")}</>)}
-                </Button>
+                <LoggerDownload
+                  onDataLoaded={onDataLoaded}
+                  autoSave={autoSave}
+                  autoSaveFile={onSaveFile}
+                  renderTrigger={({ onOpen }) => (
+                    <Button onClick={onOpen} disabled={device.isConnecting} className="gap-2">
+                      {device.isConnecting ? (<><Loader2 className="w-4 h-4 animate-spin" /> {t("shell.connecting")}</>) : (<><Bluetooth className="w-4 h-4" /> {t("shell.connect")}</>)}
+                    </Button>
+                  )}
+                />
+                {!bleAvailable && (
+                  <p className="text-xs text-muted-foreground max-w-[260px]">{t("shell.btNotAvailableDesc")}</p>
+                )}
               </div>
             ) : device.loggerKind && device.loggerKind !== "fledgling" ? (
               // Settings/tracks/firmware are Fledgling-only. Other loggers (MyChron,

@@ -20,8 +20,6 @@
     "batteryTitle": "{{voltage}} V — zum Aktualisieren klicken",
     "btNotAvailable": "Bluetooth nicht verfügbar",
     "btNotAvailableDesc": "Web Bluetooth wird von diesem Browser nicht unterstützt. Probiere Chrome oder Edge auf einem Desktop- oder Android-Gerät.",
-    "connectTitle": "Mit Logger verbinden",
-    "connectDesc": "Verbinde deinen DovesDataLogger, um Geräteeinstellungen und Strecken zu verwalten.",
     "connecting": "Verbinden…",
     "connect": "Verbinden",
     "deviceFledglingOnlyTitle": "Nur Fledgling",

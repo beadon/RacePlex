@@ -20,8 +20,6 @@
     "batteryTitle": "{{voltage}} V — cliquez pour actualiser",
     "btNotAvailable": "Bluetooth non disponible",
     "btNotAvailableDesc": "Web Bluetooth n'est pas pris en charge par ce navigateur. Essayez Chrome ou Edge sur un ordinateur ou un appareil Android.",
-    "connectTitle": "Connecter l'enregistreur",
-    "connectDesc": "Connectez votre DovesDataLogger pour gérer les réglages et les circuits de l'appareil.",
     "connecting": "Connexion…",
     "connect": "Connecter",
     "deviceFledglingOnlyTitle": "Fledgling uniquement",
