@@ -3,6 +3,8 @@ import { isFieldHiddenByCanonical, CanonicalFieldId } from "@/lib/fieldResolver"
 import i18n, { initialLanguage } from "@/lib/i18n";
 import type { SupportedLanguage } from "@/lib/i18n/config";
 import { DEFAULT_PALETTE, type PaletteId } from "@/lib/palettes";
+import { onGarageChange } from "@/lib/garageEvents";
+import { STORE_NAMES } from "@/lib/dbUtils";
 
 export interface AppSettings {
   useKph: boolean;                  // Speed unit: false = MPH, true = KPH
@@ -32,7 +34,27 @@ export interface AppSettings {
   mychronSsidPrefix: string;        // SSID prefix the Android Wi-Fi picker filters on for MyChron (default: 'MYCHRON5')
 }
 
-const SETTINGS_KEY = "raceplex:settings";
+const SETTINGS_KEY_BASE = "raceplex:settings";
+const DEFAULT_USER_ID = "default-user";
+
+/**
+ * Per-user settings key (plan 0011). The default seed user keeps the plain
+ * `raceplex:settings` name so the localStorage rename migration produced by
+ * `legacyDbMigration.ts` requires no follow-up; other users get a suffixed key
+ * (`raceplex:settings:<userId>`). Read synchronously by useState-init and by
+ * the i18n bootstrap, so no async lookup is possible here — resolved from
+ * localStorage's active-user pointer directly.
+ */
+function settingsKey(): string {
+  if (typeof localStorage === "undefined") return SETTINGS_KEY_BASE;
+  try {
+    const uid = localStorage.getItem("raceplex:activeUserId");
+    if (!uid || uid === DEFAULT_USER_ID) return SETTINGS_KEY_BASE;
+    return `${SETTINGS_KEY_BASE}:${uid}`;
+  } catch {
+    return SETTINGS_KEY_BASE;
+  }
+}
 
 const defaultSettings: AppSettings = {
   useKph: false,
@@ -66,27 +88,39 @@ const defaultSettings: AppSettings = {
   mychronSsidPrefix: 'MYCHRON5',
 };
 
-export function useSettings() {
-  const [settings, setSettingsState] = useState<AppSettings>(() => {
-    try {
-      const stored = localStorage.getItem(SETTINGS_KEY);
-      if (stored) {
-        return { ...defaultSettings, ...JSON.parse(stored) };
-      }
-    } catch (e) {
-      console.error("Failed to load settings:", e);
-    }
-    return defaultSettings;
-  });
+function loadSettings(): AppSettings {
+  try {
+    const stored = localStorage.getItem(settingsKey());
+    if (stored) return { ...defaultSettings, ...JSON.parse(stored) };
+  } catch (e) {
+    console.error("Failed to load settings:", e);
+  }
+  return defaultSettings;
+}
 
-  // Persist settings to localStorage whenever they change
+export function useSettings() {
+  const [settings, setSettingsState] = useState<AppSettings>(loadSettings);
+
+  // Persist settings under the currently-active user's key. When the user
+  // switches, the effect that reacts to the USERS garage-event below reloads
+  // settings first — so this write always lands under the new user's key.
   useEffect(() => {
     try {
-      localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+      localStorage.setItem(settingsKey(), JSON.stringify(settings));
     } catch (e) {
       console.error("Failed to save settings:", e);
     }
   }, [settings]);
+
+  // Reload settings when the active user switches (plan 0011). The switcher
+  // emits a synthetic USERS garage-event; on receipt we replace state with the
+  // new user's saved settings (or defaults, if they've never picked any).
+  useEffect(() => {
+    return onGarageChange((c) => {
+      if (c.store !== STORE_NAMES.USERS) return;
+      setSettingsState(loadSettings());
+    });
+  }, []);
 
   // Bridge the language preference to i18next. Lives here (not in a single UI
   // handler) so the active language always tracks the setting, no matter which

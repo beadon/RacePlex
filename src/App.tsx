@@ -39,7 +39,24 @@ const PendingCheckoutRedirect = lazy(() =>
   import("./components/PendingCheckoutRedirect").then((m) => ({ default: m.PendingCheckoutRedirect })),
 );
 
-const SETTINGS_KEY = "raceplex:settings";
+const SETTINGS_KEY_BASE = "raceplex:settings";
+const ACTIVE_USER_KEY = "raceplex:activeUserId";
+const DEFAULT_USER_ID = "default-user";
+
+/**
+ * Same rule as `useSettings.settingsKey()` — kept as a private copy so this
+ * boot-time palette read doesn't pull the hook module. The default user's
+ * settings stay on the plain key so upgraders don't need a data move.
+ */
+function currentSettingsKey(): string {
+  try {
+    const uid = localStorage.getItem(ACTIVE_USER_KEY);
+    if (!uid || uid === DEFAULT_USER_ID) return SETTINGS_KEY_BASE;
+    return `${SETTINGS_KEY_BASE}:${uid}`;
+  } catch {
+    return SETTINGS_KEY_BASE;
+  }
+}
 
 const App = () => {
   // Apply dark/light mode and the colour palette globally so Admin and all routes
@@ -48,7 +65,7 @@ const App = () => {
   useEffect(() => {
     const apply = () => {
       try {
-        const stored = localStorage.getItem(SETTINGS_KEY);
+        const stored = localStorage.getItem(currentSettingsKey());
         const parsed = stored ? JSON.parse(stored) : null;
         document.documentElement.classList.toggle('dark', !!parsed?.darkMode);
         applyPalette(parsed?.palette);

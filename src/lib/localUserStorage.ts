@@ -3,13 +3,13 @@
  * on this browser install so shared machines can keep runs, garage, and
  * settings cleanly separated per rider.
  *
- * The `users` store lives in the shared IndexedDB (`dove-file-manager`, v14+).
- * The *active* user id is a per-install piece of UI state, kept in localStorage
- * so app startup can read it synchronously (`useSettings` needs it to pick the
+ * The `users` store lives in the shared IndexedDB (`raceplex`, v14+). The
+ * *active* user id is a per-install piece of UI state, kept in localStorage so
+ * app startup can read it synchronously (`useSettings` needs it to pick the
  * right settings key before any React tree mounts).
  */
 
-import { openDB, STORE_NAMES } from './dbUtils';
+import { openDB, STORE_NAMES, USER_SCOPED_STORES } from './dbUtils';
 import { emitGarageChange } from './garageEvents';
 
 export interface LocalUser {
@@ -140,4 +140,86 @@ export async function ensureDefaultUser(): Promise<LocalUser> {
   await saveLocalUser(seed);
   if (!getActiveUserId()) setActiveUserId(seed.id);
   return seed;
+}
+
+/** Per-store counts of rows owned by a user — feeds the delete-confirm dialog. */
+export type UserRowCounts = Record<string, number>;
+
+/**
+ * Count rows in every user-scoped store owned by `userId`. Best-effort:
+ * per-store failures are logged and treated as 0.
+ */
+export async function countUserRows(userId: string): Promise<UserRowCounts> {
+  const counts: UserRowCounts = {};
+  const db = await openDB();
+  try {
+    for (const storeName of USER_SCOPED_STORES) {
+      try {
+        const tx = db.transaction(storeName, 'readonly');
+        const all = await new Promise<Array<{ userId?: string }>>((resolve, reject) => {
+          const req = tx.objectStore(storeName).getAll();
+          req.onsuccess = () => resolve(req.result);
+          req.onerror = () => reject(req.error);
+        });
+        counts[storeName] = all.filter((row) => row.userId === userId).length;
+      } catch (e) {
+        console.warn(`countUserRows: ${storeName} failed`, e);
+        counts[storeName] = 0;
+      }
+    }
+  } finally {
+    db.close();
+  }
+  return counts;
+}
+
+/**
+ * Delete every row in every user-scoped store owned by `userId`. NOT
+ * transactional across stores — IDB won't do that — so a per-store failure is
+ * logged and the sweep continues. The `users` row itself is NOT deleted here;
+ * caller (`useLocalUsers.removeUser`) does that after switching active user.
+ */
+export async function cascadeDeleteUser(userId: string): Promise<void> {
+  if (userId === DEFAULT_USER_ID) {
+    throw new Error('The default user cannot be cascade-deleted.');
+  }
+  const db = await openDB();
+  try {
+    for (const storeName of USER_SCOPED_STORES) {
+      try {
+        // Two txns per store: read all keys owned by this user, then delete.
+        // A single readwrite cursor would work but batching the delete list is
+        // simpler and keeps the tx short.
+        const keys: IDBValidKey[] = await new Promise((resolve, reject) => {
+          const tx = db.transaction(storeName, 'readonly');
+          const store = tx.objectStore(storeName);
+          const rowsReq = store.getAll();
+          const keysReq = store.getAllKeys();
+          Promise.all([
+            new Promise<Array<{ userId?: string }>>((r, j) => { rowsReq.onsuccess = () => r(rowsReq.result); rowsReq.onerror = () => j(rowsReq.error); }),
+            new Promise<IDBValidKey[]>((r, j) => { keysReq.onsuccess = () => r(keysReq.result); keysReq.onerror = () => j(keysReq.error); }),
+          ])
+            .then(([rows, allKeys]) => {
+              resolve(allKeys.filter((_, i) => rows[i]?.userId === userId));
+            })
+            .catch(reject);
+        });
+        if (keys.length === 0) continue;
+        await new Promise<void>((resolve, reject) => {
+          const tx = db.transaction(storeName, 'readwrite');
+          const store = tx.objectStore(storeName);
+          for (const k of keys) store.delete(k);
+          tx.oncomplete = () => resolve();
+          tx.onerror = () => reject(tx.error);
+        });
+        // Emit garage events so any open reader refetches. One event per store
+        // is enough — every scoped hook is subscribed to its store.
+        emitGarageChange({ store: storeName, key: '__cascade__', type: 'delete' });
+      } catch (e) {
+        console.warn(`cascadeDeleteUser: ${storeName} failed`, e);
+      }
+    }
+  } finally {
+    db.close();
+  }
 }
