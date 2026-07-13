@@ -2,6 +2,7 @@ import { useCallback, useState } from "react";
 import { useTranslation, Trans } from "react-i18next";
 import { Upload, Loader2 } from "lucide-react";
 import { parseDatalogFile } from "@/lib/datalogParser";
+import { groupGoProChapters, parseGoProChapterName } from "@/lib/gopro/gpmfChapters";
 import { ParsedData } from "@/types/racing";
 
 interface FileImportProps {
@@ -52,25 +53,76 @@ export function FileImport({ onDataLoaded, autoSave, autoSaveFile }: FileImportP
     [onDataLoaded, autoSave, autoSaveFile, t],
   );
 
+  /**
+   * A GoPro long recording is split into chapter files (`GX010042.MP4`,
+   * `GX020042.MP4`, …). Import them together as one continuous session — see
+   * issue #29. When the drop is a mix or a non-GoPro pick, fall back to
+   * processing the first file only (current single-file behaviour).
+   */
+  const processFiles = useCallback(
+    async (files: File[]) => {
+      if (files.length === 0) return;
+      if (files.length === 1) return processFile(files[0]);
+
+      const allGoPro = files.every((f) => parseGoProChapterName(f.name) !== null);
+      if (!allGoPro) {
+        // Mixed pick — take the first file only, keeps behaviour predictable.
+        return processFile(files[0]);
+      }
+      const groups = groupGoProChapters(files);
+      if (groups.length !== 1) {
+        // Multiple GoPro recordings selected at once — take the largest group.
+        // A future release could import each as its own session.
+        groups.sort((a, b) => b.length - a.length);
+      }
+      const chapters = groups[0];
+      const displayName = chapters[0].name;
+
+      setIsLoading(true);
+      setError(null);
+      setProgress(null);
+      setFileName(displayName);
+      try {
+        if (autoSave && autoSaveFile) {
+          // Auto-save every chapter under its own name so a rider can re-open
+          // any single chapter later (the folded session is derived, not stored).
+          for (const c of chapters) {
+            try { await autoSaveFile(c.name, c); } catch (e) { console.warn("Auto-save failed:", e); }
+          }
+        }
+        const { parseGoProSequence } = await import("@/lib/gopro/gpmfImporter");
+        const data = await parseGoProSequence(chapters, (p) => setProgress(p.message));
+        onDataLoaded(data, displayName);
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : t("fileImport.parseFailed");
+        setError(autoSave ? t("fileImport.parseErrorSaved", { message: msg }) : msg);
+      } finally {
+        setIsLoading(false);
+        setProgress(null);
+      }
+    },
+    [processFile, onDataLoaded, autoSave, autoSaveFile, t],
+  );
+
   const handleFileChange = useCallback(
     async (event: React.ChangeEvent<HTMLInputElement>) => {
-      const file = event.target.files?.[0];
-      if (!file) return;
-      await processFile(file);
+      const files = Array.from(event.target.files ?? []);
+      if (files.length === 0) return;
+      await processFiles(files);
     },
-    [processFile],
+    [processFiles],
   );
 
   const handleDrop = useCallback(
     (event: React.DragEvent<HTMLLabelElement>) => {
       event.preventDefault();
       setIsDragging(false);
-      const file = event.dataTransfer.files?.[0];
-      if (file) {
-        processFile(file);
+      const files = Array.from(event.dataTransfer.files ?? []);
+      if (files.length > 0) {
+        processFiles(files);
       }
     },
-    [processFile],
+    [processFiles],
   );
 
   const handleDragOver = useCallback((event: React.DragEvent<HTMLLabelElement>) => {
@@ -97,6 +149,7 @@ export function FileImport({ onDataLoaded, autoSave, autoSaveFile }: FileImportP
         <input
           type="file"
           accept=".csv,.gpx,.nmea,.txt,.ubx,.vbo,.dove,.dovex,.ld,.xrk,.xrz,.ibt,.mp4"
+          multiple
           onChange={handleFileChange}
           className="hidden"
           disabled={isLoading}

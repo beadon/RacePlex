@@ -192,3 +192,37 @@ export async function parseGoProFile(
   report("done", "Done");
   return parsed;
 }
+
+/**
+ * Parse a chapter-split GoPro recording (`GX010042.MP4`, `GX020042.MP4`, …)
+ * into one continuous session. Runs `parseGoProFile` on each chapter in
+ * order, then folds the timelines by real-world UTC gap so a run that spans
+ * a chapter boundary lands on one lap timer instead of two half-runs.
+ *
+ * The caller is expected to have already grouped and ordered the chapters
+ * via `groupGoProChapters` (in `gpmfChapters.ts`).
+ */
+export async function parseGoProSequence(
+  chapters: File[],
+  onProgress?: (progress: ImportProgress) => void,
+): Promise<ParsedData> {
+  if (chapters.length === 0) throw new Error("parseGoProSequence: no files supplied");
+  if (chapters.length === 1) return parseGoProFile(chapters[0], onProgress);
+
+  const { foldGoProChapters } = await import("./gpmfSequence");
+
+  const parsedChapters: ParsedData[] = [];
+  for (let i = 0; i < chapters.length; i++) {
+    const chapterNum = i + 1;
+    const prefix = `Chapter ${chapterNum}/${chapters.length}: `;
+    // Chapters MUST parse sequentially: rebasing depends on chapter N-1's
+    // startDate being known when N lands. (The no-await-in-loop rule is off
+    // in this repo, but the intent is worth naming.)
+    const parsed = await parseGoProFile(chapters[i], (progress) => {
+      onProgress?.({ ...progress, message: prefix + progress.message });
+    });
+    parsedChapters.push(parsed);
+  }
+
+  return foldGoProChapters(parsedChapters);
+}
