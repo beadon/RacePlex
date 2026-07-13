@@ -148,7 +148,7 @@ export function FileImport({ onDataLoaded, autoSave, autoSaveFile }: FileImportP
       >
         <input
           type="file"
-          accept=".csv,.gpx,.nmea,.txt,.ubx,.vbo,.dove,.dovex,.ld,.xrk,.xrz,.ibt,.mp4"
+          accept=".csv,.gpx,.nmea,.txt,.ubx,.vbo,.dove,.dovex,.ld,.xrk,.xrz,.ibt,.mp4,.fit"
           multiple
           onChange={handleFileChange}
           className="hidden"

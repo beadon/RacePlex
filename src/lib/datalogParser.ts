@@ -20,6 +20,7 @@ import { isXrkFile, parseXrkFile } from './xrk/xrkImporter';
 // GPMF decoder) is dynamic-imported at the call site below, so it never lands in
 // the main bundle. `gpmfDetect` has no imports of its own; keep it that way.
 import { isGoProFile } from './gopro/gpmfDetect';
+import { isFitFile } from './fitParser';
 import { beginFileLoading, updateFileLoading, endFileLoading } from './fileLoadingState';
 import type { ImportProgressCallback } from './importProgress';
 
@@ -109,6 +110,14 @@ async function routeDatalogFile(
     return parseIracingFile(buffer);
   }
 
+  // FIT (Garmin/Wahoo/Coros/Suunto). Binary, unambiguous magic; the parser
+  // library is lazy-loaded (842 kB unpacked). See issue #17 and fitParser.ts
+  // for the "these devices log at ~1 Hz" caveat.
+  if (isFitFile(file.name, buffer)) {
+    const { parseFitFile } = await import('./fitParser');
+    return parseFitFile(buffer);
+  }
+
   // For text formats, read as string and let the ordered detector table decide.
   // The async path only differs from the sync one on the last two entries — it
   // may show the interactive mapping dialog (which needs a File name for the
@@ -141,6 +150,10 @@ function routeDatalogContent(content: string | ArrayBuffer): ParsedData {
     // the GPMF libraries are lazy-loaded, neither of which fits a sync signature.
     if (isGoProFile("", content)) {
       throw new Error("GoPro .mp4 files must be parsed via parseDatalogFile (async).");
+    }
+    // FIT — the parser library is lazy-loaded (842 kB). Same rule as GoPro.
+    if (isFitFile("", content)) {
+      throw new Error("FIT files must be parsed via parseDatalogFile (async).");
     }
     if (isMotecLdFormat(content)) {
       return parseMotecLdFile(content);
