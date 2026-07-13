@@ -73,6 +73,13 @@ interface TrackCourseEditorProps {
    * instead of the compact selection label.
    */
   triggerButton?: React.ReactNode;
+  /**
+   * Optional controlled-open for the main manage-dialog. When set, the
+   * editor's own triggers still work but external openers (the dashboard's
+   * Tracks nav destination + tile) can drive the dialog too.
+   */
+  externalOpen?: boolean;
+  onExternalOpenChange?: (open: boolean) => void;
 }
 
 export function TrackEditor({
@@ -82,9 +89,17 @@ export function TrackEditor({
   laps,
   samples,
   triggerButton,
+  externalOpen,
+  onExternalOpenChange,
 }: TrackCourseEditorProps) {
   const { t } = useTranslation('tracks');
-  const [isSelectDialogOpen, setIsSelectDialogOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  // Controlled when both external props are present, otherwise internal.
+  const isSelectDialogOpen = externalOpen !== undefined ? externalOpen : internalOpen;
+  const setIsSelectDialogOpen = (v: boolean) => {
+    onExternalOpenChange?.(v);
+    setInternalOpen(v);
+  };
   const [isAddCourseOpen, setIsAddCourseOpen] = useState(false);
   const [isAddTrackOpen, setIsAddTrackOpen] = useState(false);
   // Override + derived pattern: the dialog-opening effect used to reset these

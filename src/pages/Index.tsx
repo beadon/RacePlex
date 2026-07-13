@@ -738,15 +738,10 @@ export default function Index() {
             onLoadSample={handleLoadSample}
             isLoadingSample={isLoadingSample}
             showSampleFiles={effectiveShowSampleFiles}
-            settingsButton={
-              <SettingsModal
-                settings={settings}
-                onSettingsChange={setSettings}
-                onToggleFieldDefault={toggleFieldDefault}
-                canHideSampleFiles={fileManager.hasOtherFiles}
-                triggerLabelBreakpoint="sm"
-              />
-            }
+            settings={settings}
+            onSettingsChange={setSettings}
+            onToggleFieldDefault={toggleFieldDefault}
+            canHideSampleFiles={fileManager.hasOtherFiles}
           />
           <Suspense fallback={null}>
             {/* Off-session Setups drawer stays mounted so the garage stays

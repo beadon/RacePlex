@@ -1,12 +1,15 @@
-import { type ReactNode } from "react";
+import { useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { LoggerDownload } from "@/components/LoggerDownload";
 import { TrackEditor } from "@/components/TrackEditor";
+import { SettingsModal } from "@/components/SettingsModal";
 import { RecentSessionsTile } from "@/components/dashboard/RecentSessionsTile";
 import { GarageTile } from "@/components/dashboard/GarageTile";
 import { TracksTile } from "@/components/dashboard/TracksTile";
 import { DevicesTile } from "@/components/dashboard/DevicesTile";
 import { ImportTile } from "@/components/dashboard/ImportTile";
+import type { AppSettings } from "@/hooks/useSettings";
+import type { CanonicalFieldId } from "@/lib/fieldResolver";
 import type { ParsedData } from "@/types/racing";
 
 interface DashboardProps {
@@ -21,13 +24,18 @@ interface DashboardProps {
   onOpenGarage: () => void;
   autoSave: boolean;
   autoSaveFile: (name: string, blob: Blob) => Promise<void>;
-  /** Settings modal (trigger + dialog), rendered in the shell's right cluster. */
-  settingsButton: ReactNode;
   /** Sample-file loader — demoted from a primary CTA to a small link in the
    *  empty state; still available for the fresh-install case. */
   onLoadSample: () => void;
   isLoadingSample: boolean;
   showSampleFiles: boolean;
+  // Settings dialog is owned + rendered by Dashboard in controlled mode so
+  // the nav bar's Settings destination can open it. That removes what used
+  // to be a top-right gear button duplicating the same action.
+  settings: AppSettings;
+  onSettingsChange: (updates: Partial<AppSettings>) => void;
+  onToggleFieldDefault: (canonicalId: CanonicalFieldId) => void;
+  canHideSampleFiles: boolean;
 }
 
 /**
@@ -47,19 +55,27 @@ export function Dashboard({
   onOpenGarage,
   autoSave,
   autoSaveFile,
-  settingsButton,
   onLoadSample,
   isLoadingSample,
   showSampleFiles,
+  settings,
+  onSettingsChange,
+  onToggleFieldDefault,
+  canHideSampleFiles,
 }: DashboardProps) {
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [tracksOpen, setTracksOpen] = useState(false);
+
   return (
     <AppShell
-      rightSlot={settingsButton}
       actions={{
         onOpenGarage,
-        // Tracks + Tools nav destinations to come — need an imperative-open
-        // handle from TrackEditor and a Tools route, respectively. Omitting
-        // for now hides those nav items rather than dead-ending them.
+        onOpenTracks: () => setTracksOpen(true),
+        onOpenSettings: () => setSettingsOpen(true),
+        // Tools destination stays hidden until we have a real page for it —
+        // the Tools plugin's tile duplicated the nav item and had unequal
+        // weight vs the other dashboard cards, so it's out. When Tools grows
+        // into its own route we'll wire it here.
       }}
     >
       <div className="mx-auto w-full max-w-6xl px-6 py-8 space-y-6">
@@ -84,9 +100,16 @@ export function Dashboard({
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <GarageTile onManage={onOpenGarage} />
 
-          {/* TrackEditor's dialog attaches to whatever we hand it as
-              triggerButton — the TracksTile is the click target. */}
-          <TrackEditor triggerButton={<TracksTile />} />
+          {/* TracksTile is presentational; the click target is the tile
+              button below, which flips tracksOpen so TrackEditor's dialog
+              renders through controlled mode. */}
+          <button
+            type="button"
+            onClick={() => setTracksOpen(true)}
+            className="text-left focus:outline-none"
+          >
+            <TracksTile />
+          </button>
 
           {/* LoggerDownload owns the datalogger picker + BLE flow lazily. */}
           <LoggerDownload
@@ -103,6 +126,26 @@ export function Dashboard({
           />
         </div>
       </div>
+
+      {/* Track manager — controlled from the Tracks tile + nav destination.
+          Rendering with `triggerButton={null}` and controlled open props
+          means it mounts + shows/hides based on external state only. */}
+      <TrackEditor
+        triggerButton={null}
+        externalOpen={tracksOpen}
+        onExternalOpenChange={setTracksOpen}
+      />
+
+      {/* Settings modal — controlled from the nav bar's Settings destination.
+          No trigger button; the nav item is the entry point. */}
+      <SettingsModal
+        settings={settings}
+        onSettingsChange={onSettingsChange}
+        onToggleFieldDefault={onToggleFieldDefault}
+        canHideSampleFiles={canHideSampleFiles}
+        open={settingsOpen}
+        onOpenChange={setSettingsOpen}
+      />
     </AppShell>
   );
 }
