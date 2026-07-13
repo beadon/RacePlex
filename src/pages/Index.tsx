@@ -721,6 +721,7 @@ export default function Index() {
           <InstallPrompt />
           <Dashboard
             onDataLoaded={handleDataLoaded}
+            onOpenFile={handleOpenFile}
             autoSave={settings.autoSaveFiles}
             autoSaveFile={fileManager.saveFile}
             onLoadSample={handleLoadSample}
