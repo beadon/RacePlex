@@ -22,6 +22,13 @@ export interface Device {
   imu?: boolean;
   /** Format ids (keys of FORMAT_LABELS) this device can give us. */
   exports: string[];
+  /**
+   * RacePlex can connect to this device and record from it directly, with no
+   * file to export first. Web Bluetooth, so Chrome/Edge on desktop or Android.
+   * This is about RacePlex talking to the hardware — not about the device being
+   * able to stream to some other app.
+   */
+  live?: boolean;
   status: DeviceStatus;
   notes?: string;
   url?: string;

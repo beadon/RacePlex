@@ -198,6 +198,8 @@
       "partial": "Partial",
       "no": "Not yet"
     },
-    "footer": "Missing a device? The list lives in src/data/supported-devices.json — open a pull request. If you own hardware we haven’t tested, sending us a sample export file is the single most useful contribution you can make."
+    "footer": "Missing a device? The list lives in src/data/supported-devices.json — open a pull request. If you own hardware we haven’t tested, sending us a sample export file is the single most useful contribution you can make.",
+    "live": "Live",
+    "liveTitle": "RacePlex records from this device directly over Bluetooth — no file to export"
   }
 }

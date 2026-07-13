@@ -20,6 +20,9 @@
     "RacePlex sells no hardware and has no affiliation with any of these vendors. Prices are",
     "approximate, in USD, and will go out of date. Sample rate is the number that matters most.",
     "",
+    "live: true  — RacePlex connects to it over Web Bluetooth and records directly, with no file to",
+    "              export first. Shown as a 'Live' chip.",
+    "",
     "status: 'verified'  — we have parsed a real file from this device",
     "        'expected'  — it exports a format we read; nobody has sent us a file yet",
     "        'partial'   — works through a conversion step or a companion app; see notes",
@@ -60,8 +63,9 @@
             "raceboxCsv"
           ],
           "status": "verified",
-          "notes": "The best option for eskate. Records standalone with a hardware button, so no phone is involved while you ride, and it is small enough to tape to a deck. Exports GPX, VBO and CSV. Our test fixtures come from one. Can also record live over Web Bluetooth, with no file to export.",
-          "url": "https://www.racebox.pro/products/racebox-micro"
+          "notes": "The best option for eskate. Records standalone with a hardware button, so no phone is involved while you ride, and it is small enough to tape to a deck. Exports GPX, VBO and CSV. Our test fixtures come from one.",
+          "url": "https://www.racebox.pro/products/racebox-micro",
+          "live": true
         },
         {
           "name": "RaceBox Mini / Mini S",
@@ -75,8 +79,9 @@
             "raceboxCsv"
           ],
           "status": "verified",
-          "notes": "Same data as the Micro; you are paying for form factor, battery and mounts. Needs the phone app to record. Export goes through RaceBox's cloud, so you need an account and internet to get the file out. Can also record live over Web Bluetooth, with no file to export.",
-          "url": "https://www.racebox.pro/store/"
+          "notes": "Same data as the Micro; you are paying for form factor, battery and mounts. Needs the phone app to record. Export goes through RaceBox's cloud, so you need an account and internet to get the file out.",
+          "url": "https://www.racebox.pro/store/",
+          "live": true
         },
         {
           "name": "Dragy DRG70 / DRG70-C / Pro",
@@ -91,7 +96,8 @@
           ],
           "status": "partial",
           "notes": "Dragy has no CSV export; the vendor confirms this. Use it as a Bluetooth GPS source for RaceChrono and export from there, or use the dragy·Lap app's .vbo export. The original 2018 Dragy ran at 10 Hz; the current DRG70 reaches 25 Hz. RacePlex can also record live from it over Web Bluetooth; the protocol is reverse-engineered and firmware-dependent.",
-          "url": "https://www.godragy.com/dragy-70/"
+          "url": "https://www.godragy.com/dragy-70/",
+          "live": true
         },
         {
           "name": "Qstarz LT-6000S",
