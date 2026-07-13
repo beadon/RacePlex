@@ -83,9 +83,12 @@ describe("buildInfo helpers", () => {
   });
 
   describe("commitUrl", () => {
-    it("builds a GitHub commit URL for a real hash", () => {
+    // Must point at RacePlex's own repo. It used to point at upstream
+    // (TheAngryRaven/DovesDataViewer), which sent a rider asking "which build am
+    // I running?" to a commit that isn't in the app they're using.
+    it("links the commit in RacePlex's repo, not upstream's", () => {
       expect(commitUrl(mainBuild)).toBe(
-        "https://github.com/TheAngryRaven/DovesDataViewer/commit/837b514",
+        "https://github.com/beadon/RacePlex/commit/837b514",
       );
     });
     it("returns null without a real hash", () => {

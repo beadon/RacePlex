@@ -49,11 +49,11 @@
       },
       "data": {
         "heading": "Your Data Stays on Your Device",
-        "body": "All data processing happens entirely in your browser, and everything is saved locally on your device by default. Cloud storage is entirely optional — nothing leaves your device unless you create an account and turn on sync."
+        "body": "Everything is parsed and stored in your browser, on your device. There is no account and no server: nothing you import ever leaves your machine. That also means it lives and dies with this browser, so Settings → Your data downloads all of it as a .zip — sessions, garage, tracks and settings — and restores it on a new browser or device."
       },
       "community": {
         "heading": "Community Track Database",
-        "body": "Don't see your track? You can define custom track and course layouts in the editor, then submit them to the site-wide database for everyone to use. Submissions are reviewed before being added."
+        "body": "Don't see your track? Define custom track and course layouts in the editor, then contribute them from the app. The track collection is the git repository itself — a submission opens a pull request, which is reviewed before it is merged. There is no server holding it."
       },
       "oss": {
         "heading": "Open Source",

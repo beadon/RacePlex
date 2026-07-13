@@ -19,7 +19,10 @@ export interface BuildInfo {
   commitDate: string;
 }
 
-const GITHUB_REPO = "TheAngryRaven/DovesDataViewer";
+// RacePlex's own repo. This used to point at upstream (TheAngryRaven/DovesDataViewer),
+// which meant "which build am I running?" linked a RacePlex user to a commit that
+// isn't in the app they're using — and often doesn't exist there at all.
+const GITHUB_REPO = "beadon/RacePlex";
 const PROD_BRANCH = "main";
 
 export const buildInfo: BuildInfo = {
