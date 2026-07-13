@@ -4,7 +4,7 @@ import {
   CROUCH_COM_DROP,
   DEFAULT_PARAMS,
   DEFAULT_STANCE,
-  KART_TYPICAL_COG_MM,
+  longitudinalBudgetG,
   STANDING_COM_FRACTION,
   TYPICAL_GRIP_G,
   axleLoads,
@@ -37,7 +37,7 @@ describe("stance model — statics", () => {
     expect(totalMassKg(p)).toBe(87);
   });
 
-  it("the rider is ~86% of the moving mass — the whole point vs a kart", () => {
+  it("the rider is ~86% of the moving mass — the regime the tool exists for", () => {
     expect(riderMassFractionPct(p)).toBeCloseTo((100 * 75) / 87, 9);
     expect(riderMassFractionPct(p)).toBeGreaterThan(80);
   });
@@ -68,12 +68,14 @@ describe("stance model — statics", () => {
     expect(boardCoM(p)).toEqual({ x: 350, z: 110 * BOARD_COM_Z_FRACTION });
   });
 
-  it("combined CoG is ~946 mm — ~3.8× a kart's", () => {
+  it("combined CoG is ~946 mm — higher than the wheelbase is long", () => {
     // z_cm = (12·55 + 75·1089) / 87
     const { com } = computeState(p, s);
     expect(com.zMm).toBeCloseTo((12 * 55 + 75 * 1089) / 87, 9);
     expect(com.zMm).toBeCloseTo(946.38, 2);
-    expect(com.zMm / KART_TYPICAL_COG_MM).toBeGreaterThan(3.5);
+    // The whole reason a board endos: the CoG stands taller than the wheelbase,
+    // so z/L > 1 and the longitudinal budget drops under 1 g.
+    expect(com.zMm).toBeGreaterThan(p.wheelbaseMm);
   });
 
   it("front% = 100·x_cm/L, exactly", () => {
@@ -110,10 +112,29 @@ describe("stance model — tip-over thresholds", () => {
 
   it("the two thresholds always sum to L/z_cm — the whole longitudinal budget", () => {
     const st = computeState(p, { ...s, weightSplitPct: 25, crouchPct: 40 });
-    expect(st.thresholds.endoG + st.thresholds.wheelieG).toBeCloseTo(p.wheelbaseMm / st.com.zMm, 9);
-    // A kart's budget is ~4 g (never reachable). A board's is under 1 g.
-    expect(p.wheelbaseMm / st.com.zMm).toBeLessThan(1.1);
-    expect(1040 / KART_TYPICAL_COG_MM).toBeGreaterThan(4);
+    const budget = longitudinalBudgetG(st.com, p.wheelbaseMm);
+    expect(st.thresholds.endoG + st.thresholds.wheelieG).toBeCloseTo(budget, 9);
+    expect(budget).toBeCloseTo(p.wheelbaseMm / st.com.zMm, 9);
+    // Under 1 g, so at least one end is always inside what the board can pull.
+    expect(budget).toBeLessThan(1.1);
+  });
+
+  it("moving your feet re-splits the budget without changing its size", () => {
+    // The claim the readout makes: stance slides the budget, crouch grows it.
+    const back = computeState(p, { ...s, weightSplitPct: 10 });
+    const fwd = computeState(p, { ...s, weightSplitPct: 90 });
+    const backBudget = longitudinalBudgetG(back.com, p.wheelbaseMm);
+    const fwdBudget = longitudinalBudgetG(fwd.com, p.wheelbaseMm);
+
+    // Same size (z_cm doesn't move when only the split changes) ...
+    expect(backBudget).toBeCloseTo(fwdBudget, 9);
+    // ... but split differently: weight back buys braking, costs you the wheelie.
+    expect(back.thresholds.endoG).toBeGreaterThan(fwd.thresholds.endoG);
+    expect(back.thresholds.wheelieG).toBeLessThan(fwd.thresholds.wheelieG);
+
+    // Crouching is the only thing that makes the budget itself bigger.
+    const tucked = computeState(p, { ...s, crouchPct: 100 });
+    expect(longitudinalBudgetG(tucked.com, p.wheelbaseMm)).toBeGreaterThan(backBudget);
   });
 
   it("weight back raises the endo threshold and lowers the wheelie threshold", () => {
@@ -189,12 +210,12 @@ describe("stance model — load transfer", () => {
     expect(dyn.rearKg).toBeLessThan(0); // past the endo point: rear wheels are airborne
   });
 
-  it("transfer is M·a·z/L and is ~5× a kart's for the same braking", () => {
+  it("transfer is M·a·z/L, and z/L > 1 means it exceeds the braking force itself", () => {
     const { com } = computeState(p, s);
     expect(loadTransferKg(com, p.wheelbaseMm, -0.3)).toBeCloseTo((com.massKg * 0.3 * com.zMm) / p.wheelbaseMm, 9);
-    const boardRatio = com.zMm / p.wheelbaseMm;
-    const kartRatio = KART_TYPICAL_COG_MM / 1040;
-    expect(boardRatio / kartRatio).toBeGreaterThan(4);
+    // z/L > 1, so a 0.3 g stop shifts MORE than 0.3 of the mass forward.
+    expect(com.zMm / p.wheelbaseMm).toBeGreaterThan(1);
+    expect(loadTransferKg(com, p.wheelbaseMm, -0.3)).toBeGreaterThan(0.3 * com.massKg);
   });
 });
 

@@ -9,7 +9,8 @@
 //
 // Drawn to scale, deliberately: the whole message of this tool is how far above a
 // 700 mm wheelbase the rider's mass actually sits. The dimension line on the left
-// puts a kart's ~250 mm CoG next to it so the ratio is impossible to miss.
+// The CoG height is dimensioned against the board, which is the thing the
+// rider can actually change (by crouching).
 
 import { useMemo } from "react";
 import { useToolsT } from "../i18n";
@@ -17,7 +18,6 @@ import {
   CROUCH_HIP_DROP,
   HEAD_R_FRACTION,
   HIP_FRACTION,
-  KART_TYPICAL_COG_MM,
   SHANK_FRACTION,
   THIGH_FRACTION,
   TORSO_FRACTION,
@@ -182,11 +182,10 @@ function ComMarker({ at }: { at: Point }) {
 }
 
 /**
- * Vertical dimension line for the CoG height, with a kart's ~250 mm marked on the
- * same scale. This is the readout the whole tool is built around, and it reads
- * better as a picture than as a number.
+ * Vertical dimension line for the CoG height. This is the readout the whole tool
+ * is built around, and it reads better as a picture than as a number.
  */
-function CogDimension({ zMm, x, t }: { zMm: number; x: number; t: ToolsT }) {
+function CogDimension({ zMm, x }: { zMm: number; x: number }) {
   const tick = 46;
   return (
     <>
@@ -196,18 +195,6 @@ function CogDimension({ zMm, x, t }: { zMm: number; x: number; t: ToolsT }) {
         <line x1={x - tick} y1={0} x2={x + tick} y2={0} />
         <text x={x - 20} y={-zMm / 2} stroke="none" fontSize={62} textAnchor="end" dominantBaseline="middle">
           {Math.round(zMm)} mm
-        </text>
-      </g>
-      <g className="text-muted-foreground" stroke="currentColor" fill="currentColor" strokeWidth={5}>
-        <line
-          x1={x - tick}
-          y1={-KART_TYPICAL_COG_MM}
-          x2={x + 260}
-          y2={-KART_TYPICAL_COG_MM}
-          strokeDasharray="18 14"
-        />
-        <text x={x - 20} y={-KART_TYPICAL_COG_MM - 24} stroke="none" fontSize={50} textAnchor="end">
-          {t("stance.kartCogTick")}
         </text>
       </g>
     </>
@@ -240,7 +227,7 @@ export function StanceDiagram({ params, stance }: { params: StanceParams; stance
       {/* ground */}
       <line x1={minX} y1={0} x2={maxX} y2={0} className="text-border" stroke="currentColor" strokeWidth={6} />
 
-      <CogDimension zMm={g.com.z} x={DIM_LINE_X} t={t} />
+      <CogDimension zMm={g.com.z} x={DIM_LINE_X} />
 
       <Board p={params} wheelR={wheelR} />
       <g className="text-muted-foreground" fill="currentColor" fontSize={54} textAnchor="middle">

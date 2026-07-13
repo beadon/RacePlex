@@ -103,8 +103,6 @@ export const CROUCH_COM_DROP = 0.25;
  */
 export const BOARD_COM_Z_FRACTION = 0.5;
 
-/** A sprint kart's CoG height, mm — the comparator the readouts are sold on. */
-export const KART_TYPICAL_COG_MM = 250;
 
 /**
  * Longitudinal grip a decent urethane setup gets on dry asphalt, g. Rough, but
@@ -276,6 +274,19 @@ export function thresholds(com: CoM, wheelbaseMm: number): Thresholds {
     endoG: (wheelbaseMm - com.xMm) / com.zMm,
     wheelieG: com.xMm / com.zMm,
   };
+}
+
+/**
+ * The whole longitudinal budget, g·L/z_cm — which is exactly `endoG + wheelieG`.
+ *
+ * This is the number a rider can act on. Moving your feet slides the budget
+ * between the two ends and never changes its size: buy braking at the nose and
+ * you pay for it at the tail. Only lowering the CoM (crouch) or riding a longer
+ * wheelbase makes the budget itself bigger.
+ */
+export function longitudinalBudgetG(com: CoM, wheelbaseMm: number): number {
+  if (com.zMm <= 0) return Infinity;
+  return wheelbaseMm / com.zMm;
 }
 
 /**

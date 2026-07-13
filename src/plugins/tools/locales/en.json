@@ -86,7 +86,6 @@
   "stance": {
     "diagramAria": "Side view of the board showing foot positions, the rider and the centre of mass",
     "diagramLegend": "Crosshair = combined CoG · dashed plumb line = where the weight lands · foot marks scale with the split",
-    "kartCogTick": "kart ≈ 250 mm",
     "rearFootLabel": "Rear foot (fwd of rear truck)",
     "frontFootLabel": "Front foot (fwd of rear truck)",
     "overTail": "over the tail",
@@ -110,8 +109,7 @@
     "rear": "Rear {{pct}}%",
     "cogTitle": "Centre of gravity",
     "cogPosition": "{{x}} mm fwd of the rear truck · {{z}} mm high",
-    "cogVsKart": "{{ratio}}× a kart's ({{kart}} mm) — over a much shorter wheelbase.",
-    "riderShare": "The rider is {{pct}}% of the moving mass. On a kart it's about half.",
+    "riderShare": "The rider is {{pct}}% of the moving mass.",
     "brakingTitle": "Under braking",
     "transfer": "{{weight}} moved onto the front wheels",
     "rearRemaining": "{{weight}} left on the rear ({{pct}}%)",
@@ -121,7 +119,7 @@
     "wheelieNote": "Stand further back and you buy braking but lose traction under power — the two thresholds always trade against each other.",
     "lateralTitle": "Cornering",
     "leanAngle": "{{deg}}° of lean to hold {{lat}} g",
-    "lateralNote": "A rider leans, so a board's lateral limit is grip and bushings, not tipping over — unlike a kart, CoG height doesn't enter this one.",
+    "lateralNote": "A rider leans, so CoG height doesn't enter this one — the lateral limit is grip and bushings.",
     "sectionBoardRider": "Board & rider",
     "sectionModel": "The model",
     "riderMass": "Rider (with gear)",
@@ -134,7 +132,8 @@
     "modelCoM": "Rider CoM: 0.55 × your height above the deck (standard anthropometric figure), placed along the board at the load-weighted mean of your two feet. Board CoM: mid-wheelbase, about half deck height.",
     "modelEndo": "Endo: moments about the front contact patch — the rear unloads completely at a = g · (wheelbase − x_cm) / z_cm.",
     "modelWheelie": "Wheelie: moments about the rear contact patch — the front unloads at a = g · x_cm / z_cm. The two always sum to g · wheelbase / z_cm.",
-    "modelCaveat": "Rigid-body statics: no deck flex, no suspension, no bushing lean. Treat the thresholds as the ceiling a perfectly stiff board would have — a real one gets there sooner."
+    "modelCaveat": "Rigid-body statics: no deck flex, no suspension, no bushing lean. Treat the thresholds as the ceiling a perfectly stiff board would have — a real one gets there sooner.",
+    "budget": "Your two thresholds always add up to {{value}} g. Where you stand splits that between nose and tail; crouching is what raises it."
   },
   "landing": {
     "tileDescription": "Trackside calculators and utilities — no datalog needed.",

@@ -22,7 +22,6 @@ import { useToolsT } from "../i18n";
 import {
   DEFAULT_PARAMS,
   DEFAULT_STANCE,
-  KART_TYPICAL_COG_MM,
   KG_PER_LB,
   LB_PER_KG,
   TYPICAL_GRIP_G,
@@ -32,6 +31,7 @@ import {
   leanAngleDeg,
   loadTransferKg,
   riderMassFractionPct,
+  longitudinalBudgetG,
   type StanceAdjustments,
   type StanceParams,
 } from "./model";
@@ -274,9 +274,8 @@ export default function StanceTool(_props: PluginPanelProps) {
                 {t("stance.cogPosition", { x: state.com.xMm.toFixed(0), z: state.com.zMm.toFixed(0) })}
               </p>
               <p className="text-muted-foreground tabular-nums">
-                {t("stance.cogVsKart", {
-                  ratio: (state.com.zMm / KART_TYPICAL_COG_MM).toFixed(1),
-                  kart: KART_TYPICAL_COG_MM,
+                {t("stance.budget", {
+                  value: longitudinalBudgetG(state.com, params.wheelbaseMm).toFixed(2),
                 })}
               </p>
               <p className="text-[10px] text-muted-foreground/70">
