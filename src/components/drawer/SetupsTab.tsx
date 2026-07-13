@@ -83,7 +83,7 @@ export function SetupsTab({
   const [copyVehicleId, setCopyVehicleId] = useState("");
   const [copySetupId, setCopySetupId] = useState("");
   const [preloaded, setPreloaded] = useState(false);
-  const preloadSnapshot = useRef<Record<string, unknown> | null>(null);
+  const [preloadSnapshot, setPreloadSnapshot] = useState<Record<string, unknown> | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [historySetup, setHistorySetup] = useState<VehicleSetup | null>(null);
   const { user } = useAuth();
@@ -130,16 +130,16 @@ export function SetupsTab({
     setForm(emptyForm());
     setSelectedTypeId("");
     setPreloaded(false);
-    preloadSnapshot.current = null;
+    setPreloadSnapshot(null);
     setPsiSingle(null); setPsiFront(null); setPsiRear(null);
     setWidthFront(null); setWidthRear(null);
     setDiamFront(null); setDiamRear(null);
   }, []);
 
   const isChanged = useCallback((key: string, currentValue: unknown): boolean => {
-    if (!preloaded || !preloadSnapshot.current) return false;
-    return preloadSnapshot.current[key] !== currentValue;
-  }, [preloaded]);
+    if (!preloaded || !preloadSnapshot) return false;
+    return preloadSnapshot[key] !== currentValue;
+  }, [preloaded, preloadSnapshot]);
 
   const openNew = useCallback(() => {
     resetForm();
@@ -223,7 +223,7 @@ export function SetupsTab({
     if (widthMode === "halves") { setWidthFront(source.tireWidthFrontLeft); setWidthRear(source.tireWidthRearLeft); }
     if (diamMode === "halves") { setDiamFront(source.tireDiameterFrontLeft); setDiamRear(source.tireDiameterRearLeft); }
     // Snapshot for change highlighting
-    preloadSnapshot.current = {
+    setPreloadSnapshot({
       ...source.customFields,
       tireBrand: source.tireBrand,
       psiSingle: psiMode === "single" ? source.psiFrontLeft : null,
@@ -239,7 +239,7 @@ export function SetupsTab({
       diamRear: diamMode === "halves" ? source.tireDiameterRearLeft : null,
       tireDiameterFrontLeft: source.tireDiameterFrontLeft, tireDiameterFrontRight: source.tireDiameterFrontRight,
       tireDiameterRearLeft: source.tireDiameterRearLeft, tireDiameterRearRight: source.tireDiameterRearRight,
-    };
+    });
     setPreloaded(true);
   }, []);
 
@@ -264,11 +264,22 @@ export function SetupsTab({
   // as the signal); with a single candidate vehicle, pre-select that too (which
   // also preloads its latest setup). Both pickers stay visible — these are
   // convenience defaults, not locks.
+  //
+  // Why an effect + setState: `selectedTypeId` and `form.vehicleId` are the
+  // user's editable form state; deriving them from `[vehicles, vehicleTypes,
+  // filteredVehicles]` would mean losing the user's later manual pick when the
+  // garage changes shape. The auto-fill is a one-shot convenience that has to
+  // WRITE into that state to work. React's `react-hooks/set-state-in-effect`
+  // rule flags this as a smell; useEffectEvent doesn't help because the
+  // setState is still inside the effect body per the rule's static trace. See
+  // react.dev/reference/react/useEffectEvent → "DON'T Use to hide missing
+  // dependencies or avoid re-runs that should happen."
   useEffect(() => {
     if (mode !== "new") return;
     if (!selectedTypeId) {
       const typesInUse = [...new Set(vehicles.map(v => v.vehicleTypeId).filter(Boolean))];
       const only = typesInUse.length === 1 ? typesInUse[0] : vehicleTypes.length === 1 ? vehicleTypes[0].id : "";
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- see block-comment above
       if (only && vehicleTypes.some(vt => vt.id === only)) handleTypeChange(only);
       return;
     }
@@ -279,9 +290,12 @@ export function SetupsTab({
 
   // External shortcut (the Vehicles tab's "New type" button) drops the user
   // straight into the vehicle-type creator. The parent clears the request once
-  // handled so it fires once per click.
+  // handled so it fires once per click. This is a genuine "signal received"
+  // pattern with no alternative — the parent has no ref-based imperative API
+  // here, and the state to set (`mode`) is child-owned.
   useEffect(() => {
     if (!requestNewType) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-shot signal from parent; parent's onRequestNewTypeHandled clears the flag
     setMode("new-type");
     onRequestNewTypeHandled?.();
   }, [requestNewType, onRequestNewTypeHandled]);

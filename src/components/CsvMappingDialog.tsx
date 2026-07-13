@@ -81,14 +81,16 @@ function formatDuration(ms: number): string {
 
 export function CsvMappingDialog() {
   const [request, setRequest] = useState<CsvMappingRequest | null>(getCsvMappingRequest());
-  const [mapping, setMapping] = useState<CsvColumnMapping | null>(null);
 
   useEffect(() => subscribeCsvMappingRequest(setRequest), []);
 
-  // A fresh request resets the form to the proposal.
-  useEffect(() => {
-    setMapping(request ? request.analysis.mapping : null);
-  }, [request]);
+  // The mapping form derives from the current request's proposal; a user edit
+  // overrides it, stamped against the request identity so a fresh request
+  // auto-resets the form to the proposal without a set-state-in-effect.
+  const derivedMapping = request ? request.analysis.mapping : null;
+  const [mappingOverride, setMappingOverride] = useState<{ home: CsvMappingRequest | null; value: CsvColumnMapping | null } | null>(null);
+  const mapping = mappingOverride && mappingOverride.home === request ? mappingOverride.value : derivedMapping;
+  const setMapping = (v: CsvColumnMapping | null) => setMappingOverride({ home: request, value: v });
 
   const analysis = request?.analysis;
   const table = analysis?.table;

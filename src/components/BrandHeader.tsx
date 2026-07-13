@@ -18,7 +18,7 @@ export function BrandHeader({ className }: { className?: string }) {
   return (
     <header
       className={cn(
-        "sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur safe-area-top",
+        "sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur-sm safe-area-top",
         className,
       )}
     >
@@ -26,7 +26,7 @@ export function BrandHeader({ className }: { className?: string }) {
         <button
           type="button"
           onClick={() => navigate("/")}
-          className="flex items-center gap-3 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="flex items-center gap-3 rounded-md focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
         >
           <BrandLogo className="w-8 h-8" />
           <span className="text-xl font-semibold text-foreground">RacePlex</span>

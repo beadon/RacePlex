@@ -46,10 +46,14 @@ export function GGDiagram({ samples, referenceSamples, overlayLines = [], label,
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
 
-  // Live card height — driven by the resize handle, seeded from the committed prop.
+  // Live card height — driven by the resize handle, seeded from the committed
+  // prop. `override` is stamped against its home committedHeight; a parent
+  // update to committedHeight auto-invalidates the override so no reset
+  // effect is needed.
   const committedHeight = height ?? GG_DEFAULT_HEIGHT;
-  const [cardHeight, setCardHeight] = useState(committedHeight);
-  useEffect(() => { setCardHeight(committedHeight); }, [committedHeight]);
+  const [heightOverride, setHeightOverride] = useState<{ home: number; value: number } | null>(null);
+  const cardHeight = heightOverride && heightOverride.home === committedHeight ? heightOverride.value : committedHeight;
+  const setCardHeight = (v: number) => setHeightOverride({ home: committedHeight, value: v });
 
   const hasReference = !!referenceSamples && referenceSamples.length > 0;
   const hasOverlays = overlayLines.length > 0;

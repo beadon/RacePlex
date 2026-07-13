@@ -237,8 +237,12 @@ export function VisualEditor({
     return wayback.releases.find((r) => r.date === satelliteDate)?.tileUrl ?? DEFAULT_SATELLITE_TILE_URL;
   }, [satelliteDate, wayback.releases]);
 
-  // Pending coordinates for the line currently being dragged.
-  const [pendingLine, setPendingLine] = useState<{ id: LineId; coords: { a: GpsPoint; b: GpsPoint } } | null>(null);
+  // Pending coordinates for the line currently being dragged. Stored under
+  // the selectedLine id it was set against; a selection change auto-invalidates
+  // the pending state (derived read below), so no reset effect is needed.
+  const [pendingLineRaw, setPendingLineRaw] = useState<{ id: LineId; coords: { a: GpsPoint; b: GpsPoint } } | null>(null);
+  const pendingLine = pendingLineRaw && pendingLineRaw.id === selectedLine ? pendingLineRaw : null;
+  const setPendingLine = setPendingLineRaw;
 
   // Drawing state. The ref mirrors drawPoints so the draw handlers can read the
   // latest points synchronously and auto-save each change to the parent.
@@ -249,10 +253,14 @@ export function VisualEditor({
   const drawPolylineRef = useRef<L.Polyline | null>(null);
   const drawClickHandlerRef = useRef<((e: L.LeafletMouseEvent) => void) | null>(null);
 
-  // Sync drawPoints when layoutPointsProp changes (e.g. async load from DB)
+  // Sync drawPoints when layoutPointsProp changes (e.g. async load from DB).
+  // This effect isn't just setState — it also mutates the Leaflet polyline
+  // to match, which is a genuine "sync with external system" (Leaflet is
+  // not React-managed). The setState calls happen alongside that sync.
   useEffect(() => {
     const incoming = layoutPointsProp ?? [];
     drawPointsRef.current = incoming;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Leaflet-side sync; see block-comment above
     setDrawPoints(incoming);
     if (incoming.length > 0) setShowKnownDrawing(true);
     if (mapRef.current && drawPolylineRef.current) {
@@ -273,7 +281,7 @@ export function VisualEditor({
   // Latest selection / callbacks for use inside Leaflet event handlers (refs so
   // the marker-drag closures always see current values without re-binding).
   const onSelectLineRef = useRef(onSelectLine);
-  onSelectLineRef.current = onSelectLine;
+  useEffect(() => { onSelectLineRef.current = onSelectLine; }, [onSelectLine]);
 
   // Location search state (only used when isNewTrack)
   const [searchQuery, setSearchQuery] = useState('');
@@ -461,7 +469,7 @@ export function VisualEditor({
     const markerA = createMarker(coords.a, true);
     const markerB = createMarker(coords.b, false);
     markersRef.current = [markerA, markerB];
-  }, [colorFor, onStartFinishChange, onSectorLineChange]);
+  }, [colorFor, onStartFinishChange, onSectorLineChange, setPendingLine]);
 
   // --- Draw mode helpers ---
   const updateDrawPolyline = useCallback((points: Array<{ lat: number; lon: number }>) => {
@@ -722,10 +730,8 @@ export function VisualEditor({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedLine, drawMode]);
 
-  // Clear pending drag state once the committed geometry matches (selection change).
-  useEffect(() => {
-    setPendingLine(null);
-  }, [selectedLine]);
+  // Pending drag state clears automatically when selectedLine changes — see
+  // the derived `pendingLine` above (returns null if the stored id ≠ current).
 
   const labels = useMemo(() => sectorLabels({
     name: '', startFinishA: { lat: 0, lon: 0 }, startFinishB: { lat: 0, lon: 0 }, sectors,
@@ -757,12 +763,12 @@ export function VisualEditor({
               if (e.key === 'Enter') handleLocationSearch();
             }}
             className="flex-1 h-8 text-sm"
-            disabled={isSearching || !mapRef.current}
+            disabled={isSearching || !mapReady}
           />
-          <Button variant="outline" size="sm" className="h-8 px-3" onClick={handleLocationSearch} disabled={isSearching || !searchQuery.trim() || !mapRef.current}>
+          <Button variant="outline" size="sm" className="h-8 px-3" onClick={handleLocationSearch} disabled={isSearching || !searchQuery.trim() || !mapReady}>
             {isSearching ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
           </Button>
-          <Button variant="outline" size="sm" className="h-8 px-3" onClick={handleUseMyLocation} disabled={isLocating || !mapRef.current} title={t('visual.useMyLocation')}>
+          <Button variant="outline" size="sm" className="h-8 px-3" onClick={handleUseMyLocation} disabled={isLocating || !mapReady} title={t('visual.useMyLocation')}>
             {isLocating ? <Loader2 className="w-4 h-4 animate-spin" /> : <LocateFixed className="w-4 h-4" />}
           </Button>
         </div>
@@ -797,7 +803,7 @@ export function VisualEditor({
             value={satelliteDate}
             onChange={(e) => setSatelliteDate(e.target.value)}
             disabled={wayback.loading && wayback.releases.length === 0}
-            className="flex-1 min-w-0 bg-transparent text-foreground/90 text-xs outline-none cursor-pointer border border-border rounded px-1 py-0.5"
+            className="flex-1 min-w-0 bg-transparent text-foreground/90 text-xs outline-hidden cursor-pointer border border-border rounded px-1 py-0.5"
             title={t('visual.imageryDateTitle')}
           >
             <option value="">{wayback.loading ? t('visual.loadingDates') : t('visual.latestDefault')}</option>

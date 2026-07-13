@@ -36,13 +36,13 @@ export function usePlayback({
 
   // Latest inputs, readable from inside the loop without re-subscribing it.
   const samplesRef = useRef(samples);
-  samplesRef.current = samples;
   const onIndexChangeRef = useRef(onIndexChange);
-  onIndexChangeRef.current = onIndexChange;
   const visibleRangeRef = useRef(visibleRange);
-  visibleRangeRef.current = visibleRange;
   const currentIndexRef = useRef(currentIndex);
-  currentIndexRef.current = currentIndex;
+  useEffect(() => { samplesRef.current = samples; }, [samples]);
+  useEffect(() => { onIndexChangeRef.current = onIndexChange; }, [onIndexChange]);
+  useEffect(() => { visibleRangeRef.current = visibleRange; }, [visibleRange]);
+  useEffect(() => { currentIndexRef.current = currentIndex; }, [currentIndex]);
 
   // Calculate average frame rate from sample timestamps. Memoized on the
   // sample window — the old useCallback(...)() IIFE memoized the *function*
@@ -66,10 +66,15 @@ export function usePlayback({
     return 1000 / medianInterval;
   }, [samples]);
 
-  // Stop playback when visible range changes
+  // Stop playback when the visible range changes. The rule flags the setState
+  // here, but this is a legitimate "external state changed → local state must
+  // react" case: rangeStart/rangeEnd are session-owned scalars, and isPlaying
+  // is a user-controlled flag we must clear so the loop below re-armed against
+  // the new bounds rather than continuing off the old ones.
   const rangeStart = visibleRange[0];
   const rangeEnd = visibleRange[1];
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- legit external-state reaction; no derived-state or key alternative fits (see block-comment above)
     setIsPlaying(false);
   }, [rangeStart, rangeEnd]);
 

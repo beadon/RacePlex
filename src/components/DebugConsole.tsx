@@ -44,7 +44,7 @@ export function DebugConsole() {
       <button
         type="button"
         onClick={() => setCollapsed(false)}
-        className="fixed bottom-2 right-2 z-[9999] flex items-center gap-1.5 rounded-full border border-border bg-card/95 px-3 py-1.5 text-xs font-mono shadow-lg backdrop-blur"
+        className="fixed bottom-2 right-2 z-9999 flex items-center gap-1.5 rounded-full border border-border bg-card/95 px-3 py-1.5 text-xs font-mono shadow-lg backdrop-blur-sm"
       >
         <Bug className="h-3.5 w-3.5" />
         <span>{entries.length}</span>
@@ -55,7 +55,7 @@ export function DebugConsole() {
   }
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-[9999] max-h-[45vh] border-t border-border bg-card/95 font-mono text-[11px] shadow-2xl backdrop-blur flex flex-col">
+    <div className="fixed inset-x-0 bottom-0 z-9999 max-h-[45vh] border-t border-border bg-card/95 font-mono text-[11px] shadow-2xl backdrop-blur-sm flex flex-col">
       <div className="flex items-center gap-2 border-b border-border px-2 py-1">
         <Bug className="h-3.5 w-3.5 shrink-0" />
         <span className="font-semibold">Debug</span>
@@ -81,7 +81,7 @@ export function DebugConsole() {
           <p className="text-muted-foreground">No log output yet.</p>
         ) : (
           entries.map((e) => (
-            <div key={e.id} className={`whitespace-pre-wrap break-words ${LEVEL_CLASS[e.level]}`}>
+            <div key={e.id} className={`whitespace-pre-wrap wrap-break-word ${LEVEL_CLASS[e.level]}`}>
               <span className="text-muted-foreground">{formatTime(e.time)} </span>
               {e.text}
             </div>

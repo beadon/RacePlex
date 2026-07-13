@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { User as UserIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -19,9 +19,11 @@ interface ProfileAvatarProps {
 export function ProfileAvatar({ url, alt = "", sizeClassName = "h-12 w-12", className }: ProfileAvatarProps) {
   // Fall back to the placeholder when the avatar object 404s (swept path or a
   // transient CDN miss) instead of rendering the browser's broken-image glyph.
-  // Reset on url change so a fresh upload (new ?v= buster) gets another chance.
-  const [failed, setFailed] = useState(false);
-  useEffect(() => setFailed(false), [url]);
+  // Override is stamped against the url that failed, so a fresh upload (new ?v=
+  // buster changes the url) auto-invalidates the failure state.
+  const [failedForUrl, setFailedForUrl] = useState<string | null>(null);
+  const failed = failedForUrl === url;
+  const markFailed = () => setFailedForUrl(url ?? null);
 
   return (
     <div
@@ -37,7 +39,7 @@ export function ProfileAvatar({ url, alt = "", sizeClassName = "h-12 w-12", clas
           alt={alt}
           className="h-full w-full object-cover"
           loading="lazy"
-          onError={() => setFailed(true)}
+          onError={markFailed}
         />
       ) : (
         <UserIcon className="h-1/2 w-1/2" />

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Trophy, Check, MapPin } from "lucide-react";
 import { toast } from "sonner";
@@ -11,6 +11,7 @@ import {
   Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAsyncSnapshot } from "@/hooks/useAsyncSnapshot";
 import { formatLapTime } from "@/lib/lapCalculation";
 import type { LapSnapshot } from "@/lib/lapSnapshot";
 import { listSnapshots } from "@/lib/lapSnapshotStorage";
@@ -29,53 +30,94 @@ interface RowState {
   busy: boolean;
 }
 
+interface Snapshot {
+  snaps: LapSnapshot[];
+  submittedHashes: Set<string>;
+  loaded: boolean;
+}
+
+const EMPTY: Snapshot = { snaps: [], submittedHashes: new Set(), loaded: false };
+
 // Profile-tab panel: submit your lap snapshots to the public leaderboards. Visible
 // only when signed in (submission needs an account) and you have ≥1 snapshot.
 export default function LeaderboardSubmitPanel(_props: PluginPanelProps) {
   const { t } = useTranslation("plugins");
   const { user, loading } = useAuth();
-  const [snaps, setSnaps] = useState<LapSnapshot[]>([]);
-  const [submittedHashes, setSubmittedHashes] = useState<Set<string>>(new Set());
-  const [rows, setRows] = useState<Record<string, RowState>>({});
+  // User-edited overrides for the per-snapshot form; falls back to the derived
+  // default when a snapshot has no override yet.
+  const [rowOverrides, setRowOverrides] = useState<Record<string, RowState>>({});
   const [open, setOpen] = useState(false);
 
-  const refresh = useCallback(async () => {
+  const load = useCallback(async (): Promise<Snapshot> => {
     const local = await listSnapshots();
-    setSnaps(local);
+    let submittedHashes = new Set<string>();
     if (user) {
       try {
         const mine = await fetchMyEntries(user.id);
-        setSubmittedHashes(new Set(mine.map((e) => e.contentHash)));
+        submittedHashes = new Set(mine.map((e) => e.contentHash));
       } catch (e) {
-        // Leave the known set as-is; the DB unique constraint is the backstop.
+        // DB unique constraint is the backstop; keep the loaded snapshot list.
         console.warn("[leaderboard] couldn't load existing entries:", e);
       }
     }
+    return { snaps: local, submittedHashes, loaded: true };
   }, [user]);
 
-  useEffect(() => {
-    void refresh();
-    return onGarageChange((c) => {
-      if (c.store === STORE_NAMES.LAP_SNAPSHOTS) void refresh();
-    });
-  }, [refresh]);
+  const subscribe = useCallback(
+    (onChange: () => void) =>
+      onGarageChange((c) => {
+        if (c.store === STORE_NAMES.LAP_SNAPSHOTS) onChange();
+      }),
+    [],
+  );
 
-  // Seed per-row form defaults whenever the snapshot list changes.
-  useEffect(() => {
-    setRows((prev) => {
-      const next: Record<string, RowState> = {};
-      for (const s of snaps) {
-        const d = defaultListedWeight(s);
-        next[s.id] = prev[s.id] ?? {
-          weight: d.weight !== null ? String(d.weight) : "",
-          unit: d.unit,
-          shareEngine: false,
-          busy: false,
-        };
-      }
-      return next;
-    });
-  }, [snaps]);
+  const { data: cached, refresh } = useAsyncSnapshot({
+    key: `leaderboard-submit:${user?.id ?? "anon"}`,
+    initial: EMPTY,
+    load,
+    subscribe,
+  });
+  const snaps = cached.snaps;
+  const submittedHashes = cached.submittedHashes;
+
+  // Per-snapshot form state: user edits win, otherwise fall back to the
+  // default derived from the snapshot's own body. Deriving in useMemo means
+  // no setState-in-effect churn when the snapshot list changes.
+  const rows = useMemo<Record<string, RowState>>(() => {
+    const next: Record<string, RowState> = {};
+    for (const s of snaps) {
+      const d = defaultListedWeight(s);
+      next[s.id] = rowOverrides[s.id] ?? {
+        weight: d.weight !== null ? String(d.weight) : "",
+        unit: d.unit,
+        shareEngine: false,
+        busy: false,
+      };
+    }
+    return next;
+  }, [snaps, rowOverrides]);
+  // Merge patches against the *derived* view so a first-edit sees the default
+  // rather than `undefined`. Callers use setRows((r) => ({ ...r, [id]: ... }))
+  // as before; this shim resolves the derived defaults into the override map.
+  const setRows: React.Dispatch<React.SetStateAction<Record<string, RowState>>> = useCallback(
+    (updater) => {
+      setRowOverrides((prev) => {
+        const derived: Record<string, RowState> = {};
+        for (const s of snaps) {
+          const d = defaultListedWeight(s);
+          derived[s.id] = prev[s.id] ?? {
+            weight: d.weight !== null ? String(d.weight) : "",
+            unit: d.unit,
+            shareEngine: false,
+            busy: false,
+          };
+        }
+        const next = typeof updater === "function" ? (updater as (r: Record<string, RowState>) => Record<string, RowState>)(derived) : updater;
+        return next;
+      });
+    },
+    [snaps],
+  );
 
   const hashes = useMemo(() => new Map(snaps.map((s) => [s.id, contentHashForSnapshot(s)])), [snaps]);
 
@@ -102,7 +144,9 @@ export default function LeaderboardSubmitPanel(_props: PluginPanelProps) {
         listedWeightUnit: row.unit,
       });
       await insertEntries([newRow]);
-      setSubmittedHashes((s) => new Set(s).add(newRow.content_hash));
+      // Reload from the server so `submittedHashes` reflects the just-inserted
+      // row (source of truth is the DB, not local state).
+      void refresh();
       toast.success(t("leaderboard.submitSuccess"));
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);

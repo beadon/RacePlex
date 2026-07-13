@@ -1,4 +1,7 @@
-import { Info, Github } from "lucide-react";
+// lucide-react v1 dropped brand marks (including Github). Using GitBranch as
+// a domain-appropriate replacement — the About dialog just needs a hint that
+// the link is a source repo, and this one reads instantly for developers.
+import { Info, GitBranch } from "lucide-react";
 import { useTranslation, Trans } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import {
@@ -60,7 +63,7 @@ export function AboutDialog() {
                 onClick={(e) => interceptExternal(e, link.href)}
                 className="inline-flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors"
               >
-                <Github className="w-4 h-4" />
+                <GitBranch className="w-4 h-4" />
                 <span className="text-xs">{link.label}</span>
               </a>
             ))}

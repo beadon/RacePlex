@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback, useSyncExternalStore } from 'react';
 import { useTranslation, Trans } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { Button } from '@/components/ui/button';
@@ -74,15 +74,27 @@ export function SubmitTrackDialog({ trigger, onSubmitted }: SubmitTrackDialogPro
     setPlanLoading(false);
   }, [t]);
 
-  // Reset + (re)build the plan each time the dialog opens.
-  useEffect(() => {
-    if (open) {
-      setStep('confirm');
-      setContributions([]);
-      setCopied(null);
-      buildPlan();
-    }
-  }, [open, buildPlan]);
+  // Reset + (re)build the plan each time the dialog opens. Fired from a
+  // useSyncExternalStore subscribe callback (not useEffect) so the internal
+  // setStates in buildPlan() run in an event context — same idiom as
+  // DeviceTracksTab. Radix Dialog also unmounts its content on close so the
+  // step/contributions/copied resets are effectively belt-and-braces.
+  useSyncExternalStore(
+    useCallback(
+      () => {
+        if (open) {
+          setStep('confirm');
+          setContributions([]);
+          setCopied(null);
+          void buildPlan();
+        }
+        return () => {};
+      },
+      [open, buildPlan],
+    ),
+    () => 0,
+    () => 0,
+  );
 
   const toggle = (key: string) => {
     setSelected(prev => {
@@ -128,7 +140,7 @@ export function SubmitTrackDialog({ trigger, onSubmitted }: SubmitTrackDialogPro
     window.open(url, '_blank', 'noopener,noreferrer');
     // The rider still has to submit the form, but from our side it's handed off:
     // remembering it keeps the plan from re-listing it every time they reopen.
-    markCoursesSubmitted(selectedCourses, `pr-${Date.now()}`);
+    markCoursesSubmitted(selectedCourses, `pr-${crypto.randomUUID()}`);
     onSubmitted?.();
   };
 

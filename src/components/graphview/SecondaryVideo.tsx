@@ -42,9 +42,18 @@ export function SecondaryVideo({ videoState, overlayId, lapNumber, onCommitRateA
   const pendingSeekRef = useRef<number | null>(null);
 
   // Manual fine-alignment, local to this comparison only — never written back to
-  // the persisted main video sync. Reset whenever the overlay lap changes.
-  const [nudgeMs, setNudgeMs] = useState(0);
-  useEffect(() => setNudgeMs(0), [overlayId]);
+  // the persisted main video sync. Stored as an override stamped against the
+  // current overlayId so switching overlays auto-invalidates (no reset effect).
+  const [nudgeOverride, setNudgeOverride] = useState<{ home: string | null; value: number } | null>(null);
+  const nudgeMs = nudgeOverride && nudgeOverride.home === (overlayId ?? null) ? nudgeOverride.value : 0;
+  const setNudgeMs = (v: number | ((prev: number) => number)) => {
+    setNudgeOverride((prev) => {
+      const home = overlayId ?? null;
+      const currentValue = prev && prev.home === home ? prev.value : 0;
+      const nextValue = typeof v === 'function' ? v(currentValue) : v;
+      return { home, value: nextValue };
+    });
+  };
 
   const { syncOffsetMs, syncRate, exportChunks, videoDuration, isPlaying } = videoState;
 
@@ -84,7 +93,7 @@ export function SecondaryVideo({ videoState, overlayId, lapNumber, onCommitRateA
 
   // The playback loop reads the latest target without re-subscribing per tick.
   const targetRef = useRef(target);
-  targetRef.current = target;
+  useEffect(() => { targetRef.current = target; }, [target]);
 
   // Swap the <video> source when the cursor crosses a chunk boundary; defer the
   // seek until the new chunk's metadata loads.
@@ -176,7 +185,7 @@ export function SecondaryVideo({ videoState, overlayId, lapNumber, onCommitRateA
       )}
       {covered && (
         <div
-          className="absolute bottom-1.5 right-1.5 flex items-center gap-0.5 rounded-md bg-card/90 px-0.5 py-0.5 text-foreground backdrop-blur-sm"
+          className="absolute bottom-1.5 right-1.5 flex items-center gap-0.5 rounded-md bg-card/90 px-0.5 py-0.5 text-foreground backdrop-blur-xs"
           title={t('graphs.splitVideoNudgeTooltip')}
         >
           {syncRate !== 1 && (
@@ -197,7 +206,7 @@ export function SecondaryVideo({ videoState, overlayId, lapNumber, onCommitRateA
           </button>
           <button
             type="button"
-            className="min-w-[3.25rem] px-1 text-center font-mono text-[11px] tabular-nums hover:text-primary"
+            className="min-w-13 px-1 text-center font-mono text-[11px] tabular-nums hover:text-primary"
             onClick={() => setNudgeMs(0)}
           >
             {nudgeMs > 0 ? '+' : ''}{(nudgeMs / 1000).toFixed(2)}s

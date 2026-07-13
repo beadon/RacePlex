@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState, useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ArrowLeft,
@@ -47,6 +47,16 @@ interface DeviceTracksTabProps {
 }
 
 type View = "loading" | "tracks" | "courses";
+
+const StatusIcon = ({ status }: { status: string }) => {
+  switch (status) {
+    case 'synced': return <Check className="w-4 h-4 text-green-500 shrink-0" />;
+    case 'mismatch': return <AlertTriangle className="w-4 h-4 text-yellow-500 shrink-0" />;
+    case 'device_only': return <HelpCircle className="w-4 h-4 text-orange-500 shrink-0" />;
+    case 'app_only': return <CloudOff className="w-4 h-4 text-blue-500 shrink-0" />;
+    default: return null;
+  }
+};
 
 export function DeviceTracksTab({ connection }: DeviceTracksTabProps) {
   const { t } = useTranslation("drawer");
@@ -102,9 +112,19 @@ export function DeviceTracksTab({ connection }: DeviceTracksTabProps) {
     }
   }, [connection, t]);
 
-  useEffect(() => {
-    syncAll();
-  }, [syncAll]);
+  // React 19: run the initial sync from a subscribe callback (not useEffect)
+  // so the setState calls inside syncAll — progress reporting throughout the
+  // device I/O loop — happen in an event context, not during a render effect.
+  // Consumers just need a stable snapshot; there's no external event to
+  // listen for, so getSnapshot is a constant.
+  useSyncExternalStore(
+    useCallback(() => {
+      void syncAll();
+      return () => {};
+    }, [syncAll]),
+    () => 0,
+    () => 0,
+  );
 
   // ── helpers to check if track exists on device ──
   const isOnDevice = (entry: MergedTrackEntry) =>
@@ -277,17 +297,6 @@ export function DeviceTracksTab({ connection }: DeviceTracksTabProps) {
     setResyncProgress(null);
     toast.success(t("deviceTracks.resyncedToast", { count: toSync.length }));
     await syncAll();
-  };
-
-  // ── Status icon helper ──
-  const StatusIcon = ({ status }: { status: string }) => {
-    switch (status) {
-      case 'synced': return <Check className="w-4 h-4 text-green-500 shrink-0" />;
-      case 'mismatch': return <AlertTriangle className="w-4 h-4 text-yellow-500 shrink-0" />;
-      case 'device_only': return <HelpCircle className="w-4 h-4 text-orange-500 shrink-0" />;
-      case 'app_only': return <CloudOff className="w-4 h-4 text-blue-500 shrink-0" />;
-      default: return null;
-    }
   };
 
   // ─────────── LOADING VIEW ───────────

@@ -248,7 +248,6 @@ export function parseVboFile(content: string): ParsedData {
   // Parse data rows
   const samples: GpsSample[] = [];
   let baseTimeMs: number | null = null;
-  let startDate: Date | undefined;
 
   for (let i = dataStart + 1; i < lines.length; i++) {
     const line = lines[i].trim();
@@ -386,6 +385,5 @@ export function parseVboFile(content: string): ParsedData {
     fieldMappings,
     bounds: calculateBounds(samples),
     duration: samples[samples.length - 1].t,
-    startDate
   };
 }

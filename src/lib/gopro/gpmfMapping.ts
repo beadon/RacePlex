@@ -53,8 +53,8 @@ const ACCL_FORWARD = 2;
 const GYRO_YAW = 0;
 
 export class NoGoProGpsError extends Error {
-  constructor(message: string) {
-    super(message);
+  constructor(message: string, options?: ErrorOptions) {
+    super(message, options);
     this.name = "NoGoProGpsError";
   }
 }

@@ -8,6 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
+import { useAsyncSnapshot } from "@/hooks/useAsyncSnapshot";
 import { deleteFile, listAllMetadata, listFiles, saveFile, type FileEntry, type FileMetadata } from "@/lib/fileStorage";
 import { listVehicles, type Vehicle } from "@/lib/vehicleStorage";
 import {
@@ -28,6 +29,24 @@ function formatDate(iso?: string): string {
     : d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
 }
 
+interface CloudLogsSnapshot {
+  cloud: CloudFile[] | null;
+  localFiles: FileEntry[];
+  metaMap: Map<string, FileMetadata>;
+  vehicles: Vehicle[];
+  error: string | null;
+  loaded: boolean;
+}
+
+const EMPTY_SNAPSHOT: CloudLogsSnapshot = {
+  cloud: null,
+  localFiles: [],
+  metaMap: new Map(),
+  vehicles: [],
+  error: null,
+  loaded: false,
+};
+
 // Profile-tab panel: manage the log files stored in YOUR cloud, in the same
 // Track→Course folder browser as the file manager. Deleting removes the cloud
 // copy only (other devices keep what they've downloaded); an opt-in toggle also
@@ -36,36 +55,48 @@ export default function CloudLogsPanel(_props: PluginPanelProps) {
   const { t } = useTranslation("plugins");
   const { user, loading } = useAuth();
   const online = useOnlineStatus();
-  const [cloud, setCloud] = useState<CloudFile[] | null>(null);
-  const [localFiles, setLocalFiles] = useState<FileEntry[]>([]);
-  const [metaMap, setMetaMap] = useState<Map<string, FileMetadata>>(new Map());
-  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-  const [error, setError] = useState<string | null>(null);
   const [nav, setNav] = useState<NavState>(ROOT_NAV);
   const [confirming, setConfirming] = useState<string | null>(null);
   const [alsoLocal, setAlsoLocal] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [downloading, setDownloading] = useState<{ done: number; total: number } | null>(null);
 
-  const refresh = useCallback(async () => {
-    if (!user) return;
+  const load = useCallback(async (): Promise<CloudLogsSnapshot> => {
+    if (!user) return { ...EMPTY_SNAPSHOT, loaded: true };
     try {
       const [cloudFiles, local, metas, vehs] = await Promise.all([
         listCloudFiles(user.id), listFiles(), listAllMetadata(), listVehicles(),
       ]);
-      setCloud(cloudFiles);
-      setLocalFiles(local);
-      setMetaMap(new Map(metas.map((m) => [m.fileName, m])));
-      setVehicles(vehs);
-      setError(null);
+      return {
+        cloud: cloudFiles,
+        localFiles: local,
+        metaMap: new Map(metas.map((m) => [m.fileName, m])),
+        vehicles: vehs,
+        error: null,
+        loaded: true,
+      };
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("cloudLogs.loadFailed"));
+      return {
+        cloud: null,
+        localFiles: [],
+        metaMap: new Map(),
+        vehicles: [],
+        error: e instanceof Error ? e.message : t("cloudLogs.loadFailed"),
+        loaded: true,
+      };
     }
   }, [user, t]);
 
-  useEffect(() => {
-    void refresh();
-  }, [refresh]);
+  const { data: snapshot, refresh } = useAsyncSnapshot({
+    key: `cloud-logs:${user?.id ?? "anon"}`,
+    initial: EMPTY_SNAPSHOT,
+    load,
+  });
+  const cloud = snapshot.cloud;
+  const localFiles = snapshot.localFiles;
+  const metaMap = snapshot.metaMap;
+  const vehicles = snapshot.vehicles;
+  const error = snapshot.error;
 
   // Reclaim any orphaned blobs (no index row) once per signed-in user.
   const cleanedFor = useRef<string | null>(null);

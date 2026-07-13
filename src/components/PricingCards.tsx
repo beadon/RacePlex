@@ -214,7 +214,7 @@ export function PricingCards({ className, variant = "home" }: { className?: stri
       // stay off the eager graph (these cards ride the landing page).
       const { createCheckout } = await import("@/lib/billingClient");
       const url = await createCheckout(slug, cardInterval, window.location.href);
-      window.location.href = url;
+      window.location.assign(url);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t("pricing.checkoutError"));
       setBusy(null);
@@ -229,7 +229,7 @@ export function PricingCards({ className, variant = "home" }: { className?: stri
     try {
       const { createPortal } = await import("@/lib/billingClient");
       const url = await createPortal(window.location.href);
-      window.location.href = url;
+      window.location.assign(url);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t("pricing.portalError"));
       setBusy(null);

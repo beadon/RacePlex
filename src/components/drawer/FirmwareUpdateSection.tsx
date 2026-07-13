@@ -183,7 +183,7 @@ export function FirmwareUpdateSection({ connection }: { connection: BleConnectio
                   <AlertTriangle className="w-5 h-5 text-destructive" />
                   {phaseLabel.error}
                 </DialogTitle>
-                <DialogDescription className="text-left whitespace-pre-wrap break-words max-h-60 overflow-y-auto">
+                <DialogDescription className="text-left whitespace-pre-wrap wrap-break-word max-h-60 overflow-y-auto">
                   {fw.flashError ?? t("firmware.genericError")}
                 </DialogDescription>
               </DialogHeader>

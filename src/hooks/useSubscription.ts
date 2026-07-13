@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { effectiveTier, type SubscriptionTierRow, type UserSubscriptionRow } from "@/lib/billing";
+import { useAsyncSnapshot } from "./useAsyncSnapshot";
 
 const enableCloud = import.meta.env.VITE_ENABLE_CLOUD === "true";
 
@@ -17,6 +18,16 @@ export interface SubscriptionState {
   refresh: () => Promise<void>;
 }
 
+interface Snapshot {
+  tiers: SubscriptionTierRow[];
+  subscription: UserSubscriptionRow | null;
+  error: string | null;
+  /** True once the load has resolved (either data or a captured error). */
+  loaded: boolean;
+}
+
+const EMPTY: Snapshot = { tiers: [], subscription: null, error: null, loaded: false };
+
 /**
  * Reads the catalogue of subscription tiers + the current user's subscription.
  * Online-only and account-gated: returns the free baseline when cloud is
@@ -25,44 +36,42 @@ export interface SubscriptionState {
 export function useSubscription(): SubscriptionState {
   const { user, loading: authLoading } = useAuth();
   const online = useOnlineStatus();
-  const [tiers, setTiers] = useState<SubscriptionTierRow[]>([]);
-  const [subscription, setSubscription] = useState<UserSubscriptionRow | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  const refresh = useCallback(async () => {
-    if (!enableCloud || !user) {
-      setTiers([]);
-      setSubscription(null);
-      setError(null);
-      return;
-    }
-    setLoading(true);
+  const load = useCallback(async (): Promise<Snapshot> => {
+    if (!enableCloud || !user) return { ...EMPTY, loaded: true };
     try {
       // Dynamic import keeps the Supabase client off the eager graph.
       const { fetchTiers, fetchMySubscription } = await import("@/lib/billingClient");
-      const [t, s] = await Promise.all([fetchTiers(), fetchMySubscription(user.id)]);
-      setTiers(t);
-      setSubscription(s);
-      setError(null);
+      const [tiers, subscription] = await Promise.all([fetchTiers(), fetchMySubscription(user.id)]);
+      return { tiers, subscription, error: null, loaded: true };
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load subscription");
-    } finally {
-      setLoading(false);
+      return {
+        tiers: [],
+        subscription: null,
+        error: e instanceof Error ? e.message : "Failed to load subscription",
+        loaded: true,
+      };
     }
   }, [user]);
 
-  // Re-read on mount, on sign-in/out, and when connectivity returns.
-  useEffect(() => {
-    void refresh();
-  }, [refresh, online]);
+  // Re-key on user id + online so signing in/out or connectivity flips reset
+  // the cached snapshot without a manual refresh() call.
+  const key = `subscription:${user?.id ?? "anon"}:${online ? "on" : "off"}`;
+
+  const { data, refresh } = useAsyncSnapshot({
+    key,
+    initial: EMPTY,
+    load,
+  });
+
+  const currentTier = useMemo(() => effectiveTier(data.subscription), [data.subscription]);
 
   return {
-    loading: authLoading || loading,
-    error,
-    tiers,
-    subscription,
-    currentTier: effectiveTier(subscription),
+    loading: authLoading || !data.loaded,
+    error: data.error,
+    tiers: data.tiers,
+    subscription: data.subscription,
+    currentTier,
     refresh,
   };
 }

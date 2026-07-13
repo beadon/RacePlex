@@ -108,7 +108,7 @@ export function VehicleHistoryPanel({ vehicle, vehicles, onBack, onOpenFile }: V
                 key={entry.revision.id}
                 isFastestOverall={entry.isFastestOverall}
                 header={
-                  <span className="text-xs font-semibold text-foreground truncate max-w-[12rem]">
+                  <span className="text-xs font-semibold text-foreground truncate max-w-48">
                     {entry.setupName}
                   </span>
                 }

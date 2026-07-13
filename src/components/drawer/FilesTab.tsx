@@ -88,7 +88,7 @@ export function FilesTab({
   // same tree as "cloud" rows; the host never imports any cloud code.
   const sources = useFileSources();
   const sourcesRef = useRef(sources);
-  sourcesRef.current = sources;
+  useEffect(() => { sourcesRef.current = sources; }, [sources]);
   // Stable key (getContributions hands back a fresh [] each call, so we can't
   // depend on the array identity without looping the effect).
   const sourceKey = sources.map((s) => s.id).join("|");
@@ -96,12 +96,23 @@ export function FilesTab({
   const [remoteMeta, setRemoteMeta] = useState<Map<string, FileMetadata>>(new Map());
   const remoteSourceByName = useRef<Map<string, FileSource>>(new Map());
 
-  // Folder navigation. Opens at the current session's track/course, and re-homes
-  // there whenever the drawer is (re)opened or a different session is loaded.
-  const [nav, setNav] = useState<NavState>(() => defaultNav(currentTrackName, currentCourseName));
-  useEffect(() => {
-    if (isOpen) setNav(defaultNav(currentTrackName, currentCourseName));
-  }, [isOpen, currentTrackName, currentCourseName]);
+  // Folder navigation. Derived from the current session's track/course +
+  // whether the drawer is open, so opening or switching sessions re-homes
+  // there without a set-state-in-effect. A user pick overrides the derived
+  // value; the override is cleared whenever the drawer closes so the next
+  // open picks up the fresh derived home again.
+  const derivedNav = useMemo(
+    () => defaultNav(currentTrackName, currentCourseName),
+    [currentTrackName, currentCourseName],
+  );
+  // The override is "keyed" on the current derived home + isOpen: if either
+  // changes we ignore the stored override, effectively re-homing without a
+  // reset effect. Setting a new override always stamps the current home.
+  const [navOverride, setNavOverride] = useState<{ home: NavState; open: boolean; nav: NavState } | null>(null);
+  const nav = navOverride && navOverride.home === derivedNav && navOverride.open === isOpen
+    ? navOverride.nav
+    : derivedNav;
+  const setNav = (next: NavState) => setNavOverride({ home: derivedNav, open: isOpen, nav: next });
 
   // Pull the list of cloud files (+ their synced metadata) when the drawer opens
   // or the local set changes (e.g. after a download promotes a cloud file local).
@@ -112,7 +123,7 @@ export function FilesTab({
       const byName = new Map<string, FileSource>();
       const all: RemoteFile[] = [];
       for (const src of sourcesRef.current) {
-        let list: RemoteFile[] = [];
+        let list: RemoteFile[];
         try { list = await src.listFiles(); } catch { list = []; }
         for (const rf of list) {
           if (!byName.has(rf.name)) { byName.set(rf.name, src); all.push(rf); }

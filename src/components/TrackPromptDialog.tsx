@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useTranslation, Trans } from 'react-i18next';
 import { MapPin, Plus, Check, AlertTriangle, Navigation } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -48,8 +48,12 @@ export function TrackPromptDialog({
   laps, samples,
 }: TrackPromptDialogProps) {
   const { t } = useTranslation('tracks');
-  const [tracks, setTracks] = useState(initialTracks);
-  const [selectedCourseName, setSelectedCourseName] = useState('');
+  // Local overrides for the track list — refreshTracks pushes an updated list
+  // here after a create, so we don't need to wait for the parent to re-render.
+  // Falls back to the fresh `initialTracks` prop otherwise, dropping the
+  // "sync local state from prop on change" effect.
+  const [tracksOverride, setTracksOverride] = useState<Track[] | null>(null);
+  const tracks = tracksOverride ?? initialTracks;
   const [isAddCourseOpen, setIsAddCourseOpen] = useState(false);
   const [isAddTrackOpen, setIsAddTrackOpen] = useState(false);
   // A track is just a name now, so creating one here is a two-step flow: make
@@ -66,28 +70,21 @@ export function TrackPromptDialog({
   // True once the user has created a bare track here and is adding its course.
   const inCourseStep = createdTrackName != null;
 
-  useEffect(() => {
-    setTracks(initialTracks);
-  }, [initialTracks]);
-
-  // Each fresh open starts clean — drop any in-progress track creation.
-  useEffect(() => {
-    if (open) setCreatedTrackName(null);
-  }, [open]);
-
-  useEffect(() => {
-    if (open && detectionResult && !detectionResult.isWaypointMode) {
-      setSelectedCourseName(detectionResult.course.name);
-    } else if (open && courses.length === 1) {
-      setSelectedCourseName(courses[0].name);
-    } else if (open) {
-      setSelectedCourseName('');
-    }
-  }, [open, courses, detectionResult]);
+  // Derive the selected course from what would be auto-suggested (detected
+  // course, or the only course if there's just one). A user pick overrides.
+  const derivedSelectedCourse = useMemo(() => {
+    if (!open) return '';
+    if (detectionResult && !detectionResult.isWaypointMode) return detectionResult.course.name;
+    if (courses.length === 1) return courses[0].name;
+    return '';
+  }, [open, detectionResult, courses]);
+  const [selectedCourseOverride, setSelectedCourseOverride] = useState<string | null>(null);
+  const selectedCourseName = selectedCourseOverride ?? derivedSelectedCourse;
+  const setSelectedCourseName = (name: string) => setSelectedCourseOverride(name);
 
   const refreshTracks = useCallback(async () => {
     const loaded = await loadTracks();
-    setTracks(loaded);
+    setTracksOverride(loaded);
     return loaded;
   }, []);
 
@@ -237,7 +234,7 @@ export function TrackPromptDialog({
             <div className="space-y-4">
               <div className="p-3 rounded-md border border-yellow-500/30 bg-yellow-500/5">
                 <div className="flex items-start gap-2">
-                  <AlertTriangle className="w-4 h-4 text-yellow-500 mt-0.5 flex-shrink-0" />
+                  <AlertTriangle className="w-4 h-4 text-yellow-500 mt-0.5 shrink-0" />
                   <div>
                     <p className="text-sm font-medium text-foreground">{t('prompt.waypointTiming')}</p>
                     <p className="text-xs text-muted-foreground mt-1">

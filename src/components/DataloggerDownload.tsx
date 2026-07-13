@@ -151,20 +151,20 @@ export function DataloggerDownload({ onDataLoaded, autoSave, autoSaveFile, autoS
     [connection, onDataLoaded, autoSave, autoSaveFile, handleClose]
   );
 
-  // React to unexpected disconnects from the context while a transfer is in flight.
-  useEffect(() => {
-    if (!connection && (state === "downloading" || state === "fetching-files" || state === "file-list")) {
-      setError("Device disconnected unexpectedly.");
-      setState("error");
-    }
-  }, [connection, state]);
+  // React to unexpected disconnects while a transfer is in flight. Derived
+  // (not effect-driven) so the render just observes the connection-loss and
+  // paints the error view without a setState-in-effect churn.
+  const workingStates: DownloadState[] = ["downloading", "fetching-files", "file-list"];
+  const disconnectedMidTransfer = !connection && workingStates.includes(state);
+  const effectiveState: DownloadState = disconnectedMidTransfer ? "error" : state;
+  const effectiveError = disconnectedMidTransfer ? "Device disconnected unexpectedly." : error;
 
   const handleRetry = useCallback(() => {
     setError("");
     void handleConnect();
   }, [handleConnect]);
 
-  const isModalOpen = state !== "idle";
+  const isModalOpen = effectiveState !== "idle";
 
   return (
     <Dialog open={isModalOpen} onOpenChange={(open) => !open && handleClose()}>
@@ -172,16 +172,16 @@ export function DataloggerDownload({ onDataLoaded, autoSave, autoSaveFile, autoS
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Bluetooth className="w-5 h-5" />
-            {state === "connecting" && "Connecting..."}
-            {state === "fetching-files" && "Fetching Files..."}
-            {state === "file-list" && "Select File to Download"}
-            {state === "downloading" && "Downloading..."}
-            {state === "error" && "Connection Error"}
+            {effectiveState ==="connecting" && "Connecting..."}
+            {effectiveState ==="fetching-files" && "Fetching Files..."}
+            {effectiveState ==="file-list" && "Select File to Download"}
+            {effectiveState ==="downloading" && "Downloading..."}
+            {effectiveState ==="error" && "Connection Error"}
           </DialogTitle>
         </DialogHeader>
 
         {/* Connecting State */}
-        {state === "connecting" && (
+        {effectiveState ==="connecting" && (
           <div className="flex flex-col items-center gap-4 py-8">
             <Loader2 className="w-12 h-12 animate-spin text-primary" />
             <p className="text-muted-foreground">{statusMessage}</p>
@@ -192,7 +192,7 @@ export function DataloggerDownload({ onDataLoaded, autoSave, autoSaveFile, autoS
         )}
 
         {/* Fetching Files State */}
-        {state === "fetching-files" && (
+        {effectiveState ==="fetching-files" && (
           <div className="flex flex-col items-center gap-4 py-8">
             <Loader2 className="w-12 h-12 animate-spin text-primary" />
             <p className="text-muted-foreground">{statusMessage}</p>
@@ -200,19 +200,19 @@ export function DataloggerDownload({ onDataLoaded, autoSave, autoSaveFile, autoS
         )}
 
         {/* File List State */}
-        {state === "file-list" && (
+        {effectiveState ==="file-list" && (
           <FileListPanel files={files} onSelect={handleFileSelect} />
         )}
 
         {/* Downloading State */}
-        {state === "downloading" && progress && (
+        {effectiveState ==="downloading" && progress && (
           <ProgressPanel currentFile={currentFile} progress={progress} />
         )}
 
         {/* Error State */}
-        {state === "error" && (
+        {effectiveState ==="error" && (
           <div className="flex flex-col items-center gap-4 py-4">
-            <p className="text-destructive text-center">{error}</p>
+            <p className="text-destructive text-center">{effectiveError}</p>
             <div className="flex gap-2">
               <Button variant="outline" onClick={handleClose}>
                 Cancel

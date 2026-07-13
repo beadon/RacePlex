@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { ChevronDown, Gauge, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -30,33 +30,32 @@ const numOrNull = (v: string): number | null => (v === "" ? null : parseFloat(v)
  * Saved to FileMetadata so it cloud-syncs with the session. Held for later
  * processing — nothing consumes it yet.
  */
+/**
+ * `key`-ed by the parent on session identity (fileName), so switching files
+ * remounts this component and its state resets via lazy initializers below.
+ * That's the React docs' recommended alternative to a "reset state when props
+ * change" effect (see: react.dev/reference/react/useState#resetting-state-with-a-key).
+ */
 export function PostSessionPanel({ postSession, onSave }: PostSessionPanelProps) {
   const { t } = useTranslation("drawer");
   const [open, setOpen] = useState(false);
 
-  const [mode, setMode] = useState<TirePsiMode>("quarters");
-  const [psiSingle, setPsiSingle] = useState<number | null>(null);
-  const [psiFront, setPsiFront] = useState<number | null>(null);
-  const [psiRear, setPsiRear] = useState<number | null>(null);
-  const [fl, setFl] = useState<number | null>(null);
-  const [fr, setFr] = useState<number | null>(null);
-  const [rl, setRl] = useState<number | null>(null);
-  const [rr, setRr] = useState<number | null>(null);
-  const [weight, setWeight] = useState<number | null>(null);
-
-  // Reload local state whenever a different session's data arrives.
-  useEffect(() => {
-    const m = detectMode(postSession);
-    setMode(m);
-    setFl(postSession?.tirePsiFrontLeft ?? null);
-    setFr(postSession?.tirePsiFrontRight ?? null);
-    setRl(postSession?.tirePsiRearLeft ?? null);
-    setRr(postSession?.tirePsiRearRight ?? null);
-    setPsiSingle(m === "single" ? postSession?.tirePsiFrontLeft ?? null : null);
-    setPsiFront(m === "halves" ? postSession?.tirePsiFrontLeft ?? null : null);
-    setPsiRear(m === "halves" ? postSession?.tirePsiRearLeft ?? null : null);
-    setWeight(postSession?.weight ?? null);
-  }, [postSession]);
+  const initialMode = detectMode(postSession);
+  const [mode, setMode] = useState<TirePsiMode>(() => initialMode);
+  const [psiSingle, setPsiSingle] = useState<number | null>(
+    () => (initialMode === "single" ? postSession?.tirePsiFrontLeft ?? null : null),
+  );
+  const [psiFront, setPsiFront] = useState<number | null>(
+    () => (initialMode === "halves" ? postSession?.tirePsiFrontLeft ?? null : null),
+  );
+  const [psiRear, setPsiRear] = useState<number | null>(
+    () => (initialMode === "halves" ? postSession?.tirePsiRearLeft ?? null : null),
+  );
+  const [fl, setFl] = useState<number | null>(() => postSession?.tirePsiFrontLeft ?? null);
+  const [fr, setFr] = useState<number | null>(() => postSession?.tirePsiFrontRight ?? null);
+  const [rl, setRl] = useState<number | null>(() => postSession?.tirePsiRearLeft ?? null);
+  const [rr, setRr] = useState<number | null>(() => postSession?.tirePsiRearRight ?? null);
+  const [weight, setWeight] = useState<number | null>(() => postSession?.weight ?? null);
 
   // Project the current editor state into the canonical 4-corner + weight shape.
   const draft = useMemo<PostSessionData>(() => {

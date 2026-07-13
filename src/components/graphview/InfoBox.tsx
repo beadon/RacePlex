@@ -69,14 +69,28 @@ export function InfoBox({
 }: InfoBoxProps) {
   const { t } = useTranslation('session');
   const { useKph } = useSettingsContext();
-  const [tab, setTab] = useState<InfoTab>('data');
-  const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(sessionKartId);
-  const [selectedSetupId, setSelectedSetupId] = useState<string | null>(sessionSetupId);
+  // Tab is derived: force 'data' when video is unavailable; otherwise the user
+  // pick (stamped against the "video is available" state) wins.
+  const videoTabAvailable = !(hideVideoTab || readOnly);
+  const [tabOverride, setTabOverride] = useState<{ home: boolean; value: InfoTab } | null>(null);
+  const tab = videoTabAvailable
+    ? tabOverride && tabOverride.home === true ? tabOverride.value : 'data'
+    : 'data';
+  const setTab = (v: InfoTab) => setTabOverride({ home: videoTabAvailable, value: v });
 
-  useEffect(() => { setSelectedVehicleId(sessionKartId); setSelectedSetupId(sessionSetupId); }, [sessionKartId, sessionSetupId]);
-
-  // If the video panel was relocated while this tab was open, fall back to data.
-  useEffect(() => { if ((hideVideoTab || readOnly) && tab === 'video') setTab('data'); }, [hideVideoTab, readOnly, tab]);
+  // Vehicle/setup: derived from the session props, with a user pick override
+  // stamped against the current session pair so switching sessions re-homes.
+  const derivedHome = `${sessionKartId ?? ''}|${sessionSetupId ?? ''}`;
+  const [vehicleSetupOverride, setVehicleSetupOverride] = useState<{
+    home: string; vehicle: string | null; setup: string | null;
+  } | null>(null);
+  const overrideValid = vehicleSetupOverride?.home === derivedHome;
+  const selectedVehicleId = overrideValid ? vehicleSetupOverride!.vehicle : sessionKartId;
+  const selectedSetupId = overrideValid ? vehicleSetupOverride!.setup : sessionSetupId;
+  const setSelectedVehicleId = (v: string | null) =>
+    setVehicleSetupOverride({ home: derivedHome, vehicle: v, setup: selectedSetupId });
+  const setSelectedSetupId = (v: string | null) =>
+    setVehicleSetupOverride({ home: derivedHome, vehicle: selectedVehicleId, setup: v });
 
   const unit = useKph ? 'kph' : 'mph';
   const convertSpeed = (speed: number) => useKph ? speed * 1.60934 : speed;
@@ -100,13 +114,18 @@ export function InfoBox({
   const selectedSetup = setups.find(s => s.id === sessionSetupId);
   const isSaved = selectedVehicleId === sessionKartId && selectedSetupId === sessionSetupId;
 
+  // Handlers wrap the derived-state setters (which recreate each render, but
+  // that's fine — these callbacks are DOM onValueChange handlers, not deps of
+  // anything memoized downstream).
   const handleVehicleChange = useCallback((v: string) => {
     setSelectedVehicleId(v === 'none' ? null : v);
     setSelectedSetupId(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- setters intentionally omitted; see block-comment above
   }, []);
 
   const handleSetupChange = useCallback((v: string) => {
     setSelectedSetupId(v === 'none' ? null : v);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- setter intentionally omitted; see block-comment above
   }, []);
 
   const handleSave = useCallback(async () => {

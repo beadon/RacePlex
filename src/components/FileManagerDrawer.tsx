@@ -75,9 +75,39 @@ export function FileManagerDrawer({
   currentTrackName, currentCourseName,
 }: FileManagerDrawerProps) {
   const { t } = useTranslation("drawer");
-  const [topTab, setTopTab] = useState<TopTab>("garage");
-  const [garageTab, setGarageTab] = useState<GarageTab>("files");
-  const [deviceTab, setDeviceTab] = useState<DeviceTab>("settings");
+  // The three tab selections are derived from the props whenever the drawer
+  // opens (see the `isOpen`-keyed override below), and user picks override the
+  // derivation. Same pattern as FilesTab's nav — a reset-on-open effect would
+  // trigger the set-state-in-effect rule; deriving with a stamped override
+  // avoids it.
+  const derivedTopTab: TopTab = initialTopTab === "profile" && showProfile ? "profile" : "garage";
+  const derivedGarageTab: GarageTab = initialGarageTab;
+  const derivedDeviceTab: DeviceTab = "settings";
+  const [tabOverride, setTabOverride] = useState<{
+    open: boolean;
+    homeTop: TopTab; homeGarage: GarageTab; homeDevice: DeviceTab;
+    top: TopTab; garage: GarageTab; device: DeviceTab;
+  } | null>(null);
+  const overrideActive =
+    tabOverride?.open === isOpen &&
+    tabOverride?.homeTop === derivedTopTab &&
+    tabOverride?.homeGarage === derivedGarageTab &&
+    tabOverride?.homeDevice === derivedDeviceTab;
+  const topTab = overrideActive ? tabOverride!.top : derivedTopTab;
+  const garageTab = overrideActive ? tabOverride!.garage : derivedGarageTab;
+  const deviceTab = overrideActive ? tabOverride!.device : derivedDeviceTab;
+  const setTopTab = (v: TopTab) => setTabOverride({
+    open: isOpen, homeTop: derivedTopTab, homeGarage: derivedGarageTab, homeDevice: derivedDeviceTab,
+    top: v, garage: garageTab, device: deviceTab,
+  });
+  const setGarageTab = (v: GarageTab) => setTabOverride({
+    open: isOpen, homeTop: derivedTopTab, homeGarage: derivedGarageTab, homeDevice: derivedDeviceTab,
+    top: topTab, garage: v, device: deviceTab,
+  });
+  const setDeviceTab = (v: DeviceTab) => setTabOverride({
+    open: isOpen, homeTop: derivedTopTab, homeGarage: derivedGarageTab, homeDevice: derivedDeviceTab,
+    top: topTab, garage: garageTab, device: v,
+  });
 
   const garageTabs: { key: GarageTab; label: string }[] = [
     { key: "files", label: t("shell.garageTabs.files") },
@@ -94,14 +124,14 @@ export function FileManagerDrawer({
   const bleAvailable = isBleSupported();
   const [battery, setBattery] = useState<BatteryInfo | null>(null);
 
+  // Reset battery on open — the drawer might reopen against a different
+  // connection (or the same connection with a fresh reading). setState here
+  // is a legit "external event" (drawer opening) reaction; the tab reset
+  // above is handled via the derived + override pattern instead.
   useEffect(() => {
-    if (isOpen) {
-      setTopTab(initialTopTab === "profile" && showProfile ? "profile" : "garage");
-      setGarageTab(initialGarageTab);
-      setDeviceTab("settings");
-      setBattery(null);
-    }
-  }, [isOpen, initialGarageTab, initialTopTab, showProfile]);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-shot on drawer open; equivalent React idiom for "reset a scratch cache when a workspace reopens"
+    if (isOpen) setBattery(null);
+  }, [isOpen]);
 
   // Fetch battery on connect / when switching to device tab
   const fetchBattery = useCallback(async () => {
@@ -114,19 +144,27 @@ export function FileManagerDrawer({
     }
   }, [device.connection]);
 
+  // Battery scratch state tracks the device connection: fetch on connect (when
+  // the device tab is active — no point spamming BATT reads otherwise), clear
+  // on disconnect. Genuine "subscribe to external state (connection lifecycle)
+  // and setState from a callback."
   useEffect(() => {
     if (device.connection && topTab === "device") {
-      fetchBattery();
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- fetchBattery is async and subscribes to an external system (BLE); this is the sanctioned "trigger a fetch when external state changes" case per React docs
+      void fetchBattery();
+      return;
     }
-    if (!device.connection) setBattery(null);
+    if (!device.connection) {
+      setBattery(null);
+    }
   }, [device.connection, topTab, fetchBattery]);
 
   if (!isOpen) return null;
 
   return (
     <>
-      <div className="fixed inset-0 z-[10000] bg-black/40" onClick={onClose} />
-      <div className="fixed inset-y-0 right-0 z-[10001] w-full sm:w-1/2 min-w-[320px] bg-background border-l border-border flex flex-col shadow-2xl animate-in slide-in-from-right duration-200 safe-area-inset">
+      <div className="fixed inset-0 z-10000 bg-black/40" onClick={onClose} />
+      <div className="fixed inset-y-0 right-0 z-10001 w-full sm:w-1/2 min-w-[320px] bg-background border-l border-border flex flex-col shadow-2xl animate-in slide-in-from-right duration-200 safe-area-inset">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
           <div className="flex items-center gap-2">

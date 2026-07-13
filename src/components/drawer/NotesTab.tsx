@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { Pencil, Trash2, NotebookPen, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -39,8 +39,11 @@ export function NotesTab({
   const [text, setText] = useState("");
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [confirmClearSession, setConfirmClearSession] = useState(false);
-  const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
-  const [selectedSetupId, setSelectedSetupId] = useState<string | null>(null);
+  // User overrides for the vehicle/setup selection. `undefined` means "no
+  // override yet — fall back to the session-derived default"; `null` means
+  // "the user explicitly cleared the selection".
+  const [vehicleOverride, setVehicleOverride] = useState<string | null | undefined>(undefined);
+  const [setupOverride, setSetupOverride] = useState<string | null | undefined>(undefined);
 
   // The setup to default to for a vehicle: its only one, or none when ambiguous.
   const defaultSetupFor = useCallback((vehicleId: string): string | null => {
@@ -48,19 +51,23 @@ export function NotesTab({
     return forVehicle.length === 1 ? forVehicle[0].id : null;
   }, [setups]);
 
-  useEffect(() => {
-    if (sessionKartId) {
-      // Session already linked — restore exactly what was saved.
-      setSelectedVehicleId(sessionKartId);
-      setSelectedSetupId(sessionSetupId);
-      return;
-    }
-    // Unlinked session: pre-fill the obvious choices (the only vehicle, and its
-    // only setup) so the user just has to hit Save — we never auto-save for them.
-    const onlyVehicle = vehicles.length === 1 ? vehicles[0].id : null;
-    setSelectedVehicleId(onlyVehicle);
-    setSelectedSetupId(onlyVehicle ? defaultSetupFor(onlyVehicle) : null);
-  }, [sessionKartId, sessionSetupId, vehicles, defaultSetupFor]);
+  // Session-derived defaults: restore the persisted assignment when the session
+  // is already linked, otherwise pre-fill the only-vehicle-and-its-only-setup
+  // pair so the user just has to hit Save. `key`ing on sessionKartId +
+  // sessionSetupId means switching sessions resets the derived defaults; user
+  // overrides carry across only within one session (they reset because the
+  // parent remounts the tab on file switch).
+  const derivedVehicleId = sessionKartId ?? (vehicles.length === 1 ? vehicles[0].id : null);
+  const derivedSetupId = sessionKartId
+    ? sessionSetupId
+    : derivedVehicleId
+    ? defaultSetupFor(derivedVehicleId)
+    : null;
+  const selectedVehicleId = vehicleOverride === undefined ? derivedVehicleId : vehicleOverride;
+  const selectedSetupId = setupOverride === undefined ? derivedSetupId : setupOverride;
+
+  const setSelectedVehicleId = (id: string | null) => setVehicleOverride(id);
+  const setSelectedSetupId = (id: string | null) => setSetupOverride(id);
 
   const handleVehicleChange = useCallback((value: string) => {
     const id = value === "none" ? null : value;
@@ -184,8 +191,10 @@ export function NotesTab({
         )}
       </div>
 
-      {/* Post-session measurements (tire pressure + weight) */}
-      <PostSessionPanel postSession={postSession} onSave={onSavePostSession} />
+      {/* Post-session measurements (tire pressure + weight). `key` on fileName
+          so switching files remounts the panel — React docs' pattern for
+          resetting form state instead of a set-state-in-effect on prop change. */}
+      <PostSessionPanel key={fileName ?? "no-file"} postSession={postSession} onSave={onSavePostSession} />
 
       {/* Delete Confirmation */}
       {confirmDelete && (

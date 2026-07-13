@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import type { GpsSample, Lap, ParsedData, TrackCourseSelection } from "@/types/racing";
 import type { Vehicle } from "@/lib/vehicleStorage";
 import type { VehicleSetup } from "@/lib/setupStorage";
@@ -13,6 +13,15 @@ import {
 import {
   deleteSnapshot, listSnapshots, saveSnapshot,
 } from "@/lib/lapSnapshotStorage";
+import { useAsyncSnapshot } from "./useAsyncSnapshot";
+
+const INITIAL: LapSnapshot[] = [];
+
+function subscribeToLapSnapshots(onChange: () => void): () => void {
+  return onGarageChange((c) => {
+    if (c.store === STORE_NAMES.LAP_SNAPSHOTS) onChange();
+  });
+}
 
 export interface UseLapSnapshotsParams {
   data: ParsedData | null;
@@ -59,21 +68,14 @@ export function useLapSnapshots(params: UseLapSnapshotsParams) {
     vehicles, setups, sessionKartId, sessionSetupId, onLoadOverlay, onClearOverlay,
   } = params;
 
-  const [snapshots, setSnapshots] = useState<LapSnapshot[]>([]);
+  const { data: snapshots, refresh } = useAsyncSnapshot({
+    key: "garage:lap-snapshots",
+    initial: INITIAL,
+    load: listSnapshots,
+    subscribe: subscribeToLapSnapshots,
+  });
   const [activeSnapshotId, setActiveSnapshotId] = useState<string | null>(null);
   const [prompt, setPrompt] = useState<SnapshotPromptState | null>(null);
-
-  const refresh = useCallback(async () => {
-    setSnapshots(await listSnapshots());
-  }, []);
-
-  // Load on mount + whenever the snapshot store changes (local saves, cloud pulls).
-  useEffect(() => {
-    void refresh();
-    return onGarageChange((change) => {
-      if (change.store === STORE_NAMES.LAP_SNAPSHOTS) void refresh();
-    });
-  }, [refresh]);
 
   const courseKey = useMemo(
     () => (selection ? makeCourseKey(selection.trackName, selection.courseName, selection.direction) : null),

@@ -176,9 +176,10 @@ export async function parseGoProFile(
       throw new NoGoProGpsError(
         "This video has no GoPro telemetry track. It may not be a GoPro video, or it may " +
           "have been re-encoded (most editors strip the metadata track — import the original file).",
+        { cause: error },
       );
     }
-    throw new Error(`Could not read GoPro telemetry: ${reason}`);
+    throw new Error(`Could not read GoPro telemetry: ${reason}`, { cause: error });
   }
 
   report("decode", "Decoding GoPro telemetry…");

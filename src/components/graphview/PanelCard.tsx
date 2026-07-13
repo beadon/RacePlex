@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { X } from 'lucide-react';
 import { GraphResizeHandle } from './GraphResizeHandle';
@@ -28,8 +28,12 @@ interface PanelCardProps {
 export function PanelCard({ label, onDelete, height, defaultHeight, onHeightChange, readOnly = false, children }: PanelCardProps) {
   const { t } = useTranslation('session');
   const committedHeight = height ?? defaultHeight;
-  const [cardHeight, setCardHeight] = useState(committedHeight);
-  useEffect(() => { setCardHeight(committedHeight); }, [committedHeight]);
+  // Override lets a mid-drag height paint immediately; it's stamped against
+  // the committedHeight it was captured against, so a parent-driven change to
+  // the committed height auto-invalidates it (no set-state-in-effect reset).
+  const [override, setOverride] = useState<{ home: number; value: number } | null>(null);
+  const cardHeight = override && override.home === committedHeight ? override.value : committedHeight;
+  const setCardHeight = (v: number) => setOverride({ home: committedHeight, value: v });
 
   return (
     <div className="relative border-b border-border flex flex-col" style={{ height: `${cardHeight}px` }}>

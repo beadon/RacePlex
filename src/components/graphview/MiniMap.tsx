@@ -80,19 +80,18 @@ export function MiniMap({ samples, allSamples, referenceSamples = [], course, bo
   const speedEventsLayerRef = useRef<L.LayerGroup | null>(null);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
 
-  const [showSpeedEvents, setShowSpeedEvents] = useState(true);
-  const [showBrakingZones, setShowBrakingZones] = useState(true);
-
-  // Auto-toggle overlays based on All Laps mode
-  useEffect(() => {
-    if (isAllLaps) {
-      setShowSpeedEvents(false);
-      setShowBrakingZones(false);
-    } else {
-      setShowSpeedEvents(true);
-      setShowBrakingZones(true);
-    }
-  }, [isAllLaps]);
+  // Speed-event / braking-zone overlays are off in All Laps mode and on in
+  // single-lap mode by default; a user toggle overrides that stamped against
+  // the current isAllLaps value so switching modes re-homes.
+  const allLapsHome = !!isAllLaps;
+  const [overlayOverride, setOverlayOverride] = useState<{ home: boolean; speed: boolean; brake: boolean } | null>(null);
+  const overrideValid = overlayOverride?.home === allLapsHome;
+  const showSpeedEvents = overrideValid ? overlayOverride!.speed : !allLapsHome;
+  const showBrakingZones = overrideValid ? overlayOverride!.brake : !allLapsHome;
+  const setShowSpeedEvents = (v: boolean) =>
+    setOverlayOverride({ home: allLapsHome, speed: v, brake: showBrakingZones });
+  const setShowBrakingZones = (v: boolean) =>
+    setOverlayOverride({ home: allLapsHome, speed: showSpeedEvents, brake: v });
   const [mapStyle, setMapStyle] = useState<MapStyle>('dark');
   const isOnline = useOnlineStatus();
 
@@ -250,24 +249,24 @@ export function MiniMap({ samples, allSamples, referenceSamples = [], course, bo
       {/* Map style toggle - upper left */}
       <button
         onClick={cycleMapStyle}
-        className="absolute top-2 left-2 z-[1000] p-1.5 rounded bg-card/90 backdrop-blur-sm border border-border hover:bg-muted/50 text-muted-foreground"
+        className="absolute top-2 left-2 z-1000 p-1.5 rounded bg-card/90 backdrop-blur-xs border border-border hover:bg-muted/50 text-muted-foreground"
         title={`${t('map.mapPrefix')}: ${mapStyle === 'dark' ? t('map.styleDark') : mapStyle === 'satellite' ? t('map.styleSatellite') : t('map.styleNone')}`}
       >
         {mapStyleIcon[mapStyle]}
       </button>
 
       {/* Event toggles - upper right */}
-      <div className="absolute top-2 right-2 z-[1000] flex gap-1">
+      <div className="absolute top-2 right-2 z-1000 flex gap-1">
         <button
           onClick={() => setShowBrakingZones(!showBrakingZones)}
-          className={`p-1.5 rounded bg-card/90 backdrop-blur-sm border border-border hover:bg-muted/50 transition-colors ${showBrakingZones ? 'text-primary' : 'text-muted-foreground'}`}
+          className={`p-1.5 rounded bg-card/90 backdrop-blur-xs border border-border hover:bg-muted/50 transition-colors ${showBrakingZones ? 'text-primary' : 'text-muted-foreground'}`}
           title={t('map.brakingZones')}
         >
           <Octagon className="w-3 h-3" />
         </button>
         <button
           onClick={() => setShowSpeedEvents(!showSpeedEvents)}
-          className={`p-1.5 rounded bg-card/90 backdrop-blur-sm border border-border hover:bg-muted/50 transition-colors ${showSpeedEvents ? 'text-primary' : 'text-muted-foreground'}`}
+          className={`p-1.5 rounded bg-card/90 backdrop-blur-xs border border-border hover:bg-muted/50 transition-colors ${showSpeedEvents ? 'text-primary' : 'text-muted-foreground'}`}
           title={t('map.speedEvents')}
         >
           <Zap className="w-3 h-3" />
@@ -276,7 +275,7 @@ export function MiniMap({ samples, allSamples, referenceSamples = [], course, bo
 
       {/* Overlay legend - lower right */}
       {overlayLines.length > 0 && (
-        <div className="absolute bottom-2 right-2 z-[1000] max-w-[55%] max-h-[40%] overflow-y-auto rounded bg-card/90 backdrop-blur-sm border border-border p-1.5 space-y-1 scrollbar-thin">
+        <div className="absolute bottom-2 right-2 z-1000 max-w-[55%] max-h-[40%] overflow-y-auto rounded bg-card/90 backdrop-blur-xs border border-border p-1.5 space-y-1 scrollbar-thin">
           {onToggleOverlayLegend && (
             <button
               onClick={onToggleOverlayLegend}
@@ -317,7 +316,7 @@ export function MiniMap({ samples, allSamples, referenceSamples = [], course, bo
       )}
 
       {!isOnline && (
-        <div className="absolute bottom-2 left-2 z-[1000] flex items-center gap-1 text-xs text-amber-500">
+        <div className="absolute bottom-2 left-2 z-1000 flex items-center gap-1 text-xs text-amber-500">
           <WifiOff className="w-3 h-3" /> {t('map.offline')}
         </div>
       )}

@@ -154,18 +154,24 @@ export default function Index() {
   }, [sessionData, navigate]);
 
   // Consume a pending leaderboard session once on mount. Inject the prebuilt
-  // ParsedData + selection + laps directly (bypassing useLapManagement's detection)
-  // and select the fastest lap (lap 1).
+  // ParsedData + selection + laps directly (bypassing useLapManagement's
+  // detection) and select the fastest lap (lap 1). This is a one-shot
+  // localStorage → state handoff; the whole point of the effect is the
+  // setStates, so the rule flags it — but there's no derived-state path
+  // that fits (the handoff must happen exactly once, on mount, from an
+  // external buffer to component state).
   useEffect(() => {
     const bundle = takePendingLeaderboardSession();
     if (!bundle) return;
     sessionData.loadParsedData(bundle.data, "leaderboard");
+    /* eslint-disable react-hooks/set-state-in-effect -- one-shot mount handoff; see block-comment above */
     setSelection(bundle.selection);
     setLaps(bundle.laps);
     setSelectedLapNumber(bundle.laps[0]?.lapNumber ?? null);
     setLapLabels(bundle.lapLabels);
     setReadOnlyDescriptor(bundle.descriptor);
     setReadOnly(true);
+    /* eslint-enable react-hooks/set-state-in-effect */
     // eslint-disable-next-line react-hooks/exhaustive-deps -- one-shot handoff on mount
   }, []);
 
@@ -367,18 +373,20 @@ export default function Index() {
   });
 
   // Split graphs (Pro tab): a second stack bound to one enabled overlay lap.
-  const [splitActive, setSplitActive] = useState(false);
+  // splitActive derives from the raw flag AND the presence of the split
+  // overlay in the current overlayLines list — auto-collapse when the overlay
+  // is toggled off, no reset effect needed.
+  const [splitActiveRaw, setSplitActive] = useState(false);
   const [splitOverlayId, setSplitOverlayId] = useState<string | null>(null);
   const startSplit = useCallback((overlayId: string) => {
     setSplitOverlayId(overlayId);
     setSplitActive(true);
   }, []);
   const combineSplit = useCallback(() => setSplitActive(false), []);
-  // Auto-combine when the chosen overlay is toggled off (or none remain).
-  useEffect(() => {
-    if (!splitActive) return;
-    if (!overlayLines.some((o) => o.id === splitOverlayId)) setSplitActive(false);
-  }, [splitActive, splitOverlayId, overlayLines]);
+  // Auto-combine derives: active only when the raw flag is on AND the chosen
+  // overlay is still present in the current overlayLines list. Toggling the
+  // overlay off invalidates it without a reset effect.
+  const splitActive = splitActiveRaw && overlayLines.some((o) => o.id === splitOverlayId);
 
   // Reference-lap handlers: clear the other side when one is set.
   const handleSetReferenceWithClear = useCallback((lapNumber: number) => {
@@ -763,7 +771,7 @@ export default function Index() {
             type="button"
             onClick={clearSession}
             aria-label={t("header.home")}
-            className="flex items-center gap-3 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="flex items-center gap-3 rounded-md focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
           >
             <BrandLogo className="w-6 h-6" />
             <span className="font-semibold text-foreground hidden sm:inline">RacePlex</span>

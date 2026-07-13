@@ -1,4 +1,4 @@
-import { defineConfig, loadEnv, type Plugin } from "vite";
+import { defineConfig, loadEnv, type Plugin, type UserConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import fs from "fs";
@@ -128,7 +128,7 @@ const PUBLIC_BACKEND_FALLBACKS = {
 } as const;
 
 // https://vitejs.dev/config/
-export default defineConfig(async ({ mode }) => {
+export default defineConfig(async ({ mode }): Promise<UserConfig> => {
   const env = loadEnv(mode, process.cwd(), "");
 
   // Some secret stores reject the `VITE_` prefix (those are public, build-time
@@ -393,31 +393,26 @@ export default defineConfig(async ({ mode }) => {
     },
     build: {
       // Split heavy vendor libs into their own chunks so they cache
-      // independently across deploys. Each entry below becomes a separate
+      // independently across deploys. Each match below becomes a separate
       // file in /dist/assets; a deploy that only touches app code lets users
       // re-use the existing vendor chunks instead of re-downloading them.
+      //
+      // Vite 8 / Rolldown deprecated the object-literal manualChunks shape;
+      // a moduleId → chunkName function is now the only supported form.
       rollupOptions: {
         output: {
-          manualChunks: {
-            "vendor-react": ["react", "react-dom", "react-router-dom"],
-            "vendor-query": ["@tanstack/react-query"],
-            "vendor-i18n": ["i18next", "react-i18next"],
-            "vendor-leaflet": ["leaflet"],
-            "vendor-supabase": ["@supabase/supabase-js"],
+          manualChunks: (id) => {
+            if (!id.includes("node_modules")) return undefined;
+            if (/[\\/]node_modules[\\/](?:react|react-dom|react-router-dom|react-router|scheduler)[\\/]/.test(id)) {
+              return "vendor-react";
+            }
+            if (/[\\/]node_modules[\\/]@tanstack[\\/]react-query[\\/]/.test(id)) return "vendor-query";
+            if (/[\\/]node_modules[\\/](?:i18next|react-i18next)[\\/]/.test(id)) return "vendor-i18n";
+            if (/[\\/]node_modules[\\/]leaflet[\\/]/.test(id)) return "vendor-leaflet";
+            if (/[\\/]node_modules[\\/]@supabase[\\/]/.test(id)) return "vendor-supabase";
             // Radix is many small packages; group them into one chunk.
-            "vendor-radix": [
-              "@radix-ui/react-collapsible",
-              "@radix-ui/react-dialog",
-              "@radix-ui/react-label",
-              "@radix-ui/react-select",
-              "@radix-ui/react-separator",
-              "@radix-ui/react-slider",
-              "@radix-ui/react-slot",
-              "@radix-ui/react-switch",
-              "@radix-ui/react-tabs",
-              "@radix-ui/react-toast",
-              "@radix-ui/react-tooltip",
-            ],
+            if (/[\\/]node_modules[\\/]@radix-ui[\\/]/.test(id)) return "vendor-radix";
+            return undefined;
           },
         },
       },

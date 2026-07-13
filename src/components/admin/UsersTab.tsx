@@ -1,10 +1,11 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from '@/hooks/use-toast';
 import { Gift, RotateCcw, ChevronDown, ChevronRight, HardDrive, Mail, Route as RouteIcon } from 'lucide-react';
+import { useAsyncSnapshot } from '@/hooks/useAsyncSnapshot';
 
 interface AdminUserRow {
   user_id: string;
@@ -47,30 +48,73 @@ async function invokeAdmin<T>(body: Record<string, unknown>): Promise<T> {
   return data as T;
 }
 
+interface FirstPageSnapshot {
+  users: AdminUserRow[];
+  hasMore: boolean;
+  loaded: boolean;
+}
+
+const EMPTY_FIRST_PAGE: FirstPageSnapshot = { users: [], hasMore: false, loaded: false };
+
 export function UsersTab() {
   const { t } = useTranslation('admin');
-  const [users, setUsers] = useState<AdminUserRow[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Page 1 comes from the shared async cache (initial load + refresh after
+  // mutations). Additional pages (2+) accumulate here so "Load more" can
+  // append without invalidating the cached page 1.
+  const [extraPages, setExtraPages] = useState<AdminUserRow[]>([]);
   const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [grantMonths, setGrantMonths] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<string | null>(null);
+  const [pageLoading, setPageLoading] = useState(false);
+  const [hasMoreOverride, setHasMoreOverride] = useState<boolean | null>(null);
 
-  const load = useCallback(async (targetPage: number, append: boolean) => {
-    setLoading(true);
+  const loadFirst = useCallback(async (): Promise<FirstPageSnapshot> => {
     try {
-      const res = await invokeAdmin<{ users: AdminUserRow[]; hasMore: boolean }>({ action: 'list', page: targetPage });
-      setUsers(prev => append ? [...prev, ...res.users] : res.users);
-      setHasMore(res.hasMore);
-      setPage(targetPage);
+      const res = await invokeAdmin<{ users: AdminUserRow[]; hasMore: boolean }>({ action: 'list', page: 1 });
+      return { users: res.users, hasMore: res.hasMore, loaded: true };
     } catch (e: unknown) {
       toast({ title: t('users.loadError'), description: (e as Error).message, variant: 'destructive' });
+      return { users: [], hasMore: false, loaded: true };
     }
-    setLoading(false);
   }, [t]);
 
-  useEffect(() => { load(1, false); }, [load]);
+  const { data: firstPage, refresh: refreshFirstPage } = useAsyncSnapshot({
+    key: 'admin:users:page-1',
+    initial: EMPTY_FIRST_PAGE,
+    load: loadFirst,
+  });
+
+  const users = page === 1 ? firstPage.users : [...firstPage.users, ...extraPages];
+  const hasMore = hasMoreOverride ?? firstPage.hasMore;
+  const loading = !firstPage.loaded || pageLoading;
+
+  /**
+   * Load a page. `targetPage === 1` resets to the cached first page (via
+   * refresh); `targetPage > 1` fetches and appends to `extraPages`.
+   */
+  const load = useCallback(
+    async (targetPage: number, append: boolean) => {
+      if (targetPage === 1) {
+        setExtraPages([]);
+        setHasMoreOverride(null);
+        setPage(1);
+        await refreshFirstPage();
+        return;
+      }
+      setPageLoading(true);
+      try {
+        const res = await invokeAdmin<{ users: AdminUserRow[]; hasMore: boolean }>({ action: 'list', page: targetPage });
+        setExtraPages((prev) => (append ? [...prev, ...res.users] : res.users));
+        setHasMoreOverride(res.hasMore);
+        setPage(targetPage);
+      } catch (e: unknown) {
+        toast({ title: t('users.loadError'), description: (e as Error).message, variant: 'destructive' });
+      }
+      setPageLoading(false);
+    },
+    [refreshFirstPage, t],
+  );
 
   const grant = async (u: AdminUserRow) => {
     const months = Math.floor(Number(grantMonths[u.user_id] ?? '1'));

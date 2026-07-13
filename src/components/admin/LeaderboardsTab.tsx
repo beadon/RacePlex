@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -13,32 +13,49 @@ import {
   createEngineClass, updateEngineClass, deleteEngineClass,
 } from "@/plugins/cloud-sync/leaderboardClient";
 import { fetchEngineClasses } from "@/plugins/cloud-sync/leaderboardClient";
+import { useAsyncSnapshot } from "@/hooks/useAsyncSnapshot";
 
 type StatusFilter = "all" | "approved" | "denied";
 const UNCLASSIFIED = "__none__";
 
+interface Snapshot {
+  entries: LeaderboardEntry[] | null;
+  classes: EngineClass[];
+  error: string | null;
+  loaded: boolean;
+}
+
+const EMPTY: Snapshot = { entries: null, classes: [], error: null, loaded: false };
+
 export function LeaderboardsTab() {
   const { t } = useTranslation("admin");
-  const [entries, setEntries] = useState<LeaderboardEntry[] | null>(null);
-  const [classes, setClasses] = useState<EngineClass[]>([]);
   const [filter, setFilter] = useState<StatusFilter>("all");
-  const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
 
-  const classesById = useMemo(() => new Map(classes.map((c) => [c.id, c])), [classes]);
-
-  const refresh = useCallback(async () => {
+  const load = useCallback(async (): Promise<Snapshot> => {
     try {
       const [e, c] = await Promise.all([fetchAllEntriesAdmin(), fetchEngineClasses()]);
-      setEntries(e);
-      setClasses(c);
-      setError(null);
+      return { entries: e, classes: c, error: null, loaded: true };
     } catch (err) {
-      setError(err instanceof Error ? err.message : t("leaderboards.loadFailed"));
+      return {
+        entries: null,
+        classes: [],
+        error: err instanceof Error ? err.message : t("leaderboards.loadFailed"),
+        loaded: true,
+      };
     }
   }, [t]);
 
-  useEffect(() => { void refresh(); }, [refresh]);
+  const { data, refresh } = useAsyncSnapshot({
+    key: "admin:leaderboards",
+    initial: EMPTY,
+    load,
+  });
+  const entries = data.entries;
+  const classes = data.classes;
+  const error = data.error;
+
+  const classesById = useMemo(() => new Map(classes.map((c) => [c.id, c])), [classes]);
 
   const patch = async (id: string, p: Parameters<typeof updateEntryAdmin>[1]) => {
     setBusy(id);
@@ -202,7 +219,7 @@ function EngineClassesEditor({ classes, onChanged }: { classes: EngineClass[]; o
           <label className="text-xs text-muted-foreground">{t("leaderboards.className")}</label>
           <Input className="h-8" value={name} onChange={(e) => setName(e.target.value)} placeholder={t("leaderboards.classNamePlaceholder")} />
         </div>
-        <div className="flex-[2] min-w-[180px]">
+        <div className="flex-2 min-w-[180px]">
           <label className="text-xs text-muted-foreground">{t("leaderboards.keywords")}</label>
           <Input className="h-8" value={keywords} onChange={(e) => setKeywords(e.target.value)} placeholder={t("leaderboards.keywordsPlaceholder")} />
         </div>
@@ -246,7 +263,7 @@ function EngineClassRow({ cls, onChanged }: { cls: EngineClass; onChanged: () =>
   return (
     <div className="flex flex-wrap items-end gap-2">
       <Input className="h-8 flex-1 min-w-[120px]" value={name} onChange={(e) => setName(e.target.value)} />
-      <Input className="h-8 flex-[2] min-w-[160px]" value={keywords} onChange={(e) => setKeywords(e.target.value)} />
+      <Input className="h-8 flex-2 min-w-[160px]" value={keywords} onChange={(e) => setKeywords(e.target.value)} />
       <Button size="sm" variant="outline" className="h-8" disabled={busy} onClick={() => void save()}>{t("leaderboards.saveClass")}</Button>
       <Button size="sm" variant="ghost" className="h-8 text-destructive" disabled={busy} onClick={() => void remove()}>{t("leaderboards.deleteClass")}</Button>
     </div>

@@ -236,7 +236,6 @@ export function parseAlfanoFile(content: string): ParsedData {
   // Parse data rows
   const samples: GpsSample[] = [];
   let baseTimeMs: number | null = null;
-  let startDate: Date | undefined;
   let hasNativeG = false;
 
   for (let i = headerIndex + 1; i < lines.length; i++) {
@@ -426,6 +425,5 @@ export function parseAlfanoFile(content: string): ParsedData {
     fieldMappings,
     bounds: calculateBounds(samples),
     duration: samples[samples.length - 1].t,
-    startDate
   };
 }

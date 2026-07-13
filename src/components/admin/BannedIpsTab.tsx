@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,11 +7,18 @@ import { toast } from '@/hooks/use-toast';
 import { getDatabase } from '@/lib/db';
 import type { DbBannedIp } from '@/lib/db/types';
 import { Plus, Trash2 } from 'lucide-react';
+import { useAsyncSnapshot } from '@/hooks/useAsyncSnapshot';
+
+interface Snapshot {
+  items: DbBannedIp[];
+  loaded: boolean;
+  error: string | null;
+}
+
+const INITIAL: Snapshot = { items: [], loaded: false, error: null };
 
 export function BannedIpsTab() {
   const { t } = useTranslation('admin');
-  const [ips, setIps] = useState<DbBannedIp[]>([]);
-  const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
   const [newIp, setNewIp] = useState('');
   const [newReason, setNewReason] = useState('');
@@ -20,17 +27,26 @@ export function BannedIpsTab() {
 
   const db = getDatabase();
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const loadSnapshot = useCallback(async (): Promise<Snapshot> => {
     try {
-      setIps(await db.getBannedIps());
+      const items = await db.getBannedIps();
+      return { items, loaded: true, error: null };
     } catch (e: unknown) {
-      toast({ title: t('common.error'), description: (e as Error).message, variant: 'destructive' });
+      const msg = (e as Error).message;
+      // Toast fires here (not in render) so useAsyncSnapshot stays pure.
+      toast({ title: t('common.error'), description: msg, variant: 'destructive' });
+      return { items: [], loaded: true, error: msg };
     }
-    setLoading(false);
   }, [db, t]);
 
-  useEffect(() => { load(); }, [load]);
+  const { data, refresh } = useAsyncSnapshot({
+    key: 'admin:banned-ips',
+    initial: INITIAL,
+    load: loadSnapshot,
+  });
+  const ips = data.items;
+  const loading = !data.loaded;
+  const load = refresh;
 
   const handleBan = async () => {
     if (!newIp.trim()) return;
@@ -80,7 +96,7 @@ export function BannedIpsTab() {
             <select
               value={newDurationDays}
               onChange={e => setNewDurationDays(e.target.value)}
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
               <option value="1">{t('bannedIps.duration.oneDay')}</option>
               <option value="7">{t('bannedIps.duration.sevenDays')}</option>

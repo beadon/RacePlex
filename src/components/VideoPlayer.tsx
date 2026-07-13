@@ -70,6 +70,9 @@ function DraggableOverlay({
 }) {
   const [localPos, setLocalPos] = useState<OverlayPosition>(position);
   const [selected, setSelected] = useState(false);
+  // `interacting` mirrors dragging/resizing for the willChange hint (which is
+  // read during render). The refs stay authoritative inside the pointer handlers.
+  const [interacting, setInteracting] = useState(false);
   const dragging = useRef(false);
   const resizing = useRef(false);
   const offset = useRef({ x: 0, y: 0 });
@@ -80,9 +83,9 @@ function DraggableOverlay({
     if (!dragging.current && !resizing.current) setLocalPos(position);
   }, [position]);
 
-  useEffect(() => {
-    if (locked) setSelected(false);
-  }, [locked]);
+  // Locked overlays can't be selected. `effectiveSelected` derives from
+  // `selected` and `locked` without a reset effect.
+  const effectiveSelected = selected && !locked;
 
   const [containerWidth, setContainerWidth] = useState(BASE_WIDTH);
   useEffect(() => {
@@ -105,6 +108,7 @@ function DraggableOverlay({
     e.stopPropagation();
     if (!selected) { setSelected(true); return; }
     dragging.current = true;
+    setInteracting(true);
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
     const container = containerRef.current;
     if (!container) return;
@@ -129,6 +133,7 @@ function DraggableOverlay({
   const handlePointerUp = useCallback(() => {
     if (dragging.current) {
       dragging.current = false;
+      setInteracting(resizing.current);
       onMove(id, localPos);
     }
   }, [id, onMove, localPos]);
@@ -137,6 +142,7 @@ function DraggableOverlay({
     e.preventDefault();
     e.stopPropagation();
     resizing.current = true;
+    setInteracting(true);
     resizeStartY.current = e.clientY;
     resizeStartScale.current = localPos.scale ?? 1;
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
@@ -153,6 +159,7 @@ function DraggableOverlay({
   const handleResizePointerUp = useCallback(() => {
     if (resizing.current) {
       resizing.current = false;
+      setInteracting(dragging.current);
       onMove(id, localPos);
     }
   }, [id, onMove, localPos]);
@@ -175,7 +182,7 @@ function DraggableOverlay({
         left: `${localPos.x}%`,
         top: `${localPos.y}%`,
         transform: "translate3d(0,0,0)",
-        willChange: dragging.current || resizing.current ? "transform" : "auto",
+        willChange: interacting ? "transform" : "auto",
         touchAction: "none",
       }}
       onPointerDown={handlePointerDown}
@@ -233,9 +240,10 @@ function OverlayRenderer({ instance, ctx, fontSize }: { instance: OverlayInstanc
  */
 function RecordingPicker({ state, actions }: { state: VideoSyncState; actions: VideoSyncActions }) {
   const { t } = useTranslation("video");
+  const { cancelRecordingChoice, chooseRecording } = actions;
   const pending = state.pendingRecordings;
   return (
-    <Dialog open={!!pending && pending.length > 0} onOpenChange={(open) => { if (!open) actions.cancelRecordingChoice(); }}>
+    <Dialog open={!!pending && pending.length > 0} onOpenChange={(open) => { if (!open) cancelRecordingChoice(); }}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -250,7 +258,7 @@ function RecordingPicker({ state, actions }: { state: VideoSyncState; actions: V
               key={r.key}
               variant="outline"
               className="justify-between h-auto py-2.5"
-              onClick={() => actions.chooseRecording(r.key)}
+              onClick={() => chooseRecording(r.key)}
             >
               <span className="font-mono text-sm truncate">{r.label}</span>
               {r.count > 1 && (
@@ -273,6 +281,16 @@ export const VideoPlayer = memo(function VideoPlayer({
   course = null, referenceSamples = [], paceData = [],
   sessionFileName = null,
 }: VideoPlayerProps) {
+  // Destructure once so JSX + handlers reference plain names instead of
+  // `actions.<field>`; the react-hooks/refs rule flags every access on an
+  // object that carries a RefObject field (videoRef/preloadVideoRef).
+  const {
+    videoRef, preloadVideoRef,
+    loadVideo, chooseRecording, cancelRecordingChoice,
+    toggleLock, togglePlay, stepFrame, setSyncPoint,
+    seekVideo, updateOverlaySettings,
+    deleteStoredVideo, refreshStoredMeta,
+  } = actions;
   const { t } = useTranslation("video");
   const { useKph, useMetricDistance, brakingZoneSettings } = useSettingsContext();
   // Cursor comes from its own context (not props) so only this component —
@@ -295,13 +313,15 @@ export const VideoPlayer = memo(function VideoPlayer({
   const [isExporting, setIsExporting] = useState(false);
   const [exportProgress, setExportProgress] = useState(0);
 
-  // Keep refs for export context building
+  // Keep refs for export context building. The export callback is created
+  // once and runs asynchronously in a worker; the refs let it read the latest
+  // arrays without re-creating the callback on every render.
   const samplesRef = useRef(samples);
-  samplesRef.current = samples;
   const allSamplesRef = useRef(allSamples);
-  allSamplesRef.current = allSamples;
   const paceDataRef = useRef(paceData);
-  paceDataRef.current = paceData;
+  useEffect(() => { samplesRef.current = samples; }, [samples]);
+  useEffect(() => { allSamplesRef.current = allSamples; }, [allSamples]);
+  useEffect(() => { paceDataRef.current = paceData; }, [paceData]);
 
   // Compute brake % from visible samples for overlays (must match currentIndex which indexes into samples)
   const brakingGData = useMemo(() => {
@@ -309,7 +329,7 @@ export const VideoPlayer = memo(function VideoPlayer({
     return gToBrakePercent(computeBrakingGSeriesSG(samples, brakingZoneSettings.graphWindow), brakingZoneSettings.brakeMaxG);
   }, [samples, brakingZoneSettings.graphWindow, brakingZoneSettings.brakeMaxG]);
   const brakingGDataRef = useRef(brakingGData);
-  brakingGDataRef.current = brakingGData;
+  useEffect(() => { brakingGDataRef.current = brakingGData; }, [brakingGData]);
 
   const overlaysLocked = state.overlaySettings.overlaysLocked ?? true;
   const overlays = state.overlaySettings.overlays ?? [];
@@ -350,8 +370,8 @@ export const VideoPlayer = memo(function VideoPlayer({
         o.id === id ? { ...o, position: pos } : o
       ),
     };
-    actions.updateOverlaySettings(updated);
-  }, [actions, state.overlaySettings]);
+    updateOverlaySettings(updated);
+  }, [updateOverlaySettings, state.overlaySettings]);
 
   // Auto-hide logic
   const resetHideTimer = useCallback(() => {
@@ -363,10 +383,11 @@ export const VideoPlayer = memo(function VideoPlayer({
   }, [state.isPlaying, overlaysLocked]);
 
   useEffect(() => {
-    // When overlays are unlocked, always keep controls visible
+    // When overlays are unlocked, we short-circuit into "always visible" via
+    // the derived read at the JSX site (`effectiveControlsVisible` below); no
+    // setState here, so the effect body stays free of state writes.
     if (!overlaysLocked) {
       if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
-      setControlsVisible(true);
       return;
     }
 
@@ -374,15 +395,20 @@ export const VideoPlayer = memo(function VideoPlayer({
       hideTimerRef.current = setTimeout(() => setControlsVisible(false), 3000);
     } else {
       if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- react to external play-state going idle: cancel the auto-hide timer + surface controls
       setControlsVisible(true);
     }
     return () => { if (hideTimerRef.current) clearTimeout(hideTimerRef.current); };
   }, [state.isPlaying, overlaysLocked]);
 
+  // When overlays are unlocked the controls are ALWAYS visible; when locked
+  // they follow the timer-driven `controlsVisible` state above.
+  const effectiveControlsVisible = !overlaysLocked || controlsVisible;
+
   // Video rect tracking
   const [videoRect, setVideoRect] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
   useEffect(() => {
-    const videoEl = actions.videoRef?.current;
+    const videoEl = videoRef?.current;
     const containerEl = videoAreaRef.current;
     if (!videoEl || !containerEl) return;
     const updateRect = () => {
@@ -401,7 +427,7 @@ export const VideoPlayer = memo(function VideoPlayer({
     ro.observe(containerEl);
     videoEl.addEventListener("loadedmetadata", updateRect);
     return () => { ro.disconnect(); videoEl.removeEventListener("loadedmetadata", updateRect); };
-  }, [actions.videoRef, state.videoUrl]);
+  }, [videoRef,state.videoUrl]);
 
   const handleVideoClick = useCallback((e: React.MouseEvent) => {
     if (toolbarRef.current?.contains(e.target as Node)) return;
@@ -419,8 +445,8 @@ export const VideoPlayer = memo(function VideoPlayer({
     if (state.isLocked || !progressRef.current || state.videoDuration <= 0) return;
     const rect = progressRef.current.getBoundingClientRect();
     const fraction = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-    actions.seekVideo(fraction * state.videoDuration);
-  }, [state.isLocked, state.videoDuration, actions]);
+    seekVideo(fraction * state.videoDuration);
+  }, [state.isLocked, state.videoDuration, seekVideo]);
 
   const handlePointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     if (state.isLocked) return;
@@ -478,7 +504,7 @@ export const VideoPlayer = memo(function VideoPlayer({
 
   // Export
   const handleExport = useCallback((options: ExportOptions) => {
-    const video = actions.videoRef.current;
+    const video = videoRef.current;
     if (!video) return;
     setIsExporting(true);
     setExportProgress(0);
@@ -531,7 +557,7 @@ export const VideoPlayer = memo(function VideoPlayer({
           const lapNum = options.range === "lap" && selectedLapNumber != null ? selectedLapNumber : undefined;
           saveSessionVideo(sessionFileName, blob, vidName, exportType, options.includeOverlays, lapNum).then(() => {
             console.log("Video saved to app storage");
-            actions.refreshStoredMeta();
+            refreshStoredMeta();
           }).catch(err => {
             console.error("Failed to save video:", err);
             // Fallback to download
@@ -552,7 +578,7 @@ export const VideoPlayer = memo(function VideoPlayer({
     // the whole `actions` object would invalidate handleExport on every parent
     // render, defeating the memoization.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [actions.videoRef, state.videoFileName, state.syncOffsetMs, state.videoDuration, state.exportChunks, overlays, buildExportRenderCtx, sessionFileName, selectedLapNumber, laps]);
+  }, [videoRef,state.videoFileName, state.syncOffsetMs, state.videoDuration, state.exportChunks, overlays, buildExportRenderCtx, sessionFileName, selectedLapNumber, laps]);
 
   // Download existing stored video
   const handleSaveExisting = useCallback(async () => {
@@ -566,8 +592,8 @@ export const VideoPlayer = memo(function VideoPlayer({
   // Delete stored video
   const handleDeleteStored = useCallback(async () => {
     if (!sessionFileName) return;
-    await actions.deleteStoredVideo();
-  }, [sessionFileName, actions]);
+    await deleteStoredVideo();
+  }, [sessionFileName, deleteStoredVideo]);
 
   const hasSectors = courseHasSectors(course);
 
@@ -578,9 +604,9 @@ export const VideoPlayer = memo(function VideoPlayer({
         <Video className="w-12 h-12 text-muted-foreground/50" />
         <p className="text-muted-foreground text-sm">{t("player.noVideo")}</p>
         {state.videoFileName && (
-          <p className="text-xs text-muted-foreground max-w-xs break-words">{t("player.lastUsed", { name: state.videoFileName })}</p>
+          <p className="text-xs text-muted-foreground max-w-xs wrap-break-word">{t("player.lastUsed", { name: state.videoFileName })}</p>
         )}
-        <Button variant="outline" size="sm" onClick={actions.loadVideo} className="gap-2">
+        <Button variant="outline" size="sm" onClick={loadVideo} className="gap-2">
           <Video className="w-4 h-4" /> {t("player.loadVideo")}
         </Button>
         <p className="text-xs text-muted-foreground/70 max-w-xs">{t("player.goproHint")}</p>
@@ -595,7 +621,7 @@ export const VideoPlayer = memo(function VideoPlayer({
       {/* Video element + click target */}
       <div ref={videoAreaRef} className="flex-1 min-h-0 relative overflow-hidden" onClick={handleVideoClick}>
         <video
-          ref={actions.videoRef}
+          ref={videoRef}
           src={state.videoUrl}
           onLoadedMetadata={onLoadedMetadata}
           className="w-full h-full object-contain"
@@ -607,7 +633,7 @@ export const VideoPlayer = memo(function VideoPlayer({
         {/* Hidden element that buffers the next chunk so the boundary swap is near-seamless. */}
         {state.preloadUrl && (
           <video
-            ref={actions.preloadVideoRef}
+            ref={preloadVideoRef}
             src={state.preloadUrl}
             className="hidden"
             preload="auto"
@@ -661,7 +687,7 @@ export const VideoPlayer = memo(function VideoPlayer({
       {/* Overlay Settings Dialog */}
       <Dialog open={showOverlayDialog} onOpenChange={setShowOverlayDialog}>
         <DialogContent className="sm:max-w-md max-h-[85vh] flex flex-col">
-          <DialogHeader className="flex-shrink-0">
+          <DialogHeader className="shrink-0">
             <DialogTitle className="flex items-center gap-2">
               <Sliders className="w-5 h-5" />
               {t("player.overlaySettingsTitle")}
@@ -670,7 +696,7 @@ export const VideoPlayer = memo(function VideoPlayer({
           <div className="flex-1 min-h-0 overflow-y-auto pr-3 scrollbar-thin">
             <OverlaySettingsPanel
               settings={state.overlaySettings}
-              onUpdate={actions.updateOverlaySettings}
+              onUpdate={updateOverlaySettings}
               dataSources={dataSources}
               hasReference={hasReference}
               hasSectors={hasSectors}
@@ -702,14 +728,14 @@ export const VideoPlayer = memo(function VideoPlayer({
         onPointerMove={resetHideTimer}
         onClick={e => e.stopPropagation()}
         className={`absolute bottom-0 left-0 right-0 transition-opacity duration-300 ${
-          controlsVisible ? "opacity-100" : "opacity-0 pointer-events-none"
+          effectiveControlsVisible ? "opacity-100" : "opacity-0 pointer-events-none"
         }`}
       >
-        <div className="flex items-center gap-1 px-3 py-1.5 bg-black/70 backdrop-blur-sm">
-          <Button variant="ghost" size="icon" className="h-7 w-7 bg-white/15 backdrop-blur-sm text-white hover:bg-white/30 active:bg-white/25" onClick={actions.togglePlay}>
+        <div className="flex items-center gap-1 px-3 py-1.5 bg-black/70 backdrop-blur-xs">
+          <Button variant="ghost" size="icon" className="h-7 w-7 bg-white/15 backdrop-blur-xs text-white hover:bg-white/30 active:bg-white/25" onClick={togglePlay}>
             {state.isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
           </Button>
-          <Button variant="ghost" size="icon" className="h-7 w-7 bg-white/15 backdrop-blur-sm text-white hover:bg-white/30 active:bg-white/25" onClick={() => setIsMuted(m => !m)} title={isMuted ? t("player.unmute") : t("player.mute")}>
+          <Button variant="ghost" size="icon" className="h-7 w-7 bg-white/15 backdrop-blur-xs text-white hover:bg-white/30 active:bg-white/25" onClick={() => setIsMuted(m => !m)} title={isMuted ? t("player.unmute") : t("player.mute")}>
             {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
           </Button>
 
@@ -717,21 +743,21 @@ export const VideoPlayer = memo(function VideoPlayer({
 
           <Button
             variant="ghost" size="icon"
-            className={`h-7 w-7 backdrop-blur-sm text-white ${state.isLocked ? "bg-primary/70 hover:bg-primary/50" : "bg-white/15 hover:bg-white/30"}`}
-            onClick={actions.toggleLock}
+            className={`h-7 w-7 backdrop-blur-xs text-white ${state.isLocked ? "bg-primary/70 hover:bg-primary/50" : "bg-white/15 hover:bg-white/30"}`}
+            onClick={toggleLock}
             title={state.isLocked ? t("player.unlockSync") : t("player.lockSync")}
           >
             {state.isLocked ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
           </Button>
           {!state.isLocked && (
             <>
-              <Button variant="ghost" size="icon" className="h-7 w-7 bg-white/15 backdrop-blur-sm text-white hover:bg-white/30" onClick={() => actions.stepFrame(-1)} title={t("player.previousFrame")}>
+              <Button variant="ghost" size="icon" className="h-7 w-7 bg-white/15 backdrop-blur-xs text-white hover:bg-white/30" onClick={() => stepFrame(-1)} title={t("player.previousFrame")}>
                 <Minus className="w-3.5 h-3.5" />
               </Button>
-              <Button variant="ghost" size="icon" className="h-7 w-7 bg-white/15 backdrop-blur-sm text-white hover:bg-white/30" onClick={() => actions.stepFrame(1)} title={t("player.nextFrame")}>
+              <Button variant="ghost" size="icon" className="h-7 w-7 bg-white/15 backdrop-blur-xs text-white hover:bg-white/30" onClick={() => stepFrame(1)} title={t("player.nextFrame")}>
                 <Plus className="w-3.5 h-3.5" />
               </Button>
-              <Button variant="ghost" size="sm" className="h-7 bg-white/15 backdrop-blur-sm text-white hover:bg-white/30 text-xs gap-1.5" onClick={actions.setSyncPoint} title={t("player.setSyncPoint")}>
+              <Button variant="ghost" size="sm" className="h-7 bg-white/15 backdrop-blur-xs text-white hover:bg-white/30 text-xs gap-1.5" onClick={setSyncPoint} title={t("player.setSyncPoint")}>
                 <Crosshair className="w-3.5 h-3.5" /> {t("player.sync")}
               </Button>
             </>
@@ -742,8 +768,8 @@ export const VideoPlayer = memo(function VideoPlayer({
           {/* Overlay position lock */}
           <Button
             variant="ghost" size="icon"
-            className={`h-7 w-7 backdrop-blur-sm text-white ${!overlaysLocked ? "bg-amber-500/60 hover:bg-amber-500/40" : "bg-white/15 hover:bg-white/30"}`}
-            onClick={() => actions.updateOverlaySettings({ ...state.overlaySettings, overlaysLocked: !overlaysLocked })}
+            className={`h-7 w-7 backdrop-blur-xs text-white ${!overlaysLocked ? "bg-amber-500/60 hover:bg-amber-500/40" : "bg-white/15 hover:bg-white/30"}`}
+            onClick={() => updateOverlaySettings({ ...state.overlaySettings, overlaysLocked: !overlaysLocked })}
             title={overlaysLocked ? t("player.unlockOverlays") : t("player.lockOverlays")}
           >
             {overlaysLocked ? <Lock className="w-3.5 h-3.5" /> : <Move className="w-3.5 h-3.5" />}
@@ -752,7 +778,7 @@ export const VideoPlayer = memo(function VideoPlayer({
           {/* Overlay config */}
           <Button
             variant="ghost" size="icon"
-            className={`h-7 w-7 backdrop-blur-sm text-white ${showOverlayDialog ? "bg-white/30" : "bg-white/15"} hover:bg-white/30`}
+            className={`h-7 w-7 backdrop-blur-xs text-white ${showOverlayDialog ? "bg-white/30" : "bg-white/15"} hover:bg-white/30`}
             onClick={() => setShowOverlayDialog(v => !v)}
             title={t("player.overlaySettings")}
           >
@@ -763,7 +789,7 @@ export const VideoPlayer = memo(function VideoPlayer({
           {(
             <Button
               variant="ghost" size="icon"
-              className="h-7 w-7 bg-white/15 backdrop-blur-sm text-white hover:bg-white/30"
+              className="h-7 w-7 bg-white/15 backdrop-blur-xs text-white hover:bg-white/30"
               onClick={() => setShowExportDialog(true)}
               title={t("player.exportVideo")}
             >
@@ -773,7 +799,7 @@ export const VideoPlayer = memo(function VideoPlayer({
         </div>
 
         {/* Progress bar row */}
-        <div className="flex items-center gap-2 px-3 py-1.5 bg-black/70 backdrop-blur-sm">
+        <div className="flex items-center gap-2 px-3 py-1.5 bg-black/70 backdrop-blur-xs">
           <div
             ref={progressRef}
             onPointerDown={handlePointerDown}
@@ -795,7 +821,7 @@ export const VideoPlayer = memo(function VideoPlayer({
           <span className="text-white/60 text-xs font-mono min-w-[80px] text-right">
             {formatTime(videoCurrentTime)} / {formatTime(state.videoDuration)}
           </span>
-          <Button variant="ghost" size="icon" className="h-7 w-7 bg-white/15 backdrop-blur-sm text-white hover:bg-white/30" onClick={actions.loadVideo} title={t("player.replaceVideo")}>
+          <Button variant="ghost" size="icon" className="h-7 w-7 bg-white/15 backdrop-blur-xs text-white hover:bg-white/30" onClick={loadVideo} title={t("player.replaceVideo")}>
             <RefreshCw className="w-3.5 h-3.5" />
           </Button>
         </div>

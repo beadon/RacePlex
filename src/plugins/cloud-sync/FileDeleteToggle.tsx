@@ -22,23 +22,30 @@ export default function FileDeleteToggle({ ctx }: { ctx: FileDeleteConfirmContex
   const { user } = useAuth();
   const online = useOnlineStatus();
   const { fileName, registerOnConfirm } = ctx;
+  // `syncedFor` tracks the fileName+user this snapshot describes so we don't
+  // render a stale `synced` state during the async refetch when either changes.
+  const [syncedFor, setSyncedFor] = useState<{ fileName: string; userId: string } | null>(null);
   const [synced, setSynced] = useState(false);
   const [alsoDelete, setAlsoDelete] = useState(false);
+  const syncedIsCurrent = !!user && syncedFor?.fileName === fileName && syncedFor.userId === user.id;
+  const effectiveSynced = syncedIsCurrent && synced;
 
   useEffect(() => {
+    if (!user) return;
     let active = true;
-    if (!user) {
-      setSynced(false);
-      return;
-    }
-    getFileRecord(fileName).then((r) => active && setSynced(fileSyncStatus(r) === "synced"));
+    const userId = user.id;
+    getFileRecord(fileName).then((r) => {
+      if (!active) return;
+      setSynced(fileSyncStatus(r) === "synced");
+      setSyncedFor({ fileName, userId });
+    });
     return () => {
       active = false;
     };
   }, [user, fileName]);
 
   useEffect(() => {
-    if (!user || !synced || !alsoDelete) {
+    if (!user || !effectiveSynced || !alsoDelete) {
       registerOnConfirm(null);
       return;
     }
@@ -57,9 +64,9 @@ export default function FileDeleteToggle({ ctx }: { ctx: FileDeleteConfirmContex
       }
     });
     return () => registerOnConfirm(null);
-  }, [user, synced, alsoDelete, online, fileName, registerOnConfirm]);
+  }, [user, effectiveSynced, alsoDelete, online, fileName, registerOnConfirm]);
 
-  if (!user || !synced) return null;
+  if (!user || !effectiveSynced) return null;
 
   return (
     <div className="flex items-center gap-2">

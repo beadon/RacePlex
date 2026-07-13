@@ -16,6 +16,7 @@ import {
   normalizeCourseSectors, legacyMirror, isAtSectorLimit, centeredSectorLine,
 } from '@/lib/courseSectors';
 import { sectorsFromJson, sectorsToJson, type SectorJson } from '@/lib/trackStorage';
+import { useAsyncSnapshot } from '@/hooks/useAsyncSnapshot';
 const CourseSectorEditor = lazy(() =>
   import('@/components/track-editor/CourseSectorEditor').then((m) => ({ default: m.CourseSectorEditor })),
 );
@@ -163,12 +164,14 @@ function LayoutsOverviewMap({ courses, layouts }: { courses: DbCourse[]; layouts
   return <div ref={mapContainerRef} className="h-64 sm:h-80 md:h-96 w-full rounded-md overflow-hidden" />;
 }
 
+interface TracksSnapshot { items: DbTrack[]; loaded: boolean }
+interface CoursesSnapshot { courses: DbCourse[]; layouts: DbCourseLayout[]; loaded: boolean }
+const EMPTY_TRACKS: TracksSnapshot = { items: [], loaded: false };
+const EMPTY_COURSES: CoursesSnapshot = { courses: [], layouts: [], loaded: false };
+
 export function CoursesTab() {
   const { t } = useTranslation('admin');
-  const [tracks, setTracks] = useState<DbTrack[]>([]);
   const [selectedTrackId, setSelectedTrackId] = useState<string>('');
-  const [courses, setCourses] = useState<DbCourse[]>([]);
-  const [loading, setLoading] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<CourseFormState>(emptyForm);
@@ -177,33 +180,43 @@ export function CoursesTab() {
   const [layoutPoints, setLayoutPoints] = useState<Array<{ lat: number; lon: number }>>([]);
   const [hasExistingLayout, setHasExistingLayout] = useState(false);
 
-  // All layouts for selected track (for overview map)
-  const [trackLayouts, setTrackLayouts] = useState<DbCourseLayout[]>([]);
-
   const db = getDatabase();
 
-  const loadTracks = useCallback(async () => {
-    try { setTracks(await db.getTracks()); }
-    catch (e: unknown) { toast({ title: t('common.error'), description: (e as Error).message, variant: 'destructive' }); }
+  const loadTracksSnapshot = useCallback(async (): Promise<TracksSnapshot> => {
+    try { return { items: await db.getTracks(), loaded: true }; }
+    catch (e: unknown) {
+      toast({ title: t('common.error'), description: (e as Error).message, variant: 'destructive' });
+      return { items: [], loaded: true };
+    }
   }, [db, t]);
 
-  const loadCourses = useCallback(async () => {
-    if (!selectedTrackId) { setCourses([]); setTrackLayouts([]); return; }
-    setLoading(true);
+  const loadCoursesSnapshot = useCallback(async (): Promise<CoursesSnapshot> => {
+    if (!selectedTrackId) return { courses: [], layouts: [], loaded: true };
     try {
       const loadedCourses = await db.getCourses(selectedTrackId);
-      setCourses(loadedCourses);
-      // Batch-load all layouts for this track's courses
       const courseIds = loadedCourses.map(c => c.id);
       const layouts = await db.getLayoutsForCourses(courseIds);
-      setTrackLayouts(layouts);
+      return { courses: loadedCourses, layouts, loaded: true };
+    } catch (e: unknown) {
+      toast({ title: t('common.error'), description: (e as Error).message, variant: 'destructive' });
+      return { courses: [], layouts: [], loaded: true };
     }
-    catch (e: unknown) { toast({ title: t('common.error'), description: (e as Error).message, variant: 'destructive' }); }
-    setLoading(false);
   }, [selectedTrackId, db, t]);
 
-  useEffect(() => { loadTracks(); }, [loadTracks]);
-  useEffect(() => { loadCourses(); }, [loadCourses]);
+  const { data: tracksData, refresh: loadTracks } = useAsyncSnapshot({
+    key: 'admin:courses:tracks',
+    initial: EMPTY_TRACKS,
+    load: loadTracksSnapshot,
+  });
+  const { data: coursesData, refresh: loadCourses } = useAsyncSnapshot({
+    key: `admin:courses:${selectedTrackId}`,
+    initial: EMPTY_COURSES,
+    load: loadCoursesSnapshot,
+  });
+  const tracks = tracksData.items;
+  const courses = coursesData.courses;
+  const trackLayouts = coursesData.layouts;
+  const loading = selectedTrackId ? !coursesData.loaded : false;
 
 
   const setField = (key: keyof CourseFormState, value: string) => setForm(prev => ({ ...prev, [key]: value }));
@@ -424,7 +437,7 @@ export function CoursesTab() {
                   <Switch checked={course.enabled ?? true} onCheckedChange={val => handleToggle(course.id, val)} />
                   {hasLayout && (
                     <span
-                      className="inline-block w-3 h-3 rounded-full flex-shrink-0"
+                      className="inline-block w-3 h-3 rounded-full shrink-0"
                       style={{ backgroundColor: color }}
                       title={t('courses.hasLayoutTitle')}
                     />
@@ -460,7 +473,7 @@ export function CoursesTab() {
                           onClick={async () => {
                             try {
                               await db.updateTrack(selectedTrackId, { default_course_id: course.id });
-                              setTracks(prev => prev.map(t => t.id === selectedTrackId ? { ...t, default_course_id: course.id } : t));
+                              await loadTracks();
                               toast({ title: t('courses.setDefaultDone', { name: course.name }) });
                             } catch (e: unknown) {
                               toast({ title: t('common.error'), description: (e as Error).message, variant: 'destructive' });
@@ -518,8 +531,7 @@ export function CoursesTab() {
                         try {
                           // eslint-disable-next-line @typescript-eslint/no-explicit-any -- length_ft_override column not in generated types; remove on next regen
                           await db.updateCourse(course.id, { length_ft_override: newOverride } as any);
-                          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- length_ft_override column not in generated types; remove on next regen
-                          setCourses(prev => prev.map(c => c.id === course.id ? { ...c, length_ft_override: newOverride } as any : c));
+                          await loadCourses();
                         } catch (err: unknown) {
                           toast({ title: t('common.error'), description: (err as Error).message, variant: 'destructive' });
                         }

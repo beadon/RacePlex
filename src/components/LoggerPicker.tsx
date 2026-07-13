@@ -77,7 +77,7 @@ function LoggerCard({ image, name, tag, onClick, disabled, badge, hint }: Logger
         src={image}
         alt={name}
         loading="lazy"
-        className="h-16 w-24 shrink-0 object-cover sm:h-auto sm:w-full sm:aspect-[4/3]"
+        className="h-16 w-24 shrink-0 object-cover sm:h-auto sm:w-full sm:aspect-4/3"
       />
       <span className="space-y-0.5 p-3">
         <span className="block font-semibold text-foreground">{name}</span>

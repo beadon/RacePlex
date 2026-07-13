@@ -8,17 +8,15 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 export function InstallPrompt() {
+  // Read the dismiss flag lazily so no effect+setState pair is needed on mount.
+  const [isDismissed, setIsDismissed] = useState<boolean>(
+    () => sessionStorage.getItem("pwa-install-dismissed") !== null,
+  );
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isVisible, setIsVisible] = useState(false);
-  const [isDismissed, setIsDismissed] = useState(false);
 
   useEffect(() => {
-    // Check if already dismissed in this session
-    const dismissed = sessionStorage.getItem("pwa-install-dismissed");
-    if (dismissed) {
-      setIsDismissed(true);
-      return;
-    }
+    if (isDismissed) return;
 
     const handleBeforeInstall = (e: Event) => {
       e.preventDefault();
@@ -38,7 +36,7 @@ export function InstallPrompt() {
       window.removeEventListener("beforeinstallprompt", handleBeforeInstall);
       window.removeEventListener("appinstalled", handleAppInstalled);
     };
-  }, []);
+  }, [isDismissed]);
 
   const handleInstall = async () => {
     if (!deferredPrompt) return;
@@ -61,7 +59,7 @@ export function InstallPrompt() {
   if (!isVisible || isDismissed) return null;
 
   return (
-    <div className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-auto md:max-w-sm z-[9999] animate-in slide-in-from-bottom-4 duration-300">
+    <div className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-auto md:max-w-sm z-9999 animate-in slide-in-from-bottom-4 duration-300">
       <div className="bg-card border border-border rounded-lg shadow-lg p-4 flex items-center gap-3">
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-foreground">Install RacePlex</p>

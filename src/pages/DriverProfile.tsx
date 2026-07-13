@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useCallback, useState } from "react";
+import { useAsyncSnapshot } from "@/hooks/useAsyncSnapshot";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Car, Cpu, Trophy, UserX, Weight, Loader2 } from "lucide-react";
@@ -60,45 +61,36 @@ export default function DriverProfile() {
   const name = decodeURIComponent(username ?? "");
   const { t } = useTranslation(["driver", "common"]);
   const { settings, setSettings, toggleFieldDefault } = useSettings();
-  const [state, setState] = useState<LoadState>({ status: "loading" });
 
-  useEffect(() => {
-    let cancelled = false;
-    setState({ status: "loading" });
-    (async () => {
-      try {
-        const { fetchPublicProfileByName, fetchPublicVehicles } = await import(
-          "@/plugins/cloud-sync/publicProfile"
-        );
-        const profile = await fetchPublicProfileByName(name);
-        if (cancelled) return;
-        if (!profile) {
-          setState({ status: "notfound" });
-          return;
-        }
-        const { fetchApprovedLightByUser, fetchEngineClasses } = await import(
-          "@/plugins/cloud-sync/leaderboardClient"
-        );
-        const [entries, classes, vehicles] = await Promise.all([
-          fetchApprovedLightByUser(profile.userId),
-          fetchEngineClasses(),
-          fetchPublicVehicles(profile.userId),
-        ]);
-        if (cancelled) return;
-        setState({
-          status: "ready",
-          data: { profile, vehicles, courses: groupEntriesByCourseWeight(entries, classes) },
-        });
-      } catch (e) {
-        if (!cancelled) {
-          setState({ status: "error", message: e instanceof Error ? e.message : t("loadFailed") });
-        }
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
+  const load = useCallback(async (): Promise<LoadState> => {
+    try {
+      const { fetchPublicProfileByName, fetchPublicVehicles } = await import(
+        "@/plugins/cloud-sync/publicProfile"
+      );
+      const profile = await fetchPublicProfileByName(name);
+      if (!profile) return { status: "notfound" };
+      const { fetchApprovedLightByUser, fetchEngineClasses } = await import(
+        "@/plugins/cloud-sync/leaderboardClient"
+      );
+      const [entries, classes, vehicles] = await Promise.all([
+        fetchApprovedLightByUser(profile.userId),
+        fetchEngineClasses(),
+        fetchPublicVehicles(profile.userId),
+      ]);
+      return {
+        status: "ready",
+        data: { profile, vehicles, courses: groupEntriesByCourseWeight(entries, classes) },
+      };
+    } catch (e) {
+      return { status: "error", message: e instanceof Error ? e.message : t("loadFailed") };
+    }
   }, [name, t]);
+
+  const { data: state } = useAsyncSnapshot<LoadState>({
+    key: `driver-profile:${name}`,
+    initial: { status: "loading" },
+    load,
+  });
 
   const settingsButton = (
     <SettingsModal

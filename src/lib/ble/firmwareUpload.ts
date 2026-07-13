@@ -193,7 +193,10 @@ export async function uploadFirmwareImage(
     const sendChunks = async () => {
       for (let i = 0; i < image.length; i += chunkSize) {
         const chunk = image.subarray(i, Math.min(i + chunkSize, image.length));
-        await connection.characteristics.fileRequest.writeValue(chunk);
+        // TS 5.7+ tightened Uint8Array<ArrayBufferLike> vs the Web-API-expected
+        // Uint8Array<ArrayBuffer>. `image` is loaded from fetch/File, never a
+        // SharedArrayBuffer, so this cast is a runtime no-op.
+        await connection.characteristics.fileRequest.writeValue(chunk as Uint8Array<ArrayBuffer>);
         onProgress?.({ sent: Math.min(i + chunkSize, image.length), total: image.length });
         // Progress resets the watchdog — only a real stall trips it.
         arm("Timed out during firmware upload — the device stopped responding");

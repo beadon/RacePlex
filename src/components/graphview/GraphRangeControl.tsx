@@ -25,7 +25,7 @@ export function GraphRangeControl({
   if (filteredSamples.length === 0) return null;
   return (
     <div className="shrink-0 flex items-center gap-3 px-4 py-2 border-t border-border bg-muted/30">
-      <div className="flex-[4] min-w-0">
+      <div className="flex-4 min-w-0">
         <RangeSlider
           min={0}
           max={filteredSamples.length - 1}

@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
+import { useAsyncSnapshot } from "@/hooks/useAsyncSnapshot";
 import { Link } from "react-router-dom";
 import { AlertTriangle, ArrowLeft, Loader2, ShieldX, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -94,20 +95,21 @@ function CloudDisabledNote() {
 function DeletionFlow() {
   const { user, login, logout } = useAuth();
   const online = useOnlineStatus();
-  const [pending, setPending] = useState<PendingDeletion | null>(null);
 
-  const refreshPending = useCallback(async () => {
-    if (!user) return setPending(null);
+  const loadPending = useCallback(async (): Promise<PendingDeletion | null> => {
+    if (!user) return null;
     try {
-      setPending(await getPendingDeletion(user.id));
+      return await getPendingDeletion(user.id);
     } catch {
-      /* non-fatal: leave as-is */
+      return null; /* non-fatal */
     }
   }, [user]);
 
-  useEffect(() => {
-    void refreshPending();
-  }, [refreshPending]);
+  const { data: pending, refresh: refreshPending } = useAsyncSnapshot<PendingDeletion | null>({
+    key: `delete-account:pending:${user?.id ?? "anon"}`,
+    initial: null,
+    load: loadPending,
+  });
 
   if (!user) return <SignIn login={login} online={online} />;
 
