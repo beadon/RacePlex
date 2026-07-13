@@ -1,10 +1,14 @@
 /**
  * Shared IndexedDB utilities.
- * All storage modules share the same database ("dove-file-manager") and version.
+ * All storage modules share the same database ("raceplex") and version.
  * The schema is defined here once to avoid duplication across storage files.
+ *
+ * A one-shot migration in `legacyDbMigration.ts` copies data from the previous
+ * `dove-file-manager` database on first startup after upgrade, then deletes
+ * the old one; users don't lose anything.
  */
 
-export const DB_NAME = "dove-file-manager";
+export const DB_NAME = "raceplex";
 export const DB_VERSION = 13;
 
 export const STORE_NAMES = {

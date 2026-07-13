@@ -17,7 +17,7 @@ import {
 const STORE = STORE_NAMES.SETUP_REVISIONS;
 
 /** localStorage key holding the last orphan-prune time (ms). */
-const PRUNE_TS_KEY = "dove:setup-revisions:lastPrune";
+const PRUNE_TS_KEY = "raceplex:setup-revisions:lastPrune";
 
 export async function getSetupRevision(id: string): Promise<SetupRevision | null> {
   const db = await openDB();

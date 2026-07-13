@@ -1,13 +1,15 @@
 // Per-plugin persistent storage.
 //
-// Each plugin gets its own IndexedDB database (`dove-plugin-<id>`) with a single
-// key-value object store. This keeps plugin data fully decoupled from the core
-// schema in `dbUtils.ts` — plugins never bump the app's DB_VERSION or register
-// stores there, so a new plugin's storage needs is zero core changes.
+// Each plugin gets its own IndexedDB database (`raceplex-plugin-<id>`) with a
+// single key-value object store. This keeps plugin data fully decoupled from
+// the core schema in `dbUtils.ts` — plugins never bump the app's DB_VERSION
+// or register stores there, so a new plugin's storage needs is zero core
+// changes. Legacy `dove-plugin-<id>` databases are copied to the new name by
+// the one-shot migration in `lib/legacyDbMigration.ts`.
 
 import type { PluginStore } from "./types";
 
-const DB_PREFIX = "dove-plugin-";
+const DB_PREFIX = "raceplex-plugin-";
 const KV_STORE = "kv";
 
 // Plugin ids become part of an IndexedDB database name; keep them tame.

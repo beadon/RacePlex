@@ -12,7 +12,7 @@ import { downloadCloudFile } from "./syncEngine";
 import { DOC_STORES } from "./syncStores";
 import { buildExportTextFiles, type CloudExport, type LocalExport } from "./exportManifest";
 
-const SETTINGS_KEY = "dove-dataviewer-settings";
+const SETTINGS_KEY = "raceplex:settings";
 
 /** Fetch the server-side account export. Returns null when signed out. */
 async function fetchCloudExport(): Promise<CloudExport | null> {

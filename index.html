@@ -33,6 +33,29 @@
 </head>
 
   <body>
+    <!-- Rename any legacy `dove-*` localStorage keys to `raceplex:*` BEFORE any
+         ESM module runs — settings, i18n, and the palette all read localStorage
+         synchronously at import time, and they need to find the settings blob
+         under its new name on the first upgraded boot. Idempotent; no-ops after
+         the first run. The IDB rename runs later inside main.tsx. -->
+    <script>
+      (function migrateLegacyLocalStorage() {
+        try {
+          var renames = [
+            ["dove-dataviewer-settings", "raceplex:settings"],
+            ["dove-pending-checkout", "raceplex:pending-checkout"],
+            ["dove:setup-revisions:lastPrune", "raceplex:setup-revisions:lastPrune"]
+          ];
+          for (var i = 0; i < renames.length; i++) {
+            var legacy = renames[i][0], next = renames[i][1];
+            var val = localStorage.getItem(legacy);
+            if (val === null) continue;
+            if (localStorage.getItem(next) === null) localStorage.setItem(next, val);
+            localStorage.removeItem(legacy);
+          }
+        } catch (_) { /* storage disabled or private-browsing — carry on */ }
+      })();
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

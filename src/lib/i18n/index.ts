@@ -35,7 +35,7 @@ import enPlugins from "@/locales/en/plugins.json";
 import enAuth from "@/locales/en/auth.json";
 import enAdmin from "@/locales/en/admin.json";
 
-const SETTINGS_KEY = "dove-dataviewer-settings";
+const SETTINGS_KEY = "raceplex:settings";
 
 /** Read the persisted language preference straight from the settings blob,
  * synchronously, so we can pick it before React mounts (mirrors the darkMode

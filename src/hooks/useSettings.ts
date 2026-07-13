@@ -32,7 +32,7 @@ export interface AppSettings {
   mychronSsidPrefix: string;        // SSID prefix the Android Wi-Fi picker filters on for MyChron (default: 'MYCHRON5')
 }
 
-const SETTINGS_KEY = "dove-dataviewer-settings";
+const SETTINGS_KEY = "raceplex:settings";
 
 const defaultSettings: AppSettings = {
   useKph: false,

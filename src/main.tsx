@@ -7,6 +7,7 @@ import { initPlugins } from "@/plugins";
 import { initDebugConsole } from "@/lib/debugConsole";
 import { isNativeApp } from "@/lib/platform";
 import { startVersionPolling } from "@/lib/versionCheck";
+import { runLegacyDbMigration } from "@/lib/legacyDbMigration";
 // Initialize i18next before render so the chosen language is active on first
 // paint (no English flash). The default export is the configured instance.
 import i18n from "@/lib/i18n";
@@ -25,9 +26,20 @@ const PERSISTENT_TOAST_DURATION_MS = 24 * 60 * 60 * 1000;
 // early/uncaught errors are caught on devices with no dev tools (?dbg=true).
 initDebugConsole();
 
-initPlugins();
+// Bootstrap: copy any legacy `dove-file-manager` / `dove-plugin-*` databases
+// to the new `raceplex` / `raceplex-plugin-*` names BEFORE the first
+// `openDB()` call — otherwise a fresh empty `raceplex` DB gets created and
+// the migration's guard (`if (legacyExists && !newExists)`) skips the copy.
+// The corresponding localStorage rename ran synchronously in index.html so
+// that settings/i18n/palette imports find their keys under the new names on
+// first paint. Plugins and React mount only after the copy resolves.
+async function bootstrap() {
+  await runLegacyDbMigration();
+  initPlugins();
+  createRoot(document.getElementById("root")!).render(<App />);
+}
 
-createRoot(document.getElementById("root")!).render(<App />);
+void bootstrap();
 
 const isInIframe = (() => {
   try {

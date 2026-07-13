@@ -133,7 +133,7 @@ tap, so it never imports any cloud code.
 ## Plugin storage (`storage.ts`)
 
 Each plugin gets a private key-value store in its **own** IndexedDB database
-(`dove-plugin-<id>`) — decoupled from the core schema, so persisting plugin
+(`raceplex-plugin-<id>`) — decoupled from the core schema, so persisting plugin
 state never touches `dbUtils`/`DB_VERSION`. Available as `ctx.storage` in
 `setup`, or `getPluginStore(id)` from anywhere (e.g. a panel/mount component):
 

@@ -39,7 +39,7 @@ const PendingCheckoutRedirect = lazy(() =>
   import("./components/PendingCheckoutRedirect").then((m) => ({ default: m.PendingCheckoutRedirect })),
 );
 
-const SETTINGS_KEY = "dove-dataviewer-settings";
+const SETTINGS_KEY = "raceplex:settings";
 
 const App = () => {
   // Apply dark/light mode and the colour palette globally so Admin and all routes
