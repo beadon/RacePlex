@@ -1,5 +1,6 @@
 import { useCallback } from "react";
-import { FileText, MapPin } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { FileText, MapPin, GitCompare, X } from "lucide-react";
 import { STORE_NAMES } from "@/lib/dbUtils";
 import { onGarageChange } from "@/lib/garageEvents";
 import {
@@ -10,6 +11,8 @@ import {
 } from "@/lib/fileStorage";
 import { isSampleFileName } from "@/lib/sampleData";
 import { useAsyncSnapshot } from "@/hooks/useAsyncSnapshot";
+import { useComparisonBin } from "@/hooks/useComparisonBin";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 /** How many recent sessions the dashboard tile shows. Anything beyond this is
@@ -109,10 +112,21 @@ export function RecentSessionsTile({
     subscribe: subscribeFilesAndMetadata,
   });
 
+  const bin = useComparisonBin();
+  const navigate = useNavigate();
+
   const visible = useCallback(() => {
     const filtered = showSampleFiles ? data.items : data.items.filter((s) => !s.isSample);
     return filtered.slice(0, RECENT_LIMIT);
   }, [data.items, showSampleFiles])();
+
+  const startCompare = useCallback(() => {
+    // Pass the selection to the /compare route via router state — a bare
+    // /compare URL is meaningless without the session picks. See plan 0012.
+    const files = bin.files;
+    if (files.length < 2) return;
+    navigate("/compare", { state: { compareFileNames: files } });
+  }, [bin.files, navigate]);
 
   return (
     <div className="rounded-lg border border-border bg-card/50 overflow-hidden sm:col-span-2 lg:col-span-3">
@@ -150,40 +164,83 @@ export function RecentSessionsTile({
         </div>
       ) : (
         <ul className="divide-y divide-border">
-          {visible.map((s) => (
-            <li key={s.fileName}>
-              <button
-                type="button"
-                onClick={() => onOpen(s.fileName)}
-                className={cn(
-                  "w-full text-left flex items-center gap-3 px-4 py-3 hover:bg-muted/50 transition-colors",
-                )}
-              >
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-sm font-medium text-foreground truncate">
-                      {s.displayName}
-                    </span>
-                    {s.isSample && (
-                      <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
-                        sample
+          {visible.map((s) => {
+            const inBin = bin.has(s.fileName);
+            return (
+              <li key={s.fileName} className={cn("flex items-center gap-2 pl-3 pr-1", inBin && "bg-primary/5")}>
+                {/*
+                  Selection checkbox — separate hit target from the row itself.
+                  Tapping the checkbox stages/unstages this file for a
+                  cross-session comparison (plan 0012 / issue #37); tapping the
+                  row still opens the session solo the way it always has.
+                */}
+                <label
+                  className="flex shrink-0 items-center justify-center p-1 cursor-pointer"
+                  aria-label={inBin ? "Remove from comparison" : "Add to comparison"}
+                  title={inBin ? "Remove from comparison" : "Add to comparison"}
+                >
+                  <input
+                    type="checkbox"
+                    checked={inBin}
+                    onChange={() => bin.toggle(s.fileName)}
+                    className="h-4 w-4 rounded border-border accent-primary cursor-pointer"
+                  />
+                </label>
+                <button
+                  type="button"
+                  onClick={() => onOpen(s.fileName)}
+                  className={cn(
+                    "flex-1 text-left flex items-center gap-3 py-3 pr-4 hover:bg-muted/40 transition-colors rounded",
+                  )}
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-sm font-medium text-foreground truncate">
+                        {s.displayName}
                       </span>
+                      {s.isSample && (
+                        <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+                          sample
+                        </span>
+                      )}
+                    </div>
+                    {s.trackLabel && (
+                      <div className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground truncate">
+                        <MapPin className="w-3 h-3 shrink-0" />
+                        {s.trackLabel}
+                      </div>
                     )}
                   </div>
-                  {s.trackLabel && (
-                    <div className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground truncate">
-                      <MapPin className="w-3 h-3 shrink-0" />
-                      {s.trackLabel}
-                    </div>
-                  )}
-                </div>
-                <span className="shrink-0 text-xs text-muted-foreground">
-                  {relativeTime(s.savedAt)}
-                </span>
-              </button>
-            </li>
-          ))}
+                  <span className="shrink-0 text-xs text-muted-foreground">
+                    {relativeTime(s.savedAt)}
+                  </span>
+                </button>
+              </li>
+            );
+          })}
         </ul>
+      )}
+
+      {/*
+        Comparison action bar. Only appears when the rider has staged at
+        least one session; the Compare button enables at ≥2 (a single-file
+        comparison is nonsense). Sits inside the tile card so it doesn't
+        float unexpectedly over other dashboard content.
+      */}
+      {bin.size > 0 && (
+        <div className="flex items-center justify-between gap-2 border-t border-border bg-muted/40 px-4 py-2 text-xs">
+          <span className="text-muted-foreground">
+            {bin.size} staged for comparison
+          </span>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" className="h-7 gap-1" onClick={() => bin.clear()}>
+              <X className="w-3.5 h-3.5" /> Clear
+            </Button>
+            <Button size="sm" className="h-7 gap-1" onClick={startCompare} disabled={bin.size < 2}>
+              <GitCompare className="w-3.5 h-3.5" /> Compare {bin.size}
+            </Button>
+          </div>
+        </div>
       )}
     </div>
   );

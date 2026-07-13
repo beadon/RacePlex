@@ -29,6 +29,10 @@ const Admin = lazy(() => import("./pages/Admin"));
 const Register = lazy(() => import("./pages/Register"));
 const Leaderboards = lazy(() => import("./pages/Leaderboards"));
 const DriverProfile = lazy(() => import("./pages/DriverProfile"));
+// Multi-session comparison view (plan 0012 / issue #37). Its own route so a
+// deep-link is possible in principle, though the page bounces back to the
+// dashboard when it lands without a selection in router state.
+const Compare = lazy(() => import("./pages/Compare"));
 // Public, no-login account-deletion request page. Mounted un-gated (below) so the
 // URL Google Play requires resolves on every build, even offline-only ones.
 const DeleteAccount = lazy(() => import("./pages/DeleteAccount"));
@@ -100,6 +104,9 @@ const App = () => {
             {enableCloud && !isNativeApp() && <PendingCheckoutRedirect />}
             <Routes>
               <Route path="/" element={<Index />} />
+              {/* Multi-session comparison view (plan 0012 / issue #37).
+                  Un-gated — comparison uses local files only, no backend. */}
+              <Route path="/compare" element={<Compare />} />
               {/* Un-gated: Google Play requires a publicly reachable account-deletion
                   URL. The page itself adapts when cloud accounts are disabled. */}
               <Route path="/delete-account" element={<DeleteAccount />} />
