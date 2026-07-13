@@ -1,15 +1,15 @@
 /* Self-hosted fonts (latin subset, weights 400-700) so they ship in the SW
    precache and render offline from first paint — no fonts.googleapis.com
    round-trip. Family names match the Google Fonts originals, so the Tailwind
-   `font-sans`/`font-mono` tokens stay unchanged. */
-@import '@fontsource/inter/latin-400.css' layer(base);
-@import '@fontsource/inter/latin-500.css' layer(base);
-@import '@fontsource/inter/latin-600.css' layer(base);
-@import '@fontsource/inter/latin-700.css' layer(base);
-@import '@fontsource/jetbrains-mono/latin-400.css' layer(base);
-@import '@fontsource/jetbrains-mono/latin-500.css' layer(base);
-@import '@fontsource/jetbrains-mono/latin-600.css' layer(base);
-@import '@fontsource/jetbrains-mono/latin-700.css' layer(base);
+   `font-sans`/`font-mono` tokens stay unchanged.
+
+   They are imported from main.tsx, NOT with @import here. An @import of a
+   package's CSS gets inlined by the Tailwind pipeline without rebasing the
+   relative `url(./files/*.woff2)` inside it, so the built stylesheet asked for
+   /assets/files/*.woff2 — a path nothing ever emitted. Every deploy 404'd all
+   twelve font files and silently fell back to system fonts. Importing the CSS
+   from TS routes it through Vite's asset pipeline, which resolves the URLs and
+   emits the fonts. Don't move these back. */
 
 @import 'tailwindcss';
 
