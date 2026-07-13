@@ -24,6 +24,9 @@ const mapStyleConfig = {
   none: null,
 };
 
+/** Satellite by default, matching the Simple tab's map (see RaceLineView). */
+const DEFAULT_MAP_STYLE: MapStyle = 'satellite';
+
 function createSpeedEventIcon(event: SpeedEvent, useKph: boolean): L.DivIcon {
   const displaySpeed = useKph ? (event.speed * 1.60934).toFixed(1) : event.speed.toFixed(1);
   const bg = event.type === 'peak' ? 'hsl(142,76%,36%)' : 'hsl(0,84%,50%)';
@@ -92,7 +95,7 @@ export function MiniMap({ samples, allSamples, referenceSamples = [], course, bo
     setOverlayOverride({ home: allLapsHome, speed: v, brake: showBrakingZones });
   const setShowBrakingZones = (v: boolean) =>
     setOverlayOverride({ home: allLapsHome, speed: showSpeedEvents, brake: v });
-  const [mapStyle, setMapStyle] = useState<MapStyle>('dark');
+  const [mapStyle, setMapStyle] = useState<MapStyle>(DEFAULT_MAP_STYLE);
   const isOnline = useOnlineStatus();
 
   const { minSpeed, maxSpeed } = useMemo(() => {
@@ -133,7 +136,7 @@ export function MiniMap({ samples, allSamples, referenceSamples = [], course, bo
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
     const map = L.map(containerRef.current, { zoomControl: false, attributionControl: false, preferCanvas: true }).setView([0, 0], 16);
-    const config = mapStyleConfig.dark;
+    const config = mapStyleConfig[DEFAULT_MAP_STYLE];
     if (config) tileLayerRef.current = L.tileLayer(config.url, { attribution: config.attribution, maxZoom: 21 }).addTo(map);
     L.control.zoom({ position: 'bottomleft' }).addTo(map);
     referenceLayerRef.current = L.layerGroup().addTo(map);
