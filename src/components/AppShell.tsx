@@ -10,37 +10,77 @@ import { cn } from "@/lib/utils";
  * view can still have its own toolbar; the shell just adds the outer nav).
  *
  * Nav destinations are the app's top-level surfaces, not per-session tabs:
- * - Sessions (the dashboard / current session)
- * - Garage (vehicles, setups)
- * - Tracks (track collection)
- * - Tools (phone lap timer, seat position, etc.)
- * - Settings
+ * - Sessions (the dashboard / current session, route: `/`)
+ * - Garage (vehicles, setups — opens the file-manager drawer)
+ * - Tracks (track collection — opens the TrackEditor dialog)
+ * - Tools (phone lap timer, seat position — routes to Tools plugin)
+ * - Settings (app settings modal)
  *
- * Auth / cloud / device menus stay in the desktop top bar's right cluster.
- * The mobile bottom bar is icon-only to preserve vertical space.
+ * Garage / Tracks / Settings live in existing drawers + dialogs, not
+ * standalone pages — so their nav entries fire callbacks instead of
+ * routing. Callers pass those handlers via the `actions` prop. When an
+ * action isn't provided the destination is hidden (so a page that shouldn't
+ * offer, say, garage access doesn't advertise it).
+ *
+ * Tools stays a real route once the Tools page lands; today it can be an
+ * action too if the caller wants to route to something else in the interim.
  */
+
+export interface AppShellActions {
+  onOpenGarage?: () => void;
+  onOpenTracks?: () => void;
+  onOpenSettings?: () => void;
+  onOpenTools?: () => void;
+}
 
 interface AppShellProps {
   /** Right-hand controls for the desktop top bar (settings, profile, sign-in). */
   rightSlot?: ReactNode;
+  /** Action handlers for the nav destinations that don't have their own
+   *  route. Omitted actions hide their nav entry. */
+  actions?: AppShellActions;
   children: ReactNode;
 }
 
-interface NavDest {
-  to: string;
+interface NavItem {
+  key: string;
   label: string;
   icon: ReactNode;
+  /** Either a route (renders as a NavLink) OR an action (renders as a button). */
+  to?: string;
+  onClick?: () => void;
 }
 
-const DESTINATIONS: NavDest[] = [
-  { to: "/", label: "Sessions", icon: <Gauge className="w-5 h-5" /> },
-  { to: "/garage", label: "Garage", icon: <Car className="w-5 h-5" /> },
-  { to: "/tracks", label: "Tracks", icon: <MapIcon className="w-5 h-5" /> },
-  { to: "/tools", label: "Tools", icon: <Wrench className="w-5 h-5" /> },
-  { to: "/settings", label: "Settings", icon: <SettingsIcon className="w-5 h-5" /> },
-];
+export function AppShell({ rightSlot, actions, children }: AppShellProps) {
+  const items: NavItem[] = [
+    { key: "sessions", label: "Sessions", icon: <Gauge className="w-5 h-5" />, to: "/" },
+  ];
+  if (actions?.onOpenGarage) {
+    items.push({ key: "garage", label: "Garage", icon: <Car className="w-5 h-5" />, onClick: actions.onOpenGarage });
+  }
+  if (actions?.onOpenTracks) {
+    items.push({ key: "tracks", label: "Tracks", icon: <MapIcon className="w-5 h-5" />, onClick: actions.onOpenTracks });
+  }
+  if (actions?.onOpenTools) {
+    items.push({ key: "tools", label: "Tools", icon: <Wrench className="w-5 h-5" />, onClick: actions.onOpenTools });
+  }
+  if (actions?.onOpenSettings) {
+    items.push({ key: "settings", label: "Settings", icon: <SettingsIcon className="w-5 h-5" />, onClick: actions.onOpenSettings });
+  }
 
-export function AppShell({ rightSlot, children }: AppShellProps) {
+  const desktopItemClass = (isActive: boolean) =>
+    cn(
+      "flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors",
+      isActive
+        ? "bg-primary/15 text-primary"
+        : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
+    );
+
+  const mobileItemClass = (isActive: boolean) =>
+    cn(
+      "flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-xs font-medium transition-colors",
+      isActive ? "text-primary" : "text-muted-foreground hover:text-foreground",
+    );
 
   return (
     <div className="min-h-screen bg-background flex flex-col safe-area-x">
@@ -53,24 +93,29 @@ export function AppShell({ rightSlot, children }: AppShellProps) {
               <span className="text-lg font-semibold text-foreground">RacePlex</span>
             </NavLink>
             <nav className="flex items-center gap-1">
-              {DESTINATIONS.map((d) => (
-                <NavLink
-                  key={d.to}
-                  to={d.to}
-                  end={d.to === "/"}
-                  className={({ isActive }) =>
-                    cn(
-                      "flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors",
-                      isActive
-                        ? "bg-primary/15 text-primary"
-                        : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
-                    )
-                  }
-                >
-                  {d.icon}
-                  <span>{d.label}</span>
-                </NavLink>
-              ))}
+              {items.map((it) =>
+                it.to ? (
+                  <NavLink
+                    key={it.key}
+                    to={it.to}
+                    end={it.to === "/"}
+                    className={({ isActive }) => desktopItemClass(isActive)}
+                  >
+                    {it.icon}
+                    <span>{it.label}</span>
+                  </NavLink>
+                ) : (
+                  <button
+                    key={it.key}
+                    type="button"
+                    onClick={it.onClick}
+                    className={desktopItemClass(false)}
+                  >
+                    {it.icon}
+                    <span>{it.label}</span>
+                  </button>
+                ),
+              )}
             </nav>
           </div>
           <div className="flex items-center gap-2">{rightSlot}</div>
@@ -99,22 +144,29 @@ export function AppShell({ rightSlot, children }: AppShellProps) {
           "flex items-stretch justify-around",
         )}
       >
-        {DESTINATIONS.map((d) => (
-          <NavLink
-            key={d.to}
-            to={d.to}
-            end={d.to === "/"}
-            className={({ isActive }) =>
-              cn(
-                "flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-xs font-medium transition-colors",
-                isActive ? "text-primary" : "text-muted-foreground hover:text-foreground",
-              )
-            }
-          >
-            {d.icon}
-            <span className="text-[10px] leading-tight">{d.label}</span>
-          </NavLink>
-        ))}
+        {items.map((it) =>
+          it.to ? (
+            <NavLink
+              key={it.key}
+              to={it.to}
+              end={it.to === "/"}
+              className={({ isActive }) => mobileItemClass(isActive)}
+            >
+              {it.icon}
+              <span className="text-[10px] leading-tight">{it.label}</span>
+            </NavLink>
+          ) : (
+            <button
+              key={it.key}
+              type="button"
+              onClick={it.onClick}
+              className={mobileItemClass(false)}
+            >
+              {it.icon}
+              <span className="text-[10px] leading-tight">{it.label}</span>
+            </button>
+          ),
+        )}
       </nav>
     </div>
   );

@@ -1,14 +1,12 @@
-import { Suspense, type ReactNode } from "react";
+import { type ReactNode } from "react";
 import { AppShell } from "@/components/AppShell";
-import { FileImport } from "@/components/FileImport";
 import { LoggerDownload } from "@/components/LoggerDownload";
 import { TrackEditor } from "@/components/TrackEditor";
 import { RecentSessionsTile } from "@/components/dashboard/RecentSessionsTile";
 import { GarageTile } from "@/components/dashboard/GarageTile";
 import { TracksTile } from "@/components/dashboard/TracksTile";
 import { DevicesTile } from "@/components/dashboard/DevicesTile";
-import { PluginMount } from "@/plugins/PluginMount";
-import { MountSlot } from "@/plugins/mounts";
+import { ImportTile } from "@/components/dashboard/ImportTile";
 import type { ParsedData } from "@/types/racing";
 
 interface DashboardProps {
@@ -19,7 +17,7 @@ interface DashboardProps {
    *  handler so the dashboard row-click and the file-manager drawer row-click
    *  go through the exact same load path. */
   onOpenFile: (fileName: string) => void;
-  /** Open the garage drawer on its Vehicles tab (for the Garage tile). */
+  /** Open the garage drawer on its Vehicles tab (Garage tile + nav). */
   onOpenGarage: () => void;
   autoSave: boolean;
   autoSaveFile: (name: string, blob: Blob) => Promise<void>;
@@ -34,10 +32,14 @@ interface DashboardProps {
 
 /**
  * Dashboard — the app's home surface (rendered by Index when no session is
- * loaded). Shows what's on the system (recent sessions, garage, tracks) and
- * offers inline entry points to add more (file import, device download, track
- * manager). Plugin-contributed Landing tiles (currently: Tools) show up
- * automatically via the PluginMount slot at the end of the grid.
+ * loaded). Optimized for the *returning* user: Recent Sessions is the first
+ * thing you see, and the quick-action row (Garage / Tracks / Devices /
+ * Import) sits right below with equal weight — no single action dominates.
+ *
+ * Import in particular is a compact tile that opens the FileImport dropzone
+ * in a dialog on click, rather than being the page's hero. First-time users
+ * still get a "Load a sample RaceBox session" nudge inside Recent Sessions'
+ * empty state.
  */
 export function Dashboard({
   onDataLoaded,
@@ -51,29 +53,35 @@ export function Dashboard({
   showSampleFiles,
 }: DashboardProps) {
   return (
-    <AppShell rightSlot={settingsButton}>
+    <AppShell
+      rightSlot={settingsButton}
+      actions={{
+        onOpenGarage,
+        // Tracks + Tools nav destinations to come — need an imperative-open
+        // handle from TrackEditor and a Tools route, respectively. Omitting
+        // for now hides those nav items rather than dead-ending them.
+      }}
+    >
       <div className="mx-auto w-full max-w-6xl px-6 py-8 space-y-6">
         <div>
           <h1 className="text-2xl font-semibold text-foreground">Sessions</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Drop a telemetry file, connect a device, or pick from your saved sessions.
+            Pick up where you left off, or add data from a file or device.
           </p>
         </div>
 
-        {/* Inline import dropzone — the primary "add data" surface. */}
-        <FileImport
-          onDataLoaded={onDataLoaded}
-          autoSave={autoSave}
-          autoSaveFile={autoSaveFile}
+        {/* Returning-user flow: their sessions come first, at full width. */}
+        <RecentSessionsTile
+          onOpen={onOpenFile}
+          showSampleFiles={showSampleFiles}
+          onLoadSample={onLoadSample}
+          isLoadingSample={isLoadingSample}
         />
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <RecentSessionsTile
-            onOpen={onOpenFile}
-            showSampleFiles={showSampleFiles}
-            onLoadSample={onLoadSample}
-            isLoadingSample={isLoadingSample}
-          />
+        {/* Quick-actions row — equal-weight cards. Order optimizes for
+            frequency: Garage/Tracks are edited more often than a fresh
+            device connect or one-off import for a returning user. */}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <GarageTile onManage={onOpenGarage} />
 
           {/* TrackEditor's dialog attaches to whatever we hand it as
@@ -88,11 +96,11 @@ export function Dashboard({
             renderTrigger={({ onOpen }) => <DevicesTile onOpen={onOpen} />}
           />
 
-          {/* Plugin-contributed Landing tiles (Tools today; others later).
-              Suspense because contributed components are React.lazy by convention. */}
-          <Suspense fallback={null}>
-            <PluginMount slot={MountSlot.Landing} ctx={{}} />
-          </Suspense>
+          <ImportTile
+            onDataLoaded={onDataLoaded}
+            autoSave={autoSave}
+            autoSaveFile={autoSaveFile}
+          />
         </div>
       </div>
     </AppShell>
