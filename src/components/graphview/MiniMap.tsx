@@ -1,4 +1,4 @@
-import { useEffect, useRef, useMemo, useState } from 'react';
+import { useCallback, useEffect, useRef, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import L from 'leaflet';
 import { GpsSample, Course } from '@/types/racing';
@@ -11,7 +11,7 @@ import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { updatePositionMarker, ARROW_MARKER_SIZE } from '@/components/map/positionArrowMarker';
 import { useSettingsContext } from '@/contexts/SettingsContext';
 import { usePlaybackContext } from '@/contexts/PlaybackContext';
-import { Moon, Satellite, Square, WifiOff, Zap, Octagon, Map as MapIcon, X, Crosshair, List, ChevronDown, ChevronUp } from 'lucide-react';
+import { Moon, Satellite, Square, WifiOff, Zap, Octagon, Map as MapIcon, X, Crosshair, LocateFixed, List, ChevronDown, ChevronUp } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 
 type MapStyle = 'dark' | 'satellite' | 'none';
@@ -157,12 +157,15 @@ export function MiniMap({ samples, allSamples, referenceSamples = [], course, bo
   // heatmap) doesn't re-fit the map on every movement. Fits to the active lap
   // plus any overlays (a cross-session snapshot can run slightly outside).
   const hasSamples = samples.length > 0;
-  useEffect(() => {
+  const fitToRace = useCallback(() => {
     const map = mapRef.current;
     if (!map || !hasSamples) return;
     const fit = unionBounds(bounds, drawnOverlayLines);
     map.fitBounds(L.latLngBounds([[fit.minLat, fit.minLon], [fit.maxLat, fit.maxLon]]), { padding: [10, 10] });
-  }, [bounds, drawnOverlayLines, hasSamples]);
+  }, [hasSamples, bounds, drawnOverlayLines]);
+  useEffect(() => {
+    fitToRace();
+  }, [fitToRace]);
 
   // Draw reference line underneath as grey
   useEffect(() => {
@@ -246,14 +249,25 @@ export function MiniMap({ samples, allSamples, referenceSamples = [], course, bo
     <div className="h-full relative">
       <div ref={containerRef} className="w-full h-full bg-black" />
 
-      {/* Map style toggle - upper left */}
-      <button
-        onClick={cycleMapStyle}
-        className="absolute top-2 left-2 z-1000 p-1.5 rounded bg-card/90 backdrop-blur-xs border border-border hover:bg-muted/50 text-muted-foreground"
-        title={`${t('map.mapPrefix')}: ${mapStyle === 'dark' ? t('map.styleDark') : mapStyle === 'satellite' ? t('map.styleSatellite') : t('map.styleNone')}`}
-      >
-        {mapStyleIcon[mapStyle]}
-      </button>
+      {/* Map controls - upper left. Map-style toggle + a "recenter" button to
+          snap the view back to the race data after the user has panned/zoomed. */}
+      <div className="absolute top-2 left-2 z-1000 flex gap-1">
+        <button
+          onClick={cycleMapStyle}
+          className="p-1.5 rounded bg-card/90 backdrop-blur-xs border border-border hover:bg-muted/50 text-muted-foreground"
+          title={`${t('map.mapPrefix')}: ${mapStyle === 'dark' ? t('map.styleDark') : mapStyle === 'satellite' ? t('map.styleSatellite') : t('map.styleNone')}`}
+        >
+          {mapStyleIcon[mapStyle]}
+        </button>
+        <button
+          onClick={fitToRace}
+          disabled={!hasSamples}
+          className="p-1.5 rounded bg-card/90 backdrop-blur-xs border border-border hover:bg-muted/50 text-muted-foreground disabled:opacity-50 disabled:cursor-not-allowed"
+          title={t('map.recenterTitle')}
+        >
+          <LocateFixed className="w-3 h-3" />
+        </button>
+      </div>
 
       {/* Event toggles - upper right */}
       <div className="absolute top-2 right-2 z-1000 flex gap-1">

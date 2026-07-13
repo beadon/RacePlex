@@ -106,6 +106,8 @@
     "styleDark": "Dark",
     "styleSatellite": "Satellite",
     "styleNone": "None",
+    "recenter": "Recenter",
+    "recenterTitle": "Snap the view back to the race data",
     "speedLegend": "Speed ({{unit}})",
     "overlays": "Overlays",
     "overlaysCollapseTitle": "Collapse overlay list",

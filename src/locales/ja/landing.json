@@ -8,8 +8,7 @@
   },
   "tiles": {
     "sample": {
-      "title": "サンプルデータを読み込む",
-      "description": "Orlando Kart Center の実走セッションで今すぐ試す"
+      "title": "サンプルデータを読み込む"
     },
     "browse": {
       "title": "保存済みファイルを参照",

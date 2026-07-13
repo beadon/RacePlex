@@ -8,8 +8,7 @@
   },
   "tiles": {
     "sample": {
-      "title": "Carregar dados de exemplo",
-      "description": "Experimente agora com uma sessão real do Orlando Kart Center"
+      "title": "Carregar dados de exemplo"
     },
     "browse": {
       "title": "Procurar arquivos salvos",

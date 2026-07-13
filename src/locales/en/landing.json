@@ -8,7 +8,7 @@
   "tiles": {
     "sample": {
       "title": "Load sample data",
-      "description": "Try it now with a real session from Orlando Kart Center"
+      "description": "Open a real RaceBox session and explore the map, laps and telemetry"
     },
     "browse": {
       "title": "Browse saved files",

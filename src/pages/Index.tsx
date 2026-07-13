@@ -71,7 +71,7 @@ import { LapSnapshotPromptDialog } from "@/components/LapSnapshotPromptDialog";
 import { useSessionMetadata } from "@/hooks/useSessionMetadata";
 import { useVideoSync } from "@/hooks/useVideoSync";
 import { useDataLoader } from "@/hooks/useDataLoader";
-import { ensureSampleFile } from "@/lib/sampleData";
+import { ensureAllSampleFiles } from "@/lib/sampleData";
 import { SettingsProvider } from "@/contexts/SettingsContext";
 import { DeviceProvider } from "@/contexts/DeviceContext";
 import { SessionProvider, type SessionContextValue } from "@/contexts/SessionContext";
@@ -117,7 +117,7 @@ export default function Index() {
   // refresh the file list afterwards so an open drawer reflects it immediately.
   const refreshFiles = fileManager.refresh;
   useEffect(() => {
-    void ensureSampleFile().then(() => refreshFiles());
+    void ensureAllSampleFiles().then(() => refreshFiles());
   }, [refreshFiles]);
 
   // Core session data

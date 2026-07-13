@@ -8,8 +8,7 @@
   },
   "tiles": {
     "sample": {
-      "title": "Beispieldaten laden",
-      "description": "Probiere es gleich mit einer echten Session vom Orlando Kart Center aus"
+      "title": "Beispieldaten laden"
     },
     "browse": {
       "title": "Gespeicherte Dateien durchsuchen",

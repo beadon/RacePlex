@@ -1,4 +1,4 @@
-import { useEffect, useRef, useMemo, useState, memo } from 'react';
+import { useCallback, useEffect, useRef, useMemo, useState, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import L from 'leaflet';
 import { GpsSample, Course, ParserStats } from '@/types/racing';
@@ -17,7 +17,7 @@ import { useSettingsContext } from '@/contexts/SettingsContext';
 import { usePlaybackContext } from '@/contexts/PlaybackContext';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Moon, Satellite, Square, WifiOff, CloudSun, FileText, X, Crosshair, List, ChevronDown, ChevronUp, CalendarClock } from 'lucide-react';
+import { Moon, Satellite, Square, WifiOff, CloudSun, FileText, X, Crosshair, LocateFixed, List, ChevronDown, ChevronUp, CalendarClock } from 'lucide-react';
 import { WeatherPanel } from '@/components/WeatherPanel';
 import { LocalWeatherDialog } from '@/components/LocalWeatherDialog';
 import { WeatherStation, WeatherData } from '@/lib/weatherService';
@@ -38,6 +38,13 @@ const mapStyleConfig = {
   },
   none: null,
 };
+
+/**
+ * Satellite by default: a race line is easier to read against the track surface
+ * it was ridden on than against an abstract basemap. The initial tile layer and
+ * the style state both read this, so they can't drift apart.
+ */
+const DEFAULT_MAP_STYLE: MapStyle = 'satellite';
 
 interface RaceLineViewProps {
   samples: GpsSample[];
@@ -156,7 +163,7 @@ export function RaceLineView({ samples, allSamples, referenceSamples = [], cours
   const setShowBrakingZones = (v: boolean) =>
     setOverlayOverride({ home: allLapsHome, speed: showSpeedEvents, brake: v });
   const [showWeather, setShowWeather] = useState(true);
-  const [mapStyle, setMapStyle] = useState<MapStyle>('dark');
+  const [mapStyle, setMapStyle] = useState<MapStyle>(DEFAULT_MAP_STYLE);
 
   // Satellite imagery date (Esri Wayback). '' = current best-available mosaic.
   const [satelliteDate, setSatelliteDate] = useState('');
@@ -280,8 +287,9 @@ export function RaceLineView({ samples, allSamples, referenceSamples = [], cours
       preferCanvas: true,
     }).setView([0, 0], 16);
 
-    // Add initial tile layer (dark)
-    const config = mapStyleConfig.dark;
+    // Add initial tile layer. For satellite this is the Esri default mosaic; the
+    // style effect below swaps in the Wayback tile URL once that resolves.
+    const config = mapStyleConfig[DEFAULT_MAP_STYLE];
     if (config) {
       tileLayerRef.current = L.tileLayer(config.url, {
         attribution: config.attribution,
@@ -349,18 +357,20 @@ export function RaceLineView({ samples, allSamples, referenceSamples = [], cours
   // Fit the view — its own effect so a range-slider drag (which rebuilds the
   // heatmap) doesn't re-fit the map on every movement.
   const hasSamples = samples.length > 0;
-  useEffect(() => {
+  const fitToRace = useCallback(() => {
     const map = mapRef.current;
     if (!map || !hasSamples) return;
-
-    // Include overlay extents so off-lap overlays aren't clipped
+    // Include overlay extents so off-lap overlays aren't clipped.
     const fit = unionBounds(bounds, drawnOverlayLines);
     const latLngBounds = L.latLngBounds([
       [fit.minLat, fit.minLon],
-      [fit.maxLat, fit.maxLon]
+      [fit.maxLat, fit.maxLon],
     ]);
     map.fitBounds(latLngBounds, { padding: [20, 20] });
-  }, [bounds, drawnOverlayLines, hasSamples]);
+  }, [hasSamples, bounds, drawnOverlayLines]);
+  useEffect(() => {
+    fitToRace();
+  }, [fitToRace]);
 
   // Draw the reference line (underneath) as grey
   useEffect(() => {
@@ -590,6 +600,18 @@ export function RaceLineView({ samples, allSamples, referenceSamples = [], cours
           >
             {mapStyleIcon[mapStyle]}
             <span className="text-xs text-muted-foreground">{t('map.mapPrefix')}: {mapStyleLabel[mapStyle]}</span>
+          </button>
+
+          {/* Recenter — snap the view back to the race data bounds after the
+              user has panned or zoomed off. Disabled when nothing is loaded. */}
+          <button
+            onClick={fitToRace}
+            disabled={!hasSamples}
+            className="flex items-center gap-2 w-full px-2 py-1 rounded hover:bg-muted/50 transition-colors mb-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            title={t('map.recenterTitle')}
+          >
+            <LocateFixed className="w-4 h-4 text-muted-foreground" />
+            <span className="text-xs text-muted-foreground">{t('map.recenter')}</span>
           </button>
 
           {/* Satellite imagery date — pick an older Esri Wayback capture to dodge
