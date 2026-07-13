@@ -11,11 +11,10 @@ interface FileImportProps {
 }
 
 /**
- * The drag-and-drop / click-to-browse half of the landing page's primary
- * action. The whole card is the upload target; LandingPage pairs it 50/50 with
- * a "Download from logger" panel (`h-full` so the two halves match height).
- * Other entry points (browse saved files, sample data, track manager) live as
- * their own tiles below.
+ * The drag-and-drop / click-to-browse "add data" action. The whole card is
+ * the upload target. Rendered as a full-width dropzone at the top of the
+ * Dashboard; other entry points (recent sessions, device download, track
+ * manager) live in the tile grid below.
  */
 export function FileImport({ onDataLoaded, autoSave, autoSaveFile }: FileImportProps) {
   const { t } = useTranslation("landing");

@@ -40,6 +40,11 @@ interface SettingsModalProps {
    * header can show it sooner (`sm`) to match neighbouring buttons.
    */
   triggerLabelBreakpoint?: "sm" | "lg";
+  /** Controlled-open mode: when both are set, the internal trigger button is
+   *  hidden and the modal is driven from outside (e.g. the nav bar's
+   *  Settings destination). Uncontrolled otherwise. */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 export function SettingsModal({
@@ -48,22 +53,27 @@ export function SettingsModal({
   onToggleFieldDefault,
   canHideSampleFiles,
   triggerLabelBreakpoint = "lg",
+  open,
+  onOpenChange,
 }: SettingsModalProps) {
   const { t } = useTranslation(["settings", "common"]);
+  const isControlled = open !== undefined && onOpenChange !== undefined;
   return (
-    <Dialog>
-      <DialogTrigger asChild>
-        <Button
-          variant="outline"
-          size="sm"
-          className={triggerLabelBreakpoint === "lg" ? "h-8 gap-1.5 px-2 lg:px-3" : "gap-2"}
-        >
-          <Settings className="w-4 h-4" />
-          <span className={triggerLabelBreakpoint === "lg" ? "hidden lg:inline" : "hidden sm:inline"}>
-            {t("settings:title")}
-          </span>
-        </Button>
-      </DialogTrigger>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      {!isControlled && (
+        <DialogTrigger asChild>
+          <Button
+            variant="outline"
+            size="sm"
+            className={triggerLabelBreakpoint === "lg" ? "h-8 gap-1.5 px-2 lg:px-3" : "gap-2"}
+          >
+            <Settings className="w-4 h-4" />
+            <span className={triggerLabelBreakpoint === "lg" ? "hidden lg:inline" : "hidden sm:inline"}>
+              {t("settings:title")}
+            </span>
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent className="sm:max-w-2xl max-h-[85vh] flex flex-col">
         <DialogHeader className="shrink-0">
           <DialogTitle className="flex items-center gap-2">

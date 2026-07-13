@@ -3,6 +3,7 @@
  */
 
 import { openDB, STORE_NAMES } from './dbUtils';
+import { emitGarageChange } from './garageEvents';
 import { deleteCachedWeather } from './weatherCacheStorage';
 
 export interface FileEntry {
@@ -88,6 +89,7 @@ export async function saveFile(name: string, data: Blob): Promise<void> {
       tx.onerror = () => reject(tx.error);
     });
     db.close();
+    emitGarageChange({ store: FILES_STORE, key: name, type: "put" });
   } catch (e) {
     console.warn("Failed to save file to IndexedDB:", e);
     throw e;
@@ -146,6 +148,7 @@ export async function deleteFile(name: string): Promise<void> {
     // Drop the session's locally-cached weather so a future file reusing this
     // name doesn't inherit stale conditions (best-effort).
     await deleteCachedWeather(name);
+    emitGarageChange({ store: FILES_STORE, key: name, type: "delete" });
   } catch (e) {
     console.warn("Failed to delete file from IndexedDB:", e);
     throw e;
@@ -162,6 +165,7 @@ export async function saveFileMetadata(meta: FileMetadata): Promise<void> {
       tx.onerror = () => reject(tx.error);
     });
     db.close();
+    emitGarageChange({ store: META_STORE, key: meta.fileName, type: "put" });
   } catch (e) {
     console.warn("Failed to save file metadata:", e);
   }

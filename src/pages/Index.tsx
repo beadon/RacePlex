@@ -3,7 +3,8 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Gauge, Map, ListOrdered, BarChart3, FolderOpen, Play, Pause, StepBack, StepForward, Eye, EyeOff, AlertCircle, Wrench, NotebookPen, SlidersHorizontal, Columns2 } from "lucide-react";
 import { BrandLogo } from "@/components/BrandLogo";
-import { LandingPage } from "@/components/LandingPage";
+import { Dashboard } from "@/pages/Dashboard";
+import { useAutoOpenLastSession } from "@/hooks/useAutoOpenLastSession";
 import { TrackEditor } from "@/components/TrackEditor"; // still used in compact header
 import { LapTimesTab } from "@/components/tabs/LapTimesTab";
 import { NotesTab } from "@/components/drawer/NotesTab";
@@ -334,6 +335,15 @@ export default function Index() {
       console.error("Failed to open session:", e);
     }
   }, [fileManager, handleDataLoaded]);
+
+  // Persist the last-open file + auto-open it on cold start (unless the user
+  // hit the home button before their last session ended — that sets an
+  // explicit-close flag which the hook honours). Returns markExplicitClose()
+  // to wire into the clear-session UX below.
+  const { markExplicitClose } = useAutoOpenLastSession({
+    currentFileName,
+    openFile: handleOpenFile,
+  });
 
   // Lap snapshots: frozen "course fastest lap" captures, loaded as a comparison
   // overlay through the same external-reference slot (so they never auto-play or
@@ -710,37 +720,32 @@ export default function Index() {
     openVehiclesGarage, handleOpenFile,
   ]);
 
-  // No data loaded - show import UI
+  // No data loaded — render the dashboard shell. LandingPage's welcome flow
+  // is retired; Dashboard shows "what you have" (recent sessions, garage,
+  // tracks) plus an inline import dropzone. Sample-file access moves to a
+  // tucked-away link in the empty state instead of a primary CTA.
   if (!data) {
     return (
       <DeviceProvider>
         <>
           <InstallPrompt />
-          <LandingPage
+          <Dashboard
             onDataLoaded={handleDataLoaded}
-            onOpenFileManager={fileManager.open}
-            onOpenProfile={fileManager.openProfile}
+            onOpenFile={handleOpenFile}
+            onOpenGarage={openVehiclesGarage}
             autoSave={settings.autoSaveFiles}
             autoSaveFile={fileManager.saveFile}
             onLoadSample={handleLoadSample}
             isLoadingSample={isLoadingSample}
             showSampleFiles={effectiveShowSampleFiles}
-            enableAdmin={enableAdmin}
-            enableCloud={enableCloud}
-            settingsButton={
-              <SettingsModal
-                settings={settings}
-                onSettingsChange={setSettings}
-                onToggleFieldDefault={toggleFieldDefault}
-                canHideSampleFiles={fileManager.hasOtherFiles}
-                triggerLabelBreakpoint="sm"
-              />
-            }
+            settings={settings}
+            onSettingsChange={setSettings}
+            onToggleFieldDefault={toggleFieldDefault}
+            canHideSampleFiles={fileManager.hasOtherFiles}
           />
           <Suspense fallback={null}>
-            {/* Off-session stopgap: Setups normally lives in the main toolbar
-                (session-only), so host it inside the garage here on the landing
-                page. A planned UI overhaul will revisit this relocation. */}
+            {/* Off-session Setups drawer stays mounted so the garage stays
+                reachable even without a loaded session. */}
             <FileManagerDrawer {...fileManagerProps} setupsTab={<SetupsTab {...setupsTabProps} />} />
           </Suspense>
         </>
@@ -769,7 +774,12 @@ export default function Index() {
         ) : (
           <button
             type="button"
-            onClick={clearSession}
+            onClick={() => {
+              // Explicit "go home" — remember it so the next reload lands
+              // on the dashboard instead of auto-reopening this session.
+              markExplicitClose();
+              clearSession();
+            }}
             aria-label={t("header.home")}
             className="flex items-center gap-3 rounded-md focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
           >
