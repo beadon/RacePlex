@@ -1,14 +1,20 @@
 /**
  * Persist active graph selections + per-graph heights per session file in IndexedDB.
+ *
+ * User-scoped (plan 0011): saveGraphPrefs stamps the active user's id. Reads and
+ * deletes are by-sessionFileName (already a narrow key) so they aren't scoped.
  */
 import { STORE_NAMES, withReadTransaction, withWriteTransaction } from './dbUtils';
 import { toChannelKey } from './channels';
+import { activeUserIdOrDefault } from './localUserStorage';
 
 interface GraphPrefsRecord {
   sessionFileName: string;
   activeGraphs: string[];
   /** Per-graph pixel height, keyed by the same series key as activeGraphs. */
   graphHeights?: Record<string, number>;
+  /** Owning local user (plan 0011). Stamped by saveGraphPrefs when missing. */
+  userId?: string;
 }
 
 /** Resolved prefs returned to the UI (keys already migrated to channel ids). */
@@ -46,7 +52,12 @@ export async function saveGraphPrefs(
   graphHeights: Record<string, number> = {},
 ): Promise<void> {
   await withWriteTransaction(STORE, (store) => {
-    store.put({ sessionFileName, activeGraphs, graphHeights } satisfies GraphPrefsRecord);
+    store.put({
+      sessionFileName,
+      activeGraphs,
+      graphHeights,
+      userId: activeUserIdOrDefault(),
+    } satisfies GraphPrefsRecord);
   });
 }
 

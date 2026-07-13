@@ -5,6 +5,7 @@
 
 import { openDB, STORE_NAMES } from './dbUtils';
 import { emitGarageChange } from './garageEvents';
+import { activeUserIdOrDefault } from './localUserStorage';
 
 /** Powertrain topology of the board itself (belt drive, direct drive, hub, gear). */
 export type Drivetrain = "belt" | "direct" | "hub" | "gear" | "other";
@@ -39,12 +40,21 @@ export interface Vehicle {
   publicProfile?: boolean;
   /** Last local edit time (ms) — set by saveVehicle; used for sync merge. */
   updatedAt?: number;
+  /**
+   * Owning local user (plan 0011). Stamped by saveVehicle when missing;
+   * listVehicles filters on the active user's id.
+   */
+  userId?: string;
 }
 
 const VEHICLES_STORE = STORE_NAMES.KARTS; // store name unchanged in IDB
 
 export async function saveVehicle(vehicle: Vehicle): Promise<void> {
-  const stamped: Vehicle = { ...vehicle, updatedAt: Date.now() };
+  const stamped: Vehicle = {
+    ...vehicle,
+    userId: vehicle.userId ?? activeUserIdOrDefault(),
+    updatedAt: Date.now(),
+  };
   const db = await openDB();
   const tx = db.transaction(VEHICLES_STORE, "readwrite");
   tx.objectStore(VEHICLES_STORE).put(stamped);
@@ -65,7 +75,8 @@ export async function listVehicles(): Promise<Vehicle[]> {
     request.onerror = () => reject(request.error);
   });
   db.close();
-  return results;
+  const uid = activeUserIdOrDefault();
+  return results.filter((v) => v.userId === uid);
 }
 
 export async function getVehicle(id: string): Promise<Vehicle | null> {

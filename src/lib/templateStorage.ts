@@ -1,10 +1,18 @@
 /**
  * IndexedDB CRUD for "vehicle-types" and "setup-templates" object stores.
  * Also handles seeding the built-in templates (eSkateboard, Kart) on first load.
+ *
+ * User-scoping (plan 0011): user-created types + templates are stamped with the
+ * active user's id on save; the `list*` readers return the active user's rows
+ * PLUS every row without a `userId`, so built-ins (seeded by `ensureDefaults`
+ * without an owner) stay shared across every user. By-id readers and deletes
+ * are intentionally not scoped — an id already narrows to a row, and existing
+ * setups referencing a template must resolve regardless of who created it.
  */
 
 import { openDB, STORE_NAMES } from './dbUtils';
 import { emitGarageChange } from './garageEvents';
+import { activeUserIdOrDefault } from './localUserStorage';
 
 // ── Types ──
 
@@ -34,6 +42,13 @@ export interface SetupTemplate {
   isDefault: boolean;
   createdAt: number;
   updatedAt: number;
+  /**
+   * Owning local user (plan 0011). Stamped by saveTemplate /
+   * createVehicleTypeWithTemplate when missing; undefined for built-ins so they
+   * are visible to every user. listTemplates returns "active user's rows OR no
+   * userId" — by-id lookups (getTemplate) are unscoped.
+   */
+  userId?: string;
 }
 
 export interface VehicleType {
@@ -45,6 +60,13 @@ export interface VehicleType {
   createdAt: number;
   /** Last local edit time (ms) — set by saveVehicleType; used for sync merge. */
   updatedAt?: number;
+  /**
+   * Owning local user (plan 0011). Stamped by saveVehicleType /
+   * createVehicleTypeWithTemplate when missing; undefined for built-ins so they
+   * are visible to every user. listVehicleTypes returns "active user's rows OR
+   * no userId" — by-id lookups (getVehicleType) are unscoped.
+   */
+  userId?: string;
 }
 
 // ── Built-in templates ──
@@ -278,6 +300,10 @@ export async function ensureDefaults(): Promise<void> {
 
 // ── Vehicle Type CRUD ──
 
+/**
+ * All vehicle types visible to the active user (plan 0011): user-owned rows,
+ * plus any row without a userId (built-ins seeded by `ensureDefaults`).
+ */
 export async function listVehicleTypes(): Promise<VehicleType[]> {
   const db = await openDB();
   const tx = db.transaction(STORE_NAMES.VEHICLE_TYPES, "readonly");
@@ -287,7 +313,8 @@ export async function listVehicleTypes(): Promise<VehicleType[]> {
     req.onerror = () => reject(req.error);
   });
   db.close();
-  return results;
+  const uid = activeUserIdOrDefault();
+  return results.filter((vt) => vt.userId === uid || !vt.userId);
 }
 
 export async function getVehicleType(id: string): Promise<VehicleType | null> {
@@ -303,7 +330,11 @@ export async function getVehicleType(id: string): Promise<VehicleType | null> {
 }
 
 export async function saveVehicleType(vt: VehicleType): Promise<void> {
-  const stamped: VehicleType = { ...vt, updatedAt: Date.now() };
+  const stamped: VehicleType = {
+    ...vt,
+    userId: vt.userId ?? activeUserIdOrDefault(),
+    updatedAt: Date.now(),
+  };
   const db = await openDB();
   const tx = db.transaction(STORE_NAMES.VEHICLE_TYPES, "readwrite");
   tx.objectStore(STORE_NAMES.VEHICLE_TYPES).put(stamped);
@@ -329,6 +360,10 @@ export async function deleteVehicleType(id: string): Promise<void> {
 
 // ── Setup Template CRUD ──
 
+/**
+ * All setup templates visible to the active user (plan 0011): user-owned rows,
+ * plus any row without a userId (built-ins seeded by `ensureDefaults`).
+ */
 export async function listTemplates(): Promise<SetupTemplate[]> {
   const db = await openDB();
   const tx = db.transaction(STORE_NAMES.SETUP_TEMPLATES, "readonly");
@@ -338,7 +373,8 @@ export async function listTemplates(): Promise<SetupTemplate[]> {
     req.onerror = () => reject(req.error);
   });
   db.close();
-  return results;
+  const uid = activeUserIdOrDefault();
+  return results.filter((t) => t.userId === uid || !t.userId);
 }
 
 export async function getTemplate(id: string): Promise<SetupTemplate | null> {
@@ -354,7 +390,11 @@ export async function getTemplate(id: string): Promise<SetupTemplate | null> {
 }
 
 export async function saveTemplate(template: SetupTemplate): Promise<void> {
-  const stamped: SetupTemplate = { ...template, updatedAt: Date.now() };
+  const stamped: SetupTemplate = {
+    ...template,
+    userId: template.userId ?? activeUserIdOrDefault(),
+    updatedAt: Date.now(),
+  };
   const db = await openDB();
   const tx = db.transaction(STORE_NAMES.SETUP_TEMPLATES, "readwrite");
   tx.objectStore(STORE_NAMES.SETUP_TEMPLATES).put(stamped);
@@ -391,6 +431,7 @@ export async function createVehicleTypeWithTemplate(
   const now = Date.now();
   const vtId = makeId();
   const tplId = makeId();
+  const uid = activeUserIdOrDefault();
 
   const vehicleType: VehicleType = {
     id: vtId,
@@ -400,6 +441,7 @@ export async function createVehicleTypeWithTemplate(
     isDefault: false,
     createdAt: now,
     updatedAt: now,
+    userId: uid,
   };
 
   const template: SetupTemplate = {
@@ -412,6 +454,7 @@ export async function createVehicleTypeWithTemplate(
     isDefault: false,
     createdAt: now,
     updatedAt: now,
+    userId: uid,
   };
 
   const db = await openDB();
@@ -440,6 +483,9 @@ export async function updateVehicleTypeWithTemplate(
   template: SetupTemplate,
 ): Promise<void> {
   const now = Date.now();
+  // Preserve whatever userId the caller passed in — including `undefined` for
+  // built-in rows, which must stay shared across every local user. A user
+  // editing a built-in in place does NOT convert it into a private row.
   const vt: VehicleType = { ...vehicleType, updatedAt: now };
   const tpl: SetupTemplate = { ...template, updatedAt: now };
 

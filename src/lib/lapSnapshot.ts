@@ -69,6 +69,12 @@ export interface LapSnapshot {
   createdAt: number;
   /** Last local write (ms) — used for sync merge. */
   updatedAt: number;
+  /**
+   * Owning local user (plan 0011). Stamped on write by `saveSnapshot` /
+   * `putSnapshotRaw` when missing; `listSnapshots` and `listSnapshotsForCourse`
+   * filter on the active user's id. `getSnapshot(id)` is unscoped.
+   */
+  userId?: string;
 }
 
 /** Normalize an engine string so "Rotax Max", " rotax max " match. */

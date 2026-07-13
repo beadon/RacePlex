@@ -8,6 +8,7 @@
 
 import { openDB, STORE_NAMES } from "./dbUtils";
 import { emitGarageChange } from "./garageEvents";
+import { activeUserIdOrDefault } from "./localUserStorage";
 import type { LapSnapshot } from "./lapSnapshot";
 
 const STORE = STORE_NAMES.LAP_SNAPSHOTS;
@@ -19,22 +20,31 @@ function reqPromise<T>(req: IDBRequest<T>): Promise<T> {
   });
 }
 
-/** All snapshots, newest first. */
+/** All snapshots for the active user (plan 0011), newest first. */
 export async function listSnapshots(): Promise<LapSnapshot[]> {
   const db = await openDB();
   const tx = db.transaction(STORE, "readonly");
   const all = await reqPromise<LapSnapshot[]>(tx.objectStore(STORE).getAll());
   db.close();
-  return all.sort((a, b) => b.updatedAt - a.updatedAt);
+  const uid = activeUserIdOrDefault();
+  return all
+    .filter((s) => s.userId === uid)
+    .sort((a, b) => b.updatedAt - a.updatedAt);
 }
 
-/** Snapshots for one course (any engine), sorted fastest-first. */
+/**
+ * Snapshots for one course (any engine) belonging to the active user (plan 0011),
+ * sorted fastest-first.
+ */
 export async function listSnapshotsForCourse(courseKey: string): Promise<LapSnapshot[]> {
   const db = await openDB();
   const tx = db.transaction(STORE, "readonly");
   const all = await reqPromise<LapSnapshot[]>(tx.objectStore(STORE).index("courseKey").getAll(courseKey));
   db.close();
-  return all.sort((a, b) => a.lapTimeMs - b.lapTimeMs);
+  const uid = activeUserIdOrDefault();
+  return all
+    .filter((s) => s.userId === uid)
+    .sort((a, b) => a.lapTimeMs - b.lapTimeMs);
 }
 
 export async function getSnapshot(id: string): Promise<LapSnapshot | null> {
@@ -47,18 +57,28 @@ export async function getSnapshot(id: string): Promise<LapSnapshot | null> {
 
 /** Save (or replace) a snapshot and notify the sync plugin to push it. */
 export async function saveSnapshot(snap: LapSnapshot): Promise<void> {
-  await putSnapshotRaw({ ...snap, updatedAt: Date.now() });
+  await putSnapshotRaw({
+    ...snap,
+    userId: snap.userId ?? activeUserIdOrDefault(),
+    updatedAt: Date.now(),
+  });
   emitGarageChange({ store: STORE, key: snap.id, type: "put" });
 }
 
 /**
  * Write without emitting a garage event or re-stamping — the cloud pull path
  * (mirrors the sync engine's `putOne`), so a pulled snapshot doesn't echo back.
+ * Preserves the caller-provided userId (from the cloud record); only defaults
+ * when absent so pre-plan-0011 records still land on the active user.
  */
 export async function putSnapshotRaw(snap: LapSnapshot): Promise<void> {
+  const stamped: LapSnapshot = {
+    ...snap,
+    userId: snap.userId ?? activeUserIdOrDefault(),
+  };
   const db = await openDB();
   const tx = db.transaction(STORE, "readwrite");
-  tx.objectStore(STORE).put(snap);
+  tx.objectStore(STORE).put(stamped);
   await new Promise<void>((resolve, reject) => {
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error);

@@ -92,6 +92,14 @@ export interface SetupRevision {
   createdAt: number;
   /** Last local write (ms) — mirrors createdAt; kept for the sync merge. */
   updatedAt: number;
+  /**
+   * Owning local user (plan 0011). Stamped on write by the storage module (not
+   * `buildSetupRevision`, which stays pure — and deliberately omitted from
+   * `canonicalContent` so the content hash is user-independent). listSetupRevisions
+   * filters on the active user's id; getSetupRevision(id) does not (by-id lookup
+   * — a session hash captured earlier must still resolve).
+   */
+  userId?: string;
 }
 
 /** Strip a template down to just the structure that defines the setup's shape. */

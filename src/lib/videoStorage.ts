@@ -4,6 +4,7 @@
  */
 
 import { openDB, STORE_NAMES } from "./dbUtils";
+import { activeUserIdOrDefault } from "./localUserStorage";
 import type { OverlaySettings, OverlayInstance, LegacyOverlaySettings, OverlayPosition } from "@/components/video-overlays/types";
 import { DEFAULT_OVERLAY_SETTINGS } from "@/components/video-overlays/types";
 import { generateOverlayId } from "@/components/video-overlays/registry";
@@ -47,6 +48,11 @@ export interface VideoSyncRecord {
   overlaySettings?: OverlaySettings;
   /** Ordered chunks of a chunked recording. Absent for legacy single-file records. */
   chunks?: VideoSyncChunk[];
+  /**
+   * Owning local user (plan 0011). Stamped by saveVideoSync when missing;
+   * loadVideoSync is by-sessionFileName so it's intentionally not filtered.
+   */
+  userId?: string;
 }
 
 /** Migrate old overlay settings format to new */
@@ -83,9 +89,13 @@ function migrateOverlaySettings(raw: unknown): OverlaySettings {
 }
 
 export async function saveVideoSync(record: VideoSyncRecord): Promise<void> {
+  const stamped: VideoSyncRecord = {
+    ...record,
+    userId: record.userId ?? activeUserIdOrDefault(),
+  };
   const db = await openDB();
   const tx = db.transaction(STORE_NAMES.VIDEO_SYNC, "readwrite");
-  tx.objectStore(STORE_NAMES.VIDEO_SYNC).put(record);
+  tx.objectStore(STORE_NAMES.VIDEO_SYNC).put(stamped);
   await new Promise<void>((resolve, reject) => {
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error);

@@ -1,10 +1,17 @@
 /**
  * IndexedDB wrapper for storing/retrieving/deleting file blobs and file metadata.
+ *
+ * Both stores are per-user (plan 0011): `saveFile`/`saveFileMetadata` stamp the
+ * active user's id, and `listFiles`/`listAllMetadata` filter to it. `getFile`
+ * and `getFileMetadata` are by-name lookups — an already-narrow row — and are
+ * intentionally NOT filtered, so callers holding a filename from another context
+ * still resolve it. Same policy applies to `deleteFile`/`saveFileMetadata`.
  */
 
 import { openDB, STORE_NAMES } from './dbUtils';
 import { emitGarageChange } from './garageEvents';
 import { deleteCachedWeather } from './weatherCacheStorage';
+import { activeUserIdOrDefault } from './localUserStorage';
 
 export interface FileEntry {
   name: string;
@@ -69,6 +76,11 @@ export interface FileMetadata {
   source?: "device" | "phone-gps" | "import";
   // Post-session measurements entered on the Notes tab (tire pressures, weight).
   postSession?: PostSessionData;
+  /**
+   * Owning local user (plan 0011). Stamped by saveFileMetadata when missing;
+   * listAllMetadata filters on the active user's id.
+   */
+  userId?: string;
 }
 
 interface StoredFile {
@@ -76,6 +88,11 @@ interface StoredFile {
   data: Blob;
   size: number;
   savedAt: number;
+  /**
+   * Owning local user (plan 0011). Stamped by saveFile when missing; listFiles
+   * filters on the active user's id.
+   */
+  userId?: string;
 }
 
 const FILES_STORE = STORE_NAMES.FILES;
@@ -86,7 +103,13 @@ export async function saveFile(name: string, data: Blob): Promise<void> {
     const db = await openDB();
     const tx = db.transaction(FILES_STORE, "readwrite");
     const store = tx.objectStore(FILES_STORE);
-    const record: StoredFile = { name, data, size: data.size, savedAt: Date.now() };
+    const record: StoredFile = {
+      name,
+      data,
+      size: data.size,
+      savedAt: Date.now(),
+      userId: activeUserIdOrDefault(),
+    };
     store.put(record);
     await new Promise<void>((resolve, reject) => {
       tx.oncomplete = () => resolve();
@@ -111,7 +134,9 @@ export async function listFiles(): Promise<FileEntry[]> {
       request.onerror = () => reject(request.error);
     });
     db.close();
+    const uid = activeUserIdOrDefault();
     return results
+      .filter((f) => f.userId === uid)
       .map(({ name, size, savedAt }) => ({ name, size, savedAt }))
       .sort((a, b) => b.savedAt - a.savedAt);
   } catch (e) {
@@ -161,9 +186,13 @@ export async function deleteFile(name: string): Promise<void> {
 
 export async function saveFileMetadata(meta: FileMetadata): Promise<void> {
   try {
+    const stamped: FileMetadata = {
+      ...meta,
+      userId: meta.userId ?? activeUserIdOrDefault(),
+    };
     const db = await openDB();
     const tx = db.transaction(META_STORE, "readwrite");
-    tx.objectStore(META_STORE).put(meta);
+    tx.objectStore(META_STORE).put(stamped);
     await new Promise<void>((resolve, reject) => {
       tx.oncomplete = () => resolve();
       tx.onerror = () => reject(tx.error);
@@ -214,7 +243,11 @@ export async function getFileMetadata(fileName: string): Promise<FileMetadata | 
   }
 }
 
-/** Every saved session's metadata — used to find which setup revisions are in use. */
+/**
+ * Every saved session's metadata for the active user (plan 0011) — used to find
+ * which setup revisions are in use. Filtered by userId; use getFileMetadata for a
+ * specific name to reach across users.
+ */
 export async function listAllMetadata(): Promise<FileMetadata[]> {
   try {
     const db = await openDB();
@@ -225,7 +258,8 @@ export async function listAllMetadata(): Promise<FileMetadata[]> {
       request.onerror = () => reject(request.error);
     });
     db.close();
-    return results;
+    const uid = activeUserIdOrDefault();
+    return results.filter((m) => m.userId === uid);
   } catch (e) {
     console.warn("Failed to list file metadata:", e);
     return [];
