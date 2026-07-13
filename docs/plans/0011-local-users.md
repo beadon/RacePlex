@@ -176,4 +176,19 @@ Slices, each a commit citing plan 0011.
 
 ## Status
 
-- **Draft.** Slice 1 (storage plumbing + migration) is next.
+- **Landed end-to-end.** Slices 1-6 complete:
+  - `users` store + v14 migration back-fills every scoped row with the
+    default seed user's id, so upgraders don't lose anything.
+  - Every user-owned storage module scopes reads by `activeUserIdOrDefault()`
+    and stamps `userId` on write. Built-in vehicle types + setup templates
+    remain shared (rows with `userId === undefined`).
+  - Header switcher (`UserSwitcher`) and Settings CRUD panel
+    (`UsersManagerPanel`) land the user-facing surfaces.
+  - `useSettings` writes under `raceplex:settings:<userId>` (default user
+    keeps the plain key for a clean upgrade path). i18n, palette, and
+    cloud-sync export all use the same resolver.
+  - `cascadeDeleteUser` sweeps every scoped store; `countUserRows` powers
+    the delete-confirm preview.
+- **Not done, still queued:**
+  - Slice 7 — `plugins/cloud-sync` becoming per-user (namespace its remote
+    store under the active user id). Left as an opt-in for that plugin.

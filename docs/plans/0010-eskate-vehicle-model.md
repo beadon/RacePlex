@@ -163,11 +163,22 @@ Land in slices, each slice = one commit citing plan 0010.
 
 ## Status
 
-- **Done (task #38):** drivetrain, trucks (vehicle); motorKind (engine).
-- **Next up:** slice 1 (Basic/Advanced disclosure).
-- **Also queued:** vehicle-scoped fields depend on the local-user schema; wait
-  for the local-users work (#37) to land before enabling cloud sync of the new
-  fields, so users don't leak per-build data across profiles on shared machines.
+- **Done:**
+  - drivetrain, trucks on Vehicle (task #38).
+  - motorKind on Engine, defaulting to BLDC (task #38).
+  - Basic/Advanced disclosure — everything but name/type/engine/weight is
+    behind a collapsed section by default.
+  - Battery pack — nine fields (cells, nominal V, chemistry, Wh,
+    continuous/burst A, BMS make/model).
+  - Remotes catalog (`remotes` store, v15) with per-user first-run seed of
+    common eskate remotes, `Vehicle.pairedRemoteId`, and a Manage-remotes
+    dialog.
+  - Row display surfaces drivetrain · trucks · cells · Wh when set.
+- **Still queued (not blocking, only when a consumer wants them):**
+  - Wheels / gearing — `wheelDiameterMm`, `wheelDuroA`, pulley teeth,
+    `gearRatio`, `deckLengthMm`, `wheelbaseMm`. Wire the seat-position tool
+    to read `wheelbaseMm` from the active vehicle at the same time so riders
+    stop re-entering it.
 
 ## Notes for future readers
 
