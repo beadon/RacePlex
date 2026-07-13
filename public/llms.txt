@@ -21,7 +21,7 @@ Notes: Dragy has no CSV export — record from it live over Bluetooth, or use th
 
 ## Pages
 
-- [Home](/): Import a datalog, then explore the race-line map, charts, lap times and lap comparisons.
+- [Home](https://beadon.github.io/RacePlex/): The app. Import a datalog, then explore the race-line map, charts, lap times and lap comparisons. Installs as a PWA on a phone (Add to Home Screen) and runs offline afterwards.
 
 ## Optional
 

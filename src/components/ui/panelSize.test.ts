@@ -11,7 +11,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { asPercentIfBareNumber } from "./resizable";
+import { asPercentIfBareNumber } from "./panelSize";
 
 describe("asPercentIfBareNumber", () => {
   it("sends a bare number through as a percent string, not pixels", () => {

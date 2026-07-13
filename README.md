@@ -1,5 +1,7 @@
 # RacePlex
 
+### ▶ [Open RacePlex](https://beadon.github.io/RacePlex/) — runs in your browser, installs on your phone
+
 RacePlex is a lap timing and telemetry analysis application for electric skateboards. It reads ride
 logs from GPS meters, phone apps, VESC controllers and GoPro cameras, and presents them as a
 speed-coloured track map, lap and sector times, and comparable telemetry charts.
@@ -11,10 +13,30 @@ parsed locally and stored on your device.
 
 ## Quickstart
 
-RacePlex has no hosted site. You run your own copy — it is a static web app with no server, no
-database and no account, so "running it" means serving a folder of files.
+**[Open RacePlex](https://beadon.github.io/RacePlex/)** — it runs in the browser, nothing to install.
 
-### On a computer
+Three sample rides are already loaded. Open one and you have a map, lap times and telemetry charts
+without supplying a file of your own.
+
+### Install it on your phone
+
+Open [that link](https://beadon.github.io/RacePlex/) on the phone, then:
+
+- **Android, Chrome** — menu → **Install app** (sometimes **Add to Home screen**).
+- **iOS, Safari** — Share → **Add to Home Screen**.
+
+It installs as a normal app: its own icon, its own window, and it works with no signal. Parsing, lap
+timing, the charts and the map (from cached tiles) all run on the phone. Satellite imagery and
+weather are the only features that want a network.
+
+Your rides never leave the device. There is no account and no server to send them to.
+
+### Run your own copy
+
+RacePlex is a static web app — no server, no database — so "running it" is just serving a folder of
+files. Do this to hack on it, or to host a copy you control.
+
+#### On a computer
 
 Install [Bun](https://bun.sh), then:
 
@@ -34,17 +56,20 @@ Browsers treat `localhost` as a secure origin, so the offline service worker is 
 Chrome or Edge will offer **Install RacePlex** in the address bar. Installed, it opens in its own
 window and keeps working with the network off.
 
-### On a phone
+#### Serving your copy to a phone
 
 **The phone needs an HTTPS address.** A browser will only register a service worker — the thing that
 makes RacePlex installable and able to run offline — on HTTPS or on `localhost`. Browsing to your
 computer's LAN address over `http://` does load the app and it works, but the phone will not offer
 to install it and it will not run offline. That is a browser rule, not a RacePlex limitation.
 
-Two ways to give it HTTPS.
+The published site above already solves this. To serve a copy of your own:
 
-**Publish your own copy.** Free, permanent, and the repo is already configured for Cloudflare
-Workers static hosting:
+**GitHub Pages.** A fork gets the same deployment free: enable Pages with **GitHub Actions** as the
+source, and `.github/workflows/deploy-pages.yml` publishes every push to `main`. It builds with
+`BASE_PATH` set to your repository name, because a project site is served from a subpath.
+
+**Cloudflare Workers.** Already configured:
 
 ```sh
 bun run build
@@ -55,8 +80,8 @@ That prints an `https://raceplex.<your-subdomain>.workers.dev` address. What you
 application, not your rides — those never leave the device you record them on.
 
 Any static host works. Upload `dist/` and point unknown paths at `index.html` so client-side routes
-resolve. (On GitHub Pages, a *project* site is served under a subpath like `/RacePlex/` while this
-build assumes the root, so set Vite's `base` first or the assets 404.)
+resolve. If the app will not sit at the root of the domain, build with `BASE_PATH=/subpath/` or every
+asset 404s.
 
 **Or tunnel the dev server** for a quick look, no deploy:
 

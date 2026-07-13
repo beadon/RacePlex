@@ -10,7 +10,14 @@
 
 **RacePlex** — Open-source, offline-first lap timing and telemetry analysis for
 **electric skateboards**.
-- Repo: [github.com/beadon/RacePlex](https://github.com/beadon/RacePlex). No deployed domain yet.
+- Repo: [github.com/beadon/RacePlex](https://github.com/beadon/RacePlex).
+- **Live at https://beadon.github.io/RacePlex/** — GitHub Pages, published from `main` by
+  `.github/workflows/deploy-pages.yml`. A *project* site is served from a **subpath**, so the build
+  passes `BASE_PATH=/RacePlex/` and everything downstream reads it: Vite's asset URLs, the PWA
+  manifest `start_url`/`scope`, the SW navigation fallback, the router `basename`, and
+  `lib/basePath.ts`. **Any `public/` asset fetched at runtime MUST go through `assetUrl()`** — a bare
+  `fetch("/tracks.json")` lands outside the deployment and 404s in a way nothing surfaces. There is
+  no custom domain.
 - PWA with full offline support via service worker + IndexedDB.
 - Brand: Racing Red `#BD162C`, Carbon Black `#0C0C0E`, Electric Yellow `#F0E005`.
 

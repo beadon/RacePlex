@@ -11,6 +11,7 @@ import {
 } from "react-resizable-panels";
 
 import { cn } from "@/lib/utils";
+import { asPercentIfBareNumber } from "./panelSize";
 
 // v4 API renames:
 // - <PanelGroup> → <Group>
@@ -56,23 +57,6 @@ ResizablePanelGroup.displayName = "ResizablePanelGroup";
 // v4's Panel accepts a `panelRef` prop (not React's ref) for imperative access.
 // Wrapper accepts a normal ref and adapts.
 type PanelProps = ComponentProps<typeof Panel>;
-
-/**
- * Size units changed meaning in v4, silently and without a type error:
- *
- *   v3:  defaultSize={30}   → 30 PERCENT
- *   v4:  defaultSize={30}   → 30 PIXELS      (a bare number is now px)
- *        defaultSize="30"   → 30 percent     (a unitless string is percent)
- *
- * The prop is typed `number | string`, so every v3-style callsite still
- * compiles and just renders a ~30px sliver instead of a third of the screen.
- * This wrapper's whole job is to preserve the v3 contract, so a bare number
- * keeps meaning percent. Pass an explicit string ("200px", "20rem") for pixels.
- */
-export function asPercentIfBareNumber(size: number | string | undefined): string | undefined {
-  if (size === undefined) return undefined;
-  return typeof size === "number" ? String(size) : size;
-}
 
 interface ResizablePanelProps extends PanelProps {
   /** Deprecated in v4 but preserved here as a no-op so existing callsites
