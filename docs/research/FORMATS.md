@@ -52,7 +52,7 @@ is undocumented** and, as far as we can find, nobody has reverse-engineered it. 
 Sample rate is **not fixed**: DRG70 does up to 25 Hz (10 Hz typical), Dragy Pro is user-selectable
 10/25 Hz. **Measure the rate from the data; never assume it.**
 
-> Sideways route worth knowing: godragy.com lists **Dragy Pro as a compatible BLE GPS source for
+> godragy.com lists **Dragy Pro as a compatible BLE GPS source for
 > RaceChrono**. So a Dragy owner can feed RaceChrono and export from there — which may be a cleaner
 > path than us touching Dragy at all.
 
@@ -219,8 +219,8 @@ Every one of these is now a test:
 5. **GPX has no speed channel** — it must be differentiated from position (and smoothed, or 25 Hz
    GPS noise makes the chart unreadable).
 6. **RaceBox writes `<siv>` for satellites**, where the GPX standard says `<sat>`. Accept both.
-7. **Sample intervals are 40 ms with 154 dropped samples out of 3628.** So sample rate must be the
-   **median** interval, never the mean.
+7. **Sample intervals are 40 ms, with 154 dropped samples out of 3628.** Take the sample rate from
+   the **median** interval; dropped samples pull the mean off.
 8. **Timing lines travel in the GPX as waypoints** — which means we can reconstruct the track
    geometry from the file and give the user working lap timing with zero setup. We infer each
    line's direction from the rider's heading as they passed it.
@@ -243,7 +243,7 @@ Every one of these is now a test:
 
 - [RaceBox BLE protocol, Rev 8 (official)](https://www.racebox.pro/products/mini-micro-protocol-documentation)
 - [RaceBox session export (official)](https://www.racebox.pro/info/session-export)
-- [Dragy — can I export CSV? (official; the answer is no)](https://dragymotorsports.help.center/article/1022-can-i-export-data-to-csv-or-similar)
+- [Dragy — can I export data to CSV? (official)](https://dragymotorsports.help.center/article/1022-can-i-export-data-to-csv-or-similar)
 - [dragy·Lap VBO export announcement](https://www.facebook.com/dragymotorsports/photos/dragylap-app-supports-vbo-file-export-long-press-the-session-in-the-history-page/771389701664065/)
 - [jremick/dragy-dash — the only real Dragy BLE protocol notes](https://github.com/jremick/dragy-dash)
 - [jLynx/RaceChrono-to-CSV — `.rcz` decoding + a genuine CSV v3 sample](https://github.com/jLynx/RaceChrono-to-CSV)
@@ -312,8 +312,8 @@ Both of these produce charts that look correct while being wrong, so they are wo
 - **Time.** `ms_today` (ms since local midnight), `Time(s)` (seconds since start), `time` (epoch ms),
   `UTC Time` (epoch **seconds** as a float) — indistinguishable from the column name. Inferred, then
   **shown** (first timestamp, duration, sample rate) so a wrong guess is obvious.
-- **Speed.** `gnss_gVel` is m/s; `Speed (Km/h)` is km/h; `speed_kph` is km/h. **Measured against
-  position-derived speed**, never guessed from the values.
+- **Speed.** `gnss_gVel` is m/s; `Speed (Km/h)` is km/h; `speed_kph` is km/h. RacePlex measures the
+  column against speed derived from the positions.
 
 ⚠️ **Measure against the distinct GPS fixes.** On a log with 1 Hz GNSS and 10 Hz rows, nine of every
 ten row-gaps show no movement, so the gaps that do move appear to cover a full second of travel in

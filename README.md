@@ -18,8 +18,7 @@ no paid tiers, no feature gating and no subscription.
 server component, no account system and no telemetry. If you disconnect from the network after the
 first visit, the application continues to work.
 
-**The reference data is data, not code.** Three parts of the project are plain files you can read
-and edit without writing any TypeScript:
+**The reference data is editable without writing code.** Three parts of the project are plain files:
 
 | File | Contents |
 |---|---|

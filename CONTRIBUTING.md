@@ -39,8 +39,8 @@ These are the rules the project lives by — please keep them in mind:
 ```bash
 git clone https://github.com/TheAngryRaven/DovesDataViewer.git
 cd DovesDataViewer
-npm install
-npm run dev      # dev server on http://localhost:8080
+bun install
+bun run dev      # dev server on http://localhost:8080
 ```
 
 The core app needs **no environment variables** — it runs fully offline. Env
@@ -50,15 +50,15 @@ vars are only required for the optional admin backend (see the README).
 
 | Command | Description |
 |---------|-------------|
-| `npm run dev` | Dev server on port 8080 |
-| `npm run build` | Production build to `dist/` |
-| `npm run preview` | Preview the production build |
-| `npm run lint` | ESLint |
-| `npm run typecheck` | Type-check via `tsc -b` |
-| `npm test` | Vitest (watch) |
-| `npm run test:run` | Vitest (single pass, CI-style) |
+| `bun run dev` | Dev server on port 8080 |
+| `bun run build` | Production build to `dist/` |
+| `bun run preview` | Preview the production build |
+| `bun run lint` | ESLint |
+| `bun run typecheck` | Type-check via `tsc -b` |
+| `bun test` | Vitest (watch) |
+| `bun run test:run` | Vitest (single pass, CI-style) |
 
-> **Note on typechecking:** always use `npm run typecheck` (`tsc -b`), not a
+> **Note on typechecking:** always use `bun run typecheck` (`tsc -b`), not a
 > bare `tsc --noEmit`. The root `tsconfig.json` uses project references; plain
 > `tsc` from the root silently checks nothing and exits 0.
 
@@ -69,11 +69,12 @@ vars are only required for the optional admin backend (see the README).
 Run the same checks CI runs, and make sure they pass:
 
 ```bash
-npm run lint
-npm run typecheck
-npm run test:run
-npm run build
-npm run test:coverage   # enforces the coverage gate
+bun run lint
+bun run typecheck
+bun run test:run
+bun run build
+bun run test:coverage   # enforces the coverage gate
+bun run verify:import   # drives a browser against sample_race_files/
 ```
 
 CI runs these as separate workflows on every PR. A PR won't be merged until
@@ -176,7 +177,7 @@ maintainer opens the PR for you.
 
 ### What CI checks
 
-A track that merges has to *work*, not just parse. The validator rejects:
+The validator checks that a track is usable, and rejects:
 
 - a malformed record, a bad `shortName`, a `defaultCourse` naming no real course;
 - a coordinate out of range, or a `(0, 0)` that means "I forgot to fill this in";

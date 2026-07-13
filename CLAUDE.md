@@ -185,7 +185,7 @@ src/
 │   ├── csvTable.ts        # ★ Generic delimited-table reader (delimiter sniffing, `#` comments, VESC tagged headers, name-based columnIndex). Every CSV profile is built on it.
 │   ├── genericCsvParser.ts # ★ LAST-resort CSV importer: auto-maps columns by header name, infers the two units a name can't carry (time, speed), interpolates 1 Hz GPS across fast channels. Proposes a mapping; the rider confirms it in CsvMappingDialog (csvMappingRequest pub/sub) and it's remembered by header hash (csvMappingStorage, localStorage).
 │   ├── speedUnit.ts       # ★ Recover a speed column's unit by MEASURING it against position-derived speed (never from the magnitude — 25 is plausible in m/s, km/h and mph alike)
-│   ├── gpsFixes.ts        # ★ Distinct GPS fixes + position interpolation between them — keep every row, never decimate to the GPS rate (shared by vesc + generic CSV)
+│   ├── gpsFixes.ts        # ★ Distinct GPS fixes + position interpolation between them; keeps every row at full rate (shared by vesc + generic CSV)
 │   ├── xrk/               # ★ AiM .xrk/.xrz importer — libxrk (Rust→WASM) in a Web Worker (→ docs/subsystems.md)
 │   ├── gopro/             # ★ GoPro .mp4 importer — GPMF telemetry track pulled out of the video in-browser (gpmf-extract + gopro-telemetry, both dynamic-imported so they stay out of the main bundle). gpmfDetect = the only eagerly-imported piece (ftyp sniff, no imports of its own); gpmfImporter orchestrates + falls back to useWorker:false when the library's worker is unusable; gpmfMapping = pure GPS9/GPS5 → ParsedData
 │   ├── channels.ts        # ★ Canonical channel registry + normalizeChannels()

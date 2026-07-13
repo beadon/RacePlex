@@ -209,7 +209,7 @@
             "nmea"
           ],
           "status": "expected",
-          "notes": "Export GPX from the vendor's website. FIT is their native format and carries much more data, but RacePlex cannot read it yet — see the open issues. These devices log at about 1 Hz either way, so a FIT parser would widen the range of files we accept without improving precision.",
+          "notes": "Export GPX from the vendor's website. FIT is the native format for these devices and carries more data; RacePlex cannot read it yet (see the open issues). All of them log at about 1 Hz.",
           "url": "https://www.garmin.com/en-US/p/645104/"
         },
         {
@@ -247,7 +247,7 @@
           "vendor": "GoPro",
           "exports": [],
           "status": "no",
-          "notes": "Has no GPS. GoPro removed it for this model, which catches people out."
+          "notes": "Has no GPS receiver. GoPro removed it for this model."
         },
         {
           "name": "Insta360 (with GPS remote)",
@@ -273,7 +273,7 @@
             "gpx"
           ],
           "status": "partial",
-          "notes": "Export GPX from the vendor's website. FIT is their native format and carries much more data, but RacePlex cannot read it yet — see the open issues. These devices log at about 1 Hz either way, so a FIT parser would widen the range of files we accept without improving precision."
+          "notes": "Export GPX from the vendor's website. FIT is the native format for these devices and carries more data; RacePlex cannot read it yet (see the open issues). All of them log at about 1 Hz."
         }
       ]
     },
@@ -319,7 +319,7 @@
             "csv"
           ],
           "status": "expected",
-          "notes": "Both export CSV and should import through the generic column mapper — which is the ONLY way pOnewheel can ever work, since it generates its columns per-ride from whatever BLE attributes it recorded. Float Control also reorders its columns between versions; mapping by name handles that. Send us a file and we will mark it verified."
+          "notes": "Both export CSV and import through the generic column mapper. pOnewheel generates its columns per ride from whichever BLE attributes it recorded, so the mapper is the only route for it. Float Control also changes its column order between versions, which name-based mapping handles. Send us a file and we will mark these verified."
         },
         {
           "name": "Official Onewheel app",
