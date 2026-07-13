@@ -61,7 +61,7 @@
       }
     },
     "features": [
-      "Multi-format file support (RaceBox CSV, GPX, VBO, NMEA, UBX, MoTeC, AiM CSV + XRK/XRZ, Alfano, iRacing, Dove, Dovex)",
+      "Multi-format import: RaceBox CSV, VESC Tool CSV, GPX, GoPro .mp4, FIT (Garmin/Wahoo/Coros), RaceChrono CSV, VBO, NMEA, UBX, MoTeC, AiM CSV + XRK/XRZ, Alfano, iRacing, Dove — plus most other CSVs, via a column mapper",
       "Point-to-point courses (hill runs, slalom, drag) — not just circuits",
       "Lap timing with zero setup: timing lines recovered from the datalog itself",
       "Automatic track & course detection within 5 miles",
@@ -91,11 +91,14 @@
       "Local weather lookup",
       "Dark & light mode",
       "PWA — installable & fully offline",
-      "Available in 7 languages",
-      "Native Android app — Wi-Fi download from AiM MyChron",
+      "English, with partial translations in 6 more languages",
+      "Builds as a native Android app — adds Wi-Fi download from AiM MyChron",
       "Phone-as-logger — GPS lap timing with no extra hardware",
-      "Optional cloud sync across your devices (free tier)",
-      "AI driving coach (optional add-on)"
+      "Live capture over Bluetooth — record straight from a RaceBox or Dragy, no file to export",
+      "Motor telemetry from VESC logs — motor/battery current, duty cycle, ERPM and temperatures on the GPS timeline",
+      "Stance tool — where the board tips, and why a rear-driven board slides instead of endoing",
+      "Compare multiple sessions side by side",
+      "Download everything as a .zip and restore it on another browser or device"
     ]
   },
   "fileImport": {
