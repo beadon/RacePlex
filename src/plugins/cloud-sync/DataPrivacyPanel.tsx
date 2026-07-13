@@ -8,8 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
+import { importArchive, type ImportSummary } from "@/lib/dataImport";
 import { downloadAccountExport } from "./accountExport";
-import { importAccountArchive, type ImportSummary } from "./accountImport";
 import {
   cancelAccountDeletion,
   getPendingDeletion,
@@ -106,7 +106,7 @@ function ImportData() {
     setImporting(true);
     setResult(null);
     try {
-      setResult(await importAccountArchive(file));
+      setResult(await importArchive(file));
     } catch {
       toast.error(t("dataPrivacy.importFailed"));
     } finally {

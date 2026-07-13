@@ -237,6 +237,8 @@ src/
 │   ├── trackSubmission.ts # ★ Pure: diff local vs built-in tracks, classify, content-hash for dedupe
 │   ├── trackContribution.ts # ★ Submission plan → tracks/<slug>.json record + prefilled GitHub-issue URL (plan 0008)
 │   ├── dbUtils.ts         # ★ Shared IndexedDB: DB_NAME, DB_VERSION, openDB(), tx helpers
+│   ├── dataStores.ts      # ★ THE inventory of everything this browser holds (every IDB store + localStorage key + plugin KV). Export and import both read it, so they can't drift; a new store not classified here fails dataStores.test.ts (plan 0013)
+│   ├── dataExport.ts / dataImport.ts / exportManifest.ts  # ★ "Download my data" — portable ZIP of the whole browser, and the restore. Core, offline, account-free (a stock build has no backend); cloud-sync's accountExport composes it. UI = components/DataExportSection (Settings + Tools + Files drawer)
 │   ├── garageEvents.ts    # ★ Host pub/sub: storage emits {store,key,put|delete}; cloud-sync syncs off it
 │   ├── fileLoadingState.ts # ★ Host pub/sub for the global file-load overlay
 │   ├── *Storage.ts        # IDB/localStorage store modules (file, vehicle, engine, template, note, setup, …)
@@ -357,8 +359,27 @@ Single shared database: `"raceplex"`, **version 15**. (Renamed from `dove-file-m
 | `weather-cache` | `fileName` | `weatherCacheStorage.ts` (local-only, **not** cloud-synced) |
 
 To add a store: increment `DB_VERSION`, add to `STORE_NAMES`, add creation logic in
-`openDB()`, create a storage module using `withReadTransaction`/`withWriteTransaction`.
+`openDB()`, create a storage module using `withReadTransaction`/`withWriteTransaction`,
+**and classify it in `lib/dataStores.ts`** (see below).
 Tracks live in **localStorage** (`trackStorage.ts`), not IndexedDB.
+
+### Data export — the rider can always take their data (plan 0013)
+
+Everything above lives in *this browser* and dies with it, so the app owes the rider a way
+out. `lib/dataExport.ts` (+ `dataImport.ts`) zips every store, every localStorage key and
+every plugin KV database into a portable archive, and restores it. It is **core, offline,
+and account-free** — a stock RacePlex build has no backend, so this must never depend on
+one. The cloud plugin's `accountExport.ts` *composes* it and adds the `cloud/` half.
+
+Surfaced in three places, all rendering the same `DataExportSection`: **Settings** (primary),
+the **Tools** tab, and the **Files drawer** under the storage bar.
+
+**`lib/dataStores.ts` is the single inventory** that export and import both read. A store
+added to `STORE_NAMES` but not classified there fails `dataStores.test.ts` — deliberately.
+The first version of this export tracked the *cloud-sync* store list instead, so it silently
+dropped lap snapshots, CSV column mappings, video sync offsets and tool state; a rider who
+ran it and wiped their browser lost them. Classify every new store: exported, or excluded
+with a reason.
 
 ---
 

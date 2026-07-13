@@ -63,13 +63,15 @@ export function MigrationBanner() {
   const runExport = async () => {
     setExporting(true);
     try {
-      // Dynamic import keeps the cloud-sync/export + Supabase chunk off the
-      // eager graph; the export gathers local data even when signed out.
-      const { downloadAccountExport } = await import("@/plugins/cloud-sync/accountExport");
-      await downloadAccountExport();
+      // The core export: local, no account, no backend. Dynamic-imported to
+      // keep JSZip off the eager graph. This banner is how a rider rescues
+      // their data when the origin changes, so it must not depend on the cloud
+      // plugin being present — on a stock build it isn't.
+      const { downloadMyData } = await import("@/lib/dataExport");
+      await downloadMyData();
       toast.success("Your data export has started downloading.");
     } catch {
-      toast.error("Couldn't export here — open Profile → Data & privacy to download your data.");
+      toast.error("Couldn't export here — open Settings → Your data to download it.");
     } finally {
       setExporting(false);
     }
