@@ -62,13 +62,18 @@ export function AddCourseDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild><span className="sr-only">{t('addCourse.srTrigger')}</span></DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      {/* Full-screen. Drawing a course means reading a timing line against the
+          corner it sits in, and a 2xl box with a fixed 384px map showed neither
+          properly. The map is the flexing row; the name field and the buttons stay
+          pinned at the bottom so they never scroll out of reach. */}
+      <DialogContent className="max-w-none w-screen h-[100dvh] sm:h-screen rounded-none border-0 flex flex-col gap-4 p-4 sm:p-6 safe-area-modal">
+        <DialogHeader className="shrink-0">
           <DialogTitle>{t('addCourse.title')}</DialogTitle>
         </DialogHeader>
-        <div className="space-y-4">
+        <div className="flex flex-col gap-4 flex-1 min-h-0">
           <Suspense fallback={null}>
           <CourseSectorEditor
+            fillHeight
             startFinishA={startFinishA}
             startFinishB={startFinishB}
             sectors={sectors}
@@ -89,20 +94,22 @@ export function AddCourseDialog({
             samples={samples}
           />
           </Suspense>
-          <div className="space-y-3">
-            <div>
+          {/* Pinned below the map: on a phone these would otherwise sit under the
+              fold of a full-height editor. */}
+          <div className="shrink-0 flex flex-col gap-3 sm:flex-row sm:items-end">
+            <div className="flex-1">
               <Label htmlFor="addCourseName">{t('addCourse.courseName')}</Label>
               <Input id="addCourseName" value={courseName} onChange={(e) => onCourseNameChange(e.target.value)} onKeyDownCapture={(e) => e.stopPropagation()} placeholder={t('addCourse.courseNamePlaceholder')} className="font-mono" />
             </div>
-          </div>
-          <div className="flex gap-2">
-            <Button onClick={onSubmit} className="flex-1" disabled={!canSubmit}>
-              <Check className="w-4 h-4 mr-2" />
-              {t('addCourse.create')}
-            </Button>
-            <Button variant="outline" onClick={onCancel}>
-              <X className="w-4 h-4" />
-            </Button>
+            <div className="flex gap-2">
+              <Button onClick={onSubmit} className="flex-1 sm:flex-none" disabled={!canSubmit}>
+                <Check className="w-4 h-4 mr-2" />
+                {t('addCourse.create')}
+              </Button>
+              <Button variant="outline" onClick={onCancel}>
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
         </div>
       </DialogContent>

@@ -33,6 +33,15 @@ const COLOR_MAJOR = '#a855f7';
 const COLOR_SUB = '#38bdf8';
 
 interface VisualEditorProps {
+  /**
+   * Let the map fill the height it is given instead of the fixed h-96.
+   *
+   * The map is the whole point of this editor, and at a fixed 384px you cannot
+   * see a timing line and the corner it belongs to at the same time. When set,
+   * every ancestor up to the dialog must be a flex column with min-h-0, or the
+   * map collapses to nothing.
+   */
+  fillHeight?: boolean;
   startFinishA: GpsPoint | null;
   startFinishB: GpsPoint | null;
   /** Ordered sector lines after start/finish. */
@@ -210,6 +219,7 @@ function VisualEditorToolbar({ drawMode, onToggleDraw, showDrawTool, drawPointCo
 }
 
 export function VisualEditor({
+  fillHeight = false,
   startFinishA, startFinishB, sectors, selectedLine, onSelectLine,
   onStartFinishChange, onSectorLineChange,
   isNewTrack = false, initialCenter: initialCenterProp = null,
@@ -774,7 +784,7 @@ export function VisualEditor({
   };
 
   return (
-    <div className="space-y-3">
+    <div className={fillHeight ? 'flex flex-col gap-3 min-h-0 flex-1' : 'space-y-3'}>
       {isNewTrack && (
         <div className="flex gap-2">
           <Input
@@ -838,7 +848,13 @@ export function VisualEditor({
       )}
       <div
         ref={mapContainerRef}
-        className="w-full h-64 sm:h-80 md:h-96 rounded-lg border border-border overflow-hidden"
+        className={
+          fillHeight
+            ? // Takes whatever height the dialog gives it. The min-h keeps the map
+              // usable if a short viewport squeezes the flex column down.
+              'w-full flex-1 min-h-[16rem] rounded-lg border border-border overflow-hidden'
+            : 'w-full h-64 sm:h-80 md:h-96 rounded-lg border border-border overflow-hidden'
+        }
       />
       {(drawMode || selectedLine !== null) && (
         <p className="text-xs text-muted-foreground text-center">

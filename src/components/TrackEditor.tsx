@@ -609,10 +609,16 @@ function CourseDrawingMini({ points, size = 36 }: { points: Array<{ lat: number;
     </div>
   );
 
+  // The course editor is a map, and a map in a max-w-3xl box is unusable. Only the
+  // editing page needs the room — the track/course list stays a normal dialog.
+  const editorIsOpen = !!form.editingCourse;
+
   // ── Manage mode: Course manager for the drilled-into track ─────────────────
   const courseManagerPage = (
-    <div className="space-y-3">
-      <div className="flex items-center gap-2">
+    // Flex column while the map editor is open, so it can claim the height the
+    // full-screen dialog gives it. Plain block otherwise (the course list scrolls).
+    <div className={editorIsOpen ? 'flex flex-col gap-3 flex-1 min-h-0' : 'space-y-3'}>
+      <div className="flex items-center gap-2 shrink-0">
         <Button variant="ghost" size="sm" className="h-8 gap-1.5 px-2" onClick={backToTrackList}>
           <ArrowLeft className="w-4 h-4" />{t('trackEditor.tracksTab')}
         </Button>
@@ -620,10 +626,11 @@ function CourseDrawingMini({ points, size = 36 }: { points: Array<{ lat: number;
       </div>
 
       {form.editingCourse ? (
-        <div className="space-y-4">
-          <h4 className="font-medium">{t('trackEditor.editCourse')}</h4>
+        <div className="flex flex-col gap-4 flex-1 min-h-0">
+          <h4 className="font-medium shrink-0">{t('trackEditor.editCourse')}</h4>
           <Suspense fallback={null}>
             <CourseSectorEditor
+              fillHeight
               {...sectorEditorProps}
               showDrawTool={true}
               laps={laps}
@@ -756,7 +763,13 @@ function CourseDrawingMini({ points, size = 36 }: { points: Array<{ lat: number;
   const selectDialog = (
     <Dialog open={isSelectDialogOpen} onOpenChange={(open) => { setIsSelectDialogOpen(open); if (!open) { setManagePage('tracks'); setTrackSearch(''); form.setEditingCourse(null); form.resetForm(); } }}>
       <DialogTrigger asChild><span className="sr-only">{t('trackEditor.openSelector')}</span></DialogTrigger>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent
+        className={
+          editorIsOpen
+            ? 'max-w-none w-screen h-[100dvh] sm:h-screen rounded-none border-0 flex flex-col gap-4 p-4 sm:p-6 overflow-hidden safe-area-modal'
+            : 'max-w-3xl max-h-[90vh] overflow-y-auto'
+        }
+      >
         <DialogHeader><DialogTitle>{dialogTitle}</DialogTitle></DialogHeader>
         {manageModeContent}
       </DialogContent>

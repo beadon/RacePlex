@@ -8,6 +8,8 @@ import type { SelectedLine } from '@/hooks/useTrackEditorForm';
 const VisualEditor = lazy(() => import('./VisualEditor').then((m) => ({ default: m.VisualEditor })));
 
 interface CourseSectorEditorProps {
+  /** Let the map fill the available height — see VisualEditor.fillHeight. */
+  fillHeight?: boolean;
   startFinishA: GpsPoint | null;
   startFinishB: GpsPoint | null;
   sectors: CourseSector[];
@@ -37,6 +39,7 @@ interface CourseSectorEditorProps {
  * the control surface — selecting a row puts that line into drag-edit on the map.
  */
 export function CourseSectorEditor({
+  fillHeight = false,
   startFinishA, startFinishB, sectors, selectedLine, onSelectLine,
   onStartFinishChange, onSectorLineChange,
   onAddSector, onRemoveSector, onToggleMajor, onReorder,
@@ -78,9 +81,10 @@ export function CourseSectorEditor({
   }), [startFinishA, startFinishB, sectors]);
 
   return (
-    <div className="space-y-3">
+    <div className={fillHeight ? 'flex flex-col gap-3 min-h-0 flex-1' : 'space-y-3'}>
       <Suspense fallback={null}>
         <VisualEditor
+          fillHeight={fillHeight}
           startFinishA={startFinishA}
           startFinishB={startFinishB}
           sectors={sectors}
