@@ -31,7 +31,8 @@ export function useEngineManager() {
       if (!display) return null;
       const existing = findEngineByName(engines, display);
       if (existing) return existing.name;
-      await saveEngine({ id: crypto.randomUUID(), name: display, createdAt: Date.now() });
+      // New engines default to BLDC — virtually every modern eskate motor is BLDC.
+      await saveEngine({ id: crypto.randomUUID(), name: display, createdAt: Date.now(), motorKind: "BLDC" });
       return display;
     },
     [engines],
@@ -44,10 +45,20 @@ export function useEngineManager() {
       const missing = distinctEngineNames(names).filter((n) => !findEngineByName(current, n));
       if (missing.length === 0) return;
       for (const name of missing) {
-        await saveEngine({ id: crypto.randomUUID(), name, createdAt: Date.now() });
+        await saveEngine({ id: crypto.randomUUID(), name, createdAt: Date.now(), motorKind: "BLDC" });
       }
     },
     [],
+  );
+
+  /** Merge-update an engine's fields (motorKind, motorKindOther, …). */
+  const updateEngine = useCallback(
+    async (id: string, patch: Partial<Omit<Engine, "id" | "createdAt">>) => {
+      const current = engines.find((e) => e.id === id);
+      if (!current) return;
+      await saveEngine({ ...current, ...patch });
+    },
+    [engines],
   );
 
   const removeEngine = useCallback(
@@ -57,5 +68,5 @@ export function useEngineManager() {
     [],
   );
 
-  return { engines, refresh, addEngine, importEngines, removeEngine };
+  return { engines, refresh, addEngine, importEngines, updateEngine, removeEngine };
 }

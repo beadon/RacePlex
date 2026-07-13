@@ -6,6 +6,16 @@
 import { openDB, STORE_NAMES } from './dbUtils';
 import { emitGarageChange } from './garageEvents';
 
+/** Powertrain topology of the board itself (belt drive, direct drive, hub, gear). */
+export type Drivetrain = "belt" | "direct" | "hub" | "gear" | "other";
+
+/**
+ * Truck geometry. RPK, TKP, and 3-link cover most of what eskate riders build
+ * on; "Stock" is the generic catch-all commercial-deck case; free-form fallback
+ * via `truckTypeOther`.
+ */
+export type TruckType = "RPK" | "TKP" | "3-link" | "Stock" | "other";
+
 export interface Vehicle {
   id: string;
   name: string;
@@ -14,6 +24,14 @@ export interface Vehicle {
   number: number;
   weight: number;
   weightUnit: "lb" | "kg";
+  /** Powertrain topology of the board (belt / direct / hub / gear / other). */
+  drivetrain?: Drivetrain;
+  /** Free-form label when `drivetrain === "other"`. */
+  drivetrainOther?: string;
+  /** Truck geometry (RPK / TKP / 3-link / Stock / other). */
+  truckType?: TruckType;
+  /** Free-form label when `truckType === "other"`. */
+  truckTypeOther?: string;
   /**
    * Opt-in: when true, a public-safe projection (name/type/engine/number — never
    * weight/setup) is published to the user's public driver profile. See plan 0006.

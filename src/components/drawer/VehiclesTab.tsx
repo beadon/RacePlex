@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { Pencil, Trash2, Car, History, Plus, Globe } from "lucide-react";
+import { Pencil, Trash2, Car, History, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,7 +31,6 @@ const emptyForm = (defaultTypeId: string): Omit<Vehicle, "id"> => ({
   number: 0,
   weight: 0,
   weightUnit: "lb",
-  publicProfile: false,
 });
 
 export function VehiclesTab({ vehicles, vehicleTypes, onAdd, onUpdate, onRemove, onOpenFile, onCreateVehicleType }: VehiclesTabProps) {
@@ -44,7 +43,7 @@ export function VehiclesTab({ vehicles, vehicleTypes, onAdd, onUpdate, onRemove,
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [historyVehicle, setHistoryVehicle] = useState<Vehicle | null>(null);
 
-  const { engines, addEngine, importEngines, removeEngine } = useEngineManager();
+  const { engines, addEngine, importEngines, updateEngine, removeEngine } = useEngineManager();
 
   // Seed the reusable engine list from engines already saved on vehicles.
   const vehicleEngineKey = useMemo(
@@ -76,7 +75,10 @@ export function VehiclesTab({ vehicles, vehicleTypes, onAdd, onUpdate, onRemove,
       number: vehicle.number,
       weight: vehicle.weight,
       weightUnit: vehicle.weightUnit,
-      publicProfile: vehicle.publicProfile ?? false,
+      drivetrain: vehicle.drivetrain,
+      drivetrainOther: vehicle.drivetrainOther,
+      truckType: vehicle.truckType,
+      truckTypeOther: vehicle.truckTypeOther,
     });
   };
 
@@ -142,19 +144,21 @@ export function VehiclesTab({ vehicles, vehicleTypes, onAdd, onUpdate, onRemove,
                     <span className="text-sm font-medium truncate text-foreground">
                       #{vehicle.number} — {vehicle.name}
                     </span>
-                    {vehicle.publicProfile && (
-                      <span
-                        className="flex shrink-0 items-center gap-1 rounded-full bg-primary/15 px-1.5 py-0.5 text-[10px] font-medium text-primary"
-                        title={t("vehicles.publicHint")}
-                      >
-                        <Globe className="h-2.5 w-2.5" /> {t("vehicles.publicBadge")}
-                      </span>
-                    )}
                   </div>
                   <div className="text-xs text-muted-foreground">
                     {vt?.name ?? t("vehicles.unknownType")}
                     {vehicle.engine ? ` · ${vehicle.engine}` : ""} · {vehicle.weight} {vehicle.weightUnit}
                   </div>
+                  {(vehicle.drivetrain || vehicle.truckType) && (
+                    <div className="text-[11px] text-muted-foreground/80">
+                      {[
+                        vehicle.drivetrain === "other" ? vehicle.drivetrainOther : vehicle.drivetrain,
+                        vehicle.truckType === "other" ? vehicle.truckTypeOther : vehicle.truckType,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </div>
+                  )}
                   {!vehicle.engine.trim() && (
                     <div className="text-xs text-destructive">{t("vehicles.needsEngine")}</div>
                   )}
@@ -205,6 +209,7 @@ export function VehiclesTab({ vehicles, vehicleTypes, onAdd, onUpdate, onRemove,
             engines={engines}
             onCreate={addEngine}
             onDelete={removeEngine}
+            onUpdate={updateEngine}
             usedNames={usedEngineNames}
           />
           <div className="space-y-1">
@@ -222,17 +227,56 @@ export function VehiclesTab({ vehicles, vehicleTypes, onAdd, onUpdate, onRemove,
               </div>
             </div>
           </div>
-        </div>
-        <div className="flex items-center justify-between gap-2 rounded-md border border-border/60 px-3 py-2">
-          <div className="min-w-0">
-            <Label className="text-xs">{t("vehicles.showOnProfile")}</Label>
-            <p className="text-[11px] text-muted-foreground">{t("vehicles.showOnProfileHint")}</p>
+          <div className="space-y-1">
+            <Label className="text-xs">Drivetrain</Label>
+            <Select
+              value={form.drivetrain ?? "unset"}
+              onValueChange={v => setForm(f => ({ ...f, drivetrain: v === "unset" ? undefined : (v as Vehicle["drivetrain"]) }))}
+            >
+              <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="unset">Not set</SelectItem>
+                <SelectItem value="belt">Belt</SelectItem>
+                <SelectItem value="direct">Direct drive</SelectItem>
+                <SelectItem value="hub">Hub motor</SelectItem>
+                <SelectItem value="gear">Gear drive</SelectItem>
+                <SelectItem value="other">Other…</SelectItem>
+              </SelectContent>
+            </Select>
+            {form.drivetrain === "other" && (
+              <Input
+                value={form.drivetrainOther ?? ""}
+                onChange={e => setForm(f => ({ ...f, drivetrainOther: e.target.value }))}
+                placeholder="Describe drivetrain"
+                className="h-8 text-sm mt-1"
+              />
+            )}
           </div>
-          <Switch
-            checked={!!form.publicProfile}
-            onCheckedChange={checked => setForm(f => ({ ...f, publicProfile: checked }))}
-            className="shrink-0"
-          />
+          <div className="space-y-1">
+            <Label className="text-xs">Trucks</Label>
+            <Select
+              value={form.truckType ?? "unset"}
+              onValueChange={v => setForm(f => ({ ...f, truckType: v === "unset" ? undefined : (v as Vehicle["truckType"]) }))}
+            >
+              <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="unset">Not set</SelectItem>
+                <SelectItem value="RPK">RPK</SelectItem>
+                <SelectItem value="TKP">TKP</SelectItem>
+                <SelectItem value="3-link">3-link</SelectItem>
+                <SelectItem value="Stock">Stock</SelectItem>
+                <SelectItem value="other">Other…</SelectItem>
+              </SelectContent>
+            </Select>
+            {form.truckType === "other" && (
+              <Input
+                value={form.truckTypeOther ?? ""}
+                onChange={e => setForm(f => ({ ...f, truckTypeOther: e.target.value }))}
+                placeholder="Describe trucks"
+                className="h-8 text-sm mt-1"
+              />
+            )}
+          </div>
         </div>
         {form.name.trim() && !form.engine.trim() && (
           <p className="text-xs text-destructive">{t("vehicles.engineRequired")}</p>

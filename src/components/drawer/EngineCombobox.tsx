@@ -11,13 +11,14 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import type { Engine } from "@/lib/engineStorage";
+import type { Engine, MotorKind } from "@/lib/engineStorage";
 import {
   engineNameKey,
   filterEngines,
   normalizeEngineName,
   shouldOfferCreate,
 } from "@/lib/engineUtils";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface EngineComboboxProps {
   value: string;
@@ -27,6 +28,8 @@ interface EngineComboboxProps {
   onCreate: (name: string) => Promise<unknown> | void;
   /** Remove a saved engine from the reusable list. */
   onDelete: (id: string) => Promise<void> | void;
+  /** Merge-update an engine's fields (motorKind, motorKindOther, …). */
+  onUpdate?: (id: string, patch: Partial<Omit<Engine, "id" | "createdAt">>) => Promise<void> | void;
   /** Engine names currently used by a vehicle — deletion is blocked for these. */
   usedNames?: string[];
   label?: string;
@@ -38,6 +41,7 @@ export function EngineCombobox({
   engines,
   onCreate,
   onDelete,
+  onUpdate,
   usedNames = [],
   label,
 }: EngineComboboxProps) {
@@ -147,23 +151,51 @@ export function EngineCombobox({
             ) : (
               filterEngines(engines, "").map((engine) => {
                 const inUse = usedKeys.has(engineNameKey(engine.name));
+                const motorKind: MotorKind = engine.motorKind ?? "BLDC";
                 return (
                   <div
                     key={engine.id}
-                    className="flex items-center gap-2 p-2 rounded-md hover:bg-muted/50 transition-colors"
+                    className="flex flex-col gap-1.5 p-2 rounded-md hover:bg-muted/50 transition-colors"
                   >
-                    <span className="flex-1 min-w-0 truncate text-sm text-foreground">{engine.name}</span>
-                    {inUse && <span className="text-[11px] text-muted-foreground shrink-0">{t("engine.inUse")}</span>}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 shrink-0 opacity-60 hover:opacity-100 hover:text-destructive disabled:opacity-25 disabled:hover:text-current"
-                      disabled={inUse}
-                      title={inUse ? t("engine.inUseTitle") : t("engine.delete")}
-                      onClick={() => onDelete(engine.id)}
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <span className="flex-1 min-w-0 truncate text-sm text-foreground">{engine.name}</span>
+                      {inUse && <span className="text-[11px] text-muted-foreground shrink-0">{t("engine.inUse")}</span>}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 shrink-0 opacity-60 hover:opacity-100 hover:text-destructive disabled:opacity-25 disabled:hover:text-current"
+                        disabled={inUse}
+                        title={inUse ? t("engine.inUseTitle") : t("engine.delete")}
+                        onClick={() => onDelete(engine.id)}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
+                    {onUpdate && (
+                      <div className="flex items-center gap-2 pl-1">
+                        <span className="text-[11px] text-muted-foreground shrink-0">Motor</span>
+                        <Select
+                          value={motorKind}
+                          onValueChange={(v) => void onUpdate(engine.id, { motorKind: v as MotorKind })}
+                        >
+                          <SelectTrigger className="h-7 text-xs w-32"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="BLDC">BLDC</SelectItem>
+                            <SelectItem value="PMSM">PMSM</SelectItem>
+                            <SelectItem value="DC">DC</SelectItem>
+                            <SelectItem value="other">Other…</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        {motorKind === "other" && (
+                          <Input
+                            value={engine.motorKindOther ?? ""}
+                            onChange={(e) => void onUpdate(engine.id, { motorKindOther: e.target.value })}
+                            placeholder="Describe motor"
+                            className="h-7 text-xs flex-1"
+                          />
+                        )}
+                      </div>
+                    )}
                   </div>
                 );
               })
