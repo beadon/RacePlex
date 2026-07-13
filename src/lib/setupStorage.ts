@@ -1,10 +1,16 @@
 /**
  * IndexedDB CRUD for the "setups" object store.
  * Now uses a generic template-driven data model.
+ *
+ * User-scoped (plan 0011): `saveSetup` stamps `userId`; `listSetups` and
+ * `getLatestSetupForVehicle` filter to the active user. `getSetup(id)` is a
+ * by-id lookup and is intentionally NOT filtered (setup revisions dereference
+ * a setup id captured at freeze time).
  */
 
 import { openDB, STORE_NAMES } from './dbUtils';
 import { emitGarageChange } from './garageEvents';
+import { activeUserIdOrDefault } from './localUserStorage';
 
 export interface VehicleSetup {
   id: string;
@@ -36,6 +42,11 @@ export interface VehicleSetup {
 
   createdAt: number;
   updatedAt: number;
+  /**
+   * Owning local user (plan 0011). Stamped by saveSetup when missing; listSetups
+   * and getLatestSetupForVehicle filter on the active user's id.
+   */
+  userId?: string;
 }
 
 // Keep backward compat export name for consumers that haven't migrated yet
@@ -52,11 +63,18 @@ export async function listSetups(): Promise<VehicleSetup[]> {
     request.onerror = () => reject(request.error);
   });
   db.close();
-  return results.sort((a, b) => b.updatedAt - a.updatedAt);
+  const uid = activeUserIdOrDefault();
+  return results
+    .filter((s) => s.userId === uid)
+    .sort((a, b) => b.updatedAt - a.updatedAt);
 }
 
 export async function saveSetup(setup: VehicleSetup): Promise<void> {
-  const stamped: VehicleSetup = { ...setup, updatedAt: Date.now() };
+  const stamped: VehicleSetup = {
+    ...setup,
+    userId: setup.userId ?? activeUserIdOrDefault(),
+    updatedAt: Date.now(),
+  };
   const db = await openDB();
   const tx = db.transaction(SETUPS_STORE, "readwrite");
   tx.objectStore(SETUPS_STORE).put(stamped);
@@ -125,9 +143,11 @@ export async function getLatestSetupForVehicle(vehicleId: string): Promise<Vehic
     }
   }
   db.close();
-  if (results.length === 0) return null;
-  results.sort((a, b) => b.updatedAt - a.updatedAt);
-  return results[0];
+  const uid = activeUserIdOrDefault();
+  const scoped = results.filter((s) => s.userId === uid);
+  if (scoped.length === 0) return null;
+  scoped.sort((a, b) => b.updatedAt - a.updatedAt);
+  return scoped[0];
 }
 
 // Backward compat alias

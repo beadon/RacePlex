@@ -763,6 +763,20 @@ function CourseDrawingMini({ points, size = 36 }: { points: Array<{ lat: number;
     </Dialog>
   );
 
+  // Controlled-open mode: no trigger UI at all, just the dialogs. Used by
+  // the dashboard's Tracks tile + nav destination, which drive the open
+  // state themselves via externalOpen / onExternalOpenChange.
+  if (externalOpen !== undefined) {
+    return (
+      <>
+        {selectDialog}
+        {jsonViewDialog}
+        <AddCourseDialog {...addCourseDialogProps} />
+        <AddTrackDialog {...addTrackDialogProps} />
+      </>
+    );
+  }
+
   // Custom-trigger mode (e.g. the landing-page "Manage Tracks" button): render
   // just the trigger + the dialogs, no compact selection label.
   if (triggerButton) {

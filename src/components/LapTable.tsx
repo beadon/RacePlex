@@ -287,7 +287,11 @@ export const LapTable = memo(function LapTable({ laps, course, samples, onLapSel
               full.labels.map((label, k) => (
                 <Fragment key={k}>
                   {showSums && full.isGroupStart[k] && (
-                    <th className="px-3 py-3 font-semibold text-center whitespace-nowrap bg-primary/20 text-primary">
+                    // Neutral surface + body-text foreground so the header
+                    // clears WCAG AA in every palette — the previous
+                    // `text-primary bg-primary/20` painted text with a wash
+                    // of itself and was contrast-capped below AA. See issue #31.
+                    <th className="px-3 py-3 font-semibold text-center whitespace-nowrap bg-muted/60 text-foreground">
                       {t('lapTable.sectorSum', { number: full.groupOf[k] + 1 })}
                     </th>
                   )}
@@ -371,13 +375,13 @@ export const LapTable = memo(function LapTable({ laps, course, samples, onLapSel
                       <Fragment key={k}>
                         {showSums && full.isGroupStart[k] && (
                           <td
-                            className={`px-3 py-3 font-mono text-xs text-center whitespace-nowrap font-semibold ${isFastestSum ? 'text-purple-400 bg-purple-500/15' : 'text-primary bg-primary/10'}`}
+                            className={`px-3 py-3 font-mono text-xs text-center whitespace-nowrap font-semibold ${isFastestSum ? 'text-purple-600 dark:text-purple-300 bg-purple-500/15' : 'text-foreground bg-muted/60'}`}
                           >
                             {sum !== undefined ? formatSectorTime(sum) : '—'}
                           </td>
                         )}
                         <td
-                          className={`px-3 py-3 font-mono text-xs text-center whitespace-nowrap ${isFastestSeg ? 'text-purple-400 font-semibold bg-purple-500/10' : zebra}`}
+                          className={`px-3 py-3 font-mono text-xs text-center whitespace-nowrap ${isFastestSeg ? 'text-purple-600 dark:text-purple-300 font-semibold bg-purple-500/10' : zebra}`}
                         >
                           {t !== undefined ? formatSectorTime(t) : '—'}
                         </td>
@@ -386,13 +390,13 @@ export const LapTable = memo(function LapTable({ laps, course, samples, onLapSel
                   })
                 ) : showSectors && (
                   <>
-                    <td className={`px-3 py-3 font-mono text-xs text-center ${hasFastestS1 ? 'text-purple-400 font-semibold bg-purple-500/10' : ''}`}>
+                    <td className={`px-3 py-3 font-mono text-xs text-center ${hasFastestS1 ? 'text-purple-600 dark:text-purple-300 font-semibold bg-purple-500/10' : ''}`}>
                       {lap.sectors?.s1 !== undefined ? formatSectorTime(lap.sectors.s1) : '—'}
                     </td>
-                    <td className={`px-3 py-3 font-mono text-xs text-center ${hasFastestS2 ? 'text-purple-400 font-semibold bg-purple-500/10' : ''}`}>
+                    <td className={`px-3 py-3 font-mono text-xs text-center ${hasFastestS2 ? 'text-purple-600 dark:text-purple-300 font-semibold bg-purple-500/10' : ''}`}>
                       {lap.sectors?.s2 !== undefined ? formatSectorTime(lap.sectors.s2) : '—'}
                     </td>
-                    <td className={`px-3 py-3 font-mono text-xs text-center ${hasFastestS3 ? 'text-purple-400 font-semibold bg-purple-500/10' : ''}`}>
+                    <td className={`px-3 py-3 font-mono text-xs text-center ${hasFastestS3 ? 'text-purple-600 dark:text-purple-300 font-semibold bg-purple-500/10' : ''}`}>
                       {lap.sectors?.s3 !== undefined ? formatSectorTime(lap.sectors.s3) : '—'}
                     </td>
                   </>
@@ -436,7 +440,7 @@ export const LapTable = memo(function LapTable({ laps, course, samples, onLapSel
             <>
               <div>
                 <span className="text-muted-foreground">{t('lapTable.optimal')}: </span>
-                <span className="font-mono text-purple-400 font-semibold">
+                <span className="font-mono text-purple-600 dark:text-purple-300 font-semibold">
                   {formatLapTime(optimalLap.optimalTimeMs)}
                 </span>
               </div>

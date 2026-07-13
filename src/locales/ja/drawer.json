@@ -20,8 +20,6 @@
     "batteryTitle": "{{voltage}} V — クリックして更新",
     "btNotAvailable": "Bluetooth を利用できません",
     "btNotAvailableDesc": "このブラウザーは Web Bluetooth に対応していません。デスクトップまたは Android 端末の Chrome か Edge をお試しください。",
-    "connectTitle": "ロガーに接続",
-    "connectDesc": "DovesDataLogger に接続して、デバイスの設定とコースを管理します。",
     "connecting": "接続中…",
     "connect": "接続",
     "deviceFledglingOnlyTitle": "Fledgling のみ",

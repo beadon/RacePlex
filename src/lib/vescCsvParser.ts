@@ -147,15 +147,18 @@ export function parseVescCsvFile(content: string): ParsedData {
   // This is the whole point. Keeping only the GPS fixes would drop the ESC channels from ~12 Hz to
   // ~1 Hz — and a nosedive is a duty-cycle spike that lasts a fraction of a second. At 1 Hz you
   // simply cannot see one, which would make the import worthless for the exact thing it is for.
+  //
+  // Rows AFTER the last GPS fix have nothing to interpolate toward, so we clamp them to the last
+  // known position rather than dropping them — same policy as genericCsvParser (see issue #30).
   const samples: GpsSample[] = [];
   const first = anchors[0]!;
   const last = anchors[anchors.length - 1]!;
 
-  for (let i = first.row; i <= last.row; i++) {
+  for (let i = first.row; i < table.rows.length; i++) {
     const row = table.rows[i]!;
     const t = times[i] ?? 0;
 
-    const { lat, lon } = positionAt(t);
+    const { lat, lon } = i <= last.row ? positionAt(t) : { lat: last.lat, lon: last.lon };
 
     // gnss_gVel is m/s. (Confirmed against the real log: its ratio to speed derived from the
     // positions is 0.974, i.e. 1.0 — not 3.6.) It only updates at the GNSS rate, so fall back to

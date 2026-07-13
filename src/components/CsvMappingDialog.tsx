@@ -102,12 +102,25 @@ export function CsvMappingDialog() {
     [table, mapping],
   );
 
+  // The rider has to explicitly acknowledge the assumed km/h fallback before
+  // Import unlocks. Setting the dropdown to any other value also counts as an
+  // acknowledgement (they made an active choice). Issue #30 — the previous
+  // flow was a click-through warning that a distracted rider could dismiss.
+  const [ackAssumedUnit, setAckAssumedUnit] = useState(false);
+  const initialAssumedSpeedUnit = analysis?.speedUnitSource === "assumed"
+    ? analysis.mapping.speedUnit
+    : null;
+  const unitWasChangedFromAssumed =
+    initialAssumedSpeedUnit !== null && mapping?.speedUnit !== initialAssumedSpeedUnit;
+  const speedUnitConfirmed =
+    initialAssumedSpeedUnit === null || unitWasChangedFromAssumed || ackAssumedUnit;
+
   if (!request || !analysis || !table || !mapping || !preview) return null;
 
   const set = (patch: Partial<CsvColumnMapping>) => setMapping({ ...mapping, ...patch });
 
   const missingRequired = REQUIRED.filter((f) => mapping[f] === -1);
-  const canImport = missingRequired.length === 0 && preview.sampleCount > 0;
+  const canImport = missingRequired.length === 0 && preview.sampleCount > 0 && speedUnitConfirmed;
 
   const confidenceTone =
     analysis.confidence === "low"
@@ -247,6 +260,27 @@ export function CsvMappingDialog() {
                     ))}
                   </SelectContent>
                 </Select>
+                {/* Assumed-unit gate. The mapping couldn't measure this column
+                    against GPS-derived speed (stationary log or too little
+                    movement) and no header unit was found, so we defaulted to
+                    km/h. Import is blocked until the rider either changes the
+                    unit or explicitly confirms the guess — see issue #30. */}
+                {analysis.speedUnitSource === "assumed" && !unitWasChangedFromAssumed && (
+                  <label className="mt-2 flex items-start gap-2 rounded-md border border-warning/50 bg-warning/10 p-2 text-xs text-warning-foreground cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={ackAssumedUnit}
+                      onChange={(e) => setAckAssumedUnit(e.target.checked)}
+                      className="mt-0.5 h-3.5 w-3.5 accent-warning cursor-pointer"
+                    />
+                    <span>
+                      <span className="font-medium">This unit is a guess.</span>{" "}
+                      There's not enough movement in this log to measure it, and
+                      the column name doesn't say. Pick the right unit above, or
+                      tick this box to confirm km/h is correct.
+                    </span>
+                  </label>
+                )}
               </div>
             )}
           </div>
@@ -311,7 +345,9 @@ export function CsvMappingDialog() {
               ? `Pick a column for ${missingRequired.map((f) => FIELD_LABELS[f]).join(" and ")}.`
               : preview.sampleCount === 0
                 ? "No GPS fixes with this mapping — check the latitude/longitude columns."
-                : "Saved against this file's column layout — you won't be asked again."}
+                : !speedUnitConfirmed
+                  ? "Confirm the assumed speed unit above before importing."
+                  : "Saved against this file's column layout — you won't be asked again."}
           </p>
           <div className="flex gap-2">
             <Button variant="outline" onClick={request.cancel}>

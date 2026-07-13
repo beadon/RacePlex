@@ -1,9 +1,14 @@
 /**
  * IndexedDB CRUD for the "notes" object store.
+ *
+ * User-scoped (plan 0011): `saveNote` stamps `userId`; `listNotes` filters its
+ * per-file index results to the active user, so two users on the same install
+ * can attach different notes to the same session file without seeing each other's.
  */
 
 import { openDB, STORE_NAMES } from './dbUtils';
 import { emitGarageChange } from './garageEvents';
+import { activeUserIdOrDefault } from './localUserStorage';
 
 export interface Note {
   id: string;
@@ -11,6 +16,11 @@ export interface Note {
   text: string;
   createdAt: number;
   updatedAt: number;
+  /**
+   * Owning local user (plan 0011). Stamped by saveNote when missing;
+   * listNotes filters on the active user's id.
+   */
+  userId?: string;
 }
 
 const NOTES_STORE = STORE_NAMES.NOTES;
@@ -43,14 +53,21 @@ export async function listNotes(fileName: string): Promise<Note[]> {
     request.onerror = () => reject(request.error);
   });
   db.close();
-  return results.sort((a, b) => b.createdAt - a.createdAt);
+  const uid = activeUserIdOrDefault();
+  return results
+    .filter((n) => n.userId === uid)
+    .sort((a, b) => b.createdAt - a.createdAt);
 }
 
 export async function saveNote(note: Note): Promise<void> {
   if (exceedsNoteLimit(note.text)) {
     throw new Error(`Note exceeds the ${MAX_NOTE_BYTES / 1024} KB limit.`);
   }
-  const stamped: Note = { ...note, updatedAt: Date.now() };
+  const stamped: Note = {
+    ...note,
+    userId: note.userId ?? activeUserIdOrDefault(),
+    updatedAt: Date.now(),
+  };
   const db = await openDB();
   const tx = db.transaction(NOTES_STORE, "readwrite");
   tx.objectStore(NOTES_STORE).put(stamped);

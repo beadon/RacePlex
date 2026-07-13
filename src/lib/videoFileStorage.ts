@@ -1,9 +1,14 @@
 /**
  * IndexedDB storage for video file blobs attached to telemetry sessions.
  * One video per session file. Stored in the "session-videos" object store.
+ *
+ * User-scoped (plan 0011): saveSessionVideo stamps the active user's id;
+ * listSessionVideos filters to it. By-name lookups (load/get/has/delete) are
+ * intentionally not scoped.
  */
 
 import { openDB, STORE_NAMES } from "./dbUtils";
+import { activeUserIdOrDefault } from "./localUserStorage";
 
 export interface StoredVideo {
   sessionFileName: string;
@@ -17,6 +22,11 @@ export interface StoredVideo {
   lapNumber?: number;
   /** Whether overlays were baked into the video */
   hasOverlays: boolean;
+  /**
+   * Owning local user (plan 0011). Stamped by saveSessionVideo when missing;
+   * listSessionVideos filters on the active user's id.
+   */
+  userId?: string;
 }
 
 export interface StoredVideoMeta {
@@ -48,6 +58,7 @@ export async function saveSessionVideo(
     exportType,
     lapNumber,
     hasOverlays,
+    userId: activeUserIdOrDefault(),
   });
   await new Promise<void>((resolve, reject) => {
     tx.oncomplete = () => resolve();
@@ -130,7 +141,7 @@ export async function getSessionVideoMeta(sessionFileName: string): Promise<Stor
   };
 }
 
-/** List all stored videos (metadata only, no blobs) */
+/** List all stored videos for the active user (plan 0011), metadata only. */
 export async function listSessionVideos(): Promise<StoredVideoMeta[]> {
   const db = await openDB();
   const tx = db.transaction(STORE_NAMES.SESSION_VIDEOS, "readonly");
@@ -140,13 +151,16 @@ export async function listSessionVideos(): Promise<StoredVideoMeta[]> {
     request.onerror = () => reject(request.error);
   });
   db.close();
-  return results.map(({ sessionFileName, videoFileName, savedAt, size, exportType, lapNumber, hasOverlays }) => ({
-    sessionFileName,
-    videoFileName,
-    savedAt,
-    size,
-    exportType: exportType ?? "raw",
-    lapNumber,
-    hasOverlays: hasOverlays ?? false,
-  }));
+  const uid = activeUserIdOrDefault();
+  return results
+    .filter((v) => v.userId === uid)
+    .map(({ sessionFileName, videoFileName, savedAt, size, exportType, lapNumber, hasOverlays }) => ({
+      sessionFileName,
+      videoFileName,
+      savedAt,
+      size,
+      exportType: exportType ?? "raw",
+      lapNumber,
+      hasOverlays: hasOverlays ?? false,
+    }));
 }

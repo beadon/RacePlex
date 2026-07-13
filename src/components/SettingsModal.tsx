@@ -27,6 +27,7 @@ import { SUPPORTED_LANGUAGES, type SupportedLanguage } from "@/lib/i18n/config";
 import { FIELD_CATEGORIES, CanonicalFieldId } from "@/lib/fieldResolver";
 import { PALETTES } from "@/lib/palettes";
 import { cn } from "@/lib/utils";
+import { UsersManagerPanel } from "@/components/UsersManagerPanel";
 
 interface SettingsModalProps {
   settings: AppSettings;
@@ -83,6 +84,10 @@ export function SettingsModal({
         </DialogHeader>
 
         <div className="space-y-6 py-4 overflow-y-auto flex-1 min-h-0 pr-3 scrollbar-thin">
+          {/* Profiles — always at the top so a shared machine's active profile
+              is the first thing a rider sees when they open settings. */}
+          <UsersManagerPanel />
+          <div className="border-t border-border" />
           {/* Compact toggle settings — responsive 2-column grid on tablet+ */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-6">
           {/* Language */}

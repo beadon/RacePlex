@@ -14,11 +14,13 @@ import { isRaceBoxCsvFormat, parseRaceBoxCsvFile } from './raceboxCsvParser';
 import { isVescCsvFormat, parseVescCsvFile } from './vescCsvParser';
 import { isGenericCsvFormat } from './genericCsvParser';
 import { importGenericCsv, importGenericCsvSync } from './genericCsvImport';
+import { isRaceChronoCsvV3, rewriteRaceChronoCsvV3 } from './raceChronoCsv';
 import { isXrkFile, parseXrkFile } from './xrk/xrkImporter';
 // Detection only — the GoPro importer itself (and its ~230 kB of mp4 demuxer +
 // GPMF decoder) is dynamic-imported at the call site below, so it never lands in
 // the main bundle. `gpmfDetect` has no imports of its own; keep it that way.
 import { isGoProFile } from './gopro/gpmfDetect';
+import { isFitFile } from './fitParser';
 import { beginFileLoading, updateFileLoading, endFileLoading } from './fileLoadingState';
 import type { ImportProgressCallback } from './importProgress';
 
@@ -108,71 +110,24 @@ async function routeDatalogFile(
     return parseIracingFile(buffer);
   }
 
-  // For text formats, read as string
+  // FIT (Garmin/Wahoo/Coros/Suunto). Binary, unambiguous magic; the parser
+  // library is lazy-loaded (842 kB unpacked). See issue #17 and fitParser.ts
+  // for the "these devices log at ~1 Hz" caveat.
+  if (isFitFile(file.name, buffer)) {
+    const { parseFitFile } = await import('./fitParser');
+    return parseFitFile(buffer);
+  }
+
+  // For text formats, read as string and let the ordered detector table decide.
+  // The async path only differs from the sync one on the last two entries — it
+  // may show the interactive mapping dialog (which needs a File name for the
+  // "won't be asked again" hint), so we pass `fileName` down.
   const text = await file.text();
-
-  // GPX is XML and unambiguous, so it can be claimed first.
-  if (isGpxFormat(text)) {
-    return parseGpxFile(text);
+  const named = detectNamedTextFormat(text);
+  if (named) return named;
+  if (isRaceChronoCsvV3(text)) {
+    return importGenericCsv(rewriteRaceChronoCsvV3(text), file.name);
   }
-
-  // VESC first: its gnss_lat/gnss_lon signature is unambiguous, and it is semicolon-delimited,
-  // which the loose comma-oriented matchers below would mangle.
-  if (isVescCsvFormat(text)) {
-    return parseVescCsvFile(text);
-  }
-
-  // RaceBox CSV must be claimed before the loose CSV matchers below (Alfano's and AiM's header
-  // checks are broad enough to grab it and then fail to parse the layout).
-  if (isRaceBoxCsvFormat(text)) {
-    return parseRaceBoxCsvFile(text);
-  }
-
-  // Check if it's VBO format
-  if (isVboFormat(text)) {
-    return parseVboFile(text);
-  }
-  
-  // Check if it's MoTeC CSV format (before Dove/Alfano/AiM since it's more specific)
-  if (isMotecCsvFormat(text)) {
-    return parseMotecCsvFile(text);
-  }
-  
-  // Check if it's Dovex format (before Dove since it contains Dove data)
-  if (isDovexFormat(text)) {
-    return parseDovexFile(text);
-  }
-  
-  // Check if it's Dove CSV format
-  if (isDoveFormat(text)) {
-    return parseDoveFile(text);
-  }
-
-  // AiM RaceStudio CSV carries an unambiguous "AiM CSV File" signature. Claim it
-  // before Alfano, whose loose header match (rpm/water) would otherwise grab it
-  // and then fail to parse the AiM layout.
-  if (hasAimSignature(text) && isAimFormat(text)) {
-    return parseAimFile(text);
-  }
-
-  // Check if it's Alfano CSV format
-  if (isAlfanoFormat(text)) {
-    return parseAlfanoFile(text);
-  }
-
-  // Check if it's AiM CSV format (MyChron, Race Studio 3)
-  if (isAimFormat(text)) {
-    return parseAimFile(text);
-  }
-
-  // LAST RESORT: any delimited table with a latitude and a longitude in it. This must sit below
-  // every named format — it would happily claim a RaceBox or MoTeC file and import it worse than
-  // its own parser does. It sits ABOVE the NMEA fallback only because NMEA is not a detection at
-  // all, just the historical "we give up" path, and a generic GPS CSV has never parsed as NMEA
-  // (which requires `$GPRMC` sentences in the first column) — it just failed.
-  //
-  // Interactive: proposes a column mapping and asks the rider to confirm it, unless they have
-  // already confirmed one for this exact header (see genericCsvImport).
   if (isGenericCsvFormat(text)) {
     return importGenericCsv(text, file.name);
   }
@@ -196,6 +151,10 @@ function routeDatalogContent(content: string | ArrayBuffer): ParsedData {
     if (isGoProFile("", content)) {
       throw new Error("GoPro .mp4 files must be parsed via parseDatalogFile (async).");
     }
+    // FIT — the parser library is lazy-loaded (842 kB). Same rule as GoPro.
+    if (isFitFile("", content)) {
+      throw new Error("FIT files must be parsed via parseDatalogFile (async).");
+    }
     if (isMotecLdFormat(content)) {
       return parseMotecLdFile(content);
     }
@@ -205,103 +164,65 @@ function routeDatalogContent(content: string | ArrayBuffer): ParsedData {
     if (isIracingFormat(content)) {
       return parseIracingFile(content);
     }
-    // Convert to text for text-based format detection
-    const decoder = new TextDecoder();
-    const text = decoder.decode(content);
-
-    if (isGpxFormat(text)) {
-      return parseGpxFile(text);
-    }
-
-    if (isVescCsvFormat(text)) {
-      return parseVescCsvFile(text);
-    }
-
-    if (isRaceBoxCsvFormat(text)) {
-      return parseRaceBoxCsvFile(text);
-    }
-
-    if (isVboFormat(text)) {
-      return parseVboFile(text);
-    }
-    
-    if (isMotecCsvFormat(text)) {
-      return parseMotecCsvFile(text);
-    }
-    
-    if (isDovexFormat(text)) {
-      return parseDovexFile(text);
-    }
-    
-    if (isDoveFormat(text)) {
-      return parseDoveFile(text);
-    }
-
-    if (hasAimSignature(text) && isAimFormat(text)) {
-      return parseAimFile(text);
-    }
-
-    if (isAlfanoFormat(text)) {
-      return parseAlfanoFile(text);
-    }
-
-    if (isAimFormat(text)) {
-      return parseAimFile(text);
-    }
-
-    // Last resort — see routeDatalogFile. No dialog is possible on the sync path, so this uses a
-    // remembered mapping if there is one and the auto-proposal otherwise.
-    if (isGenericCsvFormat(text)) {
-      return importGenericCsvSync(text);
-    }
-
-    return parseDatalog(text);
+    // Text-based format detection — share the single ordered detector table
+    // with the string branch so any new text parser is registered exactly once.
+    return routeTextContent(new TextDecoder().decode(content));
   }
 
-  // String content
-  if (isGpxFormat(content)) {
-    return parseGpxFile(content);
-  }
+  return routeTextContent(content);
+}
 
-  if (isVescCsvFormat(content)) {
-    return parseVescCsvFile(content);
-  }
+/**
+ * Ordered table of text-format detectors → parsers for **named** formats,
+ * shared by the sync and async routes. Returns null when no named format
+ * claims the text — callers then run their own generic-CSV branch (async
+ * uses the interactive dialog, sync uses the auto-proposal).
+ *
+ * ORDER MATTERS. Every format that has a specific, unambiguous signature
+ * sits above the loose CSV heuristics — Alfano's detector triggers on any
+ * file containing common motorsport tokens (`lap`, `rpm`), and AiM's is
+ * similarly broad, so a specific format that mentions `session` or `lap`
+ * in its metadata would otherwise be silently mis-parsed. Registering a
+ * new format is a one-line addition to this table.
+ */
+type TextParser = (text: string) => ParsedData;
+interface TextRoute { name: string; detect: (text: string) => boolean; parse: TextParser }
 
-  if (isRaceBoxCsvFormat(content)) {
-    return parseRaceBoxCsvFile(content);
-  }
+const NAMED_TEXT_ROUTES: readonly TextRoute[] = [
+  { name: 'gpx',        detect: isGpxFormat,        parse: parseGpxFile },
+  { name: 'vesc-csv',   detect: isVescCsvFormat,    parse: parseVescCsvFile },
+  { name: 'racebox',    detect: isRaceBoxCsvFormat, parse: parseRaceBoxCsvFile },
+  { name: 'vbo',        detect: isVboFormat,        parse: parseVboFile },
+  { name: 'motec-csv',  detect: isMotecCsvFormat,   parse: parseMotecCsvFile },
+  { name: 'dovex',      detect: isDovexFormat,      parse: parseDovexFile },
+  { name: 'dove',       detect: isDoveFormat,       parse: parseDoveFile },
+  // RaceChrono v3 sits ahead of the loose Alfano/AiM detectors — its
+  // two-cell `Format,3` sniff is exact. See issue #33.
+  { name: 'racechrono', detect: isRaceChronoCsvV3,  parse: (t) => importGenericCsvSync(rewriteRaceChronoCsvV3(t)) },
+  { name: 'aim-signed', detect: (t) => hasAimSignature(t) && isAimFormat(t), parse: parseAimFile },
+  { name: 'alfano',     detect: isAlfanoFormat,     parse: parseAlfanoFile },
+  { name: 'aim',        detect: isAimFormat,        parse: parseAimFile },
+];
 
-  if (isVboFormat(content)) {
-    return parseVboFile(content);
+/**
+ * First named-format hit for `text`, or null when nothing above the generic
+ * CSV fallback claims it.
+ */
+function detectNamedTextFormat(text: string): ParsedData | null {
+  for (const route of NAMED_TEXT_ROUTES) {
+    if (route.detect(text)) return route.parse(text);
   }
+  return null;
+}
 
-  if (isMotecCsvFormat(content)) {
-    return parseMotecCsvFile(content);
-  }
-
-  if (isDovexFormat(content)) {
-    return parseDovexFile(content);
-  }
-
-  if (isDoveFormat(content)) {
-    return parseDoveFile(content);
-  }
-
-  if (hasAimSignature(content) && isAimFormat(content)) {
-    return parseAimFile(content);
-  }
-
-  if (isAlfanoFormat(content)) {
-    return parseAlfanoFile(content);
-  }
-
-  if (isAimFormat(content)) {
-    return parseAimFile(content);
-  }
-
-  if (isGenericCsvFormat(content)) {
-    return importGenericCsvSync(content);
-  }
-
-  return parseDatalog(content);
+/**
+ * Sync text-content route: named parsers first, then generic CSV (using a
+ * remembered mapping or the auto-proposal — no dialog on the sync path),
+ * with the NMEA "give up" fallback last.
+ */
+function routeTextContent(text: string): ParsedData {
+  const named = detectNamedTextFormat(text);
+  if (named) return named;
+  if (isGenericCsvFormat(text)) return importGenericCsvSync(text);
+  return parseDatalog(text);
 }

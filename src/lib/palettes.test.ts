@@ -211,40 +211,13 @@ describe("WCAG AA contrast", () => {
     }
   }
 
-  // KNOWN SHORTFALL, inherited — not introduced by the palettes.
-  //
-  // LapTable draws its sector-sum column as `text-primary bg-primary/10` and that
-  // column's header as `text-primary bg-primary/20`: primary-coloured text on a
-  // wash of the primary itself. That construction is contrast-capped for *any*
-  // hue — the wash drags the background toward the very colour the text is — and
-  // it lands under 4.5:1 in every palette including upstream's. It cannot be fixed
-  // from a CSS variable: lightening the primary lightens the wash with it, and
-  // reaching AA would take Racing Red to salmon. The real fix is in the component
-  // (e.g. `text-foreground` on the wash, or a solid `bg-primary
-  // text-primary-foreground` header) — but that would change the `original` look,
-  // which is out of scope here.
-  //
-  // So: pin it. On this pair every palette must clear AA — or, where the component
-  // makes AA unreachable, be at least as legible as upstream. The red primary can
-  // never make it worse than the violet it replaced.
-  it("clears AA where the primary is washed over itself, else beats upstream", () => {
-    const ratios = (id: PaletteId, mode: (typeof MODES)[number], alpha: number) => {
-      const v = effective(id, mode);
-      const primary = parseHsl(v["primary"]);
-      return contrast(primary, tint(primary, parseHsl(v["card"]), alpha));
-    };
-    for (const { id } of audited) {
-      for (const mode of MODES) {
-        for (const alpha of [0.1, 0.2]) {
-          const floor = Math.min(AA, ratios("original", mode, alpha));
-          expect(
-            ratios(id, mode, alpha),
-            `${id}/${mode} primary on its own ${alpha * 100}% wash`,
-          ).toBeGreaterThanOrEqual(floor);
-        }
-      }
-    }
-  });
+  // Historically, LapTable painted its sector-sum column as `text-primary
+  // bg-primary/{10,20}` — text tinted with a wash of itself, contrast-capped
+  // below AA for any hue. Issue #31 fixed that in the component: the sector-
+  // sum uses `text-foreground bg-muted/60`, which is AA by construction, and
+  // the fastest-sector cells use `text-purple-600` (light) / `text-purple-300`
+  // (dark) which also clear AA on --card. Both pass because they no longer
+  // depend on the palette's primary hue at all — nothing to pin here.
 
   it("keeps the fastest-lap colour distinguishable from the primary in every palette", () => {
     // Neon's brand colour *is* green, so --lap-best moves to lime there. Guard the

@@ -9,6 +9,7 @@ import { emitGarageChange } from './garageEvents';
 import { getSetup } from './setupStorage';
 import { getTemplate } from './templateStorage';
 import { listAllMetadata } from './fileStorage';
+import { activeUserIdOrDefault } from './localUserStorage';
 import {
   buildSetupRevision, findOrphanRevisionIds, shouldPrune,
   type SetupRevision,
@@ -17,7 +18,7 @@ import {
 const STORE = STORE_NAMES.SETUP_REVISIONS;
 
 /** localStorage key holding the last orphan-prune time (ms). */
-const PRUNE_TS_KEY = "dove:setup-revisions:lastPrune";
+const PRUNE_TS_KEY = "raceplex:setup-revisions:lastPrune";
 
 export async function getSetupRevision(id: string): Promise<SetupRevision | null> {
   const db = await openDB();
@@ -31,6 +32,11 @@ export async function getSetupRevision(id: string): Promise<SetupRevision | null
   return result ?? null;
 }
 
+/**
+ * All revisions belonging to the active user (plan 0011), newest-first. By-id
+ * lookup via `getSetupRevision` is intentionally cross-user so a session hash
+ * frozen earlier still resolves.
+ */
 export async function listSetupRevisions(): Promise<SetupRevision[]> {
   const db = await openDB();
   const tx = db.transaction(STORE, "readonly");
@@ -40,13 +46,20 @@ export async function listSetupRevisions(): Promise<SetupRevision[]> {
     request.onerror = () => reject(request.error);
   });
   db.close();
-  return results.sort((a, b) => b.createdAt - a.createdAt);
+  const uid = activeUserIdOrDefault();
+  return results
+    .filter((r) => r.userId === uid)
+    .sort((a, b) => b.createdAt - a.createdAt);
 }
 
 async function putRevision(rev: SetupRevision): Promise<void> {
+  const stamped: SetupRevision = {
+    ...rev,
+    userId: rev.userId ?? activeUserIdOrDefault(),
+  };
   const db = await openDB();
   const tx = db.transaction(STORE, "readwrite");
-  tx.objectStore(STORE).put(rev);
+  tx.objectStore(STORE).put(stamped);
   await new Promise<void>((resolve, reject) => {
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error);

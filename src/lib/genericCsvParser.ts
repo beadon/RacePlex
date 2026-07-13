@@ -464,13 +464,16 @@ export function analyzeGenericCsv(content: string): GenericCsvAnalysis {
           `Speed column "${table.columns[speed]}" is unlabelled — measured against GPS-derived speed as ${measured}.`,
         );
       } else {
-        // Not enough movement to measure, and the name says nothing. km/h is the most common
-        // unlabelled export, but this is a guess and it is flagged as one.
+        // Not enough movement to measure, and the name says nothing. Default
+        // to km/h (the most common unlabelled export) but require the rider to
+        // explicitly acknowledge in the dialog before Import unlocks — a
+        // click-through warning is too easy to miss. See issue #30 + the
+        // CsvMappingDialog's `ackAssumedUnit` gate.
         speedUnit = 'kph';
         speedUnitSource = 'assumed';
         speedConfident = false;
         notes.push(
-          `Speed column "${table.columns[speed]}" is unlabelled and the ride has too little movement to measure it — ASSUMING km/h. Check this.`,
+          `Speed column "${table.columns[speed]}" is unlabelled and the ride has too little movement to measure it — assuming km/h. Confirm this in the mapping dialog before importing.`,
         );
       }
     }
@@ -671,15 +674,20 @@ export function parseGenericCsvTable(table: CsvTable, mapping: CsvColumnMapping)
   const extras = extraColumnIndices(table, mapping);
   const factor = SPEED_FACTOR[mapping.speedUnit];
 
-  // ── Pass 2: emit EVERY row between the first and last fix, position interpolated. ──
+  // ── Pass 2: emit EVERY row from the first GPS fix to the end of the file. ──
+  // Rows after `last.row` no longer have a next GPS fix to interpolate toward;
+  // they get clamped to the last known position rather than extrapolated (which
+  // would draw a straight line off the map). Trimming to `last.row` would drop
+  // the trailing ~<1 s of fast-channel rows on a 1 Hz-GNSS log — data loss for
+  // no gain. See issue #30.
   const samples: GpsSample[] = [];
   const first = anchors[0]!;
   const last = anchors[anchors.length - 1]!;
 
-  for (let i = first.row; i <= last.row; i++) {
+  for (let i = first.row; i < table.rows.length; i++) {
     const row = table.rows[i]!;
     const t = times[i] ?? 0;
-    const { lat, lon } = positionAt(t);
+    const { lat, lon } = i <= last.row ? positionAt(t) : { lat: last.lat, lon: last.lon };
 
     const speedMps =
       mapping.speed === -1 ? derivedAt(t) : (cellNumber(row, mapping.speed) ?? 0) * factor;

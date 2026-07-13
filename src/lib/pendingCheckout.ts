@@ -6,7 +6,7 @@
 
 import type { BillingInterval } from "./billing";
 
-const KEY = "dove-pending-checkout";
+const KEY = "raceplex:pending-checkout";
 const MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24h
 
 export interface PendingCheckout {

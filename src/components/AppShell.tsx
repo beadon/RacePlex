@@ -2,6 +2,7 @@ import { type ReactNode } from "react";
 import { NavLink } from "react-router-dom";
 import { Gauge, Car, Map as MapIcon, Wrench, Settings as SettingsIcon } from "lucide-react";
 import { BrandLogo } from "@/components/BrandLogo";
+import { UserSwitcher } from "@/components/UserSwitcher";
 import { cn } from "@/lib/utils";
 
 /**
@@ -118,7 +119,10 @@ export function AppShell({ rightSlot, actions, children }: AppShellProps) {
               )}
             </nav>
           </div>
-          <div className="flex items-center gap-2">{rightSlot}</div>
+          <div className="flex items-center gap-2">
+            <UserSwitcher onManage={actions?.onOpenSettings} />
+            {rightSlot}
+          </div>
         </div>
       </header>
 
@@ -129,7 +133,10 @@ export function AppShell({ rightSlot, actions, children }: AppShellProps) {
             <BrandLogo className="w-6 h-6" />
             <span className="text-base font-semibold text-foreground">RacePlex</span>
           </NavLink>
-          <div className="flex items-center gap-1">{rightSlot}</div>
+          <div className="flex items-center gap-1">
+            <UserSwitcher onManage={actions?.onOpenSettings} />
+            {rightSlot}
+          </div>
         </div>
       </header>
 

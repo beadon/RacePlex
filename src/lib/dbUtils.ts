@@ -1,11 +1,15 @@
 /**
  * Shared IndexedDB utilities.
- * All storage modules share the same database ("dove-file-manager") and version.
+ * All storage modules share the same database ("raceplex") and version.
  * The schema is defined here once to avoid duplication across storage files.
+ *
+ * A one-shot migration in `legacyDbMigration.ts` copies data from the previous
+ * `dove-file-manager` database on first startup after upgrade, then deletes
+ * the old one; users don't lose anything.
  */
 
-export const DB_NAME = "dove-file-manager";
-export const DB_VERSION = 13;
+export const DB_NAME = "raceplex";
+export const DB_VERSION = 15;
 
 export const STORE_NAMES = {
   FILES: "files",
@@ -22,7 +26,45 @@ export const STORE_NAMES = {
   LAP_SNAPSHOTS: "lap-snapshots", // frozen "course fastest lap" captures per engine
   SETUP_REVISIONS: "setup-revisions", // immutable, content-addressed frozen setups (session history)
   WEATHER_CACHE: "weather-cache", // per-session historical weather (local-only, never cloud-synced)
+  USERS: "users",           // v14: local user profiles for shared-machine scoping (plan 0011)
+  REMOTES: "remotes",       // v15: shared remote catalog (Hoyt Puck, Flipsky VX, …), plan 0010
 } as const;
+
+/**
+ * Stores whose rows carry a `userId` (plan 0011 — local users). The v14
+ * migration back-fills every existing row with the default user's id, and
+ * scoped storage modules append their `userId` on save + filter on read.
+ *
+ * Tracks are NOT here — tracks live in localStorage and are global by design.
+ * Users, obviously, aren't here either. Everything else that a rider builds up
+ * is per-user.
+ */
+/**
+ * The seed user id used by the v14 migration to back-fill pre-existing rows.
+ * Duplicated verbatim in `localUserStorage.ts` — dbUtils can't import that
+ * module (circular), and this migration must run inside `onupgradeneeded` where
+ * async imports aren't available. Change both in lockstep.
+ */
+const DEFAULT_USER_ID_LOCAL = "default-user";
+const DEFAULT_USER_NAME_LOCAL = "Me";
+
+export const USER_SCOPED_STORES = [
+  STORE_NAMES.FILES,
+  STORE_NAMES.METADATA,
+  STORE_NAMES.KARTS,
+  STORE_NAMES.NOTES,
+  STORE_NAMES.SETUPS,
+  STORE_NAMES.VIDEO_SYNC,
+  STORE_NAMES.GRAPH_PREFS,
+  STORE_NAMES.VEHICLE_TYPES,
+  STORE_NAMES.SETUP_TEMPLATES,
+  STORE_NAMES.REMOTES,
+  STORE_NAMES.SESSION_VIDEOS,
+  STORE_NAMES.ENGINES,
+  STORE_NAMES.LAP_SNAPSHOTS,
+  STORE_NAMES.SETUP_REVISIONS,
+  STORE_NAMES.WEATHER_CACHE,
+] as const;
 
 /**
  * Open the shared IndexedDB database, creating/upgrading all object stores as needed.
@@ -99,6 +141,62 @@ export function openDB(): Promise<IDBDatabase> {
       // file name; deliberately NOT in the cloud-sync store list (local-only).
       if (!db.objectStoreNames.contains(STORE_NAMES.WEATHER_CACHE)) {
         db.createObjectStore(STORE_NAMES.WEATHER_CACHE, { keyPath: "fileName" });
+      }
+
+      // v14: Local user profiles (plan 0011). A row per profile on this
+      // browser install; the active user's id lives in localStorage. All
+      // pre-existing rows in scoped stores get back-filled with a default
+      // seed user's id so nothing disappears on upgrade.
+      if (!db.objectStoreNames.contains(STORE_NAMES.USERS)) {
+        db.createObjectStore(STORE_NAMES.USERS, { keyPath: "id" });
+      }
+
+      // v15: Reusable remote catalog (Hoyt Puck, Flipsky VX, Metr, …). Per
+      // plan 0010: each user has their own catalog seeded from a common list
+      // on first save; every row carries a `userId` like other scoped stores.
+      if (!db.objectStoreNames.contains(STORE_NAMES.REMOTES)) {
+        db.createObjectStore(STORE_NAMES.REMOTES, { keyPath: "id" });
+      }
+
+      // v14 migration: seed the default local user and back-fill every scoped
+      // store's rows with its id (plan 0011). Idempotent — a re-run finds the
+      // seed user already there and every row already tagged, and does nothing.
+      if (oldVersion < 14) {
+        try {
+          const usersStore = request.transaction!.objectStore(STORE_NAMES.USERS);
+          const getUserReq = usersStore.get(DEFAULT_USER_ID_LOCAL);
+          getUserReq.onsuccess = () => {
+            if (!getUserReq.result) {
+              usersStore.put({
+                id: DEFAULT_USER_ID_LOCAL,
+                name: DEFAULT_USER_NAME_LOCAL,
+                createdAt: Date.now(),
+              });
+            }
+          };
+        } catch {
+          // Users store doesn't exist yet — the create above handles it. The
+          // seed will be written on next open via `ensureDefaultUser`.
+        }
+
+        // Back-fill every scoped store's rows with the default user's id.
+        for (const storeName of USER_SCOPED_STORES) {
+          try {
+            const store = request.transaction!.objectStore(storeName);
+            const getAllReq = store.getAll();
+            getAllReq.onsuccess = () => {
+              for (const row of getAllReq.result) {
+                if (!row.userId) {
+                  row.userId = DEFAULT_USER_ID_LOCAL;
+                  store.put(row);
+                }
+              }
+            };
+          } catch {
+            // Store may not exist yet on fresh installs — the createObjectStore
+            // above handled it, and an empty store has nothing to back-fill.
+          }
+        }
       }
 
       // v8 migration: add vehicleId index to setups if upgrading from v7

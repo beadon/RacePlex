@@ -34,6 +34,26 @@ const AlfanoDownload = lazy(() =>
   import("@/components/AlfanoDownload").then((m) => ({ default: m.AlfanoDownload })),
 );
 
+// The phone-GPS recorder wraps the lap-timer tool + first-time precision
+// warning; lazy so the geolocation stack stays off the eager bundle.
+const PhoneGpsRecord = lazy(() =>
+  import("@/components/PhoneGpsRecord").then((m) => ({ default: m.PhoneGpsRecord })),
+);
+
+// RaceBox live capture pulls in the UBX ring buffer + Web Bluetooth transport;
+// lazy so the whole `lib/live/*` stack stays off the eager bundle for anyone
+// not using a RaceBox. See issue #32.
+const RaceBoxLiveRecord = lazy(() =>
+  import("@/components/RaceBoxLiveRecord").then((m) => ({ default: m.RaceBoxLiveRecord })),
+);
+
+// Dragy live capture — shares the UBX ring buffer with RaceBox but its own
+// handshake + NAV-PVT decoder. Lazy for the same reason. Reverse-engineered
+// protocol; expect firmware-dependent breakage.
+const DragyLiveRecord = lazy(() =>
+  import("@/components/DragyLiveRecord").then((m) => ({ default: m.DragyLiveRecord })),
+);
+
 interface LoggerDownloadProps {
   onDataLoaded: (data: ParsedData, fileName?: string) => void;
   autoSave?: boolean;
@@ -63,6 +83,9 @@ export function LoggerDownload({ onDataLoaded, autoSave, autoSaveFile, renderTri
   const [fledglingActive, setFledglingActive] = useState(false);
   const [mychronActive, setMychronActive] = useState(false);
   const [alfanoActive, setAlfanoActive] = useState(false);
+  const [phoneGpsActive, setPhoneGpsActive] = useState(false);
+  const [raceBoxLiveActive, setRaceBoxLiveActive] = useState(false);
+  const [dragyLiveActive, setDragyLiveActive] = useState(false);
 
   const openPicker = useCallback(() => setPickerOpen(true), []);
 
@@ -94,6 +117,18 @@ export function LoggerDownload({ onDataLoaded, autoSave, autoSaveFile, renderTri
         onSelectAlfano={() => {
           setPickerOpen(false);
           setAlfanoActive(true);
+        }}
+        onSelectPhoneGps={() => {
+          setPickerOpen(false);
+          setPhoneGpsActive(true);
+        }}
+        onSelectRaceBoxLive={() => {
+          setPickerOpen(false);
+          setRaceBoxLiveActive(true);
+        }}
+        onSelectDragyLive={() => {
+          setPickerOpen(false);
+          setDragyLiveActive(true);
         }}
       />
 
@@ -139,6 +174,32 @@ export function LoggerDownload({ onDataLoaded, autoSave, autoSaveFile, renderTri
             autoSave={autoSave}
             autoSaveFile={autoSaveFile}
             onClose={() => setAlfanoActive(false)}
+          />
+        </Suspense>
+      )}
+
+      {phoneGpsActive && (
+        <Suspense fallback={null}>
+          <PhoneGpsRecord open={phoneGpsActive} onClose={() => setPhoneGpsActive(false)} />
+        </Suspense>
+      )}
+
+      {raceBoxLiveActive && (
+        <Suspense fallback={null}>
+          <RaceBoxLiveRecord
+            open={raceBoxLiveActive}
+            onClose={() => setRaceBoxLiveActive(false)}
+            onDataLoaded={onDataLoaded}
+          />
+        </Suspense>
+      )}
+
+      {dragyLiveActive && (
+        <Suspense fallback={null}>
+          <DragyLiveRecord
+            open={dragyLiveActive}
+            onClose={() => setDragyLiveActive(false)}
+            onDataLoaded={onDataLoaded}
           />
         </Suspense>
       )}

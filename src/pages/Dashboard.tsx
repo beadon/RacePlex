@@ -3,6 +3,8 @@ import { AppShell } from "@/components/AppShell";
 import { LoggerDownload } from "@/components/LoggerDownload";
 import { TrackEditor } from "@/components/TrackEditor";
 import { SettingsModal } from "@/components/SettingsModal";
+import { ToolsDialog } from "@/components/ToolsDialog";
+import { SessionsSummaryTile } from "@/components/dashboard/SessionsSummaryTile";
 import { RecentSessionsTile } from "@/components/dashboard/RecentSessionsTile";
 import { GarageTile } from "@/components/dashboard/GarageTile";
 import { TracksTile } from "@/components/dashboard/TracksTile";
@@ -40,14 +42,15 @@ interface DashboardProps {
 
 /**
  * Dashboard — the app's home surface (rendered by Index when no session is
- * loaded). Optimized for the *returning* user: Recent Sessions is the first
- * thing you see, and the quick-action row (Garage / Tracks / Devices /
- * Import) sits right below with equal weight — no single action dominates.
+ * loaded). Three logical zones, top to bottom:
  *
- * Import in particular is a compact tile that opens the FileImport dropzone
- * in a dialog on click, rather than being the page's hero. First-time users
- * still get a "Load a sample RaceBox session" nudge inside Recent Sessions'
- * empty state.
+ *   1. **Status row** — Sessions summary · Garage · Tracks. Each shows what's
+ *      on the device (counts, stats, config) and clicks through to the
+ *      corresponding manager. These are the "what do I have" cards.
+ *   2. **Recent sessions** — the full clickable list. Returning-user primary
+ *      target: pick up a session and go.
+ *   3. **Add data** — Devices + Import. Actions that bring NEW data in,
+ *      visually separated from the "view what I have" zone above.
  */
 export function Dashboard({
   onDataLoaded,
@@ -65,20 +68,22 @@ export function Dashboard({
 }: DashboardProps) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [tracksOpen, setTracksOpen] = useState(false);
+  const [toolsOpen, setToolsOpen] = useState(false);
 
   return (
     <AppShell
       actions={{
         onOpenGarage,
         onOpenTracks: () => setTracksOpen(true),
+        // Tools opens the standalone calculators (Stance nosedive, Seat
+        // Position CoG, Phone Lap Timer) in a dialog. They're all in the
+        // in-session Tools tab too — this makes them reachable from the
+        // dashboard when no session is loaded.
+        onOpenTools: () => setToolsOpen(true),
         onOpenSettings: () => setSettingsOpen(true),
-        // Tools destination stays hidden until we have a real page for it —
-        // the Tools plugin's tile duplicated the nav item and had unequal
-        // weight vs the other dashboard cards, so it's out. When Tools grows
-        // into its own route we'll wire it here.
       }}
     >
-      <div className="mx-auto w-full max-w-6xl px-6 py-8 space-y-6">
+      <div className="mx-auto w-full max-w-6xl px-6 py-8 space-y-8">
         <div>
           <h1 className="text-2xl font-semibold text-foreground">Sessions</h1>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -86,23 +91,13 @@ export function Dashboard({
           </p>
         </div>
 
-        {/* Returning-user flow: their sessions come first, at full width. */}
-        <RecentSessionsTile
-          onOpen={onOpenFile}
-          showSampleFiles={showSampleFiles}
-          onLoadSample={onLoadSample}
-          isLoadingSample={isLoadingSample}
-        />
-
-        {/* Quick-actions row — equal-weight cards. Order optimizes for
-            frequency: Garage/Tracks are edited more often than a fresh
-            device connect or one-off import for a returning user. */}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {/* ── Status row: what's on this device ─────────────────────────── */}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <SessionsSummaryTile />
           <GarageTile onManage={onOpenGarage} />
-
-          {/* TracksTile is presentational; the click target is the tile
-              button below, which flips tracksOpen so TrackEditor's dialog
-              renders through controlled mode. */}
+          {/* TracksTile is presentational; the click target is the wrapping
+              button, which flips tracksOpen so TrackEditor's dialog renders
+              through controlled mode. */}
           <button
             type="button"
             onClick={() => setTracksOpen(true)}
@@ -110,28 +105,40 @@ export function Dashboard({
           >
             <TracksTile />
           </button>
+        </div>
 
-          {/* LoggerDownload owns the datalogger picker + BLE flow lazily. */}
-          <LoggerDownload
-            onDataLoaded={onDataLoaded}
-            autoSave={autoSave}
-            autoSaveFile={autoSaveFile}
-            renderTrigger={({ onOpen }) => <DevicesTile onOpen={onOpen} />}
-          />
+        {/* ── The list ──────────────────────────────────────────────────── */}
+        <RecentSessionsTile
+          onOpen={onOpenFile}
+          showSampleFiles={showSampleFiles}
+          onLoadSample={onLoadSample}
+          isLoadingSample={isLoadingSample}
+        />
 
-          <ImportTile
-            onDataLoaded={onDataLoaded}
-            autoSave={autoSave}
-            autoSaveFile={autoSaveFile}
-          />
+        {/* ── Add-data actions: separated from the "view" zone above ────── */}
+        <div>
+          <h2 className="text-xs uppercase tracking-wide text-muted-foreground mb-3">
+            Add data
+          </h2>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <LoggerDownload
+              onDataLoaded={onDataLoaded}
+              autoSave={autoSave}
+              autoSaveFile={autoSaveFile}
+              renderTrigger={({ onOpen }) => <DevicesTile onOpen={onOpen} />}
+            />
+            <ImportTile
+              onDataLoaded={onDataLoaded}
+              autoSave={autoSave}
+              autoSaveFile={autoSaveFile}
+            />
+          </div>
         </div>
       </div>
 
       {/* Track manager — controlled from the Tracks tile + nav destination.
-          Rendering with `triggerButton={null}` and controlled open props
-          means it mounts + shows/hides based on external state only. */}
+          externalOpen puts TrackEditor in dialog-only mode (no inline UI). */}
       <TrackEditor
-        triggerButton={null}
         externalOpen={tracksOpen}
         onExternalOpenChange={setTracksOpen}
       />
@@ -146,6 +153,10 @@ export function Dashboard({
         open={settingsOpen}
         onOpenChange={setSettingsOpen}
       />
+
+      {/* Tools — the standalone calculators (Stance / Seat Position / Phone
+          Lap Timer), same picker + bodies the in-session Tools tab uses. */}
+      <ToolsDialog open={toolsOpen} onOpenChange={setToolsOpen} />
     </AppShell>
   );
 }

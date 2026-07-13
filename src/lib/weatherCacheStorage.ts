@@ -11,6 +11,7 @@
  * re-fetch for itself, so syncing it would just waste the user's quota.
  */
 import { STORE_NAMES, withReadTransaction, withWriteTransaction } from "./dbUtils";
+import { activeUserIdOrDefault } from "./localUserStorage";
 import type { WeatherData } from "./weatherService";
 
 interface WeatherCacheRecord {
@@ -18,6 +19,12 @@ interface WeatherCacheRecord {
   data: WeatherData;
   /** When this entry was cached (epoch ms) — for future TTL/eviction if needed. */
   cachedAt: number;
+  /**
+   * Owning local user (plan 0011). Stamped by saveCachedWeather when missing;
+   * getCachedWeather/deleteCachedWeather are by-fileName lookups (already narrow)
+   * and are intentionally not filtered.
+   */
+  userId?: string;
 }
 
 const STORE = STORE_NAMES.WEATHER_CACHE;
@@ -36,7 +43,12 @@ export async function getCachedWeather(fileName: string): Promise<WeatherData | 
 export async function saveCachedWeather(fileName: string, data: WeatherData): Promise<void> {
   if (!fileName) return;
   await withWriteTransaction(STORE, (store) => {
-    store.put({ fileName, data, cachedAt: Date.now() } satisfies WeatherCacheRecord);
+    store.put({
+      fileName,
+      data,
+      cachedAt: Date.now(),
+      userId: activeUserIdOrDefault(),
+    } satisfies WeatherCacheRecord);
   });
 }
 

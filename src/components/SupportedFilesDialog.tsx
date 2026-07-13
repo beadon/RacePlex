@@ -33,7 +33,7 @@ const PRIMARY_IDS = [
   "dove",
   "dovex",
 ] as const;
-const SECONDARY_IDS = ["ubx", "xrk", "iracing", "motecLd", "motecCsv", "alfano", "aimCsv"] as const;
+const SECONDARY_IDS = ["ubx", "xrk", "iracing", "fit", "motecLd", "motecCsv", "alfano", "aimCsv"] as const;
 const EXPERIMENTAL = new Set(["motecLd", "motecCsv", "alfano", "aimCsv"]);
 
 // Shared rich-text components for the format bodies. `<Trans>` only uses the

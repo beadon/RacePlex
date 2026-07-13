@@ -179,6 +179,10 @@
       "iracing": {
         "name": "iRacing Telemetry (Binary)",
         "body": "iRacing's native binary telemetry export — the same data the sim's live irsdk API serves, no third-party CSV/MoTeC conversion needed. Read directly in your browser (fully offline): GPS position, speed and altitude drive the map and laps, with throttle, brake, gear, steering, RPM, water/oil temp and native lateral/longitudinal g along for the ride. Extension: <code>.ibt</code>"
+      },
+      "fit": {
+        "name": "FIT — Garmin / Wahoo / Coros / Suunto",
+        "body": "The native binary format of the largest installed base of GPS fitness devices out there. Handy for onboarding — try RacePlex with a ride you already have. <em>These devices log at ~1 Hz; at 40 km/h that's one fix every 11 metres, which isn't enough to place a slalom gate or a braking point precisely.</em> Speed and lap timing are best-effort. Extension: <code>.fit</code>"
       }
     }
   },

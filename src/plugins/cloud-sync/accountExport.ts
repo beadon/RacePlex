@@ -12,7 +12,20 @@ import { downloadCloudFile } from "./syncEngine";
 import { DOC_STORES } from "./syncStores";
 import { buildExportTextFiles, type CloudExport, type LocalExport } from "./exportManifest";
 
-const SETTINGS_KEY = "dove-dataviewer-settings";
+const SETTINGS_KEY_BASE = "raceplex:settings";
+const ACTIVE_USER_KEY = "raceplex:activeUserId";
+const DEFAULT_USER_ID = "default-user";
+
+/** Same rule as useSettings — default user keeps the unqualified key. */
+function settingsKey(): string {
+  try {
+    const uid = localStorage.getItem(ACTIVE_USER_KEY);
+    if (!uid || uid === DEFAULT_USER_ID) return SETTINGS_KEY_BASE;
+    return `${SETTINGS_KEY_BASE}:${uid}`;
+  } catch {
+    return SETTINGS_KEY_BASE;
+  }
+}
 
 /** Fetch the server-side account export. Returns null when signed out. */
 async function fetchCloudExport(): Promise<CloudExport | null> {
@@ -27,7 +40,7 @@ async function fetchCloudExport(): Promise<CloudExport | null> {
 async function gatherLocal(): Promise<LocalExport> {
   let settings: unknown;
   try {
-    const raw = localStorage.getItem(SETTINGS_KEY);
+    const raw = localStorage.getItem(settingsKey());
     settings = raw ? JSON.parse(raw) : null;
   } catch {
     settings = null;

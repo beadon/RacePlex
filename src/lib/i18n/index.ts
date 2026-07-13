@@ -35,14 +35,26 @@ import enPlugins from "@/locales/en/plugins.json";
 import enAuth from "@/locales/en/auth.json";
 import enAdmin from "@/locales/en/admin.json";
 
-const SETTINGS_KEY = "dove-dataviewer-settings";
+const SETTINGS_KEY_BASE = "raceplex:settings";
+const ACTIVE_USER_KEY = "raceplex:activeUserId";
+const DEFAULT_USER_ID = "default-user";
+
+function settingsKey(): string {
+  try {
+    const uid = localStorage.getItem(ACTIVE_USER_KEY);
+    if (!uid || uid === DEFAULT_USER_ID) return SETTINGS_KEY_BASE;
+    return `${SETTINGS_KEY_BASE}:${uid}`;
+  } catch {
+    return SETTINGS_KEY_BASE;
+  }
+}
 
 /** Read the persisted language preference straight from the settings blob,
  * synchronously, so we can pick it before React mounts (mirrors the darkMode
  * bootstrap in App.tsx). Returns undefined if unset/malformed. */
 function readSavedLanguage(): string | undefined {
   try {
-    const raw = localStorage.getItem(SETTINGS_KEY);
+    const raw = localStorage.getItem(settingsKey());
     if (!raw) return undefined;
     const parsed = JSON.parse(raw) as { language?: unknown };
     return typeof parsed.language === "string" ? parsed.language : undefined;

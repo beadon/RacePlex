@@ -178,6 +178,7 @@ export class LapTimerSession {
         courseName: t.courseName ?? "",
         sessionStartTime: startTs,
         fastestLapMs: t.bestLapMs ?? undefined,
+        source: "phone-gps",
       });
       this.patch({ saving: false, savedFileName: fileName });
     } catch (e) {
