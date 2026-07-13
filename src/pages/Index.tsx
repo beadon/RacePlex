@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Gauge, Map, ListOrdered, BarChart3, FolderOpen, Play, Pause, StepBack, StepForward, Eye, EyeOff, AlertCircle, Wrench, NotebookPen, SlidersHorizontal, Columns2 } from "lucide-react";
 import { BrandLogo } from "@/components/BrandLogo";
 import { Dashboard } from "@/pages/Dashboard";
+import { useAutoOpenLastSession } from "@/hooks/useAutoOpenLastSession";
 import { TrackEditor } from "@/components/TrackEditor"; // still used in compact header
 import { LapTimesTab } from "@/components/tabs/LapTimesTab";
 import { NotesTab } from "@/components/drawer/NotesTab";
@@ -334,6 +335,15 @@ export default function Index() {
       console.error("Failed to open session:", e);
     }
   }, [fileManager, handleDataLoaded]);
+
+  // Persist the last-open file + auto-open it on cold start (unless the user
+  // hit the home button before their last session ended — that sets an
+  // explicit-close flag which the hook honours). Returns markExplicitClose()
+  // to wire into the clear-session UX below.
+  const { markExplicitClose } = useAutoOpenLastSession({
+    currentFileName,
+    openFile: handleOpenFile,
+  });
 
   // Lap snapshots: frozen "course fastest lap" captures, loaded as a comparison
   // overlay through the same external-reference slot (so they never auto-play or
@@ -768,7 +778,12 @@ export default function Index() {
         ) : (
           <button
             type="button"
-            onClick={clearSession}
+            onClick={() => {
+              // Explicit "go home" — remember it so the next reload lands
+              // on the dashboard instead of auto-reopening this session.
+              markExplicitClose();
+              clearSession();
+            }}
             aria-label={t("header.home")}
             className="flex items-center gap-3 rounded-md focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
           >
