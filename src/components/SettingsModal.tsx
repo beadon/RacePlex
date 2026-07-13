@@ -28,6 +28,7 @@ import { FIELD_CATEGORIES, CanonicalFieldId } from "@/lib/fieldResolver";
 import { PALETTES } from "@/lib/palettes";
 import { cn } from "@/lib/utils";
 import { UsersManagerPanel } from "@/components/UsersManagerPanel";
+import { DataExportSection } from "@/components/DataExportSection";
 
 interface SettingsModalProps {
   settings: AppSettings;
@@ -745,6 +746,11 @@ export function SettingsModal({
               </div>
             ))}
           </CollapsibleSection>
+
+          <Separator />
+
+          {/* Export / import everything in this browser (plan 0013). */}
+          <DataExportSection />
 
           <Separator />
 

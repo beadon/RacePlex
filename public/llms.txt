@@ -17,6 +17,8 @@ Features specific to electric skateboards:
 
 Other features: automatic track and course detection, sector splits and optimal lap, reference-lap overlays and pace delta, speed heatmaps on a Leaflet map, braking-zone analysis, G-force visualisation, video export with overlays via WebCodecs, and Web Bluetooth session download from supported loggers.
 
+Your data is portable. Because everything is stored in the browser and there is no account, Settings → Your data (also on the Tools tab and in the Files drawer) downloads the lot as a .zip — session logs in their original formats, plus your vehicles, setups, notes, custom tracks, lap snapshots and settings as plain JSON. The same screen restores it, which is how you move to a new browser or device. Session videos are included only if you ask, since they can run to gigabytes.
+
 Notes: Dragy has no CSV export — record from it live over Bluetooth, or use the dragy·Lap app's `.vbo` export. The GoPro HERO12 has no GPS. FIT devices (Garmin, Wahoo, Coros) log at about 1 Hz, which is roughly 11 m between fixes at 40 km/h — enough to plot a ride, too coarse to place a braking point.
 
 ## Pages

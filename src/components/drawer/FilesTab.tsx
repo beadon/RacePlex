@@ -21,6 +21,7 @@ import { LoggerDownload } from "@/components/LoggerDownload";
 import { listSessionVideos, StoredVideoMeta } from "@/lib/videoFileStorage";
 import { PluginMount } from "@/plugins/PluginMount";
 import { MountSlot } from "@/plugins/mounts";
+import { DataExportSection } from "@/components/DataExportSection";
 
 function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -443,8 +444,10 @@ export function FilesTab({
         )}
       </div>
 
-      {/* Storage Usage */}
-      <div className="px-4 py-2 border-t border-border shrink-0">
+      {/* Storage Usage. Seeing how full the browser is, is the moment a rider
+          wants a way to get the data out of it — so the export sits right here
+          (plan 0013). It's also in Settings and on the Tools tab. */}
+      <div className="px-4 py-2 border-t border-border shrink-0 space-y-2">
         {storageQuota > 0 ? (
           <div className="space-y-1">
             <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
@@ -460,6 +463,7 @@ export function FilesTab({
         ) : (
           <p className="text-xs text-muted-foreground text-center">{t("files.storageUnavailable")}</p>
         )}
+        <DataExportSection compact />
       </div>
 
       {/* Bottom Actions */}

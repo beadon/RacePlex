@@ -186,5 +186,9 @@
     "statusRecording": "Recording",
     "statusEnded": "Ended",
     "statusWaiting": "Waiting"
+  },
+  "myData": {
+    "name": "My Data",
+    "description": "Download everything RacePlex is holding in this browser, or restore it from a backup."
   }
 }

@@ -147,6 +147,13 @@ delta, G-force plots, and video export with data overlays.
 **Setup tools.** A stance model that reports weight distribution and the deceleration at which the
 rear wheels unload.
 
+**Your data, portable.** Everything lives in your browser and there is no account, so
+**Settings → Your data** downloads all of it as a `.zip`: session logs in their original formats,
+plus vehicles, setups, notes, custom tracks, lap snapshots and settings as plain JSON. The same
+screen restores an archive, which is how you move to a new browser or device. Session videos are
+included only if you tick the box, since they can run to gigabytes. The export is also on the
+Tools tab and in the Files drawer.
+
 ---
 
 ## Screens
