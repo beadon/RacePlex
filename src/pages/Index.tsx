@@ -732,6 +732,7 @@ export default function Index() {
           <Dashboard
             onDataLoaded={handleDataLoaded}
             onOpenFile={handleOpenFile}
+            onOpenGarage={openVehiclesGarage}
             autoSave={settings.autoSaveFiles}
             autoSaveFile={fileManager.saveFile}
             onLoadSample={handleLoadSample}

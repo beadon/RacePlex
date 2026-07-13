@@ -1,7 +1,14 @@
-import { type ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
 import { AppShell } from "@/components/AppShell";
 import { FileImport } from "@/components/FileImport";
+import { LoggerDownload } from "@/components/LoggerDownload";
+import { TrackEditor } from "@/components/TrackEditor";
 import { RecentSessionsTile } from "@/components/dashboard/RecentSessionsTile";
+import { GarageTile } from "@/components/dashboard/GarageTile";
+import { TracksTile } from "@/components/dashboard/TracksTile";
+import { DevicesTile } from "@/components/dashboard/DevicesTile";
+import { PluginMount } from "@/plugins/PluginMount";
+import { MountSlot } from "@/plugins/mounts";
 import type { ParsedData } from "@/types/racing";
 
 interface DashboardProps {
@@ -12,6 +19,8 @@ interface DashboardProps {
    *  handler so the dashboard row-click and the file-manager drawer row-click
    *  go through the exact same load path. */
   onOpenFile: (fileName: string) => void;
+  /** Open the garage drawer on its Vehicles tab (for the Garage tile). */
+  onOpenGarage: () => void;
   autoSave: boolean;
   autoSaveFile: (name: string, blob: Blob) => Promise<void>;
   /** Settings modal (trigger + dialog), rendered in the shell's right cluster. */
@@ -25,14 +34,15 @@ interface DashboardProps {
 
 /**
  * Dashboard — the app's home surface (rendered by Index when no session is
- * loaded). Replaces the previous welcome-page flow: no hero, no marketing;
- * shows the user what's already on the system and gives an inline import
- * dropzone. Remaining tiles (Garage, Tracks, Devices, Tools) still placeholder
- * — real content lands in follow-up commits.
+ * loaded). Shows what's on the system (recent sessions, garage, tracks) and
+ * offers inline entry points to add more (file import, device download, track
+ * manager). Plugin-contributed Landing tiles (currently: Tools) show up
+ * automatically via the PluginMount slot at the end of the grid.
  */
 export function Dashboard({
   onDataLoaded,
   onOpenFile,
+  onOpenGarage,
   autoSave,
   autoSaveFile,
   settingsButton,
@@ -59,16 +69,25 @@ export function Dashboard({
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <RecentSessionsTile onOpen={onOpenFile} showSampleFiles={showSampleFiles} />
-          {/* Placeholder tiles — become Garage, Tracks, Devices, Tools in
-              follow-ups. */}
-          {["Garage", "Tracks", "Devices", "Tools"].map((label) => (
-            <div
-              key={label}
-              className="rounded-lg border border-border bg-card/50 p-4 min-h-32 flex items-center justify-center"
-            >
-              <span className="text-sm text-muted-foreground">{label}</span>
-            </div>
-          ))}
+          <GarageTile onManage={onOpenGarage} />
+
+          {/* TrackEditor's dialog attaches to whatever we hand it as
+              triggerButton — the TracksTile is the click target. */}
+          <TrackEditor triggerButton={<TracksTile />} />
+
+          {/* LoggerDownload owns the datalogger picker + BLE flow lazily. */}
+          <LoggerDownload
+            onDataLoaded={onDataLoaded}
+            autoSave={autoSave}
+            autoSaveFile={autoSaveFile}
+            renderTrigger={({ onOpen }) => <DevicesTile onOpen={onOpen} />}
+          />
+
+          {/* Plugin-contributed Landing tiles (Tools today; others later).
+              Suspense because contributed components are React.lazy by convention. */}
+          <Suspense fallback={null}>
+            <PluginMount slot={MountSlot.Landing} ctx={{}} />
+          </Suspense>
         </div>
 
         {/* Sample-file access — demoted from the hero to a tucked-away link.
@@ -91,6 +110,6 @@ export function Dashboard({
   );
 }
 
-// Keep a default export so App.tsx's lazy() preview route keeps resolving
-// during the transition. Removed once the preview route is dropped.
+// Keep a default export for parity with the earlier preview route; can be
+// removed once nothing else lazy-imports this file.
 export default Dashboard;
