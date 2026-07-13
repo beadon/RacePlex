@@ -382,6 +382,39 @@ export default function StanceTool(_props: PluginPanelProps) {
             <p>{t("stance.modelEndo")}</p>
             <p>{t("stance.modelWheelie")}</p>
             <p className="text-muted-foreground/70">{t("stance.modelCaveat")}</p>
+
+            {/* Explicit list of unsourced assumptions, per issue #35 — a rider
+                deserves to know exactly which numbers came from a text on
+                biomechanics and which are educated guesses, so they can
+                decide when to trust the second decimal. */}
+            <div className="mt-3 rounded-md border border-warning/40 bg-warning/5 p-3 space-y-1.5">
+              <p className="font-medium text-foreground">Assumptions worth sanity-checking</p>
+              <ol className="list-decimal pl-5 space-y-1.5">
+                <li>
+                  <span className="font-mono text-foreground">CROUCH_COM_DROP = 0.25</span> —
+                  a full tuck is assumed to lower whole-body CoM by a quarter.
+                  Plausible, but not sourced as precisely as the 0.55 × stature
+                  figure (which is Winter, <em>Biomechanics and Motor Control</em>, Table 4.1).
+                </li>
+                <li>
+                  <span className="font-mono text-foreground">TYPICAL_GRIP_G = 0.6</span> —
+                  urethane-on-asphalt, used for the "tip or skid first?" verdict.
+                  Varies enormously with wheel compound, surface, and temperature.
+                </li>
+                <li>
+                  <span className="font-medium text-foreground">Wide-stance CoM drop is ignored.</span>
+                  Splaying the legs to reach a wide stance lowers CoM by a few
+                  percent of z. The diagram shows it — the feet reach the deck —
+                  but the model doesn't.
+                </li>
+              </ol>
+            </div>
+            <p className="text-muted-foreground/70">
+              No deck flex, no bushing lean, no rate effects. Real nosedive
+              also depends on how fast load transfers and whether you can
+              catch it with the rear leg. <span className="font-medium text-foreground">
+              The thresholds are a ceiling, not a prediction.</span>
+            </p>
           </div>
         </Section>
       </div>
