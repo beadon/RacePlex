@@ -3,6 +3,7 @@ import { AppShell } from "@/components/AppShell";
 import { LoggerDownload } from "@/components/LoggerDownload";
 import { TrackEditor } from "@/components/TrackEditor";
 import { SettingsModal } from "@/components/SettingsModal";
+import { ToolsDialog } from "@/components/ToolsDialog";
 import { SessionsSummaryTile } from "@/components/dashboard/SessionsSummaryTile";
 import { RecentSessionsTile } from "@/components/dashboard/RecentSessionsTile";
 import { GarageTile } from "@/components/dashboard/GarageTile";
@@ -67,17 +68,19 @@ export function Dashboard({
 }: DashboardProps) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [tracksOpen, setTracksOpen] = useState(false);
+  const [toolsOpen, setToolsOpen] = useState(false);
 
   return (
     <AppShell
       actions={{
         onOpenGarage,
         onOpenTracks: () => setTracksOpen(true),
+        // Tools opens the standalone calculators (Stance nosedive, Seat
+        // Position CoG, Phone Lap Timer) in a dialog. They're all in the
+        // in-session Tools tab too — this makes them reachable from the
+        // dashboard when no session is loaded.
+        onOpenTools: () => setToolsOpen(true),
         onOpenSettings: () => setSettingsOpen(true),
-        // Tools destination stays hidden until we have a real page for it —
-        // the Tools plugin's tile duplicated the nav item and had unequal
-        // weight vs the other dashboard cards, so it's out. When Tools grows
-        // into its own route we'll wire it here.
       }}
     >
       <div className="mx-auto w-full max-w-6xl px-6 py-8 space-y-8">
@@ -150,6 +153,10 @@ export function Dashboard({
         open={settingsOpen}
         onOpenChange={setSettingsOpen}
       />
+
+      {/* Tools — the standalone calculators (Stance / Seat Position / Phone
+          Lap Timer), same picker + bodies the in-session Tools tab uses. */}
+      <ToolsDialog open={toolsOpen} onOpenChange={setToolsOpen} />
     </AppShell>
   );
 }
