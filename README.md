@@ -9,6 +9,72 @@ parsed locally and stored on your device.
 
 ---
 
+## Quickstart
+
+RacePlex has no hosted site. You run your own copy — it is a static web app with no server, no
+database and no account, so "running it" means serving a folder of files.
+
+### On a computer
+
+Install [Bun](https://bun.sh), then:
+
+```sh
+git clone https://github.com/beadon/RacePlex.git
+cd RacePlex
+bun install
+bun run dev
+```
+
+Open **http://localhost:8080**. Three sample rides are already there — open one and you have a map,
+lap times and charts without supplying a file.
+
+For the production build instead of the dev server: `bun run build && bun run preview`.
+
+Browsers treat `localhost` as a secure origin, so the offline service worker is active here and
+Chrome or Edge will offer **Install RacePlex** in the address bar. Installed, it opens in its own
+window and keeps working with the network off.
+
+### On a phone
+
+**The phone needs an HTTPS address.** A browser will only register a service worker — the thing that
+makes RacePlex installable and able to run offline — on HTTPS or on `localhost`. Browsing to your
+computer's LAN address over `http://` does load the app and it works, but the phone will not offer
+to install it and it will not run offline. That is a browser rule, not a RacePlex limitation.
+
+Two ways to give it HTTPS.
+
+**Publish your own copy.** Free, permanent, and the repo is already configured for Cloudflare
+Workers static hosting:
+
+```sh
+bun run build
+npx wrangler deploy
+```
+
+That prints an `https://raceplex.<your-subdomain>.workers.dev` address. What you publish is the
+application, not your rides — those never leave the device you record them on.
+
+Any static host works. Upload `dist/` and point unknown paths at `index.html` so client-side routes
+resolve. (On GitHub Pages, a *project* site is served under a subpath like `/RacePlex/` while this
+build assumes the root, so set Vite's `base` first or the assets 404.)
+
+**Or tunnel the dev server** for a quick look, no deploy:
+
+```sh
+cloudflared tunnel --url http://localhost:8080
+```
+
+Then install it from the phone:
+
+- **Android, Chrome** — menu → **Install app** (sometimes **Add to Home screen**).
+- **iOS, Safari** — Share → **Add to Home Screen**.
+
+After the first load it needs no signal. Parsing, lap timing, the charts and the map (from cached
+tiles) all run on the phone. Satellite imagery and weather are the only features that want a
+network.
+
+---
+
 ## Open source
 
 RacePlex is licensed under the GPL-3.0-or-later. Every feature is available to everyone. There are
@@ -123,7 +189,7 @@ weather) that stay independent so a rider can mix them however they read best.
 
 ---
 
-## Getting started
+## Your first session
 
 RacePlex opens on a dashboard listing what is already on the device, with an **Add data** zone
 below it.
