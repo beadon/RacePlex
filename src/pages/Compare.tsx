@@ -10,6 +10,7 @@ import { loadTracks } from "@/lib/trackStorage";
 import type { Lap, ParsedData } from "@/types/racing";
 import { alignSessionToLap, unionChannelIds, type AlignedSeries } from "@/lib/comparison/align";
 import { ComparisonChart } from "@/components/comparison/ComparisonChart";
+import { ComparisonMap } from "@/components/comparison/ComparisonMap";
 import { ComparisonSessionBar } from "@/components/comparison/ComparisonSessionBar";
 
 /**
@@ -138,6 +139,15 @@ export default function Compare() {
     return PALETTE[Math.max(0, idx) % PALETTE.length];
   }, [requested]);
 
+  // Slim view-model for the map — one entry per ready session that has a
+  // selected lap. Keeps the map component from having to know about the
+  // loading / error record shapes.
+  const mapSessions = useMemo(() => (
+    sessions
+      .filter((s): s is Extract<SessionRecord, { status: "ready" }> => s.status === "ready")
+      .map((s) => ({ fileName: s.fileName, samples: s.data.samples, lap: s.selectedLap }))
+  ), [sessions]);
+
   const loading = sessions.some((s) => s.status === "loading");
   const readyCount = sessions.filter((s) => s.status === "ready").length;
   const errorCount = sessions.filter((s) => s.status === "error").length;
@@ -169,6 +179,14 @@ export default function Compare() {
           onLapChange={setLap}
           colourFor={colourFor}
         />
+
+        {/* Shared map — one polyline per session's selected lap, coloured
+            to match its chart series. Deliberately no drift alignment; the
+            charts compare by cumulative distance which doesn't care about
+            small GPS offsets between different loggers. */}
+        {mapSessions.some((s) => s.lap) && (
+          <ComparisonMap sessions={mapSessions} colourFor={colourFor} />
+        )}
 
         {/* Channel toggles — one per union'd channel id. Speed is default-on. */}
         {channelIds.length > 1 && (

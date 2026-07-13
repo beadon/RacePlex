@@ -1,7 +1,9 @@
 import { useCallback, useRef, useState, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { useTranslation, Trans } from "react-i18next";
 import { toast } from "sonner";
-import { Trash2, Download, Upload, FolderOpen, Loader2, Video, Cloud, CloudDownload } from "lucide-react";
+import { Trash2, Download, Upload, FolderOpen, Loader2, Video, Cloud, CloudDownload, GitCompare, X } from "lucide-react";
+import { useComparisonBin } from "@/hooks/useComparisonBin";
 import { Button } from "@/components/ui/button";
 import { FileEntry, FileMetadata, getFileMetadata } from "@/lib/fileStorage";
 import { Vehicle } from "@/lib/vehicleStorage";
@@ -77,12 +79,21 @@ export function FilesTab({
   showSampleFiles,
 }: FilesTabProps) {
   const { t } = useTranslation("drawer");
+  const navigate = useNavigate();
+  const bin = useComparisonBin();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [confirmLoad, setConfirmLoad] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [cloudBusy, setCloudBusy] = useState<string | null>(null);
   const [videoFiles, setVideoFiles] = useState<Map<string, StoredVideoMeta>>(new Map());
+
+  /** Open /compare with the current bin. Same handler shape as the dashboard tile. */
+  const startCompare = useCallback(() => {
+    const files = bin.files;
+    if (files.length < 2) return;
+    navigate("/compare", { state: { compareFileNames: files } });
+  }, [bin.files, navigate]);
 
   // Remote (cloud) files contributed by plugins (cloud-sync). Merged into the
   // same tree as "cloud" rows; the host never imports any cloud code.
@@ -296,8 +307,24 @@ export function FilesTab({
     const file = filesByName.get(s.fileName);
     if (!file) return null;
     const metadata = mergedMeta.get(s.fileName);
+    const inBin = bin.has(s.fileName);
     return (
-      <div className="flex items-center gap-2 p-2 rounded-md hover:bg-muted/50 transition-colors group">
+      <div className={`flex items-center gap-2 p-2 rounded-md hover:bg-muted/50 transition-colors group ${inBin ? "bg-primary/5" : ""}`}>
+        {/* Comparison-bin checkbox — separate hit target from the load button
+            so a tap to stage doesn't also open the session. Mirrors the same
+            affordance on the dashboard's Recent Sessions tile (plan 0012). */}
+        <label
+          className="flex shrink-0 items-center justify-center p-1 cursor-pointer"
+          aria-label={inBin ? "Remove from comparison" : "Add to comparison"}
+          title={inBin ? "Remove from comparison" : "Add to comparison"}
+        >
+          <input
+            type="checkbox"
+            checked={inBin}
+            onChange={() => bin.toggle(s.fileName)}
+            className="h-4 w-4 rounded border-border accent-primary cursor-pointer"
+          />
+        </label>
         <button
           className="flex-1 text-left min-w-0 cursor-pointer"
           onClick={() => setConfirmLoad(s.fileName)}
@@ -345,10 +372,28 @@ export function FilesTab({
         </Button>
       </div>
     );
-  }, [cloudBusy, handleOpenCloud, filesByName, mergedMeta, videoFiles, onExportFile, t]);
+  }, [cloudBusy, handleOpenCloud, filesByName, mergedMeta, videoFiles, onExportFile, t, bin]);
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
+      {/* Comparison action bar — appears only when the rider has staged at
+          least one session via the row checkboxes. Sits at the top of the
+          tab so it never gets pushed off-screen by a long file list. Same
+          semantics as the dashboard tile's bar (plan 0012, slice 7). */}
+      {bin.size > 0 && (
+        <div className="flex items-center justify-between gap-2 mx-3 mt-3 mb-1 rounded-md border border-primary/40 bg-primary/5 px-3 py-2 text-xs shrink-0">
+          <span className="text-foreground">{bin.size} staged for comparison</span>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" className="h-7 gap-1" onClick={() => bin.clear()}>
+              <X className="w-3.5 h-3.5" /> Clear
+            </Button>
+            <Button size="sm" className="h-7 gap-1" onClick={startCompare} disabled={bin.size < 2}>
+              <GitCompare className="w-3.5 h-3.5" /> Compare {bin.size}
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Inline Confirmation Banner */}
       {(confirmLoad || confirmDelete) && (
         <div className="mx-3 mt-3 mb-1 p-3 rounded-md border border-border bg-muted/60 space-y-2 shrink-0">

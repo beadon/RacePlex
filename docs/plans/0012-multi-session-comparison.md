@@ -187,4 +187,20 @@ updated at that point.
 
 ## Status
 
-- **Draft.** Slice 1 (selection bin) is next.
+- **Landed end-to-end.** All 7 slices from the approach section shipped:
+  1. Selection bin (`useComparisonBin` + 8 tests)
+  2. RecentSessionsTile multi-select + action bar
+  3. `/compare` route + parallel session load with per-file progress
+  4. Distance-normalised alignment + `ComparisonChart` (10 tests)
+  5. Channel-toggle bar
+  6. Shared Leaflet map — one polyline per session's selected lap, coloured
+     to match its chart series
+  7. File-manager drawer parity — same checkbox affordance in the Files tab
+- **Not done, still queued (small-multiples + polish):**
+  - Small-multiples layout (one tile per session with map+chart+stats)
+  - Per-session stats table (min/avg/max speed, delta to fastest)
+  - Video-sync across sessions
+  - Cross-session delta lap-time chart (all sessions vs. the fastest)
+  - Lift the SVG chart onto the app's Canvas `TelemetryChart` so a shared
+    playback cursor + crosshair works across sessions — the "series"
+    abstraction already exists on that chart, just needs wiring.
