@@ -11,6 +11,7 @@
  * To add a sample: drop the file in `public/samples/` and add an entry below.
  */
 
+import { assetUrl } from "./basePath";
 import { getFile, saveFile, getFileMetadata, updateFileMetadata } from "./fileStorage";
 
 export interface SampleLog {
@@ -79,7 +80,7 @@ export async function ensureSampleFile(sample: SampleLog = DEFAULT_SAMPLE): Prom
   try {
     let blob = await getFile(sample.fileName);
     if (!blob) {
-      const url = `/samples/${sample.fileName}`;
+      const url = assetUrl(`samples/${sample.fileName}`);
       const res = await fetch(url);
       if (!res.ok) throw new Error(`fetch ${url} failed: ${res.status}`);
       blob = await res.blob();

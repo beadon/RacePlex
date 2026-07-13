@@ -1,3 +1,4 @@
+import { assetUrl } from "./basePath";
 import { Track, Course, CourseSector, LegacyTrack, SectorLine } from '@/types/racing';
 import { emitGarageChange } from '@/lib/garageEvents';
 import { normalizeCourseSectors } from '@/lib/courseSectors';
@@ -110,7 +111,7 @@ export async function loadDefaultTracks(): Promise<Track[]> {
   }
 
   try {
-    const response = await fetch('/tracks.json');
+    const response = await fetch(assetUrl('tracks.json'));
     if (!response.ok) {
       console.error('Failed to load tracks.json:', response.statusText);
       return [];
@@ -524,7 +525,7 @@ export async function loadCourseDrawings(): Promise<Record<string, CourseDrawing
   
   courseDrawingsLoading = (async () => {
     try {
-      const response = await fetch('/drawings.json');
+      const response = await fetch(assetUrl('drawings.json'));
       if (!response.ok) {
         courseDrawingsCache = {};
         return courseDrawingsCache;

@@ -96,7 +96,9 @@ const App = () => {
             opens — every path that goes through parseDatalogFile. */}
         <CsvMappingDialog />
         <DebugConsole />
-        <BrowserRouter>
+        {/* Vite bakes the deploy base in (see vite.config.ts). "/" everywhere except
+            a GitHub Pages project site, where the app lives under /RacePlex/. */}
+        <BrowserRouter basename={import.meta.env.BASE_URL}>
           {/* Old-domain-only migration notice (hackthetrack.net → lapwingdata.com).
               Renders nothing on the new site. Inside the router so it can navigate. */}
           <MigrationBanner />

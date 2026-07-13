@@ -9,6 +9,7 @@
 // compares it against the build constants compiled into its own bundle
 // (`buildInfo`). The deployed copy is, by definition, "latest".
 
+import { assetUrl } from "./basePath";
 import { buildInfo, type BuildInfo } from "@/lib/buildInfo";
 
 /** Shape of the build-emitted `/version.json`. Mirrors {@link BuildInfo}. */
@@ -53,7 +54,7 @@ export function isUpdateAvailable(
  */
 export async function fetchRemoteVersion(): Promise<RemoteVersion | null> {
   try {
-    const res = await fetch(`/version.json?t=${Date.now()}`, { cache: "no-store" });
+    const res = await fetch(assetUrl(`version.json?t=${Date.now()}`), { cache: "no-store" });
     if (!res.ok) return null;
     const json = (await res.json()) as Partial<RemoteVersion>;
     if (!json || typeof json.commit !== "string" || typeof json.buildDate !== "string") {

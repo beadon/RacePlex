@@ -230,7 +230,16 @@ export default defineConfig(async ({ mode }): Promise<UserConfig> => {
     .map((s) => s.trim())
     .filter(Boolean);
 
+  // Where the app is served from. Root on Cloudflare, a local server and `bun run
+  // dev`; a subpath on a GitHub Pages *project* site (/RacePlex/). Vite exposes
+  // this as import.meta.env.BASE_URL, which lib/basePath.ts uses to resolve every
+  // public/ asset fetched at runtime. Normalised to leading + trailing slash,
+  // because Vite, the PWA manifest scope and the router basename all want that.
+  const rawBase = env.BASE_PATH || "/";
+  const basePath = `/${rawBase.replace(/^\/+|\/+$/g, "")}/`.replace(/^\/\/$/, "/");
+
   return {
+    base: basePath,
     server: {
       host: "::",
       port: 8080,
@@ -296,7 +305,10 @@ export default defineConfig(async ({ mode }): Promise<UserConfig> => {
           theme_color: "#0C0C0E",
           background_color: "#0C0C0E",
           display: "standalone",
-          start_url: "/",
+          // Must track the deploy base: an installed PWA launches start_url, and
+          // "/" would take a Pages install to the account root, not the app.
+          start_url: basePath,
+          scope: basePath,
           icons: [
             {
               src: "pwa-192x192.png",
@@ -326,6 +338,7 @@ export default defineConfig(async ({ mode }): Promise<UserConfig> => {
           // version.json must never be precached — it's the freshness signal the
           // running tab fetches uncached to detect a newer deploy (see versionCheck.ts).
           globIgnores: ["**/tracks.zip", "version.json"],
+          navigateFallback: `${basePath}index.html`,
           navigateFallbackDenylist: [/^\/~oauth/],
           runtimeCaching: [
             {

@@ -1,0 +1,66 @@
+# Publish RacePlex to GitHub Pages — a free HTTPS origin, which is what the PWA
+# needs: browsers register a service worker only on HTTPS or localhost, so an
+# install-to-home-screen copy has to be served from somewhere like this.
+#
+# A *project* site lives under a subpath (https://<user>.github.io/RacePlex/), so
+# the build is told its base. Everything downstream reads it: Vite's asset URLs,
+# the PWA manifest's start_url/scope, the service worker's navigation fallback,
+# the router's basename, and lib/basePath.ts for public/ assets fetched at runtime.
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Never let two deploys race; let a newer commit supersede an in-flight one.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The footer version stamp comes from `git describe --tags`, which needs
+          # the tags — a shallow clone would stamp the build with a bare hash.
+          fetch-depth: 0
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - run: bun install --frozen-lockfile
+
+      - name: Build for the Pages subpath
+        env:
+          BASE_PATH: /${{ github.event.repository.name }}/
+        run: bun run build
+
+      - name: Add the SPA fallback
+        # Pages has no rewrite rules: an unknown path serves 404.html. Making that
+        # a copy of index.html boots the app, and the router (which knows its
+        # basename) resolves the URL — so a deep link like /RacePlex/leaderboards
+        # works instead of showing GitHub's 404.
+        run: cp dist/index.html dist/404.html
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
