@@ -12,12 +12,29 @@ import { resolveBranchBackend } from "./scripts/resolveSupabaseBranch";
 // commit-SHA env vars are preferred (Cloudflare Workers Builds / Pages, generic
 // CI) so the hash is correct even on a shallow checkout; we fall back to a local
 // `git` call for dev, and to "unknown" when neither is available.
+/**
+ * The app version, read from the GIT TAG — which is the single source of truth.
+ *
+ * It deliberately does NOT read package.json. A version in package.json is a second place to state
+ * the same fact, and second places drift: this repo's CHANGELOG had already reached 3.1.0
+ * (upstream's numbering) while package.json said 0.1.0, and neither matched anything real. The tag
+ * is what we publish a release against, so the tag is what the app should call itself.
+ *
+ * Returns "" when there is no tag to be found — a shallow CI clone has no tags, and a fresh fork
+ * has none either. An empty version is honest: the footer then shows just the commit hash, which
+ * still identifies the build exactly. A stale number would be worse than no number.
+ */
 function readAppVersion(): string {
+  const fromEnv = process.env.VITE_APP_VERSION || process.env.HTT_APP_VERSION;
+  if (fromEnv) return fromEnv.replace(/^v/, "");
   try {
-    const pkg = JSON.parse(fs.readFileSync(path.resolve(__dirname, "package.json"), "utf8"));
-    return typeof pkg.version === "string" ? pkg.version : "0.0.0";
+    // The nearest tag reachable from HEAD, without the `v` prefix.
+    return execSync("git describe --tags --abbrev=0", { cwd: __dirname, stdio: ["ignore", "pipe", "ignore"] })
+      .toString()
+      .trim()
+      .replace(/^v/, "");
   } catch {
-    return "0.0.0";
+    return "";
   }
 }
 

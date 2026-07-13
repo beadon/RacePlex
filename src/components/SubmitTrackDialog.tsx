@@ -1,28 +1,26 @@
-import { useState, useEffect, useRef, useCallback, useSyncExternalStore } from 'react';
+import { useState, useCallback, useSyncExternalStore } from 'react';
 import { useTranslation, Trans } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { toast } from '@/hooks/use-toast';
-import { Send, ShieldCheck, ArrowRight, ArrowLeft, Loader2, CheckCircle2, AlertTriangle, Check, Gift } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
+import { ArrowRight, ArrowLeft, Loader2, CheckCircle2, AlertTriangle, Check, Copy, ExternalLink, GitPullRequest } from 'lucide-react';
 import { loadTracks, loadDefaultTracks } from '@/lib/trackStorage';
 import { buildSubmissionPlan, type SubmissionPlan, type SubmissionCourse } from '@/lib/trackSubmission';
+import { buildContributions, issueUrl, type TrackContribution } from '@/lib/trackContribution';
 import { loadSubmittedRecords, markCoursesSubmitted } from '@/lib/submittedTracksStorage';
-
-const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY;
-// The free-cloud-storage incentive only makes sense when accounts exist.
-const CLOUD_ENABLED = import.meta.env.VITE_ENABLE_CLOUD === 'true';
+import type { Track } from '@/types/racing';
 
 interface SubmitTrackDialogProps {
   trigger: React.ReactNode;
-  /** Notified after a successful upload (e.g. to refresh a count badge). */
+  /** Notified after a contribution is handed off (e.g. to refresh a count badge). */
   onSubmitted?: () => void;
 }
 
-type Step = 'confirm' | 'review';
+type Step = 'confirm' | 'review' | 'contribute';
 
-/** A new track can only go up if it has the short name the DB requires. */
+/** A new track can't be contributed without the short name the record requires. */
 function isBlocked(course: SubmissionCourse): boolean {
   return course.type === 'new_track' && !course.trackShortName?.trim();
 }
@@ -43,25 +41,26 @@ const CHANGE_STYLE: Record<SubmissionCourse['change'], string> = {
 
 export function SubmitTrackDialog({ trigger, onSubmitted }: SubmitTrackDialogProps) {
   const { t } = useTranslation('tracks');
-  const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<Step>('confirm');
   const [plan, setPlan] = useState<SubmissionPlan | null>(null);
   const [planLoading, setPlanLoading] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [loading, setLoading] = useState(false);
-  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
-  const turnstileRef = useRef<HTMLDivElement>(null);
-  const widgetIdRef = useRef<string | null>(null);
+  const [tracks, setTracks] = useState<Track[]>([]);
+  const [credit, setCredit] = useState('');
+  const [location, setLocation] = useState('');
+  const [contributions, setContributions] = useState<TrackContribution[]>([]);
+  const [copied, setCopied] = useState<string | null>(null);
 
-  // Build the upload plan from everything the user currently has locally.
+  // Build the plan from everything the user currently has locally.
   const buildPlan = useCallback(async () => {
     setPlanLoading(true);
     try {
       const [merged, defaults] = await Promise.all([loadTracks(), loadDefaultTracks()]);
+      setTracks(merged);
       const p = buildSubmissionPlan(merged, defaults, loadSubmittedRecords());
       setPlan(p);
-      // Default-select everything still pending and submittable.
+      // Default-select everything still pending and contributable.
       const next = new Set<string>();
       for (const g of p.groups) {
         for (const c of g.courses) {
@@ -75,50 +74,20 @@ export function SubmitTrackDialog({ trigger, onSubmitted }: SubmitTrackDialogPro
     setPlanLoading(false);
   }, [t]);
 
-  // Load Turnstile script once.
-  useEffect(() => {
-    if (!TURNSTILE_SITE_KEY) return;
-    if (document.getElementById('cf-turnstile-script')) return;
-    const script = document.createElement('script');
-    script.id = 'cf-turnstile-script';
-    script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
-    script.async = true;
-    document.head.appendChild(script);
-  }, []);
-
-  const renderTurnstile = useCallback(() => {
-    if (!TURNSTILE_SITE_KEY || !turnstileRef.current) return;
-    const win = window as unknown as { turnstile?: { render: (el: HTMLElement, opts: Record<string, unknown>) => string; remove: (id: string) => void } };
-    if (!win.turnstile) return;
-    if (widgetIdRef.current) {
-      try { win.turnstile.remove(widgetIdRef.current); } catch { /* already removed */ }
-      widgetIdRef.current = null;
-    }
-    setTurnstileToken(null);
-    widgetIdRef.current = win.turnstile.render(turnstileRef.current, {
-      sitekey: TURNSTILE_SITE_KEY,
-      callback: (token: string) => setTurnstileToken(token),
-      'expired-callback': () => setTurnstileToken(null),
-      theme: 'dark',
-    });
-  }, []);
-
-  useEffect(() => {
-    if (step === 'review' && open) {
-      const timer = setTimeout(renderTurnstile, 200);
-      return () => clearTimeout(timer);
-    }
-  }, [step, open, renderTurnstile]);
-
-  // Build the plan each time the dialog opens. Fired from a
-  // useSyncExternalStore subscribe (not useEffect) so the internal setStates
-  // in buildPlan happen in an event context — same idiom as DeviceTracksTab.
-  // Radix Dialog unmounts on close, so `step` / `turnstileToken` reset via
-  // remount rather than an explicit reset effect.
+  // Reset + (re)build the plan each time the dialog opens. Fired from a
+  // useSyncExternalStore subscribe callback (not useEffect) so the internal
+  // setStates in buildPlan() run in an event context — same idiom as
+  // DeviceTracksTab. Radix Dialog also unmounts its content on close so the
+  // step/contributions/copied resets are effectively belt-and-braces.
   useSyncExternalStore(
     useCallback(
       () => {
-        if (open) void buildPlan();
+        if (open) {
+          setStep('confirm');
+          setContributions([]);
+          setCopied(null);
+          void buildPlan();
+        }
         return () => {};
       },
       [open, buildPlan],
@@ -138,49 +107,41 @@ export function SubmitTrackDialog({ trigger, onSubmitted }: SubmitTrackDialogPro
   const selectedCourses: SubmissionCourse[] =
     plan?.groups.flatMap(g => g.courses).filter(c => selected.has(c.key)) ?? [];
 
-  const handleSubmit = async () => {
+  const handlePrepare = () => {
     if (selectedCourses.length === 0) {
       toast({ title: t('submit.toastNothingSelected'), variant: 'destructive' });
       return;
     }
-    if (TURNSTILE_SITE_KEY && !turnstileToken) {
-      toast({ title: t('submit.toastVerify'), variant: 'destructive' });
-      return;
-    }
+    setContributions(buildContributions(selectedCourses, tracks, credit));
+    setStep('contribute');
+  };
 
-    setLoading(true);
+  const copy = async (c: TrackContribution) => {
     try {
-      const submissions = selectedCourses.map(c => ({
-        type: c.type,
-        track_name: c.trackName,
-        track_short_name: c.type === 'new_track' ? c.trackShortName : undefined,
-        course_name: c.courseName,
-        course_data: c.courseData,
-        layout_data: c.layout,
-      }));
-
-      // Dynamic import: submitting is online-only and rare, so the Supabase
-      // client stays out of the initial bundle (this dialog rides the eager
-      // TrackEditor on the landing page).
-      const { supabase } = await import('@/integrations/supabase/client');
-      const { data, error } = await supabase.functions.invoke('submit-track', {
-        body: { submissions, turnstile_token: turnstileToken },
-      });
-      if (error) throw error;
-
-      const batchId = (data as { batch_id?: string } | null)?.batch_id ?? `local-${crypto.randomUUID()}`;
-      markCoursesSubmitted(selectedCourses, batchId);
-
-      toast({
-        title: t('submit.toastSent'),
-        description: t('submit.toastSentDesc', { count: selectedCourses.length }),
-      });
-      onSubmitted?.();
-      setOpen(false);
-    } catch (e: unknown) {
-      toast({ title: t('submit.toastFailed'), description: (e as Error).message, variant: 'destructive' });
+      await navigator.clipboard.writeText(c.json);
+      setCopied(c.fileName);
+      setTimeout(() => setCopied(null), 2000);
+    } catch {
+      toast({ title: t('submit.toastCopyFailed'), variant: 'destructive' });
     }
-    setLoading(false);
+  };
+
+  /**
+   * Opening the issue is the hand-off. Copy the JSON first regardless: when the
+   * outline is too big to ride in the URL, the clipboard is the only way it
+   * reaches the form.
+   */
+  const openIssue = async (c: TrackContribution) => {
+    const { url, prefilled } = issueUrl(c, location);
+    if (!prefilled) {
+      await copy(c);
+      toast({ title: t('submit.toastPasteNeeded'), description: t('submit.toastPasteNeededDesc') });
+    }
+    window.open(url, '_blank', 'noopener,noreferrer');
+    // The rider still has to submit the form, but from our side it's handed off:
+    // remembering it keeps the plan from re-listing it every time they reopen.
+    markCoursesSubmitted(selectedCourses, `pr-${crypto.randomUUID()}`);
+    onSubmitted?.();
   };
 
   const pendingCount = plan?.pendingCount ?? 0;
@@ -190,11 +151,11 @@ export function SubmitTrackDialog({ trigger, onSubmitted }: SubmitTrackDialogPro
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{trigger}</DialogTrigger>
       <DialogContent className="max-h-[80vh] overflow-y-auto">
-        {step === 'confirm' ? (
+        {step === 'confirm' && (
           <>
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <ShieldCheck className="w-5 h-5 text-primary" />
+                <GitPullRequest className="w-5 h-5 text-primary" />
                 {t('submit.confirmTitle')}
               </DialogTitle>
               <DialogDescription>
@@ -206,8 +167,8 @@ export function SubmitTrackDialog({ trigger, onSubmitted }: SubmitTrackDialogPro
                 <p className="text-foreground font-medium">{t('submit.whatHappens')}</p>
                 <ul className="list-disc list-inside space-y-1.5">
                   <li>{t('submit.li1')}</li>
-                  <li>{t('submit.li2')}</li>
-                  <li><Trans ns="tracks" i18nKey="submit.li3" components={{ b: <strong className="text-foreground" /> }} /></li>
+                  <li><Trans ns="tracks" i18nKey="submit.li2" components={{ b: <strong className="text-foreground" /> }} /></li>
+                  <li>{t('submit.li3')}</li>
                   <li>{t('submit.li4')}</li>
                 </ul>
               </div>
@@ -218,7 +179,9 @@ export function SubmitTrackDialog({ trigger, onSubmitted }: SubmitTrackDialogPro
               </Button>
             </div>
           </>
-        ) : (
+        )}
+
+        {step === 'review' && (
           <>
             <DialogHeader>
               <DialogTitle>{t('submit.reviewTitle')}</DialogTitle>
@@ -289,27 +252,92 @@ export function SubmitTrackDialog({ trigger, onSubmitted }: SubmitTrackDialogPro
                 </div>
               )}
 
-              {TURNSTILE_SITE_KEY && hasAnything && (
-                <div className="flex justify-center">
-                  <div ref={turnstileRef} />
+              {hasAnything && (
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <label htmlFor="track-location" className="text-xs text-muted-foreground">
+                      {t('submit.locationLabel')}
+                    </label>
+                    <Input
+                      id="track-location"
+                      value={location}
+                      onChange={(e) => setLocation(e.target.value)}
+                      placeholder={t('submit.locationPlaceholder')}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label htmlFor="track-credit" className="text-xs text-muted-foreground">
+                      {t('submit.creditLabel')}
+                    </label>
+                    <Input
+                      id="track-credit"
+                      value={credit}
+                      onChange={(e) => setCredit(e.target.value)}
+                      placeholder={t('submit.creditPlaceholder')}
+                    />
+                  </div>
                 </div>
               )}
 
               <div className="flex gap-2">
-                <Button variant="outline" onClick={() => setStep('confirm')} className="shrink-0">
+                <Button variant="outline" onClick={() => setStep('confirm')} className="flex-shrink-0">
                   <ArrowLeft className="w-4 h-4 mr-1" /> {t('submit.back')}
                 </Button>
-                <Button
-                  onClick={handleSubmit}
-                  disabled={loading || selectedCourses.length === 0 || (!!TURNSTILE_SITE_KEY && !turnstileToken)}
-                  className="flex-1"
-                >
-                  <Send className="w-4 h-4 mr-2" />
-                  {loading
-                    ? t('submit.submitting')
-                    : t('submit.submitBtn', { count: selectedCourses.length })}
+                <Button onClick={handlePrepare} disabled={selectedCourses.length === 0} className="flex-1">
+                  <ArrowRight className="w-4 h-4 mr-2" />
+                  {t('submit.prepareBtn', { count: selectedCourses.length })}
                 </Button>
               </div>
+            </div>
+          </>
+        )}
+
+        {step === 'contribute' && (
+          <>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <GitPullRequest className="w-5 h-5 text-primary" />
+                {t('submit.contributeTitle')}
+              </DialogTitle>
+              <DialogDescription>
+                {t('submit.contributeDesc')}
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4">
+              {contributions.map((c) => (
+                <div key={c.fileName} className="rounded-lg border border-border p-3 space-y-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm font-medium text-foreground">{c.trackName}</span>
+                    <code className="text-xs text-muted-foreground">tracks/{c.fileName}</code>
+                  </div>
+                  <pre className="max-h-40 overflow-auto rounded bg-muted/40 p-2 text-xs text-muted-foreground">
+                    {c.json}
+                  </pre>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={() => copy(c)} className="flex-shrink-0">
+                      {copied === c.fileName
+                        ? (<><Check className="w-4 h-4 mr-1" /> {t('submit.copied')}</>)
+                        : (<><Copy className="w-4 h-4 mr-1" /> {t('submit.copyJson')}</>)}
+                    </Button>
+                    <Button size="sm" onClick={() => openIssue(c)} className="flex-1">
+                      <ExternalLink className="w-4 h-4 mr-1" /> {t('submit.openIssue')}
+                    </Button>
+                  </div>
+                </div>
+              ))}
+
+              <p className="text-xs text-muted-foreground">
+                <Trans
+                  ns="tracks"
+                  i18nKey="submit.prNote"
+                  components={{ c: <code className="text-foreground" /> }}
+                />
+              </p>
+
+              <Button variant="outline" onClick={() => setStep('review')} className="w-full">
+                <ArrowLeft className="w-4 h-4 mr-1" /> {t('submit.back')}
+              </Button>
             </div>
           </>
         )}

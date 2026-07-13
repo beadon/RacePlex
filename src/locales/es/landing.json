@@ -120,14 +120,6 @@
       "vbo": {
         "name": "Racelogic VBO",
         "body": "Formato de exportación de Racelogic VBOX y RaceBox. Extensión: <code>.vbo</code>"
-      },
-      "raceboxCsv": {
-        "name": "RaceBox CSV",
-        "body": "La exportación predeterminada de la app RaceBox (Mini / Mini S / Micro): GPS, velocidad, fuerza G y giroscopio. Si incluye la numeración de vueltas de RaceBox, RacePlex reconstruye las líneas de salida/meta a partir de ella. Nota: RaceBox escribe la columna de velocidad <em>sin unidad</em> — RacePlex la deduce comparándola con tus posiciones. Extensión: <code>.csv</code>"
-      },
-      "gpx": {
-        "name": "GPX",
-        "body": "El formato universal de trazas GPS. GPX no incluye velocidad, así que se deriva de la posición y se suaviza. Si el archivo tiene waypoints de salida/meta, RacePlex reconstruye las líneas de cronometraje automáticamente. Extensión: <code>.gpx</code>"
       }
     },
     "secondary": {
@@ -165,7 +157,7 @@
     "title": "Abrir un datalog",
     "processing": "Procesando...",
     "dragDrop": "Arrastra y suelta un archivo aquí, o haz clic para explorar",
-    "formats": "NMEA, UBX, VBO, Dove, Alfano, AiM (CSV + XRK/XRZ), iRacing, MoTeC CSV/LD y más — <i>todo procesado localmente en tu dispositivo.</i>",
+    "formats": "GPX, vídeo GoPro (.mp4), NMEA, UBX, VBO, Dove, Alfano, AiM (CSV + XRK/XRZ), iRacing, MoTeC CSV/LD y más — <i>todo procesado localmente en tu dispositivo.</i>",
     "parseFailed": "No se pudo analizar el archivo",
     "parseErrorSaved": "{{message}} — el archivo se guardó y puedes encontrarlo en Explorar archivos.",
     "loaded": "Cargado: {{name}}",
@@ -173,7 +165,6 @@
   },
   "supportedDevices": {
     "title": "Dispositivos compatibles",
-    "description": "Funciona cualquier dispositivo que exporte GPX, CSV, VBO, NMEA o UBX. RacePlex no vende hardware ni está afiliado a ninguna de estas marcas: un dispositivo aparece porque funciona.",
     "rate": "GPS",
     "imu": "IMU",
     "via": "vía",

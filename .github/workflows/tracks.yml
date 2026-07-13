@@ -1,0 +1,23 @@
+name: Tracks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tracks:
+    name: Validate track submissions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      # Validates every tracks/*.json (schema, coordinate sanity, timing-line
+      # geometry, cross-track uniqueness) AND asserts the committed
+      # public/tracks.json + drawings.json are regenerated from them.
+      - run: bun run check:tracks

@@ -120,14 +120,6 @@
       "vbo": {
         "name": "Racelogic VBO",
         "body": "Format d'export Racelogic VBOX et RaceBox. Extension : <code>.vbo</code>"
-      },
-      "raceboxCsv": {
-        "name": "RaceBox CSV",
-        "body": "L’export par défaut de l’app RaceBox (Mini / Mini S / Micro) : GPS, vitesse, force G et gyroscope. Si l’export contient le numérotage des tours de RaceBox, RacePlex en reconstruit les lignes de départ/arrivée. Note : RaceBox écrit la colonne de vitesse <em>sans unité</em> — RacePlex la déduit à partir de vos positions. Extension : <code>.csv</code>"
-      },
-      "gpx": {
-        "name": "GPX",
-        "body": "Le format universel de traces GPS. GPX ne contient pas de vitesse : elle est dérivée de la position puis lissée. Si le fichier contient des waypoints Départ/Arrivée, RacePlex reconstruit les lignes de chronométrage automatiquement. Extension : <code>.gpx</code>"
       }
     },
     "secondary": {
@@ -165,7 +157,7 @@
     "title": "Ouvrir un datalog",
     "processing": "Traitement...",
     "dragDrop": "Glissez-déposez un fichier ici, ou cliquez pour parcourir",
-    "formats": "NMEA, UBX, VBO, Dove, Alfano, AiM (CSV + XRK/XRZ), iRacing, MoTeC CSV/LD et plus encore — <i>tout est traité localement sur votre appareil.</i>",
+    "formats": "GPX, vidéo GoPro (.mp4), NMEA, UBX, VBO, Dove, Alfano, AiM (CSV + XRK/XRZ), iRacing, MoTeC CSV/LD et plus encore — <i>tout est traité localement sur votre appareil.</i>",
     "parseFailed": "Échec de l'analyse du fichier",
     "parseErrorSaved": "{{message}} — le fichier a été enregistré et se trouve dans Parcourir les fichiers.",
     "loaded": "Chargé : {{name}}",
@@ -173,7 +165,6 @@
   },
   "supportedDevices": {
     "title": "Appareils compatibles",
-    "description": "Tout appareil capable d’exporter du GPX, CSV, VBO, NMEA ou UBX fonctionne. RacePlex ne vend aucun matériel et n’est affilié à aucune de ces marques : un appareil est listé parce qu’il fonctionne.",
     "rate": "GPS",
     "imu": "IMU",
     "via": "via",

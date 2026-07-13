@@ -102,7 +102,7 @@
     "title": "Open a datalog",
     "processing": "Processing...",
     "dragDrop": "Drag & drop a file here, or click to browse",
-    "formats": "NMEA, UBX, VBO, Dove, Alfano, AiM (CSV + XRK/XRZ), iRacing, MoTeC CSV/LD and more — <i>all processed locally on your device.</i>",
+    "formats": "GPX, GoPro video (.mp4), NMEA, UBX, VBO, Dove, Alfano, AiM (CSV + XRK/XRZ), iRacing, MoTeC CSV/LD and more — <i>all processed locally on your device.</i>",
     "parseFailed": "Failed to parse file",
     "parseErrorSaved": "{{message}} — file was saved and can be found in Browse Files.",
     "loaded": "Loaded: {{name}}",
@@ -132,11 +132,23 @@
       },
       "raceboxCsv": {
         "name": "RaceBox CSV",
-        "body": "The default export from the RaceBox app (Mini / Mini S / Micro): GPS, speed, G-force and gyro. If the export carries RaceBox's own lap numbering, RacePlex reconstructs the start/finish lines from it, so you get lap times with no setup at all. Note: RaceBox writes the speed column with <em>no unit</em> — RacePlex measures it against your positions to work out whether it's kph, mph or m/s. Extension: <code>.csv</code>"
+        "body": "The default export from the RaceBox app (Mini, Mini S, Micro): GPS, speed, G-force and gyro. If the export includes RaceBox's lap numbering, lap times appear automatically — you don't need to draw a start line. Extension: <code>.csv</code>"
       },
       "gpx": {
         "name": "GPX",
-        "body": "The universal GPS track format — emitted by nearly every logger, phone app and watch. GPX carries no speed channel, so speed is derived from position and smoothed. If the file contains Start/Finish waypoints (RaceBox writes them), RacePlex rebuilds the timing lines from them and times your run automatically. Extension: <code>.gpx</code>"
+        "body": "The standard GPS track format, exported by most loggers, phone apps and watches. If the file contains Start and Finish waypoints, lap times appear automatically. GPX carries no speed channel, so speed is calculated from position. Extension: <code>.gpx</code>"
+      },
+      "gopro": {
+        "name": "GoPro Video (GPMF)",
+        "body": "Drop in an `.mp4` from a GPS-capable GoPro (HERO5–11 or HERO13) and RacePlex reads the GPS from the video. Large files take a few moments to scan. <em>The HERO12 has no GPS</em> and won't work. Extension: <code>.mp4</code>"
+      },
+      "vescCsv": {
+        "name": "VESC Tool CSV",
+        "body": "Export a ride log from VESC Tool and import the CSV. Alongside GPS, you get the ESC channels: <em>motor current, battery current, battery voltage, duty cycle, ERPM and temperatures</em>, all charted on the same timeline. Extension: <code>.csv</code>"
+      },
+      "genericCsv": {
+        "name": "Any other CSV",
+        "body": "If your logger isn't listed above, try importing its CSV anyway. RacePlex will read the columns and show you which it thinks are latitude, longitude, time and speed. <em>Check the preview before importing</em> — if the session duration or top speed look wrong, correct the column or unit from the dropdown. Your choice is saved, so you're only asked once per logger. Known to work with Float Control, pOnewheel, Metr, TrackAddict and Qstarz. Extensions: <code>.csv</code>, <code>.txt</code>"
       }
     },
     "secondary": {
@@ -172,7 +184,7 @@
   },
   "supportedDevices": {
     "title": "Supported Devices",
-    "description": "Anything that can export GPX, CSV, VBO, NMEA or UBX works. RacePlex sells no hardware and is affiliated with none of these vendors — a device is listed because it works.",
+    "description": "Anything that exports GPX, CSV, VBO, NMEA or UBX will work, as will a GoPro .mp4, which stores GPS inside the video. An unrecognised CSV still imports: RacePlex maps the columns and lets you correct the mapping. RacePlex sells no hardware and has no affiliation with these vendors.",
     "rate": "GPS",
     "imu": "IMU",
     "via": "via",

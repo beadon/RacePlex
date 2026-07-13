@@ -1,13 +1,14 @@
 # Telemetry format research
 
-> **Status: living document.** This is an open notebook, not a spec. Corrections very welcome —
-> especially from anyone who owns hardware we don't. Open questions are marked **[OPEN]**.
+> **Status: living document.** Corrections are welcome, especially from anyone who owns hardware we
+> don't. Open questions are marked **[OPEN]**.
 > Anything marked **[VERIFIED]** we have confirmed against a real file or an official document;
 > anything marked **[REVERSE-ENGINEERED]** comes from third parties and may break at any firmware
 > update.
 
-RacePlex ingests GPS/telemetry from consumer performance meters. This document records what those
-formats actually are — including several places where the popular understanding is simply wrong.
+This document records the telemetry formats RacePlex reads: their layouts, their units, and the
+details that are easy to get wrong. Several widely-repeated claims about these formats are
+incorrect; those are flagged where they come up.
 
 ---
 
@@ -16,23 +17,27 @@ formats actually are — including several places where the popular understandin
 | Source | File export | Live BLE | Notes |
 |---|---|---|---|
 | **RaceBox** (Mini / Mini S / Micro) | **CSV, VBO, GPX, KML** | **Documented** (official PDF) | The well-behaved citizen. Everything is public. |
+| **VESC Tool** | **CSV** (semicolon-delimited) | n/a | ✅ **Supported.** The only format that carries the ESC channels next to GPS. See below. |
+| **GoPro** (HERO5–11, 13) | the **`.mp4` itself** — GPS is in the GPMF metadata track | n/a | ✅ **Supported**, read in-browser. No ffmpeg, no conversion. HERO12 has no GPS. |
+| **Anything else with a CSV** | **CSV** | n/a | ✅ **Supported** via the generic importer + column mapper. Float Control, pOnewheel, Metr, TrackAddict, Qstarz… |
 | **Dragy** (DRG70 / Pro) | **VBO only**, from the *dragy·Lap* app | [REVERSE-ENGINEERED] | **No CSV export exists.** See below. |
 | **RaceChrono** | **VBO, CSV v3, NMEA**; native `.rcz` | n/a (it's an app) | Imports VBO — so VBO is our export target too. |
 
-**Build order: VBO → RaceBox CSV → GPX → NMEA → RaceChrono CSV v3.** VBO leads because one parser
-serves Dragy *and* RaceChrono *and* RaceBox.
+**Status:** VBO, RaceBox CSV, GPX, NMEA, UBX, **VESC CSV**, **GoPro GPMF** and a **generic CSV**
+fallback are all implemented. FIT (Garmin/Wahoo/Coros) is the main gap — see issue #17.
 
 ---
 
-## ⚠️ Myth: "Dragy exports CSV"
+## Dragy has no CSV export
 
 It does not. Dragy's own help centre says so in as many words:
 
 > "Unfortunately, you are unable to do this at the moment."
 > — [Dragy help centre, *Can I export data to csv or similar?*](https://dragymotorsports.help.center/article/1022-can-i-export-data-to-csv-or-similar)
 
-Any "Dragy CSV" you find in the wild is some third-party tool's *invented* schema, not a vendor
-format. Do not design against it. (`mattholung/DragyDataLab` is the usual source of the confusion.)
+Any file described as a "Dragy CSV" comes from a third-party tool that invented its own schema.
+There is no vendor format to implement. (`mattholung/DragyDataLab` is the usual source of the
+confusion.)
 
 **What Dragy actually gives you:**
 
@@ -73,7 +78,7 @@ single "RaceBox CSV". **Parse off the header row; never use fixed column indices
 An optional metadata block (`Format,RaceBox` / `Track,…` / `Lap N, <time>, sectors, …`) may precede
 a blank line and then the header — **or may be absent entirely**, as it is in our sample file.
 
-#### 🔥 The `Speed` column has no unit, and it is not m/s
+#### The `Speed` column carries no unit
 
 This is the single nastiest thing we found, and we only caught it because we had a real file.
 
@@ -88,10 +93,9 @@ CSV "Speed" column     : mean 21.64,     max 100.82
 ratio                  : 3.588   →  kph   (1.0 would be m/s, 2.24 mph)
 ```
 
-So RacePlex **auto-detects the unit by measuring the column against the positions**
-(`core/parse/util.ts` → `detectSpeedUnit`). Assuming a default would have made every speed in the
-app 3.6× wrong — while still looking entirely plausible. That's the worst class of bug: the kind
-nobody notices.
+RacePlex detects the unit by measuring the column against speed derived from the positions
+(`detectSpeedUnit`). Assuming a default would make every speed in the app 3.6× wrong, and the charts
+would still look reasonable, so the error would be easy to miss.
 
 *(Also note: `telemetryoverlay` and `seriousracing` force m/s **regardless** of the requested
 `speedFormat`. The header annotation is trustworthy when present; the bare header is not.)*
@@ -112,9 +116,9 @@ Source: [RaceBox Mini/Micro protocol documentation](https://www.racebox.pro/prod
 - **UBX framing:** `B5 62 | class | id | len (u16 LE) | payload | CK_A CK_B` (8-bit Fletcher).
 - **Live data = class `0xFF`, id `0x01`, 80-byte payload.** Recorded history = id `0x21` with an
   **identical payload layout** — so one decoder serves both live capture and offline download.
-- **A BLE notification is NOT a packet.** The docs are explicit that a notification may contain a
-  partial packet, several packets, or both. A ring buffer with `B5 62` resync + length + checksum
-  validation is **mandatory**, not an optimization.
+- **A BLE notification does not map to one packet.** The documentation is explicit: a notification
+  may contain a partial packet, several packets, or both. You need a ring buffer with `B5 62`
+  resync, length and checksum validation.
 
 Payload highlights (all little-endian):
 
@@ -149,16 +153,16 @@ split lines as lat/lng pairs. The highest-fidelity import path if a user shares 
 
 Text format, `[header]` / `[comments]` / `[laptiming]` / `[column names]` / `[data]` sections.
 
-### 🔥 Coordinates are in MINUTES, and longitude is POSITIVE-WEST
+### Coordinates are in minutes, and longitude is positive-west
 
 ```
 +03658.54711  →  3658.54711 / 60  =  60.9758 °N
 -001359.41    →  -1359.41   / 60  = -22.657  →  negate  →  +22.657 °E
 ```
 
-Get this wrong and every ride still parses, still plots, and still looks completely plausible — just
-in the wrong hemisphere at 1/60th scale. It fails **silently**. It has its own test with a known
-real-world coordinate (`tests/vbo.test.ts`).
+A file read with the wrong convention still parses and still plots, in the wrong hemisphere at
+1/60th scale, so the error is silent. There is a test against a known real-world coordinate
+(`tests/vbo.test.ts`).
 
 `velocity` is **km/h**. `time` is `HHMMSS.ss` time-of-day UTC (watch for midnight rollover).
 
@@ -205,9 +209,9 @@ everywhere, and is faster otherwise.
 `sample_race_files/RaceBox Track Session…` — a real RaceBox export, CSV + GPX of the same ride.
 Every one of these is now a test:
 
-1. **`Speed` is kph, not m/s** — recovered by measurement, not documentation (above).
+1. **`Speed` is in kph.** Recovered by measuring the column against the positions (above).
 2. **`GyroX/Y/Z` exist** in mobile exports though the cloud exporter has no such option.
-3. **It's a point-to-point course, not a circuit.** The GPX carries `<wpt name="Start">` and
+3. **The course is point-to-point.** The GPX carries `<wpt name="Start">` and
    `<wpt name="Finish">` at *different* places (~85 m apart), and RaceBox's own `Lap` column marks a
    single timed run of **36.480 s**. A circuit-only lap engine finds **zero** laps in this file.
    RacePlex therefore supports both course types — and uses that 36.480 s as ground truth in tests.
@@ -243,6 +247,104 @@ Every one of these is now a test:
 - [dragy·Lap VBO export announcement](https://www.facebook.com/dragymotorsports/photos/dragylap-app-supports-vbo-file-export-long-press-the-session-in-the-history-page/771389701664065/)
 - [jremick/dragy-dash — the only real Dragy BLE protocol notes](https://github.com/jremick/dragy-dash)
 - [jLynx/RaceChrono-to-CSV — `.rcz` decoding + a genuine CSV v3 sample](https://github.com/jLynx/RaceChrono-to-CSV)
-- [RaceChrono — creating a custom track (the trap model)](https://racechrono.com/article/1923)
+- [RaceChrono — creating a custom track](https://racechrono.com/article/1923)
 - [RaceChrono forum — optimal lap = sum of best sectors](https://racechrono.com/forum/d/2631)
 - [lbulej/vbo-tools](https://github.com/lbulej/vbo-tools)
+
+
+---
+
+## VESC Tool CSV  ✅ [VERIFIED against a real Onewheel ride]
+
+The format that matters most for eskate, because it is the only one that puts **motor current,
+battery sag, duty cycle and ERPM on the same timeline as GPS**. A nosedive is a duty-cycle event; a
+GPS trace only shows you the aftermath.
+
+Schema confirmed from the writer itself — `vedderb/vesc_tool`, `vescinterface.cpp` (header emitter
+lines 1772–1829, row emitter 468–526). **55 columns, `;`-delimited, with a trailing `;`.**
+
+### Four common mistakes
+
+1. **There is no `kmh_gnss` column.** It's widely cited, including in our own first research notes,
+   but it's one of vesc_tool's internal display names (`pageloganalysis.cpp`) and never appears on
+   disk. The speed column is **`gnss_gVel`, in metres per second**. Read as km/h it comes out 3.6×
+   too low, and the charts still look reasonable. (Measured against position-derived speed on a real
+   log: ratio 0.974.) The same applies to `trip_gnss`, which is derived rather than stored, and to
+   `gnss_h_acc`, which is actually spelled `gnss_hAcc`.
+
+2. **The GPS repeats.** The ESC logs at about 12 Hz and the GNSS fixes at about 1 Hz, so lat/lon
+   are repeated across roughly 12 consecutive rows. Keeping one sample per GPS fix also drops the
+   ESC channels to 1 Hz, which leaves a 0.2-second duty-cycle spike as a fifth of a data point.
+   RacePlex keeps every ESC row and interpolates position between fixes.
+
+3. **The trailing `;`** means a naive split yields 56 tokens for 55 columns, and every positional
+   index runs off the end.
+
+4. **Parse by column name.** vesc_tool's own reader is positional, but third-party apps (Float
+   Control, Floaty) emit subsets of these columns in different orders.
+
+### Two dialects
+- **RT log** — bare column names (`gnss_gVel`). This is what we've verified.
+- **VESC Express / SD card** — header tokens tagged `key:name:unit:precision:...`. Handled by
+  `csvTable.ts`, but **[OPEN]** — nobody has sent us one. See issue #15.
+
+---
+
+## Generic CSV  ✅
+
+Any delimited log with a latitude and a longitude imports, including from devices we have never
+seen. It works as a column mapper because these formats have unstable column sets:
+
+- **pOnewheel generates its columns per ride**, from whichever BLE attributes that ride recorded,
+  so there is no fixed column map to write.
+- **Float Control reorders columns between app versions** — two real exports have `ADC1`/`ADC2` at
+  positions 6–7 in one and 18–19 in the other.
+- **TrackAddict's** columns depend on which sensors and OBD-II PIDs were switched on.
+
+So: delimiter sniffed by counting, `#` comment lines kept aside, phantom trailing column dropped,
+columns mapped **by name**, and the mapping **shown to the user to correct** before import. The
+correction is remembered against a hash of the header row.
+
+### Time and speed units
+
+Both of these produce charts that look correct while being wrong, so they are worth getting right:
+
+- **Time.** `ms_today` (ms since local midnight), `Time(s)` (seconds since start), `time` (epoch ms),
+  `UTC Time` (epoch **seconds** as a float) — indistinguishable from the column name. Inferred, then
+  **shown** (first timestamp, duration, sample rate) so a wrong guess is obvious.
+- **Speed.** `gnss_gVel` is m/s; `Speed (Km/h)` is km/h; `speed_kph` is km/h. **Measured against
+  position-derived speed**, never guessed from the values.
+
+⚠️ **Measure against the distinct GPS fixes.** On a log with 1 Hz GNSS and 10 Hz rows, nine of every
+ten row-gaps show no movement, so the gaps that do move appear to cover a full second of travel in
+100 ms. Measuring against raw rows gives:
+
+```
+column is m/s | raw rows -> m/s  ok      | distinct fixes -> m/s ✓
+column is kph | raw rows -> m/s  ✗ WRONG | distinct fixes -> kph ✓
+column is mph | raw rows -> m/s  ✗ WRONG | distinct fixes -> mph ✓
+```
+
+---
+
+## GoPro GPMF (`.mp4`)  ✅ [VERIFIED against hero5.mp4]
+
+GoPro records GPS into the video file's GPMF metadata track. RacePlex reads it in the browser with
+`gpmf-extract` (plus `mp4box`) and `gopro-telemetry`, both MIT-licensed. No ffmpeg or upload is
+involved. The libraries are lazy-loaded: they add 0.58 kB to the main bundle, and the 235 kB decoder
+loads only when you import a video.
+
+- **GPS9** (HERO11+, 10 Hz) preferred over **GPS5** (HERO5–10, 18 Hz). Genuinely usable for lap
+  timing, unlike a phone or a watch.
+- Accelerometer and gyro come along, merged onto the GPS timebase.
+- ⚠️ **The HERO12 has no GPS.** GoPro removed it for that model.
+- ⚠️ `useWorker` defaults to true but is documented to crash on some browsers. There is a tested
+  fallback, plus a stall guard for a worker that starts but never reports or rejects.
+- **[OPEN]** Chapter-split recordings import as separate files.
+
+### Two decoder details
+- `repeatSticky` inlines sticky keys onto the sample and deletes `sticky`. Reading them the
+  documented way returns nothing.
+- `gopro-telemetry` returns `date` as a `Date` object. Passing it to `Date.parse()` truncates the
+  milliseconds, giving a ~900 ms error in the session start time.
+

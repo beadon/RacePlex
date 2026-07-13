@@ -112,17 +112,23 @@ describe("locale parity (every language matches the English source)", () => {
     }
   });
 
+  // English is the source; the other languages are best-effort, and i18next is configured with
+  // `fallbackLng: en`, so a key a translation has not caught up with renders in English.
+  //
+  // A lagging translation therefore does not fail. Two things still do, because they render
+  // incorrectly rather than falling back:
+  //   - a key English does not have (a dead string, which can never appear)
+  //   - a dropped {{placeholder}} or markup tag in a string that HAS been translated
   for (const lng of nonEnglish) {
     for (const ns of NAMESPACES) {
-      it(`${lng}/${ns} has the same keys as en/${ns}`, () => {
+      it(`${lng}/${ns} has no keys that English does not`, () => {
         const en = locales.en[ns];
         const target = locales[lng]?.[ns];
         expect(target, `${lng}/${ns}.json should exist`).toBeTruthy();
-        expect(missingKeys(en, target!), `${lng}/${ns} is missing keys`).toEqual([]);
-        expect(extraKeys(en, target!), `${lng}/${ns} has extra keys`).toEqual([]);
+        expect(extraKeys(en, target!), `${lng}/${ns} has keys not present in en`).toEqual([]);
       });
 
-      it(`${lng}/${ns} preserves all placeholders/markup`, () => {
+      it(`${lng}/${ns} preserves placeholders/markup in what it has translated`, () => {
         const en = locales.en[ns];
         const target = locales[lng][ns];
         expect(placeholderMismatches(en, target)).toEqual([]);

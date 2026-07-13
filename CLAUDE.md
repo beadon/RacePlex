@@ -24,8 +24,22 @@ charts, the video overlay, the architecture — is upstream's work.** Much of th
 file was written by and for them. Read it that way.
 
 What is **ours** (see `NOTICE` for the full statement of changes):
-- `gpxParser.ts`, `raceboxCsvParser.ts`, `timingLines.ts` — device support
-  upstream does not have.
+- **Parsers upstream does not have:** `gpxParser.ts`, `raceboxCsvParser.ts`,
+  `vescCsvParser.ts`, `genericCsvParser.ts` (+ `csvTable.ts`, the by-NAME table
+  engine every CSV profile sits on), `gopro/` (GPMF — the GPS inside an .mp4),
+  and `timingLines.ts`.
+- **`vescCsvParser.ts`** carries the ESC channels (motor current, battery sag,
+  duty cycle, ERPM) alongside GPS. Two details, both documented in the file:
+  `gnss_gVel` is in **m/s**, and there is no `kmh_gnss` column on disk despite the
+  name being widely cited. The ESC logs about 12× faster than the GNSS, so keep
+  every ESC row and interpolate position between fixes; sampling down to the GPS
+  rate loses a 0.2 s duty-cycle spike.
+- **`genericCsvParser.ts`** is the last entry in the dispatcher: any delimited log
+  with a lat/lon, with a column mapping the user can correct and which is
+  remembered. These formats have unstable column sets — pOnewheel generates its
+  columns per ride — so the mapping is by name. Its speed-unit measurement runs on
+  the **distinct GPS fixes**; measured against raw rows, a kph column is misread as
+  m/s.
 - **Point-to-point courses** (`Course.finishA/finishB`) — a run from a start line
   to a *different* finish line. Upstream models circuits only. Eskate runs (hill
   runs, slalom, drag) are usually not circuits.
@@ -40,8 +54,10 @@ free and fully local.** We do not commit to upstreaming changes, but we do stay
 roughly mergeable with upstream so we can keep pulling their improvements —
 follow their conventions where it's free, deviate where we have a better answer.
 
-**Things NOT ours, do not treat as authoritative:** `CHANGELOG.md` and `docs/plans/`,
-`docs/reviews/` are upstream's history. Do not rewrite them. The BLE stack is
+**Things NOT ours, do not treat as authoritative:** `docs/plans/` and `docs/reviews/` are
+upstream's history. Do not rewrite them. (`CHANGELOG.md` is **gone** — release notes live in GitHub
+Releases; see *Releasing*.) The `.claude/skills/beta-release-*` skills encode upstream's
+BETA-branch, changelog-driven release process, which RacePlex does not use — **ignore them**. The BLE stack is
 specific to upstream's *DovesDataLogger* hardware — a generic Web Bluetooth path
 for RaceBox/Dragy does not exist yet.
 
@@ -60,34 +76,48 @@ for RaceBox/Dragy does not exist yet.
    fails before the fix. Don't leave testable logic untested.
 3b. **Green tests do not mean it works — RUN THE APP.** Unit tests prove a
    function returns the right numbers. They are *completely blind to whether
-   anything calls it.* Two bugs have already shipped here with a fully green
+   anything calls it.* THREE bugs have already shipped here with a fully green
    suite: (a) the GPX parser was perfect but `.gpx` was missing from the file
    picker's `accept` list, so no user could select a GPX file; (b)
    `courseFromGpxWaypoints()` was written and unit-tested and **never called**, so
-   lap timing silently did not exist. Both were wiring, not logic.
+   lap timing silently did not exist; (c) the VESC parser deduplicated GPS fixes for a
+   clean track, which also dropped the ESC channels from 12 Hz to 1 Hz and lost the
+   resolution a nosedive appears in. That one was found by looking at the rendered
+   chart. None of the three were logic errors.
    → After any change to import, parsing, or lap detection, run
    **`bun run verify:import`** (`scripts/verify-import.mjs`): it drives a real
    browser, feeds the files in `sample_race_files/` through the app's own file
    input, and asserts the map drew and the lap time is right. Ground truth: the
    real RaceBox session's own `Lap` column says **36.480 s**; our GPX path gives
    36.547 s and our CSV path 36.520 s. If those move, something broke.
-4. **Changelog is part of the change.** Add user-facing changes to `CHANGELOG.md`
-   as you make them. **Once a beta version is picked (e.g. `2.6.0`), keep that
-   heading as `## [2.6.0] - unreleased` and keep adding under it until it ships —
-   do NOT create a new `[Unreleased]` block or bump the patch on every commit.**
-   Only on release do you set the date/tag, then start the next version.
+4. **Release notes live in GitHub Releases — there is no CHANGELOG.md.**
+   It was deleted deliberately. A changelog file and a GitHub release are two
+   records of the same thing, and they drift: ours had already reached `3.1.0`
+   (upstream's numbering) while `package.json` said `0.1.0`. One source of truth.
+   → **Write the *why* in the commit message**, which is where it belongs and which
+   nothing can desync from. At release time, the notes are assembled from
+   `git log <last-tag>..HEAD` and published with `gh release create`. See
+   *Releasing* below.
 5. **Docs stay in sync.** Update `README.md`, this file, the relevant `docs/*`, and
    the in-app `CreditsDialog.tsx` alongside the code that makes them stale (parsers,
    env vars, dependencies, architecture). README Credits and `CreditsDialog` must
    agree. Update Credits when adding a FOSS dependency.
 6. **Green before merge.** `bun run lint`, `bun run typecheck`, `bun run test:run`,
    and `bun run build` all pass — CI runs them as separate workflows on every PR.
-7. **Keep it professional.** Public, released OSS (v1.5.0+). No dead code (delete,
+7. **Write plainly. No "it's not X, it's Y".** Documentation, release notes, issues,
+   in-app copy, comments and commit messages all state the fact and move on. Avoid
+   antithesis ("a nosedive is a duty-cycle event, not a GPS event"), rhetorical
+   contrast ("that's not telemetry, it's a doodle"), and bolded punchlines. The
+   contrast carries no information and makes the reader hold a wrong idea in mind
+   just to discard it. It also reads as persuasion, which makes technical claims
+   look less trustworthy. Lead with what the reader can do, then what to watch out
+   for. Reserve emphasis for real warnings, such as a unit that will corrupt data.
+8. **Keep it professional.** Public, released OSS (v1.5.0+). No dead code (delete,
    don't comment out), no leftover `console.log`, no scaffolding cruft. Comments
    explain *why*, not *what*, only where non-obvious. Small, focused PRs with clear
    commit messages explaining the *why* — prefer a topic branch + PR over committing
    to `main`. Respect the bundle budget and the conventions below.
-8. **Plans are numbered design records.** Plans live in `docs/plans/`, each prefixed
+9. **Plans are numbered design records.** Plans live in `docs/plans/`, each prefixed
    with a zero-padded sequence number (`0000-`, `0001-`, …). A **new plan takes the
    next number after the highest existing one** — glance at the folder, increment.
    Keep a plan updated *as you execute it*; only revisit an older plan later when
@@ -151,8 +181,13 @@ src/
 │   └── use*Manager        # IndexedDB CRUD: File, Vehicle (←Kart compat), Engine, Template, Note, Setup
 ├── lib/
 │   ├── datalogParser.ts   # ★ Format auto-detection router (entry point for all parsing)
-│   ├── *Parser.ts         # nmea, ubx, iracing (.ibt), vbo, dove, dovex, alfano, aim, motec
+│   ├── *Parser.ts         # nmea, ubx, iracing (.ibt), vbo, dove, dovex, alfano, aim, motec, gpx, racebox, vesc
+│   ├── csvTable.ts        # ★ Generic delimited-table reader (delimiter sniffing, `#` comments, VESC tagged headers, name-based columnIndex). Every CSV profile is built on it.
+│   ├── genericCsvParser.ts # ★ LAST-resort CSV importer: auto-maps columns by header name, infers the two units a name can't carry (time, speed), interpolates 1 Hz GPS across fast channels. Proposes a mapping; the rider confirms it in CsvMappingDialog (csvMappingRequest pub/sub) and it's remembered by header hash (csvMappingStorage, localStorage).
+│   ├── speedUnit.ts       # ★ Recover a speed column's unit by MEASURING it against position-derived speed (never from the magnitude — 25 is plausible in m/s, km/h and mph alike)
+│   ├── gpsFixes.ts        # ★ Distinct GPS fixes + position interpolation between them — keep every row, never decimate to the GPS rate (shared by vesc + generic CSV)
 │   ├── xrk/               # ★ AiM .xrk/.xrz importer — libxrk (Rust→WASM) in a Web Worker (→ docs/subsystems.md)
+│   ├── gopro/             # ★ GoPro .mp4 importer — GPMF telemetry track pulled out of the video in-browser (gpmf-extract + gopro-telemetry, both dynamic-imported so they stay out of the main bundle). gpmfDetect = the only eagerly-imported piece (ftyp sniff, no imports of its own); gpmfImporter orchestrates + falls back to useWorker:false when the library's worker is unusable; gpmfMapping = pure GPS9/GPS5 → ParsedData
 │   ├── channels.ts        # ★ Canonical channel registry + normalizeChannels()
 │   ├── courseDetection.ts # ★ Auto track/course/direction detection + waypoint mode (→ docs/subsystems.md)
 │   ├── courseSectors.ts   # ★ Pure sector model: caps, normalizeCourseSectors, majorSectorLines (→ docs/subsystems.md)
@@ -168,7 +203,8 @@ src/
 │   ├── setupRevision*.ts  # ★ Content-addressed setup history + IndexedDB CRUD (→ docs/subsystems.md)
 │   ├── setupHistory.ts    # ★ Pure setup-history view-model (diff + fastest-lap aggregation) → drawer/SetupHistoryPanel (→ docs/subsystems.md)
 │   ├── vehicleHistory.ts  # ★ Pure vehicle-history view-model (per-vehicle setup revisions, fastest-lap first, course filter) → drawer/VehicleHistoryPanel; reuses setupHistory primitives; shared card chrome in drawer/HistoryCard.tsx
-│   ├── trackSubmission.ts # ★ Community-DB upload plan (→ docs/subsystems.md)
+│   ├── trackSubmission.ts # ★ Pure: diff local vs built-in tracks, classify, content-hash for dedupe
+│   ├── trackContribution.ts # ★ Submission plan → tracks/<slug>.json record + prefilled GitHub-issue URL (plan 0008)
 │   ├── dbUtils.ts         # ★ Shared IndexedDB: DB_NAME, DB_VERSION, openDB(), tx helpers
 │   ├── garageEvents.ts    # ★ Host pub/sub: storage emits {store,key,put|delete}; cloud-sync syncs off it
 │   ├── fileLoadingState.ts # ★ Host pub/sub for the global file-load overlay
@@ -254,12 +290,17 @@ ParsedData` (full parse). **To add one:**
 4. Add Vitest coverage.
 
 **Detection order matters:** AiM XRK/XRZ first (binary, by extension/`<h` magic),
-then other binary (MoTeC LD → UBX → iRacing `.ibt`), then text most-specific to
-least (VBO → MoTeC CSV → Dovex → Dove → Alfano → AiM CSV → NMEA fallback).
+then GoPro MP4 (by extension/`ftyp` magic), then other binary (MoTeC LD → UBX →
+iRacing `.ibt`), then text most-specific to least (VBO → MoTeC CSV → Dovex → Dove
+→ Alfano → AiM CSV → NMEA fallback).
 
-Two parsers break the simple sync contract — the async **AiM XRK/XRZ** (Rust→WASM
-Web Worker) and the binary **iRacing `.ibt`**. Details, plus the **.dovex/.dovep**
-8 KB-header format: **→ `docs/subsystems.md`**.
+Three parsers break the simple sync contract — the async **AiM XRK/XRZ**
+(Rust→WASM Web Worker), the async **GoPro `.mp4`** (`lib/gopro/`: mp4 demux + GPMF
+decode, both libraries dynamic-imported), and the binary **iRacing `.ibt`**. The two
+async ones are the only formats that report progress (via `lib/importProgress.ts` →
+the file-loading overlay), and the only ones `parseDatalogContent` (sync) refuses
+outright. Details, plus the **.dovex/.dovep** 8 KB-header format:
+**→ `docs/subsystems.md`**.
 
 ---
 
@@ -354,12 +395,18 @@ unless noted.
 - **Course layouts / drawing**: user-drawn polyline outlines persist on
   `Course.layout`; built-ins come from `public/drawings.json`. Draw/Generate tools
   in `VisualEditor`, available to all users.
-- **Community submission** (`trackSubmission.ts`): bulk diff of local vs built-in
-  tracks → one `submit-track` call per batch; content-hash dedupe. Signed-in
-  submits are attributed (`submissions.submitted_by_user_id`, from the verified
-  JWT) and the dialog shows a "contributions earn free cloud storage" note. The
-  admin **Users** tab (`admin-users` edge fn) lists accounts + can **comp** free
-  premium months (auto-expiring) → `docs/backend.md` → *User management*.
+- **Community track collection — git IS the database** (plan 0008): `tracks/`, one
+  JSON file per track, is the canonical store; `public/tracks.json` +
+  `public/drawings.json` are **generated** (`bun run build:tracks`, wired as
+  `prebuild` — never hand-edit them). A submission is a **pull request**; there is
+  no server. `.github/workflows/tracks.yml` validates every record — schema, coord
+  ranges, no timing line wider than 500 m (this is what catches a transposed digit,
+  which is otherwise a valid coordinate), every line crosses the drawn outline, no
+  duplicate name/shortName, and the committed artifacts match what `tracks/`
+  regenerates. `trackSubmission.ts` (pure: diff local vs built-in, classify,
+  content-hash for dedupe) feeds `trackContribution.ts`, which renders the record +
+  a prefilled GitHub-issue link so a rider never needs git.
+  → `CONTRIBUTING.md` → *Adding a Track*, `scripts/tracks-*.mjs`.
 - **File browser** (`fileBrowserTree.ts` + `SessionBrowser`): Track→Course→logs
   hierarchy; display name = the session's date/time (or `FileMetadata.displayName`
   override); smart collapse; cloud rows merged inline. The bundled **sample log**
@@ -408,18 +455,59 @@ own design notes: **→ `docs/subsystems.md`**.
 
 ---
 
+## Releasing
+
+RacePlex versions itself from `0.x`. **Upstream's `2.x`/`3.x` tags are their release history, kept
+because we kept their commits — they are not ours.** Ignore them.
+
+**The git tag IS the version.** There is no version in `package.json` (it was deleted — a second
+place to state the same fact is a second place to drift), and no `CHANGELOG.md`. The build reads
+`git describe --tags --abbrev=0` and bakes it into the footer stamp.
+
+```sh
+# 1. tag, and push ONLY that tag:
+git tag -a v0.3.0 -m "…"
+git push origin refs/tags/v0.3.0     # NOT --tags: that would publish upstream's 21 inherited tags
+# 2. publish the notes, assembled from the commit log:
+gh release create v0.3.0 --title "…" --notes-file notes.md --latest
+```
+
+A build with no tags visible (a shallow CI clone, a fresh fork) shows the commit hash on its own.
+The hash still identifies the build exactly.
+
+`--latest` is not optional: without it GitHub may pick an inherited `v3.x` tag as "latest" by
+semver, making our newest release look like a regression.
+
+Write the release notes for a rider: what they can now do, and what is still broken. `v0.2.0` is
+the model.
+
+---
+
 ## Internationalization (i18n)
 
 i18next + react-i18next. English is **bundled** (zero-flash fallback); other
 languages (`es`, `fr`, `de`, `it`, `pt-BR`, `ja`) lazy-load per namespace, precached
 by the SW (offline). Language is a setting (`AppSettings.language`); keys are typed
-(`types/i18next.d.ts`) so a missing key fails `tsc -b`. **Every user-facing surface
-is migrated** (legal pages stay English by design).
+(`types/i18next.d.ts`) so a missing key fails `tsc -b`.
 
-**Migrating a surface:** replace literals with `t("ns:key")`, add the key to
-`src/locales/en/<ns>.json` (new namespace → register in `config.ts` + the typing),
-then `bun run i18n:seed` to fill other languages. Mechanics, plugin-owned namespaces,
-and the seeder: **→ `docs/i18n.md`**.
+### ⚠️ RacePlex: English is the source of truth; the other languages are BEST-EFFORT
+
+This is a deliberate departure from upstream, whose standard was "every user-facing surface is
+migrated" across all seven locales. RacePlex is a small eskate-focused fork that *inherited* those
+locales — hand-writing six translations for every new string is friction with nobody waiting on the
+other end.
+
+- **Add the English key and move on.** `fallbackLng: en` means an untranslated key renders in
+  English.
+- **Do NOT block a feature on translating it**, and do not report an English-only surface as a gap.
+- Translate when it's cheap (`bun run i18n:seed`, needs `ANTHROPIC_API_KEY`); never gate on it.
+- The tools-plugin parity test no longer fails a lagging locale. It still catches a key English
+  doesn't have (a dead string, which never renders) and a dropped `{{placeholder}}` in a translated
+  string (which doesn't fall back, and renders broken text).
+
+**Adding a string:** put it in `src/locales/en/<ns>.json` (new namespace → register in `config.ts` +
+the typing) and use `t("ns:key")`. Other locales are optional. Mechanics and the seeder:
+**→ `docs/i18n.md`**.
 
 ---
 
@@ -427,7 +515,7 @@ and the seeder: **→ `docs/i18n.md`**.
 
 | Variable | Client/Server | Description |
 |----------|--------------|-------------|
-| `VITE_SUPABASE_URL` / `VITE_SUPABASE_PUBLISHABLE_KEY` / `VITE_SUPABASE_PROJECT_ID` | Client | Backend creds (auto-set; `vite.config.ts` has public fallbacks) |
+| `VITE_SUPABASE_URL` / `VITE_SUPABASE_PUBLISHABLE_KEY` / `VITE_SUPABASE_PROJECT_ID` | Client | Backend creds. **RacePlex bakes in none** — the `vite.config.ts` fallbacks are empty strings, so a build has no backend and the app runs fully local (see ⚠️ below). Set them only if you stand up *your own* Supabase project. |
 | `VITE_ENABLE_ADMIN` | Client | `"true"` enables admin UI + `/admin`. `/login` is mounted when this OR `VITE_ENABLE_CLOUD` is on. |
 | `VITE_ENABLE_CLOUD` | Client | `"true"` enables public accounts (Cloud Sync + email sign-in + `/register` etc.). Default `"false"`. |
 | `VITE_IS_NATIVE` | Client/Build | `"true"` ONLY for the native (Tauri/Android) shell build. Gates `isNativeApp()` (`lib/platform.ts`): no service worker, no in-app purchases (web-only billing — Google Play policy), external links via the system browser. Default `"false"`. → `docs/android.md`. |
@@ -454,6 +542,25 @@ hosting is Cloudflare Workers (static-assets-only, `wrangler.jsonc`,
 > rest of this paragraph describes **upstream's** deploy topology (beta proxy,
 > per-branch preview backends) and is retained as reference — none of it is
 > currently wired up for RacePlex.
+
+> ## ⚠️ RacePlex has NO backend. Do not wire one up by accident.
+>
+> `vite.config.ts` blanks every backend credential (`VITE_SUPABASE_URL: ""`,
+> `VITE_ENABLE_CLOUD: "false"`), there is no `.env`, and `NOTICE` states plainly:
+> **no required backend**. A fresh build talks to nothing, and that is the design.
+>
+> **`supabase/config.toml` still carries upstream's `project_id`
+> (`svjlieovpyiffbqwhtgk`)**, inherited with the fork. Anything that "turns the
+> backend on" without replacing that ref would be reading and writing
+> **someone else's private database** — on their billing, revocable at their
+> discretion. Their `tracks`/`courses`/`submissions` tables are `SELECT`-gated to
+> admins, so there is nothing legitimately readable there anyway.
+>
+> **The community track database is git** (`tracks/`, plan 0008) — not Supabase.
+> The `supabase/functions/submit-track` edge function is dead code awaiting removal.
+>
+> Everything below this warning describes **upstream's** deploy topology and is
+> retained as reference. None of it is wired up here.
 
 Backend by branch (`vite.config.ts` `pick()`, keyed on
 `WORKERS_CI_BRANCH`/`CF_PAGES_BRANCH`): **`main`** → base/production vars;
@@ -496,9 +603,13 @@ bun run test:coverage  # Vitest + v8 coverage (enforces thresholds in vitest.con
 > stays in scope. Don't widen the include to pull view code back in, and don't
 > exclude `hooks/`/`lib/` to inflate it. Thresholds are floors — ratchet up.
 
-CI is five parallel workflows (`lint`, `typecheck`, `test`, `build`, `coverage`).
-`coverage.yml` enforces thresholds, posts a per-PR comment, and pushes the badge to
-a **GitHub Gist** (secret `GIST_TOKEN` + var `COVERAGE_GIST_ID`).
+CI is six parallel workflows (`lint`, `typecheck`, `test`, `build`, `coverage`,
+`tracks`). `tracks` validates `tracks/*.json` and asserts the generated
+`public/tracks.json` + `drawings.json` are current (`bun run check:tracks`).
+`coverage.yml` enforces thresholds and posts a per-PR comment. **No badge** — upstream
+pushed one to a GitHub Gist needing a `GIST_TOKEN` this fork never had, so it failed
+every push for a picture the README never showed. The threshold is the gate; don't
+re-add badge plumbing that needs a secret to stay green.
 
 ---
 
@@ -535,8 +646,11 @@ menu still opens instantly; `CourseSectorEditor` (carries
 - **Hooks are composable** — each does one thing; `Index.tsx` orchestrates.
 - **Parsers** export `isXxxFormat()` + `parseXxxFile()`, registered in `datalogParser.ts`.
 - **IndexedDB stores** are registered in `dbUtils.ts`; modules use the tx helpers.
-- **Tracks**: `public/tracks.json` is the runtime source of truth; admin DB builds
-  it. Export includes `longName`, `shortName`, `defaultCourse`, per-course `lengthFt`.
+- **Tracks**: **`tracks/` is the source of truth** (one JSON per track, plan 0008).
+  `public/tracks.json` + `public/drawings.json` are **generated artifacts** —
+  `bun run build:tracks`, committed, never hand-edited. The runtime still reads
+  `public/tracks.json` (`trackStorage.loadDefaultTracks()`), so it is the *runtime*
+  input but not the store. Adding a track = a PR against `tracks/`.
 - **CSS**: use Tailwind semantic tokens from `index.css`, never hardcode colors
   (e.g. `--warning`/`warning` for the preview-build footer).
 - **Admin/cloud code** is fully optional and env-gated — the core app has zero

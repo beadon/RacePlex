@@ -1,28 +1,30 @@
 {
   "$comment": [
-    "Telemetry collectors known to work with RacePlex, and how.",
+    "Telemetry collectors that work with RacePlex, and how.",
     "",
-    "This file is deliberately data, not code: it is the single source of truth for the in-app",
-    "'Supported Devices' dialog AND for the table in the README. Anyone can edit it — no TypeScript",
-    "required. Add a device, open a PR.",
+    "This file is plain data. It is the source for the in-app 'Supported Devices' dialog and the",
+    "table in the README. Anyone can edit it; to add a device, open a pull request.",
     "",
-    "THE COMPATIBILITY TEST is narrower than it sounds. RacePlex reads GPX, VBO, NMEA, UBX, and a",
-    "handful of *specific* CSV dialects (RaceBox, MoTeC, AiM, Alfano, Dove). There is NO generic",
-    "'CSV with lat/lon' parser — an unrecognised CSV falls through to the NMEA parser and fails.",
-    "So 'it exports CSV' does NOT mean it works. See docs/research/FORMATS.md.",
+    "What RacePlex reads: GPX, VBO, NMEA, UBX, GoPro .mp4 (GPS from the video's GPMF track), and CSV.",
+    "CSV covers the named formats (RaceBox, VESC Tool, MoTeC, AiM, Alfano, Dove) and, through the",
+    "generic importer, most other delimited logs with a latitude and a longitude. An unknown CSV has",
+    "its delimiter detected and its columns mapped by name, and you can correct the mapping before",
+    "importing.",
     "",
-    "RacePlex sells no hardware and is affiliated with none of these vendors. A device is listed",
-    "because it works, not because anyone paid to be here. Prices are approximate, in USD, and will",
-    "go stale — sample rate is the number that actually matters.",
+    "A 'no' status means the app produces no exportable file, or only a proprietary binary we cannot",
+    "read.",
+    "",
+    "RacePlex sells no hardware and has no affiliation with any of these vendors. Prices are",
+    "approximate, in USD, and will go out of date. Sample rate is the number that matters most.",
     "",
     "status: 'verified'  — we have parsed a real file from this device",
-    "        'expected'  — it emits a format we read, but nobody has sent us a file yet",
-    "        'partial'   — works only via a conversion step or a companion app; see notes",
-    "        'no'        — cannot be imported today. These are the help-wanted items."
+    "        'expected'  — it exports a format we read; nobody has sent us a file yet",
+    "        'partial'   — works through a conversion step or a companion app; see notes",
+    "        'no'        — cannot be imported today"
   ],
-
   "formats": {
     "gpx": "GPX",
+    "mp4": "GoPro .mp4 (GPMF)",
     "raceboxCsv": "RaceBox CSV",
     "vbo": "VBO",
     "nmea": "NMEA",
@@ -31,14 +33,15 @@
     "motec": "MoTeC i2",
     "aim": "AiM",
     "alfano": "Alfano",
-    "iracing": "iRacing"
+    "iracing": "iRacing",
+    "vescCsv": "VESC Tool CSV",
+    "csv": "CSV (generic — columns mapped on import)"
   },
-
   "categories": [
     {
       "id": "gps-meters",
       "name": "Dedicated GPS performance meters",
-      "blurb": "What you actually want. Sample rate dominates everything else for eskate: a run may only last 20 seconds, and at 40 km/h a 1 Hz fix lands every 11 metres — you cannot see a slalom gate, a braking point or an apex. 25 Hz puts a fix every 44 cm.",
+      "blurb": "Purpose-built GPS loggers. Sample rate matters more for eskate than for cars, because a run often lasts under a minute: at 40 km/h a 1 Hz fix lands every 11 metres, while 25 Hz puts one every 44 cm.",
       "devices": [
         {
           "name": "RaceBox Micro",
@@ -46,9 +49,13 @@
           "price": "~$129",
           "rateHz": "25 Hz",
           "imu": true,
-          "exports": ["gpx", "vbo", "raceboxCsv"],
+          "exports": [
+            "gpx",
+            "vbo",
+            "raceboxCsv"
+          ],
           "status": "verified",
-          "notes": "The best buy for eskate, and it isn't close. Records standalone with a hardware button — no phone bouncing around in your pocket — and it is small and light enough to tape to a deck. Exports all three formats we read best. Our own test fixtures come from a RaceBox.",
+          "notes": "The best option for eskate. Records standalone with a hardware button, so no phone is involved while you ride, and it is small enough to tape to a deck. Exports GPX, VBO and CSV. Our test fixtures come from one.",
           "url": "https://www.racebox.pro/products/racebox-micro"
         },
         {
@@ -57,7 +64,11 @@
           "price": "~$219 / ~$289",
           "rateHz": "25 Hz",
           "imu": true,
-          "exports": ["gpx", "vbo", "raceboxCsv"],
+          "exports": [
+            "gpx",
+            "vbo",
+            "raceboxCsv"
+          ],
           "status": "verified",
           "notes": "Same data as the Micro; you are paying for form factor, battery and mounts. Needs the phone app to record. Export goes through RaceBox's cloud, so you need an account and internet to get the file out.",
           "url": "https://www.racebox.pro/store/"
@@ -68,9 +79,13 @@
           "price": "~$179–$249",
           "rateHz": "up to 25 Hz",
           "imu": true,
-          "exports": ["gpx", "vbo", "nmea"],
+          "exports": [
+            "gpx",
+            "vbo",
+            "nmea"
+          ],
           "status": "partial",
-          "notes": "Dragy does NOT export CSV — the vendor confirms this, and it is the single most common misconception about the device. The reliable path is to use it as a Bluetooth GPS source for RaceChrono and export from there. The dragy·Lap app can also export .vbo directly. Note the original 2018 Dragy was 10 Hz; the current DRG70 is up to 25 Hz.",
+          "notes": "Dragy has no CSV export; the vendor confirms this. Use it as a Bluetooth GPS source for RaceChrono and export from there, or use the dragy·Lap app's .vbo export. The original 2018 Dragy ran at 10 Hz; the current DRG70 reaches 25 Hz.",
           "url": "https://www.godragy.com/dragy-70/"
         },
         {
@@ -78,9 +93,12 @@
           "vendor": "Qstarz",
           "rateHz": "10 Hz",
           "imu": true,
-          "exports": ["gpx"],
+          "exports": [
+            "gpx",
+            "csv"
+          ],
           "status": "expected",
-          "notes": "Export GPX from the QRacing desktop software (Windows only). Its CSV is its own layout and will NOT parse — use GPX.",
+          "notes": "Export GPX from the QRacing desktop software (Windows only). Its CSV should now also import through the generic column mapper.",
           "url": "https://racing.qstarz.com/Products/LT-6000S.html"
         },
         {
@@ -88,16 +106,21 @@
           "vendor": "Racelogic",
           "price": "~$540+",
           "rateHz": "20 Hz",
-          "exports": ["vbo"],
+          "exports": [
+            "vbo"
+          ],
           "status": "expected",
-          "notes": "Emits .vbo natively, which we read. But it is three times the price of a RaceBox for a lower sample rate, and availability is poor in 2026. Hard to recommend unless you already own one.",
+          "notes": "Exports .vbo natively. It costs about three times a RaceBox for a lower sample rate, and availability is poor, so it is mainly worth using if you already own one.",
           "url": "https://en.racelogic.support/Knowledge_Base/.VBO_Files"
         },
         {
           "name": "Bare u-blox module (DIY)",
           "price": "~$25",
           "rateHz": "10–25 Hz",
-          "exports": ["nmea", "ubx"],
+          "exports": [
+            "nmea",
+            "ubx"
+          ],
           "status": "expected",
           "notes": "The cheapest RacePlex-compatible logger there is. Any u-blox M8/M10 dumping raw NMEA or UBX to an SD card drops straight in — both parsers already exist, no conversion needed."
         }
@@ -106,14 +129,18 @@
     {
       "id": "phone-apps",
       "name": "Phone apps",
-      "blurb": "A phone costs nothing if you already have one — but its built-in GPS is about 1 Hz, which is far too coarse for a short eskate run. The fix is not a better app; it is an external Bluetooth GPS receiver. Pair one with the apps below and they become genuinely good.",
+      "blurb": "A phone works if you already have one, but its built-in GPS runs at about 1 Hz, which is coarse for a short run. Pairing one of these apps with an external Bluetooth GPS receiver raises the rate to 10–25 Hz.",
       "devices": [
         {
           "name": "RaceChrono Pro",
           "price": "~$20",
           "rateHz": "1 Hz on phone GPS · 25 Hz with an external receiver",
           "imu": true,
-          "exports": ["vbo", "nmea", "gpx"],
+          "exports": [
+            "vbo",
+            "nmea",
+            "gpx"
+          ],
           "status": "expected",
           "notes": "The best software path, and it drives a RaceBox or Dragy over Bluetooth at full rate. Export VBO, NMEA or GPX — NOT its CSV, which is RaceChrono's own layout and will not parse.",
           "url": "https://racechrono.com/"
@@ -122,7 +149,10 @@
           "name": "Harry's LapTimer",
           "rateHz": "1 Hz on phone GPS · higher with an external receiver",
           "imu": true,
-          "exports": ["gpx", "vbo"],
+          "exports": [
+            "gpx",
+            "vbo"
+          ],
           "status": "expected",
           "notes": "GPX from any edition; VBO from the Petrolhead edition up.",
           "url": "https://www.gps-laptimer.de/"
@@ -131,16 +161,20 @@
           "name": "Strava / generic GPX loggers",
           "price": "Free",
           "rateHz": "1 Hz",
-          "exports": ["gpx"],
+          "exports": [
+            "gpx"
+          ],
           "status": "expected",
-          "notes": "Works, and it is a fine way to check RacePlex runs at all — but at 40 km/h a 1 Hz fix is one point every 11 metres. Good for a route trace, useless for lap deltas."
+          "notes": "Works, and a good way to check RacePlex with a file you already have. At 40 km/h a 1 Hz fix is one point every 11 metres, which is enough for a route trace but not for lap deltas."
         },
         {
           "name": "TrackAddict",
           "vendor": "HP Tuners",
-          "exports": [],
-          "status": "no",
-          "notes": "Exports its own CSV layout, which we do not recognise. A parser would be a good contribution — it has a large user base.",
+          "exports": [
+            "csv"
+          ],
+          "status": "expected",
+          "notes": "Should import through the generic column mapper (its '#' comment preamble and quoted header are handled). Note it samples at 50 Hz but only updates GPS at ~10 Hz, so honour its GPS_Update flag if the trace looks stepped. Send us a file and we will mark it verified.",
           "url": "https://racerender.com/TrackAddict/docs/Interop.html"
         }
       ]
@@ -155,7 +189,12 @@
           "price": "~$129–$289",
           "rateHz": "25 Hz",
           "imu": true,
-          "exports": ["gpx", "vbo", "raceboxCsv", "nmea"],
+          "exports": [
+            "gpx",
+            "vbo",
+            "raceboxCsv",
+            "nmea"
+          ],
           "status": "verified",
           "notes": "Does both jobs: logs standalone, or streams to RaceChrono at 25 Hz. Best of both."
         },
@@ -164,15 +203,23 @@
           "vendor": "Garmin",
           "price": "~$120",
           "rateHz": "10 Hz",
-          "exports": ["gpx", "vbo", "nmea"],
+          "exports": [
+            "gpx",
+            "vbo",
+            "nmea"
+          ],
           "status": "expected",
-          "notes": "Streams only — it has no memory of its own, so it must be paired with a logging app.",
+          "notes": "Export GPX from the vendor's website. FIT is their native format and carries much more data, but RacePlex cannot read it yet — see the open issues. These devices log at about 1 Hz either way, so a FIT parser would widen the range of files we accept without improving precision.",
           "url": "https://www.garmin.com/en-US/p/645104/"
         },
         {
           "name": "Dual XGPS160 SkyPro",
           "rateHz": "10 Hz",
-          "exports": ["gpx", "vbo", "nmea"],
+          "exports": [
+            "gpx",
+            "vbo",
+            "nmea"
+          ],
           "status": "expected",
           "notes": "Use with RaceChrono or Harry's LapTimer."
         }
@@ -181,15 +228,18 @@
     {
       "id": "action-cams",
       "name": "Action cameras with GPS",
-      "blurb": "If you were filming the run anyway, the camera may have logged the GPS too. RacePlex cannot read video files directly — you convert the telemetry track to GPX first, with a free tool.",
+      "blurb": "GoPro records GPS into the video file. Drop the .mp4 in and RacePlex reads the telemetry track in the browser; there is no conversion step and nothing is uploaded.",
       "devices": [
         {
           "name": "GoPro HERO5–11, HERO13, MAX",
           "vendor": "GoPro",
           "rateHz": "~10–18 Hz",
-          "exports": ["gpx"],
-          "status": "partial",
-          "notes": "GPS rides along in the video's GPMF metadata track. Extract it to GPX with the open-source gopro-telemetry or gopro2gpx, then import that. Reading GPMF directly in the browser is on our wish list — the libraries are JavaScript, so it could work entirely locally.",
+          "exports": [
+            "mp4",
+            "gpx"
+          ],
+          "status": "verified",
+          "notes": "Import the .mp4 straight into RacePlex — the GPS rides along in the video's GPMF metadata track and we read it in the browser (nothing is uploaded, no conversion step). Accelerometer and gyro come along too. GPS must have been switched on in Preferences > Regional > GPS before recording, and the camera needs a lock before you hit record.",
           "url": "https://github.com/JuanIrache/gopro-telemetry"
         },
         {
@@ -197,12 +247,14 @@
           "vendor": "GoPro",
           "exports": [],
           "status": "no",
-          "notes": "Has NO GPS. GoPro removed it in the HERO12, and this trips people up constantly. Do not buy one for telemetry."
+          "notes": "Has no GPS. GoPro removed it for this model, which catches people out."
         },
         {
           "name": "Insta360 (with GPS remote)",
           "vendor": "Insta360",
-          "exports": ["gpx"],
+          "exports": [
+            "gpx"
+          ],
           "status": "partial",
           "notes": "Only records GPS with a GPS Action Remote / Smart Remote (or the phone app). Insta360 Studio then has an 'Export GPX File' option.",
           "url": "https://onlinemanual.insta360.com/x3/en-us/operating-tutorials/clips/gps"
@@ -212,58 +264,69 @@
     {
       "id": "watches",
       "name": "Watches & bike computers",
-      "blurb": "Fine for proving RacePlex works with a file you already own. Not fine for lap timing: they all log at about 1 Hz.",
+      "blurb": "Useful for trying RacePlex with a file you already have. They log at about 1 Hz, which is too coarse for lap timing.",
       "devices": [
         {
           "name": "Garmin / Wahoo / Coros",
           "rateHz": "1 Hz",
-          "exports": ["gpx"],
+          "exports": [
+            "gpx"
+          ],
           "status": "partial",
-          "notes": "Export GPX (not FIT) from the vendor's website. FIT is their native format and carries far more data — but we cannot read it yet. See the help-wanted list; note that even with a FIT parser these devices are still 1 Hz, so it buys reach, not precision."
+          "notes": "Export GPX from the vendor's website. FIT is their native format and carries much more data, but RacePlex cannot read it yet — see the open issues. These devices log at about 1 Hz either way, so a FIT parser would widen the range of files we accept without improving precision."
         }
       ]
     },
     {
       "id": "eskate",
-      "name": "Eskate & VESC — the honest answer",
-      "blurb": "If you ride a VESC board, none of your existing apps produce a file RacePlex can open today. Not one. Every eskate app logs GPS into its own bespoke layout. That is the gap this project exists to close — and it is the top of our help-wanted list.",
+      "name": "Eskate & VESC",
+      "blurb": "VESC Tool logs import directly, and bring the ESC channels with them: motor current, battery sag, duty cycle and ERPM are charted on the same timeline as GPS. The other eskate apps import through the generic CSV path.",
       "devices": [
         {
           "name": "VESC Tool",
           "vendor": "Benjamin Vedder",
-          "exports": [],
-          "status": "no",
-          "notes": "Logs GPS (gnss_lat / gnss_lon / kmh_gnss) but writes a SEMICOLON-delimited CSV we do not recognise. This is the highest-leverage parser anyone could contribute: it would unlock every VESC rider, and let us fuse motor current and battery sag with GPS — the one thing no car-oriented lap timer can do.",
-          "url": "https://github.com/vedderb/vesc_tool"
+          "exports": [
+            "vescCsv"
+          ],
+          "status": "verified",
+          "notes": "Imports directly, with the ESC channels: motor current, battery sag, duty cycle, ERPM and temperatures are charted alongside GPS. A nosedive shows up as a duty-cycle spike. The ESC logs at about 12 Hz and the GNSS at about 1 Hz; RacePlex keeps every ESC row at full rate and interpolates position between GPS fixes. Verified against a real Onewheel ride.",
+          "url": "https://github.com/vedderb/vesc_tool",
+          "rateHz": "GNSS ~1 Hz · ESC 10–50 Hz"
         },
         {
           "name": "FreeSK8 / Robogotchi",
           "vendor": "Derelict Robot",
           "rateHz": "~1 Hz",
-          "exports": [],
-          "status": "no",
-          "notes": "The only purpose-built eskate GPS logger there is. Shares a row-typed CSV (each line prefixed with its record type) that we cannot read. The schema is open, so a parser is small work. Caveat: ~1 Hz GPS, and the project has been quiet since 2022.",
+          "exports": [
+            "csv"
+          ],
+          "status": "expected",
+          "notes": "Its shared CSV is row-typed (each line prefixed with its record type), so the generic importer may not take it as-is — send us one and we will finish it. Caveat: ~1 Hz GPS, and the project has been quiet since 2022.",
           "url": "https://github.com/FreeSK8/freesk8_mobile"
         },
         {
           "name": "Metr Pro",
-          "exports": [],
-          "status": "no",
-          "notes": "Logs phone GPS alongside VESC data and can export CSV, or JSON by appending ?format=json to a ride URL. The JSON stores latitude/longitude as column arrays. Officially documented — an easy parser to add.",
+          "exports": [
+            "csv"
+          ],
+          "status": "expected",
+          "notes": "Its CSV export should import through the generic column mapper. The JSON export (?format=json on a ride URL) is column-oriented arrays and needs its own small parser — send us one. Note Metr also supports ?format=fit.",
           "url": "https://github.com/rpasichnyk/metr-guide"
         },
         {
           "name": "Float Control / pOnewheel",
-          "exports": [],
-          "status": "no",
-          "notes": "OneWheel and PEV companion apps. Both export CSV in their own layouts; schemas are discoverable but unconfirmed."
+          "exports": [
+            "csv"
+          ],
+          "status": "expected",
+          "notes": "Both export CSV and should import through the generic column mapper — which is the ONLY way pOnewheel can ever work, since it generates its columns per-ride from whatever BLE attributes it recorded. Float Control also reorders its columns between versions; mapping by name handles that. Send us a file and we will mark it verified."
         },
         {
           "name": "Official Onewheel app",
           "vendor": "Future Motion",
           "exports": [],
           "status": "no",
-          "notes": "Records GPS but offers no export of any kind. A dead end — use a separate GPS logger."
+          "notes": "Records GPS but has no export function, so there is no file to import. Use a separate GPS logger, or Float Control."
         }
       ]
     }

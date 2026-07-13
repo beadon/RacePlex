@@ -4,7 +4,6 @@ import { Trophy, Check, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import type { PluginPanelProps } from "@/plugins/panels";
 import { Button } from "@/components/ui/button";
-import { autoSubmitSnapshotTrack } from "./trackAutoSubmit";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -149,11 +148,6 @@ export default function LeaderboardSubmitPanel(_props: PluginPanelProps) {
       // row (source of truth is the DB, not local state).
       void refresh();
       toast.success(t("leaderboard.submitSuccess"));
-      // A custom (non-built-in) track rides along to the community track DB too,
-      // best-effort — never block or fail the snapshot submission over it.
-      void autoSubmitSnapshotTrack(snap)
-        .then((added) => { if (added) toast.success(t("leaderboard.trackAdded")); })
-        .catch((err) => console.warn("[leaderboard] track auto-submit failed:", err));
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       console.error("[leaderboard] submit failed:", e);
