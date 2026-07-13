@@ -35,9 +35,13 @@ requirements, so it can be served from any static host, a local machine, or a de
 
 ## Capabilities
 
-**Import.** Reads GPX, VBO, NMEA, UBX, GoPro `.mp4`, and CSV from RaceBox, VESC Tool, MoTeC, AiM,
-Alfano and Dove. Any other delimited log containing a latitude and a longitude can be imported
-through the column mapper.
+**Import.** Reads GPX, VBO, NMEA, UBX, FIT, GoPro `.mp4`, and CSV from RaceBox, VESC Tool,
+RaceChrono, MoTeC, AiM, Alfano and Dove. Any other delimited log containing a latitude and a
+longitude can be imported through the column mapper.
+
+**Live capture.** Records straight from a RaceBox or a Dragy over Web Bluetooth, with no logger
+file to export first. Needs Chrome or Edge, on desktop or Android. A phone's own GPS can also
+record, at whatever rate the handset provides.
 
 **Lap and sector timing.** Detects line crossings with sub-sample interpolation, and reports lap
 times, sector splits, and a theoretical optimal lap assembled from your best sectors. Supports both
@@ -56,13 +60,17 @@ rear wheels unload.
 
 ## Getting started
 
-1. Open the application and drop a ride log onto the import panel, or click to browse.
+RacePlex opens on a dashboard listing what is already on the device, with an **Add data** zone
+below it.
+
+1. Add a ride: **Import** a log file, or **Devices** to download from a logger or record live.
 2. If the file contains timing lines, lap times appear immediately. Otherwise, select or draw a
    course (see [Lap timing](#lap-timing)).
 3. Use the tabs to switch between the map, the telemetry charts, and the lap table.
 
-RacePlex ships with a sample session. Select **Load Sample** on the landing page to try the
-application without a file of your own.
+Three sample sessions ship with the application and appear in the list on first run: a RaceBox
+eskate session, a VESC Tool ride, and a kart session. Open any of them to try RacePlex without a
+file of your own.
 
 ---
 
@@ -73,7 +81,9 @@ application without a file of your own.
 | RaceBox CSV | `.csv` | Includes lap numbering, from which RacePlex reconstructs the timing lines. |
 | VESC Tool CSV | `.csv` | Includes the ESC channels. See [Motor telemetry](#motor-telemetry). |
 | GPX | `.gpx` | Start and Finish waypoints, where present, become timing lines. |
-| GoPro video | `.mp4` | GPS is read from the video's GPMF metadata track. |
+| GoPro video | `.mp4` | GPS is read from the video's GPMF metadata track. Chapter-split recordings fold into one session. |
+| FIT | `.fit` | Garmin, Wahoo, Coros, Suunto. These devices log at about 1 Hz — see [Sample rate](#sample-rate). |
+| RaceChrono CSV | `.csv` | Version 3 export. |
 | VBO | `.vbo` | RaceLogic VBOX. Exported by Dragy·Lap, RaceChrono and RaceBox. |
 | NMEA 0183 | `.nmea`, `.txt` | |
 | UBX | `.ubx` | u-blox binary. |
@@ -102,7 +112,7 @@ RacePlex sells no hardware and has no affiliation with any vendor listed.
 | | |
 |---|---|
 | **RaceBox Micro** (~$129) | 25 Hz, IMU, records standalone with a hardware button. Exports GPX, VBO and CSV. The project's test fixtures come from one. |
-| **RaceChrono Pro** (~$20) | Phone application. Pair it with a RaceBox or Dragy over Bluetooth for 25 Hz logging, and export VBO, NMEA or GPX. Its own CSV format is not supported. |
+| **RaceChrono Pro** (~$20) | Phone application. Pair it with a RaceBox or Dragy over Bluetooth for 25 Hz logging. Export VBO, NMEA, GPX, or its own CSV v3 — all four import. |
 | **u-blox module** (~$25) | Logs NMEA or UBX to an SD card. The lowest-cost option. |
 | **GoPro** | HERO5–11 and HERO13 record 10–18 Hz GPS inside the video. The HERO12 has no GPS receiver. |
 | **VESC controller** | Export the ride log from VESC Tool. |
@@ -124,8 +134,12 @@ or an apex. If you log with a phone, adding an external Bluetooth GPS receiver r
 
 ### Dragy
 
-Dragy does not provide a CSV export. Export `.vbo` from the Dragy·Lap application, or use the Dragy
-as a Bluetooth GPS source for RaceChrono and export from there.
+Dragy does not provide a CSV export. Three routes in:
+
+- **Record live** from the Dragy over Web Bluetooth (Chrome or Edge). RacePlex speaks the
+  reverse-engineered protocol, which is firmware-dependent.
+- Export `.vbo` from the Dragy·Lap application.
+- Use the Dragy as a Bluetooth GPS source for RaceChrono and export from there.
 
 ---
 
@@ -265,6 +279,16 @@ entry in the supported-formats table.
 RacePlex is a fork of [Dove's DataViewer](https://github.com/TheAngryRaven/DovesDataViewer) by
 TheAngryRaven. The VBO, NMEA, MoTeC and AiM parsers, the lap-crossing detection, the sector and
 optimal-lap mathematics, and the map and chart layers originate there.
+
+Format support leans on these open-source libraries:
+
+| Library | Used for |
+|---|---|
+| [fit-file-parser](https://github.com/jimmykane/fit-file-parser) | `.fit` decoding (Garmin, Wahoo, Coros, Suunto) |
+| [gpmf-extract](https://github.com/JuanIrache/gpmf-extract) + [gopro-telemetry](https://github.com/JuanIrache/gopro-telemetry) | GoPro GPMF telemetry inside an `.mp4` |
+| [mp4-muxer](https://github.com/Vanilagy/mp4-muxer) | Video export (H.264 + AAC) |
+| [Leaflet](https://leafletjs.com) | Maps |
+| [libxrk](https://github.com/m3rlin45/libxrk) | AiM `.xrk` / `.xrz` (pure-Rust core, compiled to WebAssembly) |
 
 Licensed GPL-3.0-or-later. See [LICENSE](LICENSE) and [NOTICE](NOTICE) for the full statement of
 changes.

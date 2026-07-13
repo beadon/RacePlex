@@ -46,6 +46,13 @@ What is **ours** (see `NOTICE` for the full statement of changes):
 - **`ParsedData.embeddedCourse`** — a course carried inside the datalog itself, so
   a rider gets lap times on first import with zero setup. RaceBox GPX supplies it
   via `<wpt>` waypoints; RaceBox CSV via reconstruction from its `Lap` column.
+- **Live capture** (`src/lib/live/`) — RaceBox + Dragy over Web Bluetooth. See the BLE note below.
+- **`fitParser.ts`** — Garmin/Wahoo/Coros/Suunto `.fit`. The largest installed base of GPS
+  fitness devices, so a rider can try RacePlex with a ride they already own. They log at
+  **~1 Hz**, which is too coarse to place a braking point — the parser documents this.
+- **`raceChronoCsv.ts`** — RaceChrono CSV v3, rewritten into the generic-CSV path.
+- **Multi-session comparison** (`src/pages/Compare.tsx`, `src/lib/comparison/`) + the
+  **Dashboard** shell (`src/pages/Dashboard.tsx`) — the app's home surface.
 - `src/lib/palettes.ts` + `[data-palette]` blocks in `index.css` — brand themes.
 - `scripts/verify-import.mjs` — see Golden Rule 3b below.
 
@@ -57,9 +64,13 @@ follow their conventions where it's free, deviate where we have a better answer.
 **Things NOT ours, do not treat as authoritative:** `docs/plans/` and `docs/reviews/` are
 upstream's history. Do not rewrite them. (`CHANGELOG.md` is **gone** — release notes live in GitHub
 Releases; see *Releasing*.) The `.claude/skills/beta-release-*` skills encode upstream's
-BETA-branch, changelog-driven release process, which RacePlex does not use — **ignore them**. The BLE stack is
-specific to upstream's *DovesDataLogger* hardware — a generic Web Bluetooth path
-for RaceBox/Dragy does not exist yet.
+BETA-branch, changelog-driven release process, which RacePlex does not use — **ignore them**.
+
+`src/lib/ble/` is upstream's, and it speaks only to their *DovesDataLogger* hardware. **Our live
+capture is a separate stack** in `src/lib/live/` (ours): RaceBox and Dragy over Web Bluetooth, both
+UBX on the wire (`ubxRingBuffer` — a BLE notification is not a packet, so it resyncs on `B5 62` and
+validates the checksum). Dragy needs a handshake (`dragyHandshake.ts`) before it sends anything.
+Entry point is `LoggerPicker` → `RaceBoxLiveRecord` / `DragyLiveRecord`.
 
 ---
 
@@ -83,7 +94,12 @@ for RaceBox/Dragy does not exist yet.
    lap timing silently did not exist; (c) the VESC parser deduplicated GPS fixes for a
    clean track, which also dropped the ESC channels from 12 Hz to 1 Hz and lost the
    resolution a nosedive appears in. That one was found by looking at the rendered
-   chart. None of the three were logic errors.
+   chart. A fourth: react-resizable-panels v4 silently redefined a bare `size` number
+   from **percent** to **pixels** (a unitless *string* is now percent). The prop is typed
+   `number | string`, so `defaultSize={30}` still compiled and the Pro view's left column
+   rendered as a 30px sliver. tsc, eslint, 2,480 tests and the build were all green.
+   None of the four were logic errors — a **major-version dependency bump is exactly this
+   risk**, so open the app after one.
    → After any change to import, parsing, or lap detection, run
    **`bun run verify:import`** (`scripts/verify-import.mjs`): it drives a real
    browser, feeds the files in `sample_race_files/` through the app's own file
@@ -98,10 +114,12 @@ for RaceBox/Dragy does not exist yet.
    nothing can desync from. At release time, the notes are assembled from
    `git log <last-tag>..HEAD` and published with `gh release create`. See
    *Releasing* below.
-5. **Docs stay in sync.** Update `README.md`, this file, the relevant `docs/*`, and
-   the in-app `CreditsDialog.tsx` alongside the code that makes them stale (parsers,
-   env vars, dependencies, architecture). README Credits and `CreditsDialog` must
-   agree. Update Credits when adding a FOSS dependency.
+5. **Docs stay in sync.** Update `README.md`, this file, the relevant `docs/*`,
+   `public/llms.txt`, and `src/data/supported-devices.json` alongside the code that makes them
+   stale (parsers, env vars, dependencies, architecture). A format the docs don't list may as well
+   not exist — six places name the supported formats and they drift. Add a FOSS dependency, add it
+   to the README's Credits. (There is no `CreditsDialog.tsx`; the in-app credits surface was
+   removed with the other commercial chrome.)
 6. **Green before merge.** `bun run lint`, `bun run typecheck`, `bun run test:run`,
    and `bun run build` all pass — CI runs them as separate workflows on every PR.
 7. **Write plainly. No "it's not X, it's Y".** Documentation, release notes, issues,
@@ -154,6 +172,8 @@ for RaceBox/Dragy does not exist yet.
 ```
 src/
 ├── pages/
+│   ├── Dashboard.tsx      # ★ The app's HOME at `/` — return-first: recent sessions, garage/tracks/devices/tools tiles, and a separate add-data zone (Devices → LoggerPicker, Import). Replaced the old LandingPage, which is gone.
+│   ├── Compare.tsx        # ★ Multi-session side-by-side comparison (plan 0012) — pick sessions from the browser, aligned on a shared distance bin (lib/comparison + useComparisonBin), shared map
 │   ├── Index.tsx          # ★ Main SPA — file import, tab views, all state orchestration. Also hosts the read-only Leaderboards viewer (plan 0005): consumes a leaderboardHandoff bundle on mount, injects its prebuilt laps/selection, flips a `readOnly` flag that alert-colours the header + hides Coach/Tools/Setups + video/weather/snapshots and labels laps by submitter.
 │   ├── Leaderboards.tsx   # ★ Public /leaderboards page (cloud-gated): Track→Course→engine/weight accordion (Group-by-weight + Show-top), opens a group into Index's read-only viewer via leaderboardHandoff; shows uploader avatar thumbnails
 │   ├── DriverProfile.tsx  # ★ Public /driver/:username page (plan 0006, anon, case-insensitive via .ilike): avatar + name + opt-in vehicles (no weights/setups) + the driver's approved leaderboard snapshots grouped by course/weight
@@ -171,7 +191,8 @@ src/
 │   ├── RaceLineView.tsx   # Leaflet map: race line, speed heatmap, braking zones
 │   ├── TelemetryChart.tsx # Canvas speed/telemetry chart (simple mode)
 │   ├── VideoPlayer.tsx    # Synced video playback + overlay system (multi-chunk GoPro playlists via lib/videoPlaylist)
-│   └── …                  # FileImport, LoggerDownload (eager picker host) + LoggerPicker (image chooser) + DataloggerDownload (lazy web-BLE Fledgling flow) / DovesloggerDownload (lazy native-BLE Fledgling flow) / MyChronDownload (lazy native Wi-Fi flow), LapSnapshot*, …
+│   └── …                  # FileImport, LoggerDownload (eager picker host) + LoggerPicker (text-only chooser: Fledgling / RaceBox live / Dragy live / MyChron / Alfano / phone GPS, each with an honest availability chip) + the lazy per-logger flows (DataloggerDownload = web-BLE Fledgling, DovesloggerDownload = native-BLE, MyChronDownload = native Wi-Fi, RaceBoxLiveRecord + DragyLiveRecord = live capture), LapSnapshot*, …
+│                           #   Every "connect a logger" surface (Dashboard tile, Files tab, Garage→Device tab) mounts LoggerDownload. Do NOT call DeviceContext.connect() directly — it is Fledgling-only by construction (requestDevice filtered on the Doves service UUID).
 ├── hooks/                 # One concern each; Index.tsx orchestrates.
 │   ├── useSessionData     # Parses imported file → ParsedData
 │   ├── useLapManagement   # Lap calc, selection, visible range
@@ -181,7 +202,9 @@ src/
 │   └── use*Manager        # IndexedDB CRUD: File, Vehicle (←Kart compat), Engine, Template, Note, Setup
 ├── lib/
 │   ├── datalogParser.ts   # ★ Format auto-detection router (entry point for all parsing)
-│   ├── *Parser.ts         # nmea, ubx, iracing (.ibt), vbo, dove, dovex, alfano, aim, motec, gpx, racebox, vesc
+│   ├── *Parser.ts         # nmea, ubx, iracing (.ibt), vbo, dove, dovex, alfano, aim, motec, gpx, racebox, vesc, fit
+│   ├── raceChronoCsv.ts   # ★ RaceChrono CSV v3 → rewritten into the generic-CSV path (3 header rows; columns are NOT unique — key on (name, source))
+│   ├── live/              # ★ OURS: live capture over Web Bluetooth. raceboxTransport/dragyTransport (NUS GATT), ubxRingBuffer (resync on B5 62 + checksum — a notification is not a packet), raceboxDecoder/dragyDecoder (UBX NAV-PVT), dragyHandshake (Dragy sends nothing until handshaked), raceboxSession (stream → ParsedData)
 │   ├── csvTable.ts        # ★ Generic delimited-table reader (delimiter sniffing, `#` comments, VESC tagged headers, name-based columnIndex). Every CSV profile is built on it.
 │   ├── genericCsvParser.ts # ★ LAST-resort CSV importer: auto-maps columns by header name, infers the two units a name can't carry (time, speed), interpolates 1 Hz GPS across fast channels. Proposes a mapping; the rider confirms it in CsvMappingDialog (csvMappingRequest pub/sub) and it's remembered by header hash (csvMappingStorage, localStorage).
 │   ├── speedUnit.ts       # ★ Recover a speed column's unit by MEASURING it against position-derived speed (never from the magnitude — 25 is plausible in m/s, km/h and mph alike)
@@ -199,6 +222,7 @@ src/
 │   ├── lapSnapshot*.ts    # ★ Snapshot types/buffer + IndexedDB CRUD (→ docs/subsystems.md)
 │   ├── leaderboard*.ts    # ★ Leaderboards (plan 0005): leaderboardTypes (shared), leaderboardBrowse (Track→Course→engine/weight tree), leaderboardSession (transpose entries → one read-only synthetic session, fastest=lap 1), leaderboardHandoff (one-shot page→Index handoff). Submission + Supabase access live in plugins/cloud-sync (leaderboardSubmission/leaderboardClient). → docs/backend.md
 │   ├── imageCrop.ts       # ★ Pure on-device avatar crop (1:1 centre + downscale ≤256, webp/jpeg) — no Supabase (plan 0006)
+│   ├── comparison/        # ★ Pure multi-session alignment (plan 0012): resample sessions onto a shared distance bin → Compare.tsx
 │   ├── driverProfileGroups.ts # ★ Pure: one driver's leaderboard entries → Course→weight buckets (plan 0006, DriverProfile)
 │   ├── setupRevision*.ts  # ★ Content-addressed setup history + IndexedDB CRUD (→ docs/subsystems.md)
 │   ├── setupHistory.ts    # ★ Pure setup-history view-model (diff + fastest-lap aggregation) → drawer/SetupHistoryPanel (→ docs/subsystems.md)
@@ -291,8 +315,11 @@ ParsedData` (full parse). **To add one:**
 
 **Detection order matters:** AiM XRK/XRZ first (binary, by extension/`<h` magic),
 then GoPro MP4 (by extension/`ftyp` magic), then other binary (MoTeC LD → UBX →
-iRacing `.ibt`), then text most-specific to least (VBO → MoTeC CSV → Dovex → Dove
-→ Alfano → AiM CSV → NMEA fallback).
+iRacing `.ibt` → **FIT**), then text most-specific to least (GPX → VESC → RaceBox → VBO →
+MoTeC CSV → Dovex → Dove → **RaceChrono v3** → AiM-signed → Alfano → AiM CSV → generic CSV →
+NMEA fallback). **RaceChrono v3 must stay ahead of the loose Alfano/AiM detectors**, which
+would otherwise claim it. The text table is a single ordered array in `datalogParser.ts` —
+add a route there, not a new `if`.
 
 Three parsers break the simple sync contract — the async **AiM XRK/XRZ**
 (Rust→WASM Web Worker), the async **GoPro `.mp4`** (`lib/gopro/`: mp4 demux + GPMF
@@ -306,7 +333,7 @@ outright. Details, plus the **.dovex/.dovep** 8 KB-header format:
 
 ## IndexedDB Storage (`src/lib/dbUtils.ts`)
 
-Single shared database: `"dove-file-manager"`, **version 13**.
+Single shared database: `"raceplex"`, **version 15**. (Renamed from `dove-file-manager`; existing installs migrate.)
 
 | Store | Key | Module |
 |-------|-----|--------|

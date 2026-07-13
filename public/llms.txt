@@ -4,7 +4,9 @@
 
 RacePlex is a Progressive Web App for electric skateboard riders. Telemetry parsing, lap detection and visualisation all happen locally in the browser (IndexedDB). No server processes your data. There is no paid tier and no feature gating.
 
-Supported formats: **VESC Tool CSV**, **RaceBox CSV**, **GPX**, **GoPro `.mp4`** (GPS is read from the video's GPMF metadata track, in the browser), **VBO**, **NMEA 0183**, **UBX**, and, through a generic importer with a user-correctable column mapper, most other delimited logs containing a latitude and a longitude (Float Control, pOnewheel, Metr, TrackAddict, Qstarz). The car and kart formats inherited from upstream also work: MoTeC i2, AiM MyChron (CSV and XRK/XRZ), Alfano, iRacing, and Dove/Dovex.
+Supported formats: **VESC Tool CSV**, **RaceBox CSV**, **GPX**, **GoPro `.mp4`** (GPS is read from the video's GPMF metadata track, in the browser; chapter-split recordings fold into one session), **FIT** (Garmin, Wahoo, Coros, Suunto — these log at about 1 Hz), **RaceChrono CSV v3**, **VBO**, **NMEA 0183**, **UBX**, and, through a generic importer with a user-correctable column mapper, most other delimited logs containing a latitude and a longitude (Float Control, pOnewheel, Metr, TrackAddict, Qstarz). The car and kart formats inherited from upstream also work: MoTeC i2, AiM MyChron (CSV and XRK/XRZ), Alfano, iRacing, and Dove/Dovex.
+
+Live capture: RacePlex records directly from a **RaceBox** or a **Dragy** over Web Bluetooth (Chrome or Edge, desktop or Android), with no file to export first. A phone's own GPS can also record.
 
 Features specific to electric skateboards:
 
@@ -15,7 +17,7 @@ Features specific to electric skateboards:
 
 Other features: automatic track and course detection, sector splits and optimal lap, reference-lap overlays and pace delta, speed heatmaps on a Leaflet map, braking-zone analysis, G-force visualisation, video export with overlays via WebCodecs, and Web Bluetooth session download from supported loggers.
 
-Notes: Dragy has no CSV export; use the dragy·Lap app's `.vbo` export. The GoPro HERO12 has no GPS.
+Notes: Dragy has no CSV export — record from it live over Bluetooth, or use the dragy·Lap app's `.vbo` export. The GoPro HERO12 has no GPS. FIT devices (Garmin, Wahoo, Coros) log at about 1 Hz, which is roughly 11 m between fixes at 40 km/h — enough to plot a ride, too coarse to place a braking point.
 
 ## Pages
 

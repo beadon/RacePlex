@@ -5,11 +5,14 @@
     "This file is plain data. It is the source for the in-app 'Supported Devices' dialog and the",
     "table in the README. Anyone can edit it; to add a device, open a pull request.",
     "",
-    "What RacePlex reads: GPX, VBO, NMEA, UBX, GoPro .mp4 (GPS from the video's GPMF track), and CSV.",
+    "What RacePlex reads: GPX, VBO, NMEA, UBX, FIT, GoPro .mp4 (GPS from the video's GPMF track), and CSV.",
     "CSV covers the named formats (RaceBox, VESC Tool, MoTeC, AiM, Alfano, Dove) and, through the",
     "generic importer, most other delimited logs with a latitude and a longitude. An unknown CSV has",
     "its delimiter detected and its columns mapped by name, and you can correct the mapping before",
     "importing.",
+    "",
+    "RacePlex can also record live over Web Bluetooth from a RaceBox or a Dragy (Chrome or Edge, on",
+    "desktop or Android), with no file to export first. Devices that support this say so in their notes.",
     "",
     "A 'no' status means the app produces no exportable file, or only a proprietary binary we cannot",
     "read.",
@@ -35,7 +38,9 @@
     "alfano": "Alfano",
     "iracing": "iRacing",
     "vescCsv": "VESC Tool CSV",
-    "csv": "CSV (generic — columns mapped on import)"
+    "csv": "CSV (generic — columns mapped on import)",
+    "fit": "FIT (Garmin, Wahoo, Coros, Suunto)",
+    "raceChronoCsv": "RaceChrono CSV v3"
   },
   "categories": [
     {
@@ -55,7 +60,7 @@
             "raceboxCsv"
           ],
           "status": "verified",
-          "notes": "The best option for eskate. Records standalone with a hardware button, so no phone is involved while you ride, and it is small enough to tape to a deck. Exports GPX, VBO and CSV. Our test fixtures come from one.",
+          "notes": "The best option for eskate. Records standalone with a hardware button, so no phone is involved while you ride, and it is small enough to tape to a deck. Exports GPX, VBO and CSV. Our test fixtures come from one. Can also record live over Web Bluetooth, with no file to export.",
           "url": "https://www.racebox.pro/products/racebox-micro"
         },
         {
@@ -70,7 +75,7 @@
             "raceboxCsv"
           ],
           "status": "verified",
-          "notes": "Same data as the Micro; you are paying for form factor, battery and mounts. Needs the phone app to record. Export goes through RaceBox's cloud, so you need an account and internet to get the file out.",
+          "notes": "Same data as the Micro; you are paying for form factor, battery and mounts. Needs the phone app to record. Export goes through RaceBox's cloud, so you need an account and internet to get the file out. Can also record live over Web Bluetooth, with no file to export.",
           "url": "https://www.racebox.pro/store/"
         },
         {
@@ -85,7 +90,7 @@
             "nmea"
           ],
           "status": "partial",
-          "notes": "Dragy has no CSV export; the vendor confirms this. Use it as a Bluetooth GPS source for RaceChrono and export from there, or use the dragy·Lap app's .vbo export. The original 2018 Dragy ran at 10 Hz; the current DRG70 reaches 25 Hz.",
+          "notes": "Dragy has no CSV export; the vendor confirms this. Use it as a Bluetooth GPS source for RaceChrono and export from there, or use the dragy·Lap app's .vbo export. The original 2018 Dragy ran at 10 Hz; the current DRG70 reaches 25 Hz. RacePlex can also record live from it over Web Bluetooth; the protocol is reverse-engineered and firmware-dependent.",
           "url": "https://www.godragy.com/dragy-70/"
         },
         {
@@ -139,10 +144,11 @@
           "exports": [
             "vbo",
             "nmea",
-            "gpx"
+            "gpx",
+            "raceChronoCsv"
           ],
           "status": "expected",
-          "notes": "The best software path, and it drives a RaceBox or Dragy over Bluetooth at full rate. Export VBO, NMEA or GPX — NOT its CSV, which is RaceChrono's own layout and will not parse.",
+          "notes": "The best software path, and it drives a RaceBox or Dragy over Bluetooth at full rate. Export VBO, NMEA or GPX — NOT its CSV, which is RaceChrono's own layout and will not parse. Its own CSV v3 export imports directly.",
           "url": "https://racechrono.com/"
         },
         {
@@ -270,10 +276,11 @@
           "name": "Garmin / Wahoo / Coros",
           "rateHz": "1 Hz",
           "exports": [
+            "fit",
             "gpx"
           ],
-          "status": "partial",
-          "notes": "Export GPX from the vendor's website. FIT is the native format for these devices and carries more data; RacePlex cannot read it yet (see the open issues). All of them log at about 1 Hz."
+          "status": "verified",
+          "notes": "Export the ride as .fit and import it directly. These are fitness devices: they log at about 1 Hz, which is roughly 11 m between fixes at 40 km/h — enough to plot a ride, too coarse to place a braking point or an apex."
         }
       ]
     },

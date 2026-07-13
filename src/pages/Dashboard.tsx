@@ -4,6 +4,10 @@ import { LoggerDownload } from "@/components/LoggerDownload";
 import { TrackEditor } from "@/components/TrackEditor";
 import { SettingsModal } from "@/components/SettingsModal";
 import { ToolsDialog } from "@/components/ToolsDialog";
+import { SupportedDevicesDialog } from "@/components/SupportedDevicesDialog";
+import { SupportedFilesDialog } from "@/components/SupportedFilesDialog";
+import { AboutDialog } from "@/components/AboutDialog";
+import { Button } from "@/components/ui/button";
 import { SessionsSummaryTile } from "@/components/dashboard/SessionsSummaryTile";
 import { RecentSessionsTile } from "@/components/dashboard/RecentSessionsTile";
 import { GarageTile } from "@/components/dashboard/GarageTile";
@@ -157,6 +161,25 @@ export function Dashboard({
       {/* Tools — the standalone calculators (Stance / Seat Position / Phone
           Lap Timer), same picker + bodies the in-session Tools tab uses. */}
       <ToolsDialog open={toolsOpen} onOpenChange={setToolsOpen} />
+
+      {/* Help row. These three dialogs used to hang off the landing page's
+          SiteHeader, which the dashboard replaced — leaving the device list
+          reachable from nowhere and About/Supported-files only on the
+          cloud-gated Leaderboards and Driver pages, which a default build
+          never mounts. The dashboard is the home surface now, so they live
+          here. SupportedFilesDialog and AboutDialog render their own trigger;
+          SupportedDevicesDialog takes one. */}
+      <div className="mt-10 flex flex-wrap items-center justify-center gap-1 border-t border-border pt-4 text-muted-foreground">
+        <SupportedDevicesDialog
+          trigger={
+            <Button variant="ghost" size="sm" className="text-muted-foreground">
+              Supported devices
+            </Button>
+          }
+        />
+        <SupportedFilesDialog />
+        <AboutDialog />
+      </div>
     </AppShell>
   );
 }
