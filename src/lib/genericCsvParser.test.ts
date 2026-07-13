@@ -419,7 +419,7 @@ describe('speed-unit inference', () => {
     const a = analyzeGenericCsv(header + rows.join('\n'));
     expect(a.speedUnitSource).toBe('assumed');
     expect(a.confidence).toBe('low');
-    expect(a.notes.join(' ')).toMatch(/ASSUMING/);
+    expect(a.notes.join(' ')).toMatch(/assuming km\/h/i);
   });
 
   it('derives speed from the positions when there is no speed column', () => {
@@ -447,11 +447,12 @@ describe('GPS fix de-duplication', () => {
     const a = analyzeGenericCsv(vescLikeSubset());
     const data = parseGenericCsvTable(a.table, a.mapping);
 
-    // Every row between the first and the last GPS fix survives (rows 0-290; the 9 rows after the
-    // last fix have nothing to interpolate towards, so — like the VESC parser — they are dropped).
-    // The ESC channels therefore keep their 10 Hz resolution. Decimating to the 30 GPS fixes would
-    // be the "obvious" fix and would throw away 90% of the motor data.
-    expect(data.samples.length).toBe(291);
+    // Every row from the first GPS fix to the end of the file survives; rows
+    // after the last fix are clamped to the last known position rather than
+    // extrapolated. The ESC channels therefore keep their 10 Hz resolution
+    // through to the end. Trimming to `last.row` (the previous behaviour)
+    // would drop the trailing ~1 s of motor data for no gain — see issue #30.
+    expect(data.samples.length).toBe(300);
     expect(a.preview.gpsFixCount).toBe(30);
     expect(data.samples[5]!.extraFields['erpm']).toBeDefined();
 
@@ -459,6 +460,14 @@ describe('GPS fix de-duplication', () => {
     const lons = data.samples.slice(0, 20).map((s) => s.lon);
     for (let i = 1; i < lons.length; i++) {
       expect(lons[i]!).toBeGreaterThan(lons[i - 1]!);
+    }
+
+    // Trailing rows (after the last fix) hold the last position — same lat/lon
+    // as the last fix, but their fast-channel data is preserved.
+    const lastFixIdx = 290 - 0; // rows are 0-indexed; last fix is row 290 in the fixture
+    const afterLast = data.samples[lastFixIdx + 1];
+    if (afterLast) {
+      expect(afterLast.lon).toBeCloseTo(data.samples[lastFixIdx]!.lon, 10);
     }
   });
 
@@ -474,7 +483,7 @@ describe('GPS fix de-duplication', () => {
     const a = analyzeGenericCsv(trackAddictLike());
     expect(a.preview.gpsFixCount).toBe(30);
     const data = parseGenericCsvTable(a.table, a.mapping);
-    expect(data.samples.length).toBe(291);
+    expect(data.samples.length).toBe(300);
     expect(data.samples[3]!.extraFields['Accel Z']).toBeCloseTo(1, 3);
   });
 });
@@ -554,6 +563,6 @@ describe('datalogParser routing', () => {
     // The VESC parser names its ESC channels; the generic one would pass `erpm` through verbatim.
     const names = data.fieldMappings.map((f) => f.name);
     expect(names.some((n) => n.toLowerCase().includes('erpm') || n === 'rpm')).toBe(true);
-    expect(data.samples.length).toBe(291); // same 1 Hz-GNSS trimming as the generic path
+    expect(data.samples.length).toBe(300); // trailing rows now clamped (issue #30), same as generic path
   });
 });
