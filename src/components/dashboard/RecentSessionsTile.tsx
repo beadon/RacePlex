@@ -20,6 +20,11 @@ interface RecentSessionsTileProps {
   onOpen: (fileName: string) => void;
   /** When false, hide the bundled sample so the tile doesn't advertise it. */
   showSampleFiles: boolean;
+  /** Fires the "seed the sample file into IndexedDB and open it" flow. Shown
+   *  as an inline option only when the tile is empty AND showSampleFiles is on
+   *  — a fresh install should have a way to try the app without hunting. */
+  onLoadSample: () => void;
+  isLoadingSample: boolean;
 }
 
 interface RecentSession {
@@ -91,7 +96,12 @@ function relativeTime(ts: number): string {
   return new Date(ts).toLocaleDateString();
 }
 
-export function RecentSessionsTile({ onOpen, showSampleFiles }: RecentSessionsTileProps) {
+export function RecentSessionsTile({
+  onOpen,
+  showSampleFiles,
+  onLoadSample,
+  isLoadingSample,
+}: RecentSessionsTileProps) {
   const { data } = useAsyncSnapshot({
     key: "dashboard:recent-sessions",
     initial: EMPTY,
@@ -121,8 +131,22 @@ export function RecentSessionsTile({ onOpen, showSampleFiles }: RecentSessionsTi
       {!data.loaded ? (
         <div className="px-4 py-6 text-sm text-muted-foreground">Loading…</div>
       ) : visible.length === 0 ? (
-        <div className="px-4 py-6 text-sm text-muted-foreground">
-          No sessions yet. Drop a telemetry file above to start.
+        <div className="px-4 py-6 text-sm text-muted-foreground space-y-2">
+          <p>No sessions yet. Drop a telemetry file above to start.</p>
+          {showSampleFiles && (
+            <p className="text-xs">
+              First time here?{" "}
+              <button
+                type="button"
+                onClick={onLoadSample}
+                disabled={isLoadingSample}
+                className="underline hover:text-foreground disabled:opacity-50"
+              >
+                {isLoadingSample ? "Loading sample…" : "Load a sample RaceBox session"}
+              </button>
+              {" to explore the tool."}
+            </p>
+          )}
         </div>
       ) : (
         <ul className="divide-y divide-border">

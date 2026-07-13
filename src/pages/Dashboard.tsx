@@ -68,7 +68,12 @@ export function Dashboard({
         />
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <RecentSessionsTile onOpen={onOpenFile} showSampleFiles={showSampleFiles} />
+          <RecentSessionsTile
+            onOpen={onOpenFile}
+            showSampleFiles={showSampleFiles}
+            onLoadSample={onLoadSample}
+            isLoadingSample={isLoadingSample}
+          />
           <GarageTile onManage={onOpenGarage} />
 
           {/* TrackEditor's dialog attaches to whatever we hand it as
@@ -89,22 +94,6 @@ export function Dashboard({
             <PluginMount slot={MountSlot.Landing} ctx={{}} />
           </Suspense>
         </div>
-
-        {/* Sample-file access — demoted from the hero to a tucked-away link.
-            Kept for the fresh-install case where a user has nothing to open. */}
-        {showSampleFiles && (
-          <div className="pt-2 text-xs text-muted-foreground">
-            <button
-              type="button"
-              onClick={onLoadSample}
-              disabled={isLoadingSample}
-              className="underline hover:text-foreground disabled:opacity-50"
-            >
-              {isLoadingSample ? "Loading sample…" : "Load sample data"}
-            </button>
-            {" · never touches the network."}
-          </div>
-        )}
       </div>
     </AppShell>
   );
