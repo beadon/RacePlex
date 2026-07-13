@@ -58,6 +58,71 @@ rear wheels unload.
 
 ---
 
+## Screens
+
+Every RacePlex install looks the same — no accounts, no plan tiers. These are the surfaces
+you'll spend time in.
+
+### Dashboard
+
+Opens to what's already on the device, with an **Add data** zone below. Left is a fresh install
+with the bundled sample sessions; right shows the same dashboard after importing a ride.
+
+<p align="center">
+  <img src="docs/screenshots/01-dashboard-empty.png" alt="Dashboard on a fresh install" width="48%">
+  <img src="docs/screenshots/02-dashboard-populated.png" alt="Dashboard after importing a session" width="48%">
+</p>
+
+### Session view
+
+The Simple map view carries the speed-coloured race line, braking-zone markers, satellite tiles,
+and a telemetry chart underneath. Lap Times lists every completed lap with top and min speed.
+
+<p align="center">
+  <img src="docs/screenshots/03-session-map.png" alt="Session view: satellite map with speed heatmap and telemetry chart" width="92%">
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/05-lap-table.png" alt="Session view: Lap Times tab" width="92%">
+</p>
+
+### Live capture and download
+
+The device picker offers the PerchWerks Fledgling, RaceBox, Dragy, MyChron, Alfano, and the
+device's own GPS. Each shows an honest capability chip so it's clear when a device needs
+Chrome/Edge or the desktop app.
+
+<p align="center">
+  <img src="docs/screenshots/10-logger-picker.png" alt="Logger picker" width="70%">
+</p>
+
+### Tools
+
+Trackside calculators reachable from the nav bar. The **Stance Visualizer** models the
+deceleration at which the front wheels unload and the rear leaves the ground — the number
+below urethane grip is why boards nosedive instead of skid.
+
+<p align="center">
+  <img src="docs/screenshots/06-tools-picker.png" alt="Tools picker" width="48%">
+  <img src="docs/screenshots/07-tools-stance.png" alt="Stance Visualizer" width="48%">
+</p>
+
+### Garage and settings
+
+The Garage catalogues vehicles, engines, setups, and remotes. Settings hosts profiles for
+shared machines, colour palettes, and the three imperial/metric toggles (speed, distance,
+weather) that stay independent so a rider can mix them however they read best.
+
+<p align="center">
+  <img src="docs/screenshots/08-garage.png" alt="Garage drawer" width="48%">
+  <img src="docs/screenshots/09-settings.png" alt="Settings" width="48%">
+</p>
+
+> These are regenerated on every release with `bun run screenshots` (Playwright — see
+> [`scripts/screenshots.mjs`](scripts/screenshots.mjs)), so they always match the app that shipped.
+
+---
+
 ## Getting started
 
 RacePlex opens on a dashboard listing what is already on the device, with an **Add data** zone
