@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Gauge, Map, ListOrdered, BarChart3, FolderOpen, Play, Pause, StepBack, StepForward, Eye, EyeOff, AlertCircle, Wrench, NotebookPen, SlidersHorizontal, Columns2 } from "lucide-react";
 import { BrandLogo } from "@/components/BrandLogo";
-import { LandingPage } from "@/components/LandingPage";
+import { Dashboard } from "@/pages/Dashboard";
 import { TrackEditor } from "@/components/TrackEditor"; // still used in compact header
 import { LapTimesTab } from "@/components/tabs/LapTimesTab";
 import { NotesTab } from "@/components/drawer/NotesTab";
@@ -710,23 +710,22 @@ export default function Index() {
     openVehiclesGarage, handleOpenFile,
   ]);
 
-  // No data loaded - show import UI
+  // No data loaded — render the dashboard shell. LandingPage's welcome flow
+  // is retired; Dashboard shows "what you have" (recent sessions, garage,
+  // tracks) plus an inline import dropzone. Sample-file access moves to a
+  // tucked-away link in the empty state instead of a primary CTA.
   if (!data) {
     return (
       <DeviceProvider>
         <>
           <InstallPrompt />
-          <LandingPage
+          <Dashboard
             onDataLoaded={handleDataLoaded}
-            onOpenFileManager={fileManager.open}
-            onOpenProfile={fileManager.openProfile}
             autoSave={settings.autoSaveFiles}
             autoSaveFile={fileManager.saveFile}
             onLoadSample={handleLoadSample}
             isLoadingSample={isLoadingSample}
             showSampleFiles={effectiveShowSampleFiles}
-            enableAdmin={enableAdmin}
-            enableCloud={enableCloud}
             settingsButton={
               <SettingsModal
                 settings={settings}
@@ -738,9 +737,8 @@ export default function Index() {
             }
           />
           <Suspense fallback={null}>
-            {/* Off-session stopgap: Setups normally lives in the main toolbar
-                (session-only), so host it inside the garage here on the landing
-                page. A planned UI overhaul will revisit this relocation. */}
+            {/* Off-session Setups drawer stays mounted so the garage stays
+                reachable even without a loaded session. */}
             <FileManagerDrawer {...fileManagerProps} setupsTab={<SetupsTab {...setupsTabProps} />} />
           </Suspense>
         </>

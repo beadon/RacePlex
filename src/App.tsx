@@ -38,10 +38,6 @@ const AuthCallback = lazy(() => import("./pages/AuthCallback"));
 const PendingCheckoutRedirect = lazy(() =>
   import("./components/PendingCheckoutRedirect").then((m) => ({ default: m.PendingCheckoutRedirect })),
 );
-// Preview route for the dashboard-shell redesign (feat/dashboard-shell). The
-// current Index.tsx keeps serving `/`; a follow-up commit flips this to be
-// the default once the shell + tiles are reviewed.
-const Dashboard = lazy(() => import("./pages/Dashboard"));
 
 const SETTINGS_KEY = "dove-dataviewer-settings";
 
@@ -87,9 +83,6 @@ const App = () => {
             {enableCloud && !isNativeApp() && <PendingCheckoutRedirect />}
             <Routes>
               <Route path="/" element={<Index />} />
-              {/* Preview route for the dashboard-shell redesign. Flip this
-                  to be the default in a follow-up commit. */}
-              <Route path="/dashboard" element={<Dashboard />} />
               {/* Un-gated: Google Play requires a publicly reachable account-deletion
                   URL. The page itself adapts when cloud accounts are disabled. */}
               <Route path="/delete-account" element={<DeleteAccount />} />
