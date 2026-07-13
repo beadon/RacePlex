@@ -13,7 +13,7 @@ Features specific to electric skateboards:
 - **ESC telemetry charted with GPS.** A VESC log imports with motor current, battery current, battery voltage, duty cycle, ERPM and temperatures on the same timeline as the GPS trace. A nosedive appears as a duty-cycle spike.
 - **Point-to-point courses.** RacePlex supports separate start and finish lines, for a hill run, slalom or drag pass that finishes somewhere other than where it started.
 - **Lap timing with no setup.** When a datalog records where its timing lines were, RacePlex reads them back and times the run: from GPX Start/Finish waypoints, or by reconstructing the lines from RaceBox's lap-number column.
-- **A stance tool.** Foot position, weight distribution, and the braking deceleration at which the rear wheels unload. A board reaches that point at around 0.37 g, below the roughly 0.6 g of grip available from urethane. The same calculation for a kart gives about 2.1 g.
+- **A stance tool.** Foot position, weight distribution, and the hardest stop a board can actually make — which depends on which wheels the motors drive, because an eskate's motors are its only brakes. A rear-driven board (nearly all of them) unloads the very wheels doing the braking, so it tops out around 0.17 g and the rear slides; it cannot endo under motor braking on any geometry. An all-wheel board keeps the full ~0.6 g of urethane grip available and does pitch, with the rear lifting at around 0.37 g.
 
 Other features: automatic track and course detection, sector splits and optimal lap, reference-lap overlays and pace delta, speed heatmaps on a Leaflet map, braking-zone analysis, G-force visualisation, video export with overlays via WebCodecs, and Web Bluetooth session download from supported loggers.
 

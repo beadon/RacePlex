@@ -9,9 +9,14 @@
 // So on a board the rider is ~85% of the moving mass and stands nearly a metre
 // up, over a 550–900 mm wheelbase. Foot placement doesn't nudge the balance the
 // way a kart seat does — it *sets* it. And because z_cm/wheelbase is ~4× a
-// kart's, the longitudinal tip-over thresholds land inside the range of
-// accelerations a board can actually produce, which is exactly why riders go
-// over the nose under hard braking.
+// kart's, the longitudinal tip-over thresholds land far lower than a car's.
+//
+// Whether a rider can actually REACH the endo threshold depends on which wheels
+// brake — see `brakingCapability`. An eskate has no friction brakes: the BLDC
+// motors are the brakes, so only driven wheels can slow the board. On a
+// rear-driven board (nearly all of them) braking unloads the very axle doing the
+// braking, and the rear breaks traction before the rear can lift. Those boards
+// slide; they cannot endo under motor braking at all.
 //
 // Coordinate system (mirrors the kart model): origin at the REAR truck's contact
 // line, x positive toward the front truck, z up from the ground. Lengths in mm,
@@ -35,6 +40,11 @@ export interface StanceParams {
   riderMassKg: number;
   /** Rider stature, mm. */
   riderHeightMm: number;
+  /**
+   * Which wheels the motors drive — and therefore which wheels can brake. An
+   * eskate has no friction brakes. Nearly every board is dual-rear.
+   */
+  drivetrain: Drivetrain;
 }
 
 /** What the rider changes by standing differently. */
@@ -71,7 +81,13 @@ export interface AxleLoads {
 }
 
 export interface Thresholds {
-  /** Braking decel at which the REAR wheels lift, g. The eskate crash mode. */
+  /**
+   * Braking decel at which the REAR wheels lift, g.
+   *
+   * Pure geometry — it does not care where the decelerating force comes from.
+   * On a rear-driven board the motors cannot reach it (`brakingCapability`);
+   * a kerb, a pothole or a nose-first impact can.
+   */
   endoG: number;
   /** Forward accel at which the FRONT wheels lift, g. */
   wheelieG: number;
@@ -106,8 +122,8 @@ export const BOARD_COM_Z_FRACTION = 0.5;
 
 /**
  * Longitudinal grip a decent urethane setup gets on dry asphalt, g. Rough, but
- * enough to answer the only question that matters: does the board endo before it
- * skids? (On most boards, yes.)
+ * enough to answer the question that matters: does the board pitch before it
+ * slides? On a rear-driven board, never — see `brakingCapability`.
  */
 export const TYPICAL_GRIP_G = 0.6;
 
@@ -122,6 +138,7 @@ export const DEFAULT_PARAMS: StanceParams = {
   boardMassKg: 12,
   riderMassKg: 75,
   riderHeightMm: 1780,
+  drivetrain: "dualRear",
 };
 
 export const DEFAULT_STANCE: StanceAdjustments = {
@@ -290,12 +307,82 @@ export function longitudinalBudgetG(com: CoM, wheelbaseMm: number): number {
 }
 
 /**
- * Which limit stops a hard stop first: the rider goes over the nose (`endo`) or
- * the wheels let go (`grip`). On a typical board the endo threshold is *below*
- * the grip limit — the board never gets to use its tyres.
+ * How the board is braked. An eskate has no friction brakes: the BLDC motors are
+ * the brakes, so only the wheels a motor drives can slow the board down.
  */
-export function brakingLimit(endoG: number, gripG: number = TYPICAL_GRIP_G): "endo" | "grip" {
-  return endoG <= gripG ? "endo" : "grip";
+export type Drivetrain = "singleRear" | "dualRear" | "allWheel";
+
+/** Share of the REAR axle's normal load a drivetrain can brake against. */
+const REAR_BRAKED_FRACTION: Record<Drivetrain, number> = {
+  singleRear: 0.5, // one of the two rear wheels
+  dualRear: 1, // both rear wheels
+  allWheel: 1, // (unused — all-wheel is handled separately)
+};
+
+export interface BrakingCapability {
+  /** The hardest the board can actually stop, g. */
+  maxDecelG: number;
+  /** What runs out first: the rider pitches (`endo`) or the wheels slide (`slip`). */
+  limit: "endo" | "slip";
+  /** Whether braking alone can ever reach the endo threshold. */
+  endoReachable: boolean;
+}
+
+/**
+ * The deceleration the board can actually produce, and what stops it going
+ * harder. This is the part that depends on WHERE the brakes are.
+ *
+ * Load transfer itself does not: ΔW = M·a·z/L no matter which wheels brake. But
+ * the *force* is capped by friction on the braked wheels only, and their normal
+ * load moves as you brake.
+ *
+ * REAR-DRIVEN (nearly every eskate — one or two rear motors). Braking unloads
+ * the rear, which is the axle doing the braking:
+ *
+ *     M·a = μ·f·N_r = μ·f·M·( g(L − x_cm)/L − a·z_cm/L )
+ *     ⇒   a = μ·f·(L − x_cm) / (L + μ·f·z_cm)
+ *
+ * Compare that to the endo threshold g·(L − x_cm)/z_cm:
+ *
+ *     a_slip / a_endo  =  μ·f·z_cm / (L + μ·f·z_cm)  <  1     for all μ, f, L, z > 0
+ *
+ * It is less than 1 for *every* board, always. **A rear-driven board cannot endo
+ * under motor braking.** As the rear unloads it loses the very grip it needs to
+ * brake, so it can never catch the threshold — the rear breaks traction and the
+ * board slides instead. With the defaults it tops out around 0.17 g, under half
+ * the 0.37 g that would lift the rear.
+ *
+ * The endo threshold is still real: a kerb, a pothole or a nose-first impact
+ * applies the decelerating force without needing rear grip. It just isn't
+ * something the motors can do to you.
+ *
+ * ALL-WHEEL. Every wheel brakes, so the whole weight is available whatever the
+ * transfer, and a_max = μ·g. Here the endo threshold IS reachable when it lands
+ * below μ (0.37 g vs 0.6 g on the defaults) — you pitch before you skid.
+ */
+export function brakingCapability(
+  com: CoM,
+  wheelbaseMm: number,
+  drivetrain: Drivetrain,
+  gripG: number = TYPICAL_GRIP_G,
+): BrakingCapability {
+  const endoG = thresholds(com, wheelbaseMm).endoG;
+
+  if (drivetrain === "allWheel") {
+    const endoFirst = endoG <= gripG;
+    return {
+      maxDecelG: Math.min(endoG, gripG),
+      limit: endoFirst ? "endo" : "slip",
+      endoReachable: endoFirst,
+    };
+  }
+
+  const f = REAR_BRAKED_FRACTION[drivetrain];
+  const slipG =
+    (gripG * f * (wheelbaseMm - com.xMm)) / (wheelbaseMm + gripG * f * com.zMm);
+
+  // Provably below endoG (see above), so the rear always slides first.
+  return { maxDecelG: slipG, limit: "slip", endoReachable: false };
 }
 
 /**

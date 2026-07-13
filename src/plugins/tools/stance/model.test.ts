@@ -10,7 +10,7 @@ import {
   axleLoads,
   axleLoadsAtAccel,
   boardCoM,
-  brakingLimit,
+  brakingCapability,
   computeCoM,
   computeMassElements,
   computeState,
@@ -102,7 +102,8 @@ describe("stance model — tip-over thresholds", () => {
     expect(th.endoG).toBeCloseTo(0.37, 2);
     // Below what the tyres could hold: the rider tips before the board skids.
     expect(th.endoG).toBeLessThan(TYPICAL_GRIP_G);
-    expect(brakingLimit(th.endoG)).toBe("endo");
+    // Reachable only when every wheel brakes. See the drivetrain block below.
+    expect(brakingCapability(computeState(p, s).com, p.wheelbaseMm, "allWheel").limit).toBe("endo");
   });
 
   it("a centred CoM makes the two thresholds equal", () => {
@@ -262,5 +263,90 @@ describe("stance model — figure IK", () => {
       Math.sqrt(legMm * legMm - 350 * 350),
       6,
     );
+  });
+});
+
+describe("brakingCapability — an eskate's brakes are its motors", () => {
+  const p = DEFAULT_PARAMS;
+  const s = DEFAULT_STANCE;
+
+  it("a rear-driven board slides long before the rear can lift", () => {
+    const { com } = computeState(p, s);
+    const cap = brakingCapability(com, p.wheelbaseMm, "dualRear");
+    const { endoG } = thresholds(com, p.wheelbaseMm);
+
+    expect(cap.limit).toBe("slip");
+    expect(cap.endoReachable).toBe(false);
+    expect(cap.maxDecelG).toBeCloseTo(0.166, 2);
+    // Under half the decel that would lift the rear.
+    expect(cap.maxDecelG).toBeLessThan(endoG / 2);
+  });
+
+  it("closed form: a = μf(L − x) / (L + μfz)", () => {
+    const { com } = computeState(p, s);
+    const mu = TYPICAL_GRIP_G;
+    const expected = (mu * 1 * (p.wheelbaseMm - com.xMm)) / (p.wheelbaseMm + mu * 1 * com.zMm);
+    expect(brakingCapability(com, p.wheelbaseMm, "dualRear").maxDecelG).toBeCloseTo(expected, 12);
+  });
+
+  it("one rear motor brakes against half the rear axle, so it slides even sooner", () => {
+    const { com } = computeState(p, s);
+    const one = brakingCapability(com, p.wheelbaseMm, "singleRear").maxDecelG;
+    const two = brakingCapability(com, p.wheelbaseMm, "dualRear").maxDecelG;
+    expect(one).toBeLessThan(two);
+    expect(one).toBeCloseTo(0.107, 2);
+  });
+
+  it("NO rear-driven board can ever endo under motor braking — for any geometry", () => {
+    // a_slip/a_endo = μfz/(L + μfz) < 1 identically. Sweep the space to prove the
+    // claim isn't an artefact of the default numbers.
+    for (const wheelbaseMm of [400, 550, 700, 900, 1200]) {
+      for (const riderHeightMm of [1400, 1780, 2100]) {
+        for (const grip of [0.3, 0.6, 1.2, 2.0]) {
+          for (const crouchPct of [0, 50, 100]) {
+            for (const weightSplitPct of [0, 35, 50, 80, 100]) {
+              const params = { ...p, wheelbaseMm, riderHeightMm };
+              // Feet scale with the board. A foot beyond the truck isn't a board.
+              const stance = {
+                ...s,
+                rearFootXMm: 0.15 * wheelbaseMm,
+                frontFootXMm: 0.85 * wheelbaseMm,
+                crouchPct,
+                weightSplitPct,
+              };
+              const { com } = computeState(params, stance);
+              const { endoG } = thresholds(com, wheelbaseMm);
+              expect(endoG).toBeGreaterThan(0); // the geometry is a real board
+              for (const dt of ["singleRear", "dualRear"] as const) {
+                const cap = brakingCapability(com, wheelbaseMm, dt, grip);
+                expect(cap.endoReachable).toBe(false);
+                expect(cap.limit).toBe("slip");
+                expect(cap.maxDecelG).toBeLessThan(endoG);
+              }
+            }
+          }
+        }
+      }
+    }
+  });
+
+  it("all-wheel braking uses the whole weight, so it CAN reach the endo", () => {
+    const { com } = computeState(p, s);
+    const cap = brakingCapability(com, p.wheelbaseMm, "allWheel");
+    const { endoG } = thresholds(com, p.wheelbaseMm);
+
+    expect(endoG).toBeLessThan(TYPICAL_GRIP_G); // 0.37 g vs 0.6 g of grip
+    expect(cap.limit).toBe("endo");
+    expect(cap.endoReachable).toBe(true);
+    expect(cap.maxDecelG).toBeCloseTo(endoG, 9);
+  });
+
+  it("all-wheel on a board that can't pitch: grip binds instead", () => {
+    // Low CoM + long wheelbase pushes the endo above the grip limit.
+    const params = { ...p, wheelbaseMm: 1200, riderHeightMm: 1400 };
+    const { com } = computeState(params, { ...s, frontFootXMm: 1100, crouchPct: 100 });
+    const cap = brakingCapability(com, params.wheelbaseMm, "allWheel");
+    expect(cap.limit).toBe("slip");
+    expect(cap.maxDecelG).toBeCloseTo(TYPICAL_GRIP_G, 9);
   });
 });

@@ -4,8 +4,11 @@
 // Board/rider numbers persist to the tools plugin's own IndexedDB store, so a
 // rider's board survives reloads and works offline.
 //
-// The headline readout is the ENDO threshold, not the front/rear split: on a
-// board the split is a means, and going over the nose under braking is the end.
+// The headline readout is the hardest stop the board can actually make, which
+// depends on which wheels the motors drive — they are the only brakes an eskate
+// has. See `brakingCapability` in model.ts: a rear-driven board slides before it
+// can ever lift its rear, so the endo threshold is shown as context, not as the
+// thing the motors will do to you.
 
 import { useEffect, useMemo, useState } from "react";
 import { RotateCcw } from "lucide-react";
@@ -26,7 +29,8 @@ import {
   LB_PER_KG,
   TYPICAL_GRIP_G,
   axleLoadsAtAccel,
-  brakingLimit,
+  brakingCapability,
+  type Drivetrain,
   computeState,
   leanAngleDeg,
   loadTransferKg,
@@ -99,7 +103,7 @@ export default function StanceTool(_props: PluginPanelProps) {
   const braking = axleLoadsAtAccel(state.com, params.wheelbaseMm, -brakeG);
   const transferKg = loadTransferKg(state.com, params.wheelbaseMm, brakeG);
   const rearLifted = braking.rearKg <= 0;
-  const limit = brakingLimit(endoG);
+  const capability = brakingCapability(state.com, params.wheelbaseMm, params.drivetrain);
   const crouchGain = endoG - neutral.thresholds.endoG;
 
   const fmtW = (kg: number) => (useLb ? `${(kg * LB_PER_KG).toFixed(1)} lb` : `${kg.toFixed(1)} kg`);
@@ -237,17 +241,30 @@ export default function StanceTool(_props: PluginPanelProps) {
 
           {/* Readouts */}
           <div className="space-y-3">
+            {/* The headline is what actually stops the board, which depends on
+                which wheels the motors drive. On a rear-driven board the rear
+                slides long before it can lift, so the endo threshold below is
+                geometry the motors can't reach — a kerb can. */}
             <div className="rounded-lg border border-border bg-card p-4 text-center">
-              <p className="text-[11px] text-muted-foreground uppercase tracking-wide">{t("stance.endoTitle")}</p>
+              <p className="text-[11px] text-muted-foreground uppercase tracking-wide">
+                {t("stance.brakingLimitTitle")}
+              </p>
               <p
                 className={`mt-1 text-3xl font-bold tabular-nums ${
-                  endoG < 0.35 ? "text-destructive" : endoG < 0.5 ? "text-warning" : "text-primary"
+                  capability.limit === "endo" ? "text-destructive" : "text-warning"
                 }`}
               >
-                {t("stance.gValue", { value: endoG.toFixed(2) })}
+                {t("stance.gValue", { value: capability.maxDecelG.toFixed(2) })}
               </p>
               <p className="text-[11px] text-muted-foreground mt-1">
-                {limit === "endo" ? t("stance.endoBelowGrip", { grip: TYPICAL_GRIP_G.toFixed(1) }) : t("stance.gripFirst")}
+                {capability.limit === "endo"
+                  ? t("stance.limitEndo", { grip: TYPICAL_GRIP_G.toFixed(1) })
+                  : t("stance.limitSlip")}
+              </p>
+              <p className="text-[11px] text-muted-foreground/70 mt-2 border-t border-border pt-2">
+                {capability.endoReachable
+                  ? t("stance.endoAtReachable", { value: endoG.toFixed(2) })
+                  : t("stance.endoAtUnreachable", { value: endoG.toFixed(2) })}
               </p>
             </div>
 
@@ -369,6 +386,28 @@ export default function StanceTool(_props: PluginPanelProps) {
               step={5}
             />
           </div>
+
+          <div className="mt-4">
+            <Label className="text-xs">{t("stance.drivetrainLabel")}</Label>
+            <div className="mt-2 grid grid-cols-3 gap-1">
+              {(["singleRear", "dualRear", "allWheel"] as const).map((d) => (
+                <button
+                  key={d}
+                  type="button"
+                  onClick={() => setParam("drivetrain", d as Drivetrain)}
+                  className={`rounded-md border px-2 py-1.5 text-[11px] font-medium transition-colors ${
+                    params.drivetrain === d
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-border text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                  }`}
+                >
+                  {t(`stance.drivetrain${d.charAt(0).toUpperCase()}${d.slice(1)}` as Parameters<typeof t>[0])}
+                </button>
+              ))}
+            </div>
+            <p className="mt-2 text-[11px] text-muted-foreground">{t("stance.drivetrainNote")}</p>
+          </div>
+
           <p className="mt-3 text-[11px] text-muted-foreground">{t("stance.boardRiderNote")}</p>
           <Button variant="outline" size="sm" className="h-8 mt-3" onClick={() => setParams(DEFAULT_PARAMS)}>
             {t("stance.restoreDefaults")}

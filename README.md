@@ -279,21 +279,44 @@ This path is known to work with Float Control, pOnewheel, Metr, TrackAddict and 
 ## Stance tool
 
 The stance tool models weight distribution on the board. Set the wheelbase, deck height, board and
-rider mass, foot positions, weight split and crouch; the tool reports:
+rider mass, foot positions, weight split, crouch, and which wheels the motors drive; the tool
+reports:
 
+- the hardest stop the board can actually make, and what limits it
 - static weight distribution, front and rear
 - combined centre-of-gravity height
-- the braking deceleration at which the rear wheels unload — the point at which the board pitches
-  forward
+- the braking deceleration at which the rear wheels unload
 - the acceleration at which the front wheels lift
 - the lean angle required to hold a given cornering force
 
-A typical board reaches the forward-pitch threshold at around 0.37 g, below the grip available from
-urethane on asphalt. Crouching lowers the centre of gravity and raises the threshold; moving your
-weight rearward does the same.
+### Which wheels brake changes the answer
 
-The model is rigid-body statics. It does not account for deck flex, bushing lean, or how quickly
-load transfers, so treat the thresholds as an upper bound.
+An eskate has no friction brakes. The motors are the brakes, so only the wheels a motor drives can
+slow the board down — and that decides what happens when you brake hard.
+
+On a **rear-driven** board (one or two rear motors, which is nearly every board), braking unloads the
+rear wheels, which are the wheels doing the braking. As the rear lightens it loses the grip it needs
+to brake, so it can never generate enough force to lift itself:
+
+    a_slip / a_endo  =  μ·f·z / (L + μ·f·z)  <  1     always
+
+A dual-rear board tops out around **0.17 g** and the rear breaks traction and slides. It cannot endo
+under motor braking, on any geometry. A single rear motor brakes against one wheel instead of two and
+slides at around 0.11 g.
+
+On an **all-wheel** board every wheel brakes, so the full weight stays available and the ~0.6 g of
+urethane grip is reachable. That board *can* pitch: the rear lifts at around 0.37 g, before the
+tyres let go.
+
+The rear-lift threshold stays worth knowing on any board, because a kerb, a pothole or a nose-first
+impact applies the decelerating force without needing rear grip. The motors just can't do it to you.
+
+Crouching lowers the centre of gravity and raises every threshold; moving your weight rearward buys
+braking and costs you acceleration. The two thresholds always sum to a fixed budget, so a stance
+change slides it between the ends rather than growing it.
+
+The model is rigid-body statics. It does not account for deck flex, bushing lean, or how quickly load
+transfers, so treat the thresholds as an upper bound.
 
 ---
 
