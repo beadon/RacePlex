@@ -17,6 +17,12 @@ export type Drivetrain = "belt" | "direct" | "hub" | "gear" | "other";
  */
 export type TruckType = "RPK" | "TKP" | "3-link" | "Stock" | "other";
 
+/**
+ * Battery pack cell chemistry. Li-ion covers 18650/21700-based packs (the
+ * common eskate case); LiPo covers pouch packs; LiFePO4 is niche but real.
+ */
+export type CellChemistry = "Li-ion" | "LiPo" | "LiFePO4" | "other";
+
 export interface Vehicle {
   id: string;
   name: string;
@@ -33,6 +39,30 @@ export interface Vehicle {
   truckType?: TruckType;
   /** Free-form label when `truckType === "other"`. */
   truckTypeOther?: string;
+
+  // ─── Battery pack (advanced) ──────────────────────────────────────────────
+  /** Nominal pack voltage (V). */
+  batteryVoltageNominalV?: number;
+  /** Cells in series (13S, 14S, …) — eskate speaks in cells more than volts. */
+  batteryCells?: number;
+  /** Cell chemistry family. */
+  batteryCellChemistry?: CellChemistry;
+  /** Free-form label when `batteryCellChemistry === "other"`. */
+  batteryCellChemistryOther?: string;
+  /** Pack energy (Wh). */
+  batteryCapacityWh?: number;
+  /** Continuous discharge rating (A). */
+  batteryContinuousDischargeA?: number;
+  /** Burst discharge rating (A). */
+  batteryBurstDischargeA?: number;
+  /** BMS make (Bestech, Daly, ANT, DieBieMS, …). Free-form. */
+  batteryBmsMake?: string;
+  /** BMS model. Free-form. */
+  batteryBmsModel?: string;
+
+  // ─── Remote pairing (advanced) ────────────────────────────────────────────
+  /** Points at a row in the `remotes` store; the store is a shared catalog. */
+  pairedRemoteId?: string;
   /**
    * Opt-in: when true, a public-safe projection (name/type/engine/number — never
    * weight/setup) is published to the user's public driver profile. See plan 0006.

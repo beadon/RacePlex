@@ -1,15 +1,18 @@
 import { useState, useCallback, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { Pencil, Trash2, Car, History, Plus } from "lucide-react";
+import { Pencil, Trash2, Car, History, Plus, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Vehicle } from "@/lib/vehicleStorage";
 import { VehicleType, defaultVehicleTypeId } from "@/lib/templateStorage";
 import { useEngineManager } from "@/hooks/useEngineManager";
+import { useRemoteManager } from "@/hooks/useRemoteManager";
 import { EngineCombobox } from "./EngineCombobox";
+import { RemoteCombobox } from "./RemoteCombobox";
 import { VehicleHistoryPanel } from "./VehicleHistoryPanel";
 
 interface VehiclesTabProps {
@@ -79,6 +82,16 @@ export function VehiclesTab({ vehicles, vehicleTypes, onAdd, onUpdate, onRemove,
       drivetrainOther: vehicle.drivetrainOther,
       truckType: vehicle.truckType,
       truckTypeOther: vehicle.truckTypeOther,
+      batteryVoltageNominalV: vehicle.batteryVoltageNominalV,
+      batteryCells: vehicle.batteryCells,
+      batteryCellChemistry: vehicle.batteryCellChemistry,
+      batteryCellChemistryOther: vehicle.batteryCellChemistryOther,
+      batteryCapacityWh: vehicle.batteryCapacityWh,
+      batteryContinuousDischargeA: vehicle.batteryContinuousDischargeA,
+      batteryBurstDischargeA: vehicle.batteryBurstDischargeA,
+      batteryBmsMake: vehicle.batteryBmsMake,
+      batteryBmsModel: vehicle.batteryBmsModel,
+      pairedRemoteId: vehicle.pairedRemoteId,
     });
   };
 
@@ -149,11 +162,13 @@ export function VehiclesTab({ vehicles, vehicleTypes, onAdd, onUpdate, onRemove,
                     {vt?.name ?? t("vehicles.unknownType")}
                     {vehicle.engine ? ` · ${vehicle.engine}` : ""} · {vehicle.weight} {vehicle.weightUnit}
                   </div>
-                  {(vehicle.drivetrain || vehicle.truckType) && (
+                  {(vehicle.drivetrain || vehicle.truckType || vehicle.batteryCells || vehicle.batteryVoltageNominalV || vehicle.pairedRemoteId) && (
                     <div className="text-[11px] text-muted-foreground/80">
                       {[
                         vehicle.drivetrain === "other" ? vehicle.drivetrainOther : vehicle.drivetrain,
                         vehicle.truckType === "other" ? vehicle.truckTypeOther : vehicle.truckType,
+                        vehicle.batteryCells ? `${vehicle.batteryCells}S` : (vehicle.batteryVoltageNominalV ? `${vehicle.batteryVoltageNominalV}V` : null),
+                        vehicle.batteryCapacityWh ? `${vehicle.batteryCapacityWh} Wh` : null,
                       ]
                         .filter(Boolean)
                         .join(" · ")}
@@ -227,11 +242,62 @@ export function VehiclesTab({ vehicles, vehicleTypes, onAdd, onUpdate, onRemove,
               </div>
             </div>
           </div>
+        </div>
+        <AdvancedVehicleFields form={form} setForm={setForm} />
+        {form.name.trim() && !form.engine.trim() && (
+          <p className="text-xs text-destructive">{t("vehicles.engineRequired")}</p>
+        )}
+        <div className="flex items-center gap-2">
+          <Button className="flex-1" size="sm" onClick={handleSubmit} disabled={!form.name.trim() || !form.engine.trim()}>
+            {editingId ? t("vehicles.update") : t("vehicles.add")}
+          </Button>
+          {editingId && (
+            <Button variant="ghost" size="sm" onClick={resetForm}>{t("vehicles.cancel")}</Button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+type FormT = Omit<Vehicle, "id">;
+type SetForm = React.Dispatch<React.SetStateAction<FormT>>;
+
+/**
+ * Collapsed-by-default disclosure of all optional vehicle detail. Kept in
+ * its own component so the primary form stays approachable — someone adding
+ * their first board sees name, type, engine, weight and nothing else. Riders
+ * who care about drivetrain, trucks, battery, BMS, or paired remotes open
+ * this and fill in what matters to them (plan 0010).
+ */
+function AdvancedVehicleFields({ form, setForm }: { form: FormT; setForm: SetForm }) {
+  const [open, setOpen] = useState(false);
+  const { remotes, addRemote, updateRemote, removeRemote } = useRemoteManager();
+
+  const numericChange = (key: keyof FormT) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    const v = e.target.value;
+    setForm((f) => ({ ...f, [key]: v === "" ? undefined : Number(v) }) as FormT);
+  };
+
+  return (
+    <Collapsible open={open} onOpenChange={setOpen} className="mt-1">
+      <CollapsibleTrigger asChild>
+        <button
+          type="button"
+          className="flex w-full items-center justify-between rounded-md border border-border/60 bg-muted/40 px-3 py-2 text-xs font-medium text-foreground hover:bg-muted/60 transition-colors"
+        >
+          <span>Advanced — drivetrain, trucks, battery, remote</span>
+          <ChevronDown className={`h-3.5 w-3.5 transition-transform ${open ? "rotate-180" : ""}`} />
+        </button>
+      </CollapsibleTrigger>
+      <CollapsibleContent className="mt-2 space-y-3 rounded-md border border-border/60 p-3">
+        {/* Drivetrain + Trucks */}
+        <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1">
             <Label className="text-xs">Drivetrain</Label>
             <Select
               value={form.drivetrain ?? "unset"}
-              onValueChange={v => setForm(f => ({ ...f, drivetrain: v === "unset" ? undefined : (v as Vehicle["drivetrain"]) }))}
+              onValueChange={(v) => setForm((f) => ({ ...f, drivetrain: v === "unset" ? undefined : (v as Vehicle["drivetrain"]) }))}
             >
               <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -246,7 +312,7 @@ export function VehiclesTab({ vehicles, vehicleTypes, onAdd, onUpdate, onRemove,
             {form.drivetrain === "other" && (
               <Input
                 value={form.drivetrainOther ?? ""}
-                onChange={e => setForm(f => ({ ...f, drivetrainOther: e.target.value }))}
+                onChange={(e) => setForm((f) => ({ ...f, drivetrainOther: e.target.value }))}
                 placeholder="Describe drivetrain"
                 className="h-8 text-sm mt-1"
               />
@@ -256,7 +322,7 @@ export function VehiclesTab({ vehicles, vehicleTypes, onAdd, onUpdate, onRemove,
             <Label className="text-xs">Trucks</Label>
             <Select
               value={form.truckType ?? "unset"}
-              onValueChange={v => setForm(f => ({ ...f, truckType: v === "unset" ? undefined : (v as Vehicle["truckType"]) }))}
+              onValueChange={(v) => setForm((f) => ({ ...f, truckType: v === "unset" ? undefined : (v as Vehicle["truckType"]) }))}
             >
               <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -271,25 +337,86 @@ export function VehiclesTab({ vehicles, vehicleTypes, onAdd, onUpdate, onRemove,
             {form.truckType === "other" && (
               <Input
                 value={form.truckTypeOther ?? ""}
-                onChange={e => setForm(f => ({ ...f, truckTypeOther: e.target.value }))}
+                onChange={(e) => setForm((f) => ({ ...f, truckTypeOther: e.target.value }))}
                 placeholder="Describe trucks"
                 className="h-8 text-sm mt-1"
               />
             )}
           </div>
         </div>
-        {form.name.trim() && !form.engine.trim() && (
-          <p className="text-xs text-destructive">{t("vehicles.engineRequired")}</p>
-        )}
-        <div className="flex items-center gap-2">
-          <Button className="flex-1" size="sm" onClick={handleSubmit} disabled={!form.name.trim() || !form.engine.trim()}>
-            {editingId ? t("vehicles.update") : t("vehicles.add")}
-          </Button>
-          {editingId && (
-            <Button variant="ghost" size="sm" onClick={resetForm}>{t("vehicles.cancel")}</Button>
-          )}
+
+        {/* Battery pack */}
+        <div>
+          <p className="text-[11px] uppercase tracking-wide text-muted-foreground mb-1">Battery pack</p>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label className="text-xs">Cells (series)</Label>
+              <Input type="number" value={form.batteryCells ?? ""} onChange={numericChange("batteryCells")} placeholder="e.g. 13" className="h-8 text-sm" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Nominal voltage (V)</Label>
+              <Input type="number" step="0.1" value={form.batteryVoltageNominalV ?? ""} onChange={numericChange("batteryVoltageNominalV")} placeholder="e.g. 48" className="h-8 text-sm" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Chemistry</Label>
+              <Select
+                value={form.batteryCellChemistry ?? "unset"}
+                onValueChange={(v) => setForm((f) => ({ ...f, batteryCellChemistry: v === "unset" ? undefined : (v as Vehicle["batteryCellChemistry"]) }))}
+              >
+                <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unset">Not set</SelectItem>
+                  <SelectItem value="Li-ion">Li-ion</SelectItem>
+                  <SelectItem value="LiPo">LiPo</SelectItem>
+                  <SelectItem value="LiFePO4">LiFePO4</SelectItem>
+                  <SelectItem value="other">Other…</SelectItem>
+                </SelectContent>
+              </Select>
+              {form.batteryCellChemistry === "other" && (
+                <Input
+                  value={form.batteryCellChemistryOther ?? ""}
+                  onChange={(e) => setForm((f) => ({ ...f, batteryCellChemistryOther: e.target.value }))}
+                  placeholder="Describe chemistry"
+                  className="h-8 text-sm mt-1"
+                />
+              )}
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Capacity (Wh)</Label>
+              <Input type="number" step="0.1" value={form.batteryCapacityWh ?? ""} onChange={numericChange("batteryCapacityWh")} placeholder="e.g. 500" className="h-8 text-sm" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Continuous (A)</Label>
+              <Input type="number" step="0.1" value={form.batteryContinuousDischargeA ?? ""} onChange={numericChange("batteryContinuousDischargeA")} placeholder="continuous" className="h-8 text-sm" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Burst (A)</Label>
+              <Input type="number" step="0.1" value={form.batteryBurstDischargeA ?? ""} onChange={numericChange("batteryBurstDischargeA")} placeholder="burst" className="h-8 text-sm" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">BMS make</Label>
+              <Input value={form.batteryBmsMake ?? ""} onChange={(e) => setForm((f) => ({ ...f, batteryBmsMake: e.target.value }))} placeholder="Bestech, Daly, …" className="h-8 text-sm" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">BMS model</Label>
+              <Input value={form.batteryBmsModel ?? ""} onChange={(e) => setForm((f) => ({ ...f, batteryBmsModel: e.target.value }))} placeholder="e.g. HCX-D223A" className="h-8 text-sm" />
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
+
+        {/* Paired remote */}
+        <div>
+          <p className="text-[11px] uppercase tracking-wide text-muted-foreground mb-1">Paired remote</p>
+          <RemoteCombobox
+            value={form.pairedRemoteId ?? null}
+            onChange={(id) => setForm((f) => ({ ...f, pairedRemoteId: id ?? undefined }))}
+            remotes={remotes}
+            onCreate={addRemote}
+            onUpdate={updateRemote}
+            onDelete={removeRemote}
+          />
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
   );
 }

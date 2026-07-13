@@ -9,7 +9,7 @@
  */
 
 export const DB_NAME = "raceplex";
-export const DB_VERSION = 14;
+export const DB_VERSION = 15;
 
 export const STORE_NAMES = {
   FILES: "files",
@@ -27,6 +27,7 @@ export const STORE_NAMES = {
   SETUP_REVISIONS: "setup-revisions", // immutable, content-addressed frozen setups (session history)
   WEATHER_CACHE: "weather-cache", // per-session historical weather (local-only, never cloud-synced)
   USERS: "users",           // v14: local user profiles for shared-machine scoping (plan 0011)
+  REMOTES: "remotes",       // v15: shared remote catalog (Hoyt Puck, Flipsky VX, …), plan 0010
 } as const;
 
 /**
@@ -57,6 +58,7 @@ export const USER_SCOPED_STORES = [
   STORE_NAMES.GRAPH_PREFS,
   STORE_NAMES.VEHICLE_TYPES,
   STORE_NAMES.SETUP_TEMPLATES,
+  STORE_NAMES.REMOTES,
   STORE_NAMES.SESSION_VIDEOS,
   STORE_NAMES.ENGINES,
   STORE_NAMES.LAP_SNAPSHOTS,
@@ -147,6 +149,13 @@ export function openDB(): Promise<IDBDatabase> {
       // seed user's id so nothing disappears on upgrade.
       if (!db.objectStoreNames.contains(STORE_NAMES.USERS)) {
         db.createObjectStore(STORE_NAMES.USERS, { keyPath: "id" });
+      }
+
+      // v15: Reusable remote catalog (Hoyt Puck, Flipsky VX, Metr, …). Per
+      // plan 0010: each user has their own catalog seeded from a common list
+      // on first save; every row carries a `userId` like other scoped stores.
+      if (!db.objectStoreNames.contains(STORE_NAMES.REMOTES)) {
+        db.createObjectStore(STORE_NAMES.REMOTES, { keyPath: "id" });
       }
 
       // v14 migration: seed the default local user and back-fill every scoped
