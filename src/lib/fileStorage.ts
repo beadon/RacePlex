@@ -63,6 +63,10 @@ export interface FileMetadata {
   // Marks the bundled sample log so the browser can hide it behind the
   // "show sample files" setting. Sample files are otherwise ordinary logs.
   isSample?: boolean;
+  // Where the samples originated. Absent = unknown/imported file. `phone-gps` is
+  // recorded from a browser geolocation source (much lower precision than a real
+  // GPS logger); the session view surfaces a small yield warning for these.
+  source?: "device" | "phone-gps" | "import";
   // Post-session measurements entered on the Notes tab (tire pressures, weight).
   postSession?: PostSessionData;
 }

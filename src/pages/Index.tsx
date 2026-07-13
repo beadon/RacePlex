@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, lazy, Suspense } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Gauge, Map, ListOrdered, BarChart3, FolderOpen, Play, Pause, StepBack, StepForward, Eye, EyeOff, AlertCircle, Wrench, NotebookPen, SlidersHorizontal, Columns2 } from "lucide-react";
+import { Gauge, Map, ListOrdered, BarChart3, FolderOpen, Play, Pause, StepBack, StepForward, Eye, EyeOff, AlertCircle, AlertTriangle, Wrench, NotebookPen, SlidersHorizontal, Columns2 } from "lucide-react";
 import { BrandLogo } from "@/components/BrandLogo";
 import { Dashboard } from "@/pages/Dashboard";
 import { useAutoOpenLastSession } from "@/hooks/useAutoOpenLastSession";
@@ -206,7 +206,7 @@ export default function Index() {
 
   // Session metadata
   const sessionMeta = useSessionMetadata(currentFileName);
-  const { cachedWeatherStation, sessionKartId, sessionSetupId, sessionSetupRev, postSession } = sessionMeta;
+  const { cachedWeatherStation, sessionKartId, sessionSetupId, sessionSetupRev, postSession, sessionSource } = sessionMeta;
 
   // Playback
   const { isPlaying, toggle: togglePlayback, averageFrameRate } = usePlayback({
@@ -772,20 +772,44 @@ export default function Index() {
             <span className="truncate text-sm font-semibold text-warning-foreground">{tl("readOnly.banner")}</span>
           </div>
         ) : (
-          <button
-            type="button"
-            onClick={() => {
-              // Explicit "go home" — remember it so the next reload lands
-              // on the dashboard instead of auto-reopening this session.
-              markExplicitClose();
-              clearSession();
-            }}
-            aria-label={t("header.home")}
-            className="flex items-center gap-3 rounded-md focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <BrandLogo className="w-6 h-6" />
-            <span className="font-semibold text-foreground hidden sm:inline">RacePlex</span>
-          </button>
+          <div className="flex items-center gap-2 min-w-0">
+            <button
+              type="button"
+              onClick={() => {
+                // Explicit "go home" — remember it so the next reload lands
+                // on the dashboard instead of auto-reopening this session.
+                markExplicitClose();
+                clearSession();
+              }}
+              aria-label={t("header.home")}
+              className="flex items-center gap-3 rounded-md focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <BrandLogo className="w-6 h-6" />
+              <span className="font-semibold text-foreground hidden sm:inline">RacePlex</span>
+            </button>
+            {sessionSource === "phone-gps" && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span
+                      aria-label="Low-precision data source"
+                      className="inline-flex items-center gap-1 rounded-full border border-warning/40 bg-warning/15 px-2 py-0.5 text-xs font-medium text-warning-foreground"
+                    >
+                      <AlertTriangle className="w-3 h-3" />
+                      <span className="hidden sm:inline">Phone GPS</span>
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="max-w-xs">
+                    <p>
+                      This session was recorded with the device's built-in GPS
+                      (~1 Hz, 5–10 m position error, no g-force). Speed and lap
+                      timing are approximate compared to a dedicated logger.
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+          </div>
         )}
 
         <div className="flex items-center gap-2">

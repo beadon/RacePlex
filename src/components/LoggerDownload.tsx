@@ -34,6 +34,12 @@ const AlfanoDownload = lazy(() =>
   import("@/components/AlfanoDownload").then((m) => ({ default: m.AlfanoDownload })),
 );
 
+// The phone-GPS recorder wraps the lap-timer tool + first-time precision
+// warning; lazy so the geolocation stack stays off the eager bundle.
+const PhoneGpsRecord = lazy(() =>
+  import("@/components/PhoneGpsRecord").then((m) => ({ default: m.PhoneGpsRecord })),
+);
+
 interface LoggerDownloadProps {
   onDataLoaded: (data: ParsedData, fileName?: string) => void;
   autoSave?: boolean;
@@ -63,6 +69,7 @@ export function LoggerDownload({ onDataLoaded, autoSave, autoSaveFile, renderTri
   const [fledglingActive, setFledglingActive] = useState(false);
   const [mychronActive, setMychronActive] = useState(false);
   const [alfanoActive, setAlfanoActive] = useState(false);
+  const [phoneGpsActive, setPhoneGpsActive] = useState(false);
 
   const openPicker = useCallback(() => setPickerOpen(true), []);
 
@@ -94,6 +101,10 @@ export function LoggerDownload({ onDataLoaded, autoSave, autoSaveFile, renderTri
         onSelectAlfano={() => {
           setPickerOpen(false);
           setAlfanoActive(true);
+        }}
+        onSelectPhoneGps={() => {
+          setPickerOpen(false);
+          setPhoneGpsActive(true);
         }}
       />
 
@@ -140,6 +151,12 @@ export function LoggerDownload({ onDataLoaded, autoSave, autoSaveFile, renderTri
             autoSaveFile={autoSaveFile}
             onClose={() => setAlfanoActive(false)}
           />
+        </Suspense>
+      )}
+
+      {phoneGpsActive && (
+        <Suspense fallback={null}>
+          <PhoneGpsRecord open={phoneGpsActive} onClose={() => setPhoneGpsActive(false)} />
         </Suspense>
       )}
     </>
