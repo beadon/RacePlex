@@ -185,7 +185,17 @@
     "waitingHint": "Drive above 5 mph to start logging.",
     "statusRecording": "Recording",
     "statusEnded": "Ended",
-    "statusWaiting": "Waiting"
+    "statusWaiting": "Waiting",
+    "iosLocationDenied": {
+      "title": "Location access is off for Safari",
+      "body": "RacePlex can't record without it. Turn it back on:",
+      "step1": "Open the Settings app",
+      "step2": "Privacy & Security → Location Services",
+      "step3": "Make sure Location Services is on, then scroll to Safari Websites and set it to “Ask Next Time or When I Share” or “While Using the App”",
+      "step4": "Come back here and reload this page",
+      "altTitle": "Or, without leaving Safari:",
+      "altBody": "Tap the “AA” icon in the address bar → Website Settings → Location → Allow, then reload."
+    }
   },
   "myData": {
     "name": "My Data",

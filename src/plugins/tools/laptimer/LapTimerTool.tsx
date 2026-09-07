@@ -27,6 +27,7 @@ import type { PluginPanelProps } from "@/plugins/panels";
 import type { Lap } from "@/types/racing";
 import { formatLapTime, formatSectorTime } from "@/lib/lapCalculation";
 import { useWakeLock } from "@/hooks/useWakeLock";
+import { isIosSafari } from "@/lib/iosSafari";
 import { useLapTimer } from "./useLapTimer";
 import { useToolsT, type ToolsKey } from "../i18n";
 import type { TimingState, GpsObservation, SessionPhase } from "@/lib/gps";
@@ -41,7 +42,7 @@ function fmtLap(ms: number | null | undefined): string {
 export default function LapTimerTool(props: PluginPanelProps) {
   const t = useToolsT();
   const logger = useLapTimer();
-  const { phase, timing, laps, latest, saving, savedFileName, error, endSession, reset } = logger;
+  const { phase, timing, laps, latest, saving, savedFileName, error, errorCode, endSession, reset } = logger;
   const [view, setView] = useState<View>("live");
   const [confirmOpen, setConfirmOpen] = useState(false);
 
@@ -81,10 +82,14 @@ export default function LapTimerTool(props: PluginPanelProps) {
         </div>
       </div>
 
-      {error && (
-        <div className="mx-3 mt-2 rounded border border-destructive/50 bg-destructive/10 p-2 text-xs text-destructive">
-          {error}
-        </div>
+      {error && errorCode === "permission-denied" && isIosSafari() ? (
+        <IosLocationDeniedHelp />
+      ) : (
+        error && (
+          <div className="mx-3 mt-2 rounded border border-destructive/50 bg-destructive/10 p-2 text-xs text-destructive">
+            {error}
+          </div>
+        )
       )}
 
       <div className="min-h-0 flex-1 overflow-auto overscroll-contain">
@@ -309,6 +314,31 @@ function SpeedometerView({
           {t("laptimer.gpsQuality", { accuracy: latest.fix.accuracy.toFixed(0), quality: latest.fix.quality })}
         </p>
       </div>
+    </div>
+  );
+}
+
+/**
+ * iOS Safari denies geolocation with no in-page way to re-request it — the
+ * only recovery is the OS/browser's own settings. Shown in place of the
+ * generic error banner when `errorCode === "permission-denied"` on iOS
+ * Safari specifically (`lib/iosSafari.ts`); every other browser/error keeps
+ * the plain message, since these exact steps don't apply anywhere else.
+ */
+function IosLocationDeniedHelp() {
+  const t = useToolsT();
+  return (
+    <div className="mx-3 mt-2 space-y-2 rounded border border-destructive/50 bg-destructive/10 p-3 text-xs text-destructive">
+      <p className="font-semibold">{t("laptimer.iosLocationDenied.title")}</p>
+      <p>{t("laptimer.iosLocationDenied.body")}</p>
+      <ol className="list-decimal space-y-1 pl-4">
+        <li>{t("laptimer.iosLocationDenied.step1")}</li>
+        <li>{t("laptimer.iosLocationDenied.step2")}</li>
+        <li>{t("laptimer.iosLocationDenied.step3")}</li>
+        <li>{t("laptimer.iosLocationDenied.step4")}</li>
+      </ol>
+      <p className="pt-1 font-semibold">{t("laptimer.iosLocationDenied.altTitle")}</p>
+      <p>{t("laptimer.iosLocationDenied.altBody")}</p>
     </div>
   );
 }

@@ -11,6 +11,7 @@
 import {
   type CustomGps,
   type GpsObservation,
+  type GpsErrorCode,
   type RealtimeLapTimer,
   type TimingState,
   EMPTY_TIMING_STATE,
@@ -40,6 +41,13 @@ export interface LapTimerSnapshot {
   /** Filename once the session has been saved. */
   savedFileName: string | null;
   error: string | null;
+  /**
+   * Normalized code for `error`, when it came from the GPS source (null for a
+   * save error or no error). `'permission-denied'` is what the UI checks to
+   * offer OS-specific re-enable instructions (issue: iOS Safari location
+   * permission denial leaves the tool silently unable to record).
+   */
+  errorCode: GpsErrorCode | null;
 }
 
 export const INITIAL_SNAPSHOT: LapTimerSnapshot = {
@@ -50,6 +58,7 @@ export const INITIAL_SNAPSHOT: LapTimerSnapshot = {
   saving: false,
   savedFileName: null,
   error: null,
+  errorCode: null,
 };
 
 export interface LapTimerSessionDeps {
@@ -87,7 +96,7 @@ export class LapTimerSession {
   /** Subscribe to the GPS source and begin capturing. */
   start(): void {
     this.offFix = this.deps.gps.onFix((obs) => this.handleFix(obs));
-    this.offErr = this.deps.gps.onError((err) => this.patch({ error: err.message }));
+    this.offErr = this.deps.gps.onError((err) => this.patch({ error: err.message, errorCode: err.code }));
     this.deps.gps.start();
   }
 
@@ -182,7 +191,11 @@ export class LapTimerSession {
       });
       this.patch({ saving: false, savedFileName: fileName });
     } catch (e) {
-      this.patch({ saving: false, error: `Failed to save session: ${e instanceof Error ? e.message : String(e)}` });
+      this.patch({
+        saving: false,
+        error: `Failed to save session: ${e instanceof Error ? e.message : String(e)}`,
+        errorCode: null,
+      });
     }
   }
 
