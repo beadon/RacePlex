@@ -15,6 +15,11 @@ import type { DragySample } from "@/lib/live/dragyDecoder";
 import type { FieldMapping, GpsSample, ParsedData } from "@/types/racing";
 import { calculateBounds, speedTriple } from "@/lib/parserUtils";
 import { buildLiveCaptureFileName, serializeLiveCapture } from "@/lib/live/liveCapturePackage";
+import { ConcurrentSourceMerger } from "@/lib/live/concurrentCapture";
+import { applyVescMergeToExtraFields, appendVescFieldMappings } from "@/lib/live/vescMergeFields";
+import type { VescValues } from "@/lib/live/vescDecoder";
+import { useVescSidecar } from "@/hooks/useVescSidecar";
+import { VescSidecarControl } from "@/components/VescSidecarControl";
 
 interface DragyLiveRecordProps {
   open: boolean;
@@ -45,6 +50,13 @@ export function DragyLiveRecord({ open, onClose, onDataLoaded }: DragyLiveRecord
   const startDateRef = useRef<Date | undefined>(undefined);
   const subUnsubRef = useRef<(() => void) | null>(null);
 
+  // Optional second BLE connection (issue #58) — merges by receipt time, not
+  // either device's own clock; see concurrentCapture.ts for why.
+  // A stable object created once, so useState's lazy initializer (not
+  // useRef — its value must never be read during render).
+  const [merger] = useState(() => new ConcurrentSourceMerger<unknown, VescValues>());
+  const vesc = useVescSidecar(merger);
+
   const reset = useCallback(() => {
     setPhase("idle");
     setStatus("");
@@ -62,7 +74,13 @@ export function DragyLiveRecord({ open, onClose, onDataLoaded }: DragyLiveRecord
     subUnsubRef.current = null;
     try { await connectionRef.current?.disconnect(); } catch { /* ignore */ }
     connectionRef.current = null;
-  }, []);
+    try { await vesc.disconnect(); } catch { /* ignore */ }
+    // Only vesc.disconnect (itself useCallback-stable off `merger`, which never
+    // changes) is used here — depending on the whole `vesc` object, which is a
+    // fresh literal every render, would re-run this effect's cleanup+setup on
+    // every render, actively tearing down BLE connections mid-session.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [vesc.disconnect]);
 
   useEffect(() => {
     if (!open) return;
@@ -90,22 +108,26 @@ export function DragyLiveRecord({ open, onClose, onDataLoaded }: DragyLiveRecord
     const list = samplesRef.current;
     if (list.length > 0 && !(t > list[list.length - 1].t)) return;
 
+    const extraFields: Record<string, number> = {
+      "Altitude (m)": sample.altitudeM,
+      "GPS Accuracy (m)": sample.hAccM,
+      Satellites: sample.numSV,
+      HDOP: sample.pDOP,
+    };
+    const merged = merger.addPrimary({ receivedAt: Date.now(), data: null });
+    applyVescMergeToExtraFields(extraFields, merged);
+
     list.push({
       t,
       lat: sample.latitude,
       lon: sample.longitude,
       ...speedTriple(sample.speedMps),
       heading: sample.headingDeg,
-      extraFields: {
-        "Altitude (m)": sample.altitudeM,
-        "GPS Accuracy (m)": sample.hAccM,
-        Satellites: sample.numSV,
-        HDOP: sample.pDOP,
-      },
+      extraFields,
     });
     setSampleCount(list.length);
     setLatest({ speedKph: sample.speedMps * 3.6, nSat: sample.numSV });
-  }, []);
+  }, [merger]);
 
   const handleConnect = useCallback(async () => {
     setPhase("connecting");
@@ -141,6 +163,7 @@ export function DragyLiveRecord({ open, onClose, onDataLoaded }: DragyLiveRecord
         { index: -4, name: "Satellites", enabled: false },
         { index: -5, name: "HDOP", enabled: false },
       ];
+      appendVescFieldMappings(fieldMappings, samples);
       const data: ParsedData = {
         samples,
         fieldMappings,
@@ -207,6 +230,11 @@ export function DragyLiveRecord({ open, onClose, onDataLoaded }: DragyLiveRecord
                   Speed {latest.speedKph.toFixed(1)} km/h · {latest.nSat} sats
                 </p>
               )}
+              {/* Optional second BLE connection alongside this one (issue #58) —
+                  merged by receipt time, flagged suspect when stale. */}
+              <div className="border-t border-border pt-2">
+                <VescSidecarControl vesc={vesc} />
+              </div>
             </div>
           )}
           {phase === "ending" && (
