@@ -29,7 +29,7 @@
         "@types/web-bluetooth": "^0.0.21",
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",
-        "fit-file-parser": "^3.0.2",
+        "fit-file-parser": "^5.0.2",
         "fix-webm-duration": "^1.0.6",
         "gopro-telemetry": "^1.2.11",
         "gpmf-extract": "^0.3.3",
@@ -935,7 +935,7 @@
 
     "find-up": ["find-up@5.0.0", "", { "dependencies": { "locate-path": "^6.0.0", "path-exists": "^4.0.0" } }, "sha512-78/PXT1wlLLDgTzDs7sjq9hzz0vXD+zn+7wypEe4fXQxCmdmqfGsEPQxmiCSQI3ajFV91bVSsvNtrJRiW6nGng=="],
 
-    "fit-file-parser": ["fit-file-parser@3.0.2", "", { "dependencies": { "buffer": "^6.0.3" } }, "sha512-Yg7XfByuKh8CypgHqNcZSLyV9aWo14pkZ1oWR8VfdHBhuJN856PvlfYAkLSTD58USE5S+iSYE9f9diil043Xag=="],
+    "fit-file-parser": ["fit-file-parser@5.0.2", "", { "dependencies": { "buffer": "^6.0.3" } }, "sha512-X30bjaoIV4huPxt2Z16zBhaOurn2xKNEGOyEsxHrQOvHZ+pLZUa0TBRJSsLFQtZzDOOc/xM+mIhdfPw1tds80w=="],
 
     "fix-webm-duration": ["fix-webm-duration@1.0.6", "", {}, "sha512-zVAqi4gE+8ywxJuAyV/rlJVX6CMtvyapEbQx6jyoeX9TMjdqAlt/FdG5d7rXSSkDVzTvS0H7CtwzHcH/vh4FPA=="],
 
