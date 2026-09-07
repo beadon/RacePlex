@@ -170,6 +170,7 @@ describe("LapTimerSession", () => {
     const s = session.getSnapshot();
     expect(s.error).toMatch(/disk full/);
     expect(s.saving).toBe(false);
+    expect(s.errorCode).toBeNull();
   });
 
   it("auto-ends and persists after the stopped-idle timeout", async () => {
@@ -183,10 +184,11 @@ describe("LapTimerSession", () => {
     expect(saveLog).toHaveBeenCalledTimes(1);
   });
 
-  it("forwards a GPS error to the snapshot", () => {
+  it("forwards a GPS error and its normalized code to the snapshot", () => {
     const { geo, session } = setup();
     session.start();
     geo.errorCb?.({ code: 1, message: "denied" } as GeolocationPositionError);
     expect(session.getSnapshot().error).toBe("denied");
+    expect(session.getSnapshot().errorCode).toBe("permission-denied");
   });
 });
