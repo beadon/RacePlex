@@ -64,6 +64,14 @@ interface LoggerDownloadProps {
    * button is rendered.
    */
   renderTrigger?: (args: { onOpen: () => void }) => ReactNode;
+  /**
+   * Optional second trigger that starts phone-GPS recording directly, no
+   * picker dialog in between (issue #54: Dashboard's "This device" tile).
+   * Pair with `hidePhoneGpsInPicker` so the picker doesn't also offer it.
+   */
+  renderPhoneTrigger?: (args: { onOpen: () => void }) => ReactNode;
+  /** Drop the "This phone (GPS)" row from the picker — see `renderPhoneTrigger`. */
+  hidePhoneGpsInPicker?: boolean;
 }
 
 /**
@@ -73,7 +81,14 @@ interface LoggerDownloadProps {
  * (Bluetooth serial) mount their native download flows on the native shell, and
  * fall back to explanatory dialogs inside the picker on the web.
  */
-export function LoggerDownload({ onDataLoaded, autoSave, autoSaveFile, renderTrigger }: LoggerDownloadProps) {
+export function LoggerDownload({
+  onDataLoaded,
+  autoSave,
+  autoSaveFile,
+  renderTrigger,
+  renderPhoneTrigger,
+  hidePhoneGpsInPicker,
+}: LoggerDownloadProps) {
   const { t } = useTranslation("logger");
   const { bleSupported } = useDeviceContext();
   // On the native app the webview has no Web Bluetooth, so we route the Fledgling
@@ -100,12 +115,15 @@ export function LoggerDownload({ onDataLoaded, autoSave, autoSaveFile, renderTri
         </Button>
       )}
 
+      {renderPhoneTrigger?.({ onOpen: () => setPhoneGpsActive(true) })}
+
       <LoggerPicker
         open={pickerOpen}
         onOpenChange={setPickerOpen}
         // Native downloads the Fledgling over BLE IPC, so the tile works there
         // even though the native webview lacks Web Bluetooth.
         bleSupported={bleSupported || native}
+        hidePhoneGps={hidePhoneGpsInPicker}
         onSelectFledgling={() => {
           setPickerOpen(false);
           setFledglingActive(true);

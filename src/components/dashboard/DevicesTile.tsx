@@ -13,6 +13,9 @@ interface DevicesTileProps {
  * Fledgling logger and web BLE has no "list previously seen devices" API in
  * standard browsers. When native (Tauri) IPC lands more device kinds, this
  * tile can grow into a real inventory.
+ *
+ * "External Device" (not "Devices") since phone-GPS recording has its own
+ * top-level tile now (issue #54) — this one is specifically hardware.
  */
 export function DevicesTile({ onOpen }: DevicesTileProps) {
   return (
@@ -24,7 +27,7 @@ export function DevicesTile({ onOpen }: DevicesTileProps) {
       <div>
         <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
           <Bluetooth className="w-4 h-4 text-primary" />
-          Devices
+          External Device
         </h2>
         <p className="mt-1 text-xs text-muted-foreground">
           Download logs straight off a datalogger over Bluetooth or the wired connection.

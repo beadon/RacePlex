@@ -56,6 +56,12 @@ interface LoggerPickerProps {
    * NAV-PVT telemetry. Same Chromium-only constraint as RaceBox.
    */
   onSelectDragyLive?: () => void;
+  /**
+   * Drop the "This phone (GPS)" row — for a host that promoted it to its own
+   * top-level entry point instead (issue #54: Dashboard's "This device" tile).
+   * Files-drawer and Garage→Device tab omit this and keep the row.
+   */
+  hidePhoneGps?: boolean;
 }
 
 type Availability =
@@ -126,6 +132,7 @@ export function LoggerPicker({
   onSelectPhoneGps,
   onSelectRaceBoxLive,
   onSelectDragyLive,
+  hidePhoneGps,
 }: LoggerPickerProps) {
   const { t } = useTranslation("logger");
   const [info, setInfo] = useState<"mychron" | "alfano" | null>(null);
@@ -209,12 +216,14 @@ export function LoggerPicker({
               availability={alfanoAvailability}
               onClick={() => (native && onSelectAlfano ? onSelectAlfano() : setInfo("alfano"))}
             />
-            <LoggerRow
-              name={PHONE_GPS_NAME}
-              tag="Record with this device's built-in GPS — no logger needed."
-              availability={phoneGpsAvailability}
-              onClick={() => onSelectPhoneGps?.()}
-            />
+            {!hidePhoneGps && (
+              <LoggerRow
+                name={PHONE_GPS_NAME}
+                tag="Record with this device's built-in GPS — no logger needed."
+                availability={phoneGpsAvailability}
+                onClick={() => onSelectPhoneGps?.()}
+              />
+            )}
           </div>
 
           {/* Don't see your logger? Open a GitHub issue. Open-source projects

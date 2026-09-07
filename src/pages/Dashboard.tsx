@@ -18,6 +18,7 @@ import { GarageTile } from "@/components/dashboard/GarageTile";
 import { TracksTile } from "@/components/dashboard/TracksTile";
 import { DevicesTile } from "@/components/dashboard/DevicesTile";
 import { ImportTile } from "@/components/dashboard/ImportTile";
+import { ThisDeviceTile } from "@/components/dashboard/ThisDeviceTile";
 import type { AppSettings } from "@/hooks/useSettings";
 import type { CanonicalFieldId } from "@/lib/fieldResolver";
 import type { ParsedData } from "@/types/racing";
@@ -128,12 +129,14 @@ export function Dashboard({
           <h2 className="text-xs uppercase tracking-wide text-muted-foreground mb-3">
             Add data
           </h2>
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-4 sm:grid-cols-3">
             <LoggerDownload
               onDataLoaded={onDataLoaded}
               autoSave={autoSave}
               autoSaveFile={autoSaveFile}
               renderTrigger={({ onOpen }) => <DevicesTile onOpen={onOpen} />}
+              renderPhoneTrigger={({ onOpen }) => <ThisDeviceTile onOpen={onOpen} />}
+              hidePhoneGpsInPicker
             />
             <ImportTile
               onDataLoaded={onDataLoaded}
