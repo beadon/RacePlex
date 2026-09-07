@@ -2,7 +2,7 @@ import { useCallback, useRef, useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation, Trans } from "react-i18next";
 import { toast } from "sonner";
-import { Trash2, Download, Upload, FolderOpen, Loader2, Video, Cloud, CloudDownload, GitCompare, X } from "lucide-react";
+import { Trash2, Download, Upload, FolderOpen, Loader2, Video, Cloud, CloudDownload, GitCompare, X, Bug } from "lucide-react";
 import { useComparisonBin } from "@/hooks/useComparisonBin";
 import { Button } from "@/components/ui/button";
 import { FileEntry, FileMetadata, getFileMetadata } from "@/lib/fileStorage";
@@ -22,6 +22,7 @@ import { listSessionVideos, StoredVideoMeta } from "@/lib/videoFileStorage";
 import { PluginMount } from "@/plugins/PluginMount";
 import { MountSlot } from "@/plugins/mounts";
 import { DataExportSection } from "@/components/DataExportSection";
+import { ReportDataIssueDialog } from "@/components/ReportDataIssueDialog";
 
 function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -197,6 +198,9 @@ export function FilesTab({
       }
     } catch (e) {
       console.error("Failed to load file:", e);
+      toast.error("Couldn't open this file.", {
+        description: e instanceof Error ? e.message : undefined,
+      });
     } finally {
       setLoading(false);
       setConfirmLoad(null);
@@ -254,6 +258,9 @@ export function FilesTab({
         onClose();
       } catch (e) {
         console.error("Failed to process uploaded file:", e);
+        toast.error("Couldn't import this file.", {
+          description: e instanceof Error ? e.message : undefined,
+        });
       } finally {
         setLoading(false);
         if (fileInputRef.current) fileInputRef.current.value = "";
@@ -464,6 +471,14 @@ export function FilesTab({
           <p className="text-xs text-muted-foreground text-center">{t("files.storageUnavailable")}</p>
         )}
         <DataExportSection compact />
+        <ReportDataIssueDialog
+          trigger={
+            <Button variant="ghost" size="sm" className="w-full justify-start text-muted-foreground">
+              <Bug className="w-3.5 h-3.5 mr-1.5" />
+              Report a data issue
+            </Button>
+          }
+        />
       </div>
 
       {/* Bottom Actions */}
@@ -471,7 +486,7 @@ export function FilesTab({
         <input
           ref={fileInputRef}
           type="file"
-          accept=".csv,.gpx,.nmea,.txt,.ubx,.vbo,.dove,.ld"
+          accept=".csv,.gpx,.nmea,.txt,.ubx,.vbo,.dove,.dovex,.ld,.xrk,.xrz,.ibt,.mp4,.fit"
           onChange={handleUpload}
           className="hidden"
         />

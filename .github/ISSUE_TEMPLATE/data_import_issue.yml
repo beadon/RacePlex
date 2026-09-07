@@ -1,0 +1,84 @@
+name: Data Import / Display Issue
+description: A ride you recorded doesn't display right — parse failure, blank map, wrong laps, missing channels.
+labels: ["bug", "data import"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting this. RacePlex runs entirely in your browser with no
+        server, so there's no support inbox to send a file to — this issue is the
+        only way we can receive one. Opening it needs a free GitHub account.
+
+        **In the app:** Settings → "Something not displaying right?" → **Report a
+        data issue** builds the diagnostic report below for you automatically —
+        paste what it gives you into the field below.
+
+        **This issue is public.** The diagnostic report has no GPS coordinates in
+        it, only counts and channel names. If you attach the actual file (drag it
+        into any text box below), anyone can see the GPS track inside it,
+        including where a ride started or ended. Only attach it if that's fine
+        with you — a short trimmed sample works too.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you expect, and what did you see instead?
+      placeholder: I imported a RaceBox CSV and the map never drew — the file loaded but the screen stayed blank...
+    validations:
+      required: true
+  - type: input
+    id: logger
+    attributes:
+      label: Device / software that produced the file
+      placeholder: "RaceBox Micro, VESC-based ESC, GoPro Hero 12, pOnewheel, ..."
+    validations:
+      required: false
+  - type: dropdown
+    id: file-format
+    attributes:
+      label: File format involved
+      options:
+        - "Not sure — the app didn't tell me"
+        - "GPX (.gpx)"
+        - "RaceBox CSV (.csv)"
+        - "VESC CSV (.csv)"
+        - "Generic / other GPS CSV (.csv)"
+        - "RaceChrono CSV v3 (.csv)"
+        - "MoTeC CSV (.csv)"
+        - "AiM MyChron CSV (.csv)"
+        - "Alfano CSV (.csv)"
+        - "AiM XRK/XRZ (.xrk/.xrz)"
+        - "MoTeC LD (.ld)"
+        - "GoPro video (.mp4)"
+        - "FIT (.fit)"
+        - "iRacing telemetry (.ibt)"
+        - "UBX (.ubx)"
+        - "VBO (.vbo)"
+        - "Dove (.dove)"
+        - "Dovex (.dovex)"
+        - "NMEA (.nmea/.txt/.csv)"
+        - "Other / unsure"
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostic-report
+    attributes:
+      label: Diagnostic report
+      description: Paste what the app's "Report a data issue" button gave you.
+      render: text
+    validations:
+      required: false
+  - type: textarea
+    id: sample
+    attributes:
+      label: Sample file
+      description: Drag the file in here, or a trimmed excerpt (see the public-data note above).
+    validations:
+      required: false
+  - type: input
+    id: environment
+    attributes:
+      label: Browser & OS
+      placeholder: "Chrome 125 on Windows 11 / Safari 17 on iOS"
+    validations:
+      required: false

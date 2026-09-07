@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Settings, Eye, EyeOff, Gauge, Activity, Circle, HardDrive, Languages, Sun, Moon, Palette, RefreshCw, Timer, Ruler, ChevronDown, Map, CloudSun, Wifi } from "lucide-react";
+import { Settings, Eye, EyeOff, Gauge, Activity, Circle, HardDrive, Languages, Sun, Moon, Palette, RefreshCw, Timer, Ruler, ChevronDown, Map, CloudSun, Wifi, Bug } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -29,6 +29,7 @@ import { PALETTES } from "@/lib/palettes";
 import { cn } from "@/lib/utils";
 import { UsersManagerPanel } from "@/components/UsersManagerPanel";
 import { DataExportSection } from "@/components/DataExportSection";
+import { ReportDataIssueDialog } from "@/components/ReportDataIssueDialog";
 
 interface SettingsModalProps {
   settings: AppSettings;
@@ -751,6 +752,23 @@ export function SettingsModal({
 
           {/* Export / import everything in this browser (plan 0013). */}
           <DataExportSection />
+
+          <Separator />
+
+          {/* Report a broken import/display (plan 0014). */}
+          <div className="flex items-center gap-2">
+            <Bug className="w-4 h-4 text-muted-foreground" />
+            <h3 className="font-medium">Something not displaying right?</h3>
+          </div>
+          <div className="pl-6">
+            <ReportDataIssueDialog
+              trigger={
+                <Button variant="outline" size="sm">
+                  Report a data issue
+                </Button>
+              }
+            />
+          </div>
 
           <Separator />
 
