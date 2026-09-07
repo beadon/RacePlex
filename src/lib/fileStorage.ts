@@ -74,6 +74,14 @@ export interface FileMetadata {
   // recorded from a browser geolocation source (much lower precision than a real
   // GPS logger); the session view surfaces a small yield warning for these.
   source?: "device" | "phone-gps" | "import";
+  /**
+   * What kind of session this was, chosen at recording time (RecordingModeDialog,
+   * issue #43). Absent = not classified (an imported file, or a recording made
+   * before this existed). A future display can use this to surface the metrics a
+   * rider actually cares about — lap times for `track`, 0-60/quarter-mile for
+   * `drag` — instead of showing everything regardless of relevance.
+   */
+  sessionType?: "simple" | "drag" | "track";
   // Post-session measurements entered on the Notes tab (tire pressures, weight).
   postSession?: PostSessionData;
   /**

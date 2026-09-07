@@ -3,7 +3,7 @@ import { useState } from "react";
 // stand-in AboutDialog uses for "this links to a source repo".
 import { GitBranch } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
-import { LoggerDownload } from "@/components/LoggerDownload";
+import { RecordingModeDialog } from "@/components/RecordingModeDialog";
 import { TrackEditor } from "@/components/TrackEditor";
 import { SettingsModal } from "@/components/SettingsModal";
 import { ToolsDialog } from "@/components/ToolsDialog";
@@ -16,9 +16,8 @@ import { SessionsSummaryTile } from "@/components/dashboard/SessionsSummaryTile"
 import { RecentSessionsTile } from "@/components/dashboard/RecentSessionsTile";
 import { GarageTile } from "@/components/dashboard/GarageTile";
 import { TracksTile } from "@/components/dashboard/TracksTile";
-import { DevicesTile } from "@/components/dashboard/DevicesTile";
 import { ImportTile } from "@/components/dashboard/ImportTile";
-import { ThisDeviceTile } from "@/components/dashboard/ThisDeviceTile";
+import { RecordSessionTile } from "@/components/dashboard/RecordSessionTile";
 import type { AppSettings } from "@/hooks/useSettings";
 import type { CanonicalFieldId } from "@/lib/fieldResolver";
 import type { ParsedData } from "@/types/racing";
@@ -58,7 +57,7 @@ interface DashboardProps {
  *      corresponding manager. These are the "what do I have" cards.
  *   2. **Recent sessions** — the full clickable list. Returning-user primary
  *      target: pick up a session and go.
- *   3. **Add data** — Devices + Import. Actions that bring NEW data in,
+ *   3. **Add data** — Record + Import. Actions that bring NEW data in,
  *      visually separated from the "view what I have" zone above.
  */
 export function Dashboard({
@@ -78,6 +77,7 @@ export function Dashboard({
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [tracksOpen, setTracksOpen] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
+  const [recordingModeOpen, setRecordingModeOpen] = useState(false);
 
   return (
     <AppShell
@@ -129,21 +129,21 @@ export function Dashboard({
           <h2 className="text-xs uppercase tracking-wide text-muted-foreground mb-3">
             Add data
           </h2>
-          <div className="grid gap-4 sm:grid-cols-3">
-            <LoggerDownload
-              onDataLoaded={onDataLoaded}
-              autoSave={autoSave}
-              autoSaveFile={autoSaveFile}
-              renderTrigger={({ onOpen }) => <DevicesTile onOpen={onOpen} />}
-              renderPhoneTrigger={({ onOpen }) => <ThisDeviceTile onOpen={onOpen} />}
-              hidePhoneGpsInPicker
-            />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <RecordSessionTile onOpen={() => setRecordingModeOpen(true)} />
             <ImportTile
               onDataLoaded={onDataLoaded}
               autoSave={autoSave}
               autoSaveFile={autoSaveFile}
             />
           </div>
+          <RecordingModeDialog
+            open={recordingModeOpen}
+            onOpenChange={setRecordingModeOpen}
+            onDataLoaded={onDataLoaded}
+            autoSave={autoSave}
+            autoSaveFile={autoSaveFile}
+          />
         </div>
       </div>
 
