@@ -290,7 +290,19 @@ export default defineConfig(async ({ mode }): Promise<UserConfig> => {
       } satisfies Plugin,
       VitePWA({
         filename: "service-worker.js",
-        registerType: "autoUpdate",
+        // "prompt", not "autoUpdate" — this MUST pair with `skipWaiting: false` below. Both were
+        // "autoUpdate"/`skipWaiting: true` from initial scaffolding, which silently made the
+        // `onNeedRefresh` callback in main.tsx dead code: vite-plugin-pwa only wires it up under
+        // "prompt". Under "autoUpdate" the new service worker instead skips waiting and claims
+        // every open tab, then `window.location.reload()`s them itself, immediately, the moment it
+        // activates — no toast, no "Refresh" button, no coordination with whatever the page is
+        // doing. That produced the white-screen-on-upgrade reports: a rider's already-open tab
+        // (or an installed PWA reopened offline "at the track with no signal") could get yanked
+        // into a reload mid-navigation, and the reload's own NetworkFirst fetch for index.html can
+        // then time out with nothing good to fall back to. "prompt" restores the actual intent
+        // already written in main.tsx: show the "Update ready" toast and let `rebootToLatest()`
+        // (updateSW(true), with its own 2s hard-reset fallback) drive the reload deliberately.
+        registerType: "prompt",
         devOptions: {
           enabled: false,
         },
@@ -331,7 +343,10 @@ export default defineConfig(async ({ mode }): Promise<UserConfig> => {
         workbox: {
           cleanupOutdatedCaches: true,
           clientsClaim: true,
-          skipWaiting: true,
+          // false (Workbox's own default) — see the registerType comment above. A new service
+          // worker now waits until the rider clicks "Refresh" on the update toast, which sends it
+          // the skip-waiting message itself; clientsClaim still applies once it does activate, so
+          // every open tab updates together from that one deliberate click.
           // woff2 only: every SW-capable browser supports it, so the legacy
           // .woff fallbacks @fontsource emits would just be dead precache weight.
           globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2,json,nmea,wasm}"],

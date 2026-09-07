@@ -19,6 +19,7 @@ import { initDebugConsole } from "@/lib/debugConsole";
 import { isNativeApp } from "@/lib/platform";
 import { startVersionPolling } from "@/lib/versionCheck";
 import { runLegacyDbMigration } from "@/lib/legacyDbMigration";
+import { shouldReloadForStaleChunk, clearStaleChunkReloadGuard } from "@/lib/staleChunkRecovery";
 // Initialize i18next before render so the chosen language is active on first
 // paint (no English flash). The default export is the configured instance.
 import i18n from "@/lib/i18n";
@@ -37,6 +38,15 @@ const PERSISTENT_TOAST_DURATION_MS = 24 * 60 * 60 * 1000;
 // early/uncaught errors are caught on devices with no dev tools (?dbg=true).
 initDebugConsole();
 
+// A lazy-loaded route/component is a dynamic import() of a hashed chunk URL. A
+// tab (or installed PWA) that's been open since a since-superseded deploy —
+// or one caught between two service-worker generations mid-update — still has
+// the OLD hashed URLs in memory; GitHub Pages doesn't keep old deploys around,
+// so that fetch 404s and Vite fires this event. See staleChunkRecovery.ts.
+window.addEventListener("vite:preloadError", () => {
+  if (shouldReloadForStaleChunk()) window.location.reload();
+});
+
 // Bootstrap: copy any legacy `dove-file-manager` / `dove-plugin-*` databases
 // to the new `raceplex` / `raceplex-plugin-*` names BEFORE the first
 // `openDB()` call — otherwise a fresh empty `raceplex` DB gets created and
@@ -48,6 +58,7 @@ async function bootstrap() {
   await runLegacyDbMigration();
   initPlugins();
   createRoot(document.getElementById("root")!).render(<App />);
+  clearStaleChunkReloadGuard();
 }
 
 void bootstrap();
