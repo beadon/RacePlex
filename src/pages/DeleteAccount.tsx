@@ -32,7 +32,7 @@ export default function DeleteAccount() {
   useDocumentHead({
     title: "Delete your account — RacePlex",
     description: "Request permanent deletion of your RacePlex cloud account and all associated data.",
-    canonical: "https://lapwingdata.com/delete-account",
+    canonical: "https://beadon.github.io/RacePlex/delete-account",
   });
 
   return (
@@ -80,11 +80,10 @@ function CloudDisabledNote() {
   return (
     <div className="rounded-md border border-border bg-card p-4 text-sm">
       <p>
-        This build of the app doesn’t include cloud accounts, so there is nothing
-        to delete here. Account deletion applies to the hosted service at{" "}
-        <strong className="text-foreground">lapwingdata.com</strong>. Data created
-        in this app lives only in your browser and can be removed by clearing this
-        site’s data.
+        This build of RacePlex doesn’t include cloud accounts, so there is nothing
+        to delete here. Everything RacePlex holds lives only in your browser and
+        can be removed by clearing this site’s data (or Settings → Your data, to
+        take a copy first).
       </p>
     </div>
   );

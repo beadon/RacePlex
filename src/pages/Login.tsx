@@ -18,7 +18,7 @@ export default function Login() {
   useDocumentHead({
     title: t('login.metaTitle'),
     description: t('login.metaDescription'),
-    canonical: 'https://lapwingdata.com/login',
+    canonical: 'https://beadon.github.io/RacePlex/login',
   });
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

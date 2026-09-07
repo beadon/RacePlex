@@ -12,7 +12,6 @@ import i18n from "@/lib/i18n";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { isNativeApp } from "@/lib/platform";
 import { applyPalette } from "@/lib/palettes";
-import { MigrationBanner } from "@/components/MigrationBanner";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 
@@ -99,9 +98,6 @@ const App = () => {
         {/* Vite bakes the deploy base in (see vite.config.ts). "/" everywhere except
             a GitHub Pages project site, where the app lives under /RacePlex/. */}
         <BrowserRouter basename={import.meta.env.BASE_URL}>
-          {/* Old-domain-only migration notice (hackthetrack.net → lapwingdata.com).
-              Renders nothing on the new site. Inside the router so it can navigate. */}
-          <MigrationBanner />
           <Suspense fallback={null}>
             {enableCloud && !isNativeApp() && <PendingCheckoutRedirect />}
             <Routes>

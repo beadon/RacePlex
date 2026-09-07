@@ -1,5 +1,7 @@
 import { type ReactNode } from "react";
-import { LogIn, User } from "lucide-react";
+// lucide-react v1 dropped brand marks (including Github); GitBranch is the same
+// stand-in AboutDialog uses for "this links to a source repo".
+import { GitBranch, LogIn, User } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { BrandLogo } from "@/components/BrandLogo";
@@ -7,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { SupportedFilesDialog } from "@/components/SupportedFilesDialog";
 import { AboutDialog } from "@/components/AboutDialog";
 import { useAuth } from "@/contexts/AuthContext";
+import { interceptExternal } from "@/lib/platform";
 
 interface SiteHeaderProps {
   /** The settings modal (trigger + dialog), rendered just left of the account button. */
@@ -52,6 +55,18 @@ export function SiteHeader({
         </div>
         <div className="flex items-center gap-2">
           {children}
+          <Button variant="outline" size="sm" className="gap-2" asChild>
+            <a
+              href="https://github.com/beadon/RacePlex"
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => interceptExternal(e, "https://github.com/beadon/RacePlex")}
+              title="RacePlex on GitHub"
+            >
+              <GitBranch className="w-4 h-4" />
+              <span className="hidden sm:inline">GitHub</span>
+            </a>
+          </Button>
           {showSupportedFiles && <SupportedFilesDialog />}
           {showAbout && <AboutDialog />}
           {settingsButton}

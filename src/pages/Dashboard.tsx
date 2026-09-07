@@ -1,4 +1,7 @@
 import { useState } from "react";
+// lucide-react v1 dropped brand marks (including Github); GitBranch is the same
+// stand-in AboutDialog uses for "this links to a source repo".
+import { GitBranch } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { LoggerDownload } from "@/components/LoggerDownload";
 import { TrackEditor } from "@/components/TrackEditor";
@@ -8,6 +11,7 @@ import { SupportedDevicesDialog } from "@/components/SupportedDevicesDialog";
 import { SupportedFilesDialog } from "@/components/SupportedFilesDialog";
 import { AboutDialog } from "@/components/AboutDialog";
 import { Button } from "@/components/ui/button";
+import { interceptExternal } from "@/lib/platform";
 import { SessionsSummaryTile } from "@/components/dashboard/SessionsSummaryTile";
 import { RecentSessionsTile } from "@/components/dashboard/RecentSessionsTile";
 import { GarageTile } from "@/components/dashboard/GarageTile";
@@ -179,6 +183,17 @@ export function Dashboard({
         />
         <SupportedFilesDialog />
         <AboutDialog />
+        <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground" asChild>
+          <a
+            href="https://github.com/beadon/RacePlex"
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => interceptExternal(e, "https://github.com/beadon/RacePlex")}
+          >
+            <GitBranch className="w-4 h-4" />
+            GitHub
+          </a>
+        </Button>
       </div>
     </AppShell>
   );

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  RacePlex is a single-page app with no server-rendered content routes worth
+  indexing separately — /compare needs a rider's own local session data, and
+  /delete-account is a legal utility page, not a page anyone searches for. The
+  homepage is the one URL search engines should crawl and rank.
+-->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://beadon.github.io/RacePlex/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+</urlset>
