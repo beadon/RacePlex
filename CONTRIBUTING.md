@@ -228,5 +228,16 @@ Use the GitHub issue templates. For bugs, include the file format involved
 (parsers are format-specific) and, where possible, a sample file or the steps
 to reproduce.
 
+**A file that isn't importing or displaying right?** In the app, go to
+Settings → "Something not displaying right?" → **Report a data issue**. It runs
+the file through RacePlex's own parser locally and builds a diagnostic report
+(rows accepted/rejected, channels detected, the parse error if any) with no GPS
+coordinates in it, then opens a prefilled
+[Data Import / Display Issue](../../issues/new?template=data_import_issue.yml)
+for you (requires a GitHub account — there's no other way for us to receive a
+report, since RacePlex has no server). You then attach the actual file yourself
+by dragging it into the issue — note that GitHub issues are public, and a GPS
+log's first/last fixes are often your home.
+
 **Security issues:** please do **not** open a public issue — follow the
 disclosure process in `SECURITY.md`.

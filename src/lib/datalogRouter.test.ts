@@ -323,6 +323,20 @@ describe("parseDatalogFile — async File entry", () => {
     expect(parsed.samples.length).toBeGreaterThan(0);
   });
 
+  it("routes a .rplive live-capture package (plan 0015)", async () => {
+    const pkg = {
+      formatVersion: 1,
+      source: { kind: "racebox" },
+      samples: [
+        { t: 0, lat: 28.4, lon: -81.4, speedMps: 10, speedMph: 22.4, speedKph: 36, extraFields: {} },
+      ],
+      fieldMappings: [{ index: -1, name: "Speed", enabled: true }],
+    };
+    const file = new File([JSON.stringify(pkg)], "racebox-20260105_090307.rplive");
+    const parsed = await parseDatalogFile(file);
+    expect(parsed.samples.length).toBe(1);
+  });
+
   it("brackets the load with begin/end of the file-loading overlay", async () => {
     const states: string[] = [];
     const unsub = subscribeFileLoading((s) => states.push(s ? "active" : "idle"));

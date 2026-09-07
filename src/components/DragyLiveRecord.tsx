@@ -14,6 +14,7 @@ import type { DragyConnection } from "@/lib/live/dragyTransport";
 import type { DragySample } from "@/lib/live/dragyDecoder";
 import type { FieldMapping, GpsSample, ParsedData } from "@/types/racing";
 import { calculateBounds, speedTriple } from "@/lib/parserUtils";
+import { buildLiveCaptureFileName, serializeLiveCapture } from "@/lib/live/liveCapturePackage";
 
 interface DragyLiveRecordProps {
   open: boolean;
@@ -128,6 +129,7 @@ export function DragyLiveRecord({ open, onClose, onDataLoaded }: DragyLiveRecord
     if (samplesRef.current.length === 0) return;
     setPhase("ending");
     setStatus("Saving session…");
+    const deviceName = connectionRef.current?.name;
     try {
       await teardown();
       const samples = samplesRef.current;
@@ -146,12 +148,9 @@ export function DragyLiveRecord({ open, onClose, onDataLoaded }: DragyLiveRecord
         duration: samples[samples.length - 1]?.t ?? 0,
         startDate: start,
       };
-      const stamp = start.toISOString().replace(/[:.]/g, "-");
-      const fileName = `dragy-${stamp}.dragyjson`;
-      await saveFile(fileName, new Blob(
-        [JSON.stringify({ samples, startDate: start.toISOString() })],
-        { type: "application/json" },
-      ));
+      const source = { kind: "dragy" as const, deviceName };
+      const fileName = buildLiveCaptureFileName(source, start);
+      await saveFile(fileName, serializeLiveCapture(data, source));
       await saveFileMetadata({
         fileName,
         trackName: "",

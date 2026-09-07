@@ -36,6 +36,7 @@ describe("logFileTypeLabel", () => {
     expect(logFileTypeLabel("a.nmea")).toBe("NMEA");
     expect(logFileTypeLabel("a.csv")).toBe("CSV");
     expect(logFileTypeLabel("a.txt")).toBe("TXT");
+    expect(logFileTypeLabel("a.rplive")).toBe("Live");
   });
 
   it("uppercases unknown extensions", () => {

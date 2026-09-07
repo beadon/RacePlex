@@ -21,6 +21,7 @@ import { isXrkFile, parseXrkFile } from './xrk/xrkImporter';
 // the main bundle. `gpmfDetect` has no imports of its own; keep it that way.
 import { isGoProFile } from './gopro/gpmfDetect';
 import { isFitFile } from './fitParser';
+import { isLiveCaptureFormat, parseLiveCaptureFile } from './live/liveCapturePackage';
 import { beginFileLoading, updateFileLoading, endFileLoading } from './fileLoadingState';
 import type { ImportProgressCallback } from './importProgress';
 
@@ -41,6 +42,7 @@ import type { ImportProgressCallback } from './importProgress';
  * - Generic GPS CSV (LAST resort: any delimited table with lat/lon — VESC subsets, Float Control,
  *   pOnewheel, TrackAddict, Metr… — with a user-correctable, remembered column mapping)
  * - NMEA text format (CSV with NMEA sentences, .nmea files)
+ * - .rplive (RacePlex's own live-capture package — RaceBox/Dragy BLE, phone GPS)
  *
  * `onProgress` only fires for the two async, heavyweight paths — XRK (wasm load +
  * parse) and GoPro (mp4 demux + GPMF decode); every other format parses
@@ -80,6 +82,13 @@ async function routeDatalogFile(
   onProgress?: ImportProgressCallback,
 ): Promise<ParsedData> {
   const buffer = await file.arrayBuffer();
+
+  // RacePlex's own live-capture package (RaceBox/Dragy BLE, phone GPS) — an
+  // app-internal JSON format, gated purely on the `.rplive` extension since no
+  // real device or export tool produces one (plan 0015).
+  if (isLiveCaptureFormat(file.name)) {
+    return parseLiveCaptureFile(buffer);
+  }
 
   // AiM XRK/XRZ binary — detected by extension or `<h` magic. Parsed in a
   // wasm worker (libxrk), so this branch is async + one of the two with progress.

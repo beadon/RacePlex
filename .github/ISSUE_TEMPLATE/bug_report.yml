@@ -8,6 +8,11 @@ body:
         Thanks for taking the time to file a bug! Please fill out the details
         below so we can reproduce and fix it.
 
+        **A file that won't import or display right?** Use
+        [Data Import / Display Issue](?template=data_import_issue.yml) instead —
+        the app can build a diagnostic report for that template automatically
+        (Settings → "Report a data issue").
+
         **Security issue?** Do not file it here — see `SECURITY.md` instead.
   - type: textarea
     id: what-happened
@@ -35,14 +40,23 @@ body:
       description: Parsers are format-specific — this helps narrow it down.
       options:
         - "Not file-related"
+        - "GPX (.gpx)"
+        - "RaceBox CSV (.csv)"
+        - "VESC CSV (.csv)"
+        - "Generic / other GPS CSV (.csv)"
+        - "RaceChrono CSV v3 (.csv)"
+        - "MoTeC CSV (.csv)"
+        - "AiM MyChron CSV (.csv)"
+        - "Alfano CSV (.csv)"
+        - "AiM XRK/XRZ (.xrk/.xrz)"
+        - "MoTeC LD (.ld)"
+        - "GoPro video (.mp4)"
+        - "FIT (.fit)"
+        - "iRacing telemetry (.ibt)"
         - "UBX (.ubx)"
         - "VBO (.vbo)"
         - "Dove (.dove)"
         - "Dovex (.dovex)"
-        - "Alfano (.csv)"
-        - "AiM MyChron (.csv)"
-        - "MoTeC CSV (.csv)"
-        - "MoTeC LD (.ld)"
         - "NMEA (.nmea/.txt/.csv)"
         - "Other / unsure"
     validations:
@@ -58,7 +72,7 @@ body:
     id: sample
     attributes:
       label: Sample file or screenshots
-      description: If possible, attach a sample file (or a snippet) and any screenshots. Telemetry stays local, so a sample helps enormously.
+      description: If possible, attach a sample file (or a snippet) and any screenshots. This issue is public, and a GPS log's first/last fixes are often your home — only attach what you're OK sharing.
     validations:
       required: false
   - type: textarea
