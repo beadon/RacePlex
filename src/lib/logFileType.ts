@@ -17,6 +17,7 @@ const EXTENSION_LABELS: Record<string, string> = {
   nmea: "NMEA",
   csv: "CSV",
   txt: "TXT",
+  rplive: "Live",
 };
 
 /** Lowercased extension (no dot), or "" when the name has none. */

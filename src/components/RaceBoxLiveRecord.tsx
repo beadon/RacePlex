@@ -12,6 +12,7 @@ import { Bluetooth, Loader2, Radio, Save, StopCircle } from "lucide-react";
 import { saveFile, saveFileMetadata } from "@/lib/fileStorage";
 import type { RaceBoxConnection } from "@/lib/live/raceboxTransport";
 import { RaceBoxCapture } from "@/lib/live/raceboxSession";
+import { buildLiveCaptureFileName, serializeLiveCapture } from "@/lib/live/liveCapturePackage";
 import type { ParsedData } from "@/types/racing";
 
 interface RaceBoxLiveRecordProps {
@@ -26,14 +27,10 @@ type Phase = "idle" | "connecting" | "recording" | "ending" | "saved" | "error";
 /**
  * Live-record from a RaceBox over Web Bluetooth. The picker mounts this on
  * demand; when the rider closes the dialog before saving, the capture is
- * discarded. On save, a `.raceboxjson` file lands in the file manager and
- * gets opened as the active session (same path as any other import).
- *
- * NOTE the file format: we save the raw sample stream as JSON rather than
- * emitting a well-known logger format. It's the only shape that round-trips
- * without loss (the app doesn't parse `.raceboxjson` on reopen yet — future
- * slice). Users get their session live in the viewer; the file exists so a
- * refresh doesn't lose it.
+ * discarded. On save, a `.rplive` package (plan 0015) lands in the file
+ * manager and gets opened as the active session (same path as any other
+ * import) — and, unlike the file manager's previous ad hoc JSON, it can be
+ * reopened later too: `datalogParser.ts` has a real parser for it.
  */
 export function RaceBoxLiveRecord({ open, onClose, onDataLoaded }: RaceBoxLiveRecordProps) {
   const [phase, setPhase] = useState<Phase>("idle");
@@ -108,23 +105,16 @@ export function RaceBoxLiveRecord({ open, onClose, onDataLoaded }: RaceBoxLiveRe
     if (!captureRef.current) return;
     setPhase("ending");
     setStatus("Saving session…");
+    const deviceName = connectionRef.current?.name;
     try {
       await teardown();
       const capture = captureRef.current;
       const data = capture.toParsedData();
       const start = capture.snapshot().startDate ?? new Date();
-      const stamp = start.toISOString().replace(/[:.]/g, "-");
-      const fileName = `racebox-${stamp}.raceboxjson`;
+      const source = { kind: "racebox" as const, deviceName };
+      const fileName = buildLiveCaptureFileName(source, start);
 
-      // Persist the raw sample stream so the file manager has a real blob
-      // to point at. A future slice will register a parser for
-      // `.raceboxjson`; for now the file exists for the auto-save round-trip
-      // (delete + reimport works even though it re-parses as generic CSV
-      // and fails cleanly) and the ParsedData feeds the session directly.
-      await saveFile(fileName, new Blob(
-        [JSON.stringify({ samples: data.samples, startDate: start.toISOString() })],
-        { type: "application/json" },
-      ));
+      await saveFile(fileName, serializeLiveCapture(data, source));
       await saveFileMetadata({
         fileName,
         trackName: "",
