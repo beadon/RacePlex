@@ -23,7 +23,7 @@ export default function ResetPassword() {
   useDocumentHead({
     title: t('reset.metaTitle'),
     description: t('reset.metaDescription'),
-    canonical: 'https://lapwingdata.com/reset-password',
+    canonical: 'https://beadon.github.io/RacePlex/reset-password',
   });
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');

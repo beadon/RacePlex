@@ -25,7 +25,7 @@ export default function Register() {
   useDocumentHead({
     title: t('register.metaTitle'),
     description: t('register.metaDescription'),
-    canonical: 'https://lapwingdata.com/register',
+    canonical: 'https://beadon.github.io/RacePlex/register',
   });
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
