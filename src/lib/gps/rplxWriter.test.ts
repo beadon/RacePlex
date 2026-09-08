@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import {
-  serializeDovep,
-  serializeDovepBlob,
-  buildDovepFileName,
-  formatDovepDatetime,
-  DOVEP_EXTENSION,
-} from './dovepWriter';
+  serializeRplx,
+  serializeRplxBlob,
+  buildRplxFileName,
+  formatRplxDatetime,
+  RPLX_EXTENSION,
+} from './rplxWriter';
 import { GpsFixQuality } from './gpsFix';
 import type { GpsObservation } from './customGps';
 import { isDovexFormat, parseDovexFile } from '@/lib/dovexParser';
@@ -43,31 +43,31 @@ function makeObs(i: number, over: Partial<{ lat: number; lon: number; speedMps: 
   };
 }
 
-describe('dovep filename + datetime', () => {
-  it('formats a device-style filename with the .dovep extension', () => {
-    const name = buildDovepFileName(new Date(2026, 5, 14, 9, 5).getTime()); // 2026-06-14 09:05 local
-    expect(name).toBe('20260614_0905.dovep');
-    expect(name.endsWith(`.${DOVEP_EXTENSION}`)).toBe(true);
+describe('rplx filename + datetime', () => {
+  it('formats a device-style filename with the .rplx extension', () => {
+    const name = buildRplxFileName(new Date(2026, 5, 14, 9, 5).getTime()); // 2026-06-14 09:05 local
+    expect(name).toBe('20260614_0905.rplx');
+    expect(name.endsWith(`.${RPLX_EXTENSION}`)).toBe(true);
   });
 
   it('formats the preamble datetime', () => {
-    expect(formatDovepDatetime(new Date(2026, 0, 2, 3, 4, 5).getTime())).toBe('2026-01-02 03:04:05');
+    expect(formatRplxDatetime(new Date(2026, 0, 2, 3, 4, 5).getTime())).toBe('2026-01-02 03:04:05');
   });
 });
 
-describe('serializeDovep — dovex-compatible round trip', () => {
+describe('serializeRplx — dovex-compatible round trip', () => {
   const observations = [makeObs(0), makeObs(1), makeObs(2), makeObs(3)];
   const meta = { driver: 'Tester', course: 'Full CW', shortName: 'OKC', bestLapMs: 62345, optimalMs: 61200, lapTimesMs: [65432, 62345] };
 
   it('produces content the .dovex detector + parser accept', () => {
-    const content = serializeDovep(observations, meta);
+    const content = serializeRplx(observations, meta);
     expect(isDovexFormat(content)).toBe(true);
     const parsed = parseDovexFile(content);
     expect(parsed.samples).toHaveLength(observations.length);
   });
 
   it('round-trips position and speed through the parser', () => {
-    const content = serializeDovep(observations, meta);
+    const content = serializeRplx(observations, meta);
     const parsed = parseDovexFile(content);
     const first = parsed.samples[0];
     expect(first.lat).toBeCloseTo(observations[0].fix.lat, 6);
@@ -79,7 +79,7 @@ describe('serializeDovep — dovex-compatible round trip', () => {
   });
 
   it('carries session metadata into dovexMetadata', () => {
-    const content = serializeDovep(observations, meta);
+    const content = serializeRplx(observations, meta);
     const parsed = parseDovexFile(content);
     expect(parsed.dovexMetadata?.driver).toBe('Tester');
     expect(parsed.dovexMetadata?.course).toBe('Full CW');
@@ -90,7 +90,7 @@ describe('serializeDovep — dovex-compatible round trip', () => {
   });
 
   it('does not fabricate channels the phone lacks (no sats/hdop/rpm/accel)', () => {
-    const content = serializeDovep(observations, meta);
+    const content = serializeRplx(observations, meta);
     const header = content.split('\n').find((l) => l.startsWith('timestamp'))!;
     expect(header).toBe('timestamp,lat,lng,speed_mph,altitude_m,heading_deg,h_acc_m');
   });
@@ -100,7 +100,7 @@ describe('serializeDovep — dovex-compatible round trip', () => {
       makeObs(0, { altitude: null, course: null }),
       makeObs(1, { altitude: null, course: null }),
     ];
-    const content = serializeDovep(obs);
+    const content = serializeRplx(obs);
     const parsed = parseDovexFile(content);
     expect(parsed.samples).toHaveLength(2);
     expect(parsed.samples[1].lat).toBeCloseTo(obs[1].fix.lat, 6);
@@ -109,7 +109,7 @@ describe('serializeDovep — dovex-compatible round trip', () => {
   });
 
   it('serializes to a text/csv Blob', () => {
-    const blob = serializeDovepBlob(observations, meta);
+    const blob = serializeRplxBlob(observations, meta);
     expect(blob.type).toBe('text/csv');
     expect(blob.size).toBeGreaterThan(0);
   });

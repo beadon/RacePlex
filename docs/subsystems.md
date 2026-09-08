@@ -69,7 +69,7 @@ names that `normalizeChannels` canonicalises.
 
 ---
 
-## .dovex / .dovep formats (`src/lib/dovexParser.ts`)
+## .dovex / .rplx formats (`src/lib/dovexParser.ts`)
 
 Extended Dove format with an 8192-byte (8 KB) metadata header:
 ```
@@ -84,14 +84,17 @@ Byte 8192+: standard .dove CSV (timestamp,sats,hdop,lat,lng,...)
 GPS data is always parseable even if metadata is corrupted. Metadata is attached
 as `ParsedData.dovexMetadata`.
 
-**`.dovep` ("Dove phone")** is the Phone Datalogger tool's output
-(`lib/gps/dovepWriter.ts`). It is **byte-compatible `.dovex`** — same metadata
+**`.rplx`** is the Phone GPS recorder tool's output (`lib/gps/rplxWriter.ts`,
+RacePlex's own extension — sessions recorded before this rename used `.dovep`,
+"Dove phone"; `logFileType.ts` still labels both the same way, since they're
+byte-identical content). It is **byte-compatible `.dovex`** — same metadata
 preamble + Dove CSV — so `isDovexFormat`/`parseDovexFile` read it with no new
-parser (content-based routing in `datalogParser.ts` already matches it). The only
-difference: it carries **only the channels a phone can measure**
+parser (content-based routing in `datalogParser.ts` already matches it, so old
+`.dovep` files keep opening with no migration needed). The only content
+difference from `.dovex`: it carries **only the channels a phone can measure**
 (`timestamp,lat,lng,speed_mph,altitude_m,heading_deg,h_acc_m`) and omits the
 device-only ones (`sats,hdop,rpm,accel_*`) rather than fabricating them. The
-`.dovep` extension just drives the file-browser type bubble (`logFileType.ts`).
+extension itself just drives the file-browser type bubble (`logFileType.ts`).
 
 ---
 

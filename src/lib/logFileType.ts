@@ -7,7 +7,10 @@
 const EXTENSION_LABELS: Record<string, string> = {
   dove: "Dove",
   dovex: "Dovex",
-  dovep: "Dovep",
+  // Legacy: phone-GPS sessions recorded before the .rplx rename. Byte-identical
+  // content, kept only so already-saved files still show a sensible bubble.
+  dovep: "Phone",
+  rplx: "Phone",
   xrk: "XRK",
   xrz: "XRZ",
   ibt: "iRacing",
