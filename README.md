@@ -135,7 +135,9 @@ file to export first. Needs Chrome or Edge, on desktop or Android. A phone's own
 record, at whatever rate the handset provides. A VESC-based ESC can connect alongside the primary
 GPS device as a second Bluetooth source, merging its telemetry into the same session in real time
 and showing a live gauge dashboard (current, power, duty, speed, battery, temps, consumption,
-odometer/trip/up-time) modeled on VESC Tool's own RT Data screen.
+odometer/trip/up-time) modeled on VESC Tool's own RT Data screen. A JBD-family BMS (sold as
+Xiaoxiang / Smart BMS / Little Elephant) can connect as a third Bluetooth source at the same time,
+adding pack voltage/current/SOC, per-cell voltages, and MOSFET/pack temperatures to the session.
 
 **Lap and sector timing.** Detects line crossings with sub-sample interpolation, and reports lap
 times, sector splits, and a theoretical optimal lap assembled from your best sectors. Supports both
