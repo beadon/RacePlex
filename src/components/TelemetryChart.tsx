@@ -496,9 +496,13 @@ export function TelemetryChart({
 
   return (
     <div className="flex w-full flex-col h-full min-h-0 bg-card">
-      {/* Legend */}
+      {/* Legend. A session with many extra channels (VESC + BMS sidecars can add
+          close to 20 — issues #58, #73) would otherwise wrap into enough rows to
+          push the chart canvas below it off-screen on a phone; capping the height
+          and scrolling internally keeps the canvas usable regardless of channel
+          count, on any viewport. */}
       {showLegend && (
-      <div className="flex items-center gap-4 px-4 py-2 border-b border-border flex-wrap">
+      <div className="flex items-center gap-4 px-4 py-2 border-b border-border flex-wrap max-h-24 overflow-y-auto">
         {/* Reserve space on the first row for the divider's floating control
             flag (collapse + legend toggle) so it never overlaps the first item. */}
         <div className="w-16 shrink-0" aria-hidden />
