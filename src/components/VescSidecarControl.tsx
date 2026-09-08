@@ -1,5 +1,8 @@
-import { Bluetooth, Loader2, X, Zap } from "lucide-react";
+import { useState } from "react";
+import { Bluetooth, Gauge, Loader2, X, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { VescGaugeDashboard } from "@/components/vesc-gauges/VescGaugeDashboard";
 import type { VescSidecarController } from "@/hooks/useVescSidecar";
 
 /**
@@ -9,6 +12,8 @@ import type { VescSidecarController } from "@/hooks/useVescSidecar";
  * rider tracks side by side, not one gating the other.
  */
 export function VescSidecarControl({ vesc }: { vesc: VescSidecarController }) {
+  const [gaugesOpen, setGaugesOpen] = useState(false);
+
   if (vesc.status === "idle") {
     return (
       <Button variant="outline" size="sm" onClick={() => void vesc.connect()} className="gap-1.5">
@@ -53,13 +58,28 @@ export function VescSidecarControl({ vesc }: { vesc: VescSidecarController }) {
         {vesc.deviceName} · {vesc.sampleCount.toLocaleString()} readings
       </span>
       {vesc.latest && (
-        <span className="tabular-nums text-muted-foreground">
+        <button
+          type="button"
+          onClick={() => setGaugesOpen(true)}
+          className="flex items-center gap-1.5 tabular-nums text-muted-foreground hover:text-foreground"
+          title="Open the live gauge dashboard"
+        >
+          <Gauge className="w-3.5 h-3.5" />
           {vesc.latest.batteryCurrentA.toFixed(1)} A · {vesc.latest.batteryVoltageV.toFixed(1)} V
-        </span>
+        </button>
       )}
       <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => void vesc.disconnect()} title="Disconnect VESC">
         <X className="w-3.5 h-3.5" />
       </Button>
+
+      <Dialog open={gaugesOpen} onOpenChange={setGaugesOpen}>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{vesc.deviceName}</DialogTitle>
+          </DialogHeader>
+          {vesc.latest && <VescGaugeDashboard values={vesc.latest} />}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

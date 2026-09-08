@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from "react";
 import { connectVescLive, type VescConnection } from "@/lib/live/vescTransport";
-import type { VescValues } from "@/lib/live/vescDecoder";
+import type { VescSetupValues } from "@/lib/live/vescDecoder";
 import type { ConcurrentSourceMerger } from "@/lib/live/concurrentCapture";
 
 export type VescSidecarStatus = "idle" | "connecting" | "connected" | "error";
@@ -9,7 +9,7 @@ export interface VescSidecarController {
   status: VescSidecarStatus;
   deviceName: string | null;
   error: string | null;
-  latest: VescValues | null;
+  latest: VescSetupValues | null;
   sampleCount: number;
   connect: () => Promise<void>;
   disconnect: () => Promise<void>;
@@ -24,12 +24,12 @@ export interface VescSidecarController {
  * lifecycle and UI-facing status; it never touches the primary source.
  */
 export function useVescSidecar(
-  merger: ConcurrentSourceMerger<unknown, VescValues>,
+  merger: ConcurrentSourceMerger<unknown, VescSetupValues>,
 ): VescSidecarController {
   const [status, setStatus] = useState<VescSidecarStatus>("idle");
   const [deviceName, setDeviceName] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [latest, setLatest] = useState<VescValues | null>(null);
+  const [latest, setLatest] = useState<VescSetupValues | null>(null);
   const [sampleCount, setSampleCount] = useState(0);
   const connectionRef = useRef<VescConnection | null>(null);
 
