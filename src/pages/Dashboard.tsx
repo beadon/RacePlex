@@ -18,6 +18,7 @@ import { GarageTile } from "@/components/dashboard/GarageTile";
 import { TracksTile } from "@/components/dashboard/TracksTile";
 import { ImportTile } from "@/components/dashboard/ImportTile";
 import { RecordSessionTile } from "@/components/dashboard/RecordSessionTile";
+import { BuildStamp } from "@/components/BuildStamp";
 import type { AppSettings } from "@/hooks/useSettings";
 import type { CanonicalFieldId } from "@/lib/fieldResolver";
 import type { ParsedData } from "@/types/racing";
@@ -198,6 +199,11 @@ export function Dashboard({
           </a>
         </Button>
       </div>
+      {/* At-a-glance version stamp — the deployed site showed this nowhere
+          until it was a click deep in About. Same BuildStamp, just also
+          here, so a rider (or us, debugging a report) can see at a glance
+          which build they're running without opening anything. */}
+      <BuildStamp className="mt-2 justify-center" />
     </AppShell>
   );
 }

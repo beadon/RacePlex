@@ -8,7 +8,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
 import { interceptExternal } from "@/lib/platform";
-import { commitUrl, formatBuildLabel } from "@/lib/buildInfo";
+import { BuildStamp } from "@/components/BuildStamp";
 
 // Section ids — order is the display order; the heading/body text lives in the
 // `landing` locale (about.sections.<id>).
@@ -88,35 +88,9 @@ export function AboutDialog() {
               (and been tested) all along, but its only host was the landing-page
               footer, which the Dashboard replaced — so the deployed app showed
               its version nowhere. This is that stamp's home now. */}
-          <BuildStamp />
+          <BuildStamp className="border-t border-border pt-3 mt-4" />
         </div>
       </DialogContent>
     </Dialog>
-  );
-}
-
-/** Version + commit of this build, linking to the exact commit on GitHub. */
-function BuildStamp() {
-  const label = formatBuildLabel();
-  if (!label) return null; // no tag and no hash — say nothing rather than invent one
-  const href = commitUrl();
-
-  return (
-    <div className="border-t border-border pt-3 mt-4 flex items-center gap-2 text-xs">
-      <span className="text-muted-foreground">Version</span>
-      {href ? (
-        <a
-          href={href}
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={(e) => interceptExternal(e, href)}
-          className="font-mono text-foreground hover:text-primary transition-colors"
-        >
-          {label}
-        </a>
-      ) : (
-        <span className="font-mono text-foreground">{label}</span>
-      )}
-    </div>
   );
 }
