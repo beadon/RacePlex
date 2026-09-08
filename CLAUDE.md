@@ -536,6 +536,24 @@ The hash still identifies the build exactly.
 `--latest` is not optional: without it GitHub may pick an inherited `v3.x` tag as "latest" by
 semver, making our newest release look like a regression.
 
+**⚠️ Tagging does not redeploy the live site.** `.github/workflows/deploy-pages.yml` triggers only
+on a push to `main`, never on a tag push — pushing `refs/tags/v0.7.1` above does not run it. If the
+tag lands on a commit already on `main` (the normal case: merge a PR, then tag it), the site is
+still serving whatever the *last push to `main`* built, which stamped its version from whatever tag
+existed *at that push* — one version behind the tag you just created. Confirmed live: v0.7.1 was
+tagged after v0.7.0's last deploy, and the site kept reporting `0.7.0` in `/version.json` until a
+manual redeploy ran. Trigger one after every tag that isn't itself immediately followed by a new
+commit to `main`:
+
+```sh
+gh workflow run deploy-pages.yml --repo beadon/RacePlex
+# if that 500s (seen in practice — a flaky gh/Actions API response, not a real failure):
+gh api repos/beadon/RacePlex/actions/workflows/deploy-pages.yml/dispatches -X POST -f ref=main
+```
+
+Verify with `curl -s https://beadon.github.io/RacePlex/version.json` — its `version` field should
+match the tag just created.
+
 Write the release notes for a rider: what they can now do, and what is still broken. `v0.2.0` is
 the model.
 
