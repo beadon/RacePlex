@@ -147,9 +147,6 @@
     "noTools": "No tools are available in this build."
   },
   "laptimer": {
-    "name": "Lap Timer",
-    "description": "Turn your phone's GPS into a live lap timer — delta, lap times and sector splits, saved as a log you can review.",
-    "badge": "Experimental",
     "tabLive": "Live",
     "tabLaps": "Lap Times",
     "end": "End",

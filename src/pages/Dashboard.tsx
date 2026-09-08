@@ -85,11 +85,12 @@ export function Dashboard({
       actions={{
         onOpenGarage,
         onOpenTracks: () => setTracksOpen(true),
-        // Tools opens the standalone calculators (Stance nosedive, Seat
-        // Position CoG, Phone Lap Timer) in a dialog. They're all in the
-        // in-session Tools tab too — this makes them reachable from the
-        // dashboard when no session is loaded.
-        onOpenTools: () => setToolsOpen(true),
+        // Recording a session is the app's primary action on a constrained
+        // screen — the nav bar's dedicated "Record" destination opens the
+        // exact same RecordingModeDialog the Add-data tile below does, so
+        // there is still exactly one record-a-session workflow, just two
+        // doors into it.
+        onBeginRecording: () => setRecordingModeOpen(true),
         onOpenSettings: () => setSettingsOpen(true),
       }}
     >
@@ -156,7 +157,10 @@ export function Dashboard({
       />
 
       {/* Settings modal — controlled from the nav bar's Settings destination.
-          No trigger button; the nav item is the entry point. */}
+          No trigger button; the nav item is the entry point. Tools (the
+          trackside calculators) lives inside Settings now rather than its
+          own nav slot — occasional-use, not something a constrained screen
+          should spend permanent bottom-bar space on. */}
       <SettingsModal
         settings={settings}
         onSettingsChange={onSettingsChange}
@@ -164,10 +168,11 @@ export function Dashboard({
         canHideSampleFiles={canHideSampleFiles}
         open={settingsOpen}
         onOpenChange={setSettingsOpen}
+        onOpenTools={() => setToolsOpen(true)}
       />
 
-      {/* Tools — the standalone calculators (Stance / Seat Position / Phone
-          Lap Timer), same picker + bodies the in-session Tools tab uses. */}
+      {/* Tools — the standalone calculators (Stance / Seat Position), same
+          picker + bodies the in-session Tools tab uses. Opened from Settings. */}
       <ToolsDialog open={toolsOpen} onOpenChange={setToolsOpen} />
 
       {/* Help row. These three dialogs used to hang off the landing page's

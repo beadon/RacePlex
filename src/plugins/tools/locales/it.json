@@ -135,9 +135,6 @@
     "noTools": "Nessuno strumento disponibile in questa build."
   },
   "laptimer": {
-    "name": "Cronometro giri",
-    "description": "Trasforma il GPS del telefono in un cronometro giri dal vivo: delta, tempi sul giro e intermedi di settore, salvati come registro da rivedere.",
-    "badge": "Sperimentale",
     "tabLive": "Dal vivo",
     "tabLaps": "Tempi sul giro",
     "end": "Termina",

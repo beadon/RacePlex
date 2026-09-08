@@ -1,6 +1,6 @@
 import { type ReactNode } from "react";
 import { NavLink } from "react-router-dom";
-import { Gauge, Car, Map as MapIcon, Wrench, Settings as SettingsIcon } from "lucide-react";
+import { Gauge, Car, Map as MapIcon, Radio, Settings as SettingsIcon } from "lucide-react";
 import { BrandLogo } from "@/components/BrandLogo";
 import { UserSwitcher } from "@/components/UserSwitcher";
 import { cn } from "@/lib/utils";
@@ -14,24 +14,28 @@ import { cn } from "@/lib/utils";
  * - Sessions (the dashboard / current session, route: `/`)
  * - Garage (vehicles, setups — opens the file-manager drawer)
  * - Tracks (track collection — opens the TrackEditor dialog)
- * - Tools (phone lap timer, seat position — routes to Tools plugin)
- * - Settings (app settings modal)
+ * - Record (the dedicated record-a-session workflow — `RecordingModeDialog`)
+ * - Settings (app settings modal; the Tools calculators live inside it —
+ *   trackside-but-occasional, not something a constrained screen should
+ *   spend a permanent nav slot on)
  *
- * Garage / Tracks / Settings live in existing drawers + dialogs, not
- * standalone pages — so their nav entries fire callbacks instead of
+ * Garage / Tracks / Record / Settings live in existing drawers + dialogs,
+ * not standalone pages — so their nav entries fire callbacks instead of
  * routing. Callers pass those handlers via the `actions` prop. When an
  * action isn't provided the destination is hidden (so a page that shouldn't
  * offer, say, garage access doesn't advertise it).
  *
- * Tools stays a real route once the Tools page lands; today it can be an
- * action too if the caller wants to route to something else in the interim.
+ * `onBeginRecording` renders as the visually primary destination (filled
+ * accent pill instead of a plain icon) — recording a session is the thing
+ * this app is for, so it gets first billing on a constrained screen rather
+ * than competing evenly with Garage/Tracks/Settings.
  */
 
 export interface AppShellActions {
   onOpenGarage?: () => void;
   onOpenTracks?: () => void;
   onOpenSettings?: () => void;
-  onOpenTools?: () => void;
+  onBeginRecording?: () => void;
 }
 
 interface AppShellProps {
@@ -50,37 +54,42 @@ interface NavItem {
   /** Either a route (renders as a NavLink) OR an action (renders as a button). */
   to?: string;
   onClick?: () => void;
+  /** Rendered as a filled accent pill instead of a plain icon+label — the one
+   *  destination that should read as THE primary action, not one of several. */
+  primary?: boolean;
 }
 
 export function AppShell({ rightSlot, actions, children }: AppShellProps) {
   const items: NavItem[] = [
     { key: "sessions", label: "Sessions", icon: <Gauge className="w-5 h-5" />, to: "/" },
   ];
+  if (actions?.onBeginRecording) {
+    items.push({ key: "record", label: "Record", icon: <Radio className="w-5 h-5" />, onClick: actions.onBeginRecording, primary: true });
+  }
   if (actions?.onOpenGarage) {
     items.push({ key: "garage", label: "Garage", icon: <Car className="w-5 h-5" />, onClick: actions.onOpenGarage });
   }
   if (actions?.onOpenTracks) {
     items.push({ key: "tracks", label: "Tracks", icon: <MapIcon className="w-5 h-5" />, onClick: actions.onOpenTracks });
   }
-  if (actions?.onOpenTools) {
-    items.push({ key: "tools", label: "Tools", icon: <Wrench className="w-5 h-5" />, onClick: actions.onOpenTools });
-  }
   if (actions?.onOpenSettings) {
     items.push({ key: "settings", label: "Settings", icon: <SettingsIcon className="w-5 h-5" />, onClick: actions.onOpenSettings });
   }
 
-  const desktopItemClass = (isActive: boolean) =>
+  const desktopItemClass = (isActive: boolean, primary?: boolean) =>
     cn(
       "flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors",
-      isActive
-        ? "bg-primary/15 text-primary"
-        : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
+      primary
+        ? "bg-primary text-primary-foreground hover:bg-primary/90"
+        : isActive
+          ? "bg-primary/15 text-primary"
+          : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
     );
 
-  const mobileItemClass = (isActive: boolean) =>
+  const mobileItemClass = (isActive: boolean, primary?: boolean) =>
     cn(
       "flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-xs font-medium transition-colors",
-      isActive ? "text-primary" : "text-muted-foreground hover:text-foreground",
+      primary ? "text-primary" : isActive ? "text-primary" : "text-muted-foreground hover:text-foreground",
     );
 
   return (
@@ -110,7 +119,7 @@ export function AppShell({ rightSlot, actions, children }: AppShellProps) {
                     key={it.key}
                     type="button"
                     onClick={it.onClick}
-                    className={desktopItemClass(false)}
+                    className={desktopItemClass(false, it.primary)}
                   >
                     {it.icon}
                     <span>{it.label}</span>
@@ -167,9 +176,15 @@ export function AppShell({ rightSlot, actions, children }: AppShellProps) {
               key={it.key}
               type="button"
               onClick={it.onClick}
-              className={mobileItemClass(false)}
+              className={mobileItemClass(false, it.primary)}
             >
-              {it.icon}
+              {it.primary ? (
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                  {it.icon}
+                </span>
+              ) : (
+                it.icon
+              )}
               <span className="text-[10px] leading-tight">{it.label}</span>
             </button>
           ),
