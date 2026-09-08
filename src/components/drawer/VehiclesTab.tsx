@@ -11,6 +11,7 @@ import { Vehicle } from "@/lib/vehicleStorage";
 import { VehicleType, defaultVehicleTypeId } from "@/lib/templateStorage";
 import { useEngineManager } from "@/hooks/useEngineManager";
 import { useRemoteManager } from "@/hooks/useRemoteManager";
+import { SAMPLE_BOARDS, applySampleBoardToVehicle } from "@/lib/sampleBoards";
 import { EngineCombobox } from "./EngineCombobox";
 import { RemoteCombobox } from "./RemoteCombobox";
 import { VehicleHistoryPanel } from "./VehicleHistoryPanel";
@@ -43,6 +44,8 @@ export function VehiclesTab({ vehicles, vehicleTypes, onAdd, onUpdate, onRemove,
   const defaultTypeId = useMemo(() => defaultVehicleTypeId(vehicleTypes), [vehicleTypes]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm(defaultTypeId));
+  // Flagship-board preset applied to the new-vehicle form ("" = none).
+  const [presetId, setPresetId] = useState<string>("");
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [historyVehicle, setHistoryVehicle] = useState<Vehicle | null>(null);
 
@@ -67,7 +70,16 @@ export function VehiclesTab({ vehicles, vehicleTypes, onAdd, onUpdate, onRemove,
   const resetForm = useCallback(() => {
     setEditingId(null);
     setForm(emptyForm(defaultTypeId));
+    setPresetId("");
   }, [defaultTypeId]);
+
+  // Prefill the form from a sample board; the picker stays on the chosen
+  // preset so its hint remains visible until the form is reset.
+  const handlePresetChange = useCallback((v: string) => {
+    setPresetId(v === "none" ? "" : v);
+    const board = SAMPLE_BOARDS.find(b => b.id === v);
+    if (board) setForm(f => applySampleBoardToVehicle(f, board));
+  }, []);
 
   const handleEdit = (vehicle: Vehicle) => {
     setEditingId(vehicle.id);
@@ -194,6 +206,23 @@ export function VehiclesTab({ vehicles, vehicleTypes, onAdd, onUpdate, onRemove,
       </div>
 
       <div className="border-t border-border p-4 space-y-3 shrink-0">
+        {editingId === null && (
+          <div className="space-y-1">
+            <Label className="text-xs">{t("vehicles.boardPreset")}</Label>
+            <Select value={presetId || "none"} onValueChange={handlePresetChange}>
+              <SelectTrigger className="h-8 text-sm"><SelectValue placeholder={t("vehicles.boardPresetNone")} /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">{t("vehicles.boardPresetNone")}</SelectItem>
+                {SAMPLE_BOARDS.map(b => (
+                  <SelectItem key={b.id} value={b.id}>{b.brand} {b.model}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {presetId && (
+              <p className="text-[11px] text-muted-foreground">{t("vehicles.boardPresetHint")}</p>
+            )}
+          </div>
+        )}
         <div className="space-y-1">
           <div className="flex items-center justify-between">
             <Label className="text-xs">{t("vehicles.vehicleType")}</Label>
