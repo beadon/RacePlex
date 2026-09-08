@@ -166,7 +166,14 @@ export class LapTimerSession {
     const patch: Partial<LapTimerSnapshot> = { latest: obs };
     if (step.justArmed) patch.phase = "recording";
 
-    if (this.gate.phase === "recording") {
+    // A connected VESC/BMS should keep recording whether or not the rider is
+    // moving — a pack heating up on the charger or an ESC being bench-tested
+    // is exactly the kind of thing worth capturing while parked. Lap timing
+    // itself stays gated on `phase === "recording"` below; only the sidecar
+    // capture unconditionally follows sensor data instead of GPS speed.
+    const sidecarLive = Boolean(this.deps.vescMerger?.hasSecondary || this.deps.bmsMerger?.hasSecondary);
+
+    if (this.gate.phase === "recording" || sidecarLive) {
       this.recorded.push(obs);
 
       const sample = observationToSample(obs);
@@ -182,12 +189,15 @@ export class LapTimerSession {
       }
       this.samples.push(sample);
 
-      patch.timing = this.deps.timer.update(sample);
-      // Completed laps are immutable once closed — only swap the array (and
-      // re-render the table) when a lap actually completes.
-      const completed = this.deps.timer.getLaps();
-      if (completed.length !== this.snapshot.laps.length) patch.laps = [...completed];
-    } else {
+      if (this.gate.phase === "recording") {
+        patch.timing = this.deps.timer.update(sample);
+        // Completed laps are immutable once closed — only swap the array (and
+        // re-render the table) when a lap actually completes.
+        const completed = this.deps.timer.getLaps();
+        if (completed.length !== this.snapshot.laps.length) patch.laps = [...completed];
+      }
+    }
+    if (this.gate.phase !== "recording") {
       // Before logging arms, still surface track proximity so the UI can explain
       // speedometer mode — either "no tracks nearby" or, when we *do* recognise a
       // track, confirm it by name (so a stationary driver knows detection worked).
