@@ -1,6 +1,6 @@
 # 0021 — Recording a VESC alongside a primary GPS device (issue #58)
 
-**Status:** done, pending real-hardware verification
+**Status:** done, verified against real hardware
 **Date:** 2026-09-07
 
 ## Problem
@@ -79,21 +79,36 @@ button, shown once the primary capture is recording) — wired into both
 was left out of this pass (lower-value pairing, and its UI is a different,
 simpler shape not well suited to a second pairing without more redesign).
 
-## Explicitly not verified against real hardware
+## Verified against real hardware
 
-**This has not been tested against a real VESC.** The protocol is
-implemented from VESC's own published firmware source and a public CRC
-conformance vector, not from a packet capture off real hardware, and the
-transport/UI wiring can't be exercised without a physical BLE peripheral to
-pair with. What *is* verified: `vescPacket.ts`/`vescDecoder.ts`/
-`concurrentCapture.ts`/`vescMergeFields.ts` are pure and thoroughly unit
-tested (44 new tests) against hand-built, spec-accurate synthetic packets;
-`bun run lint`/`typecheck`/`test:run` (2588 tests)/`build` all pass; the
-RaceBox live-recorder dialog was confirmed to still render correctly
-(no regression to the existing single-device flow) in a live browser check.
-Flagging this plainly rather than claiming more confidence than the
-verification actually supports — the same principle issue #58 asked this
-feature to apply to the data itself.
+Confirmed live against a real board (a "BKB XENITH BLE" VESC-based ESC),
+using a standalone diagnostic page (not the app itself — a minimal page that
+connects, enumerates GATT, and sends a raw `COMM_GET_VALUES` request) driven
+from an Android phone over Web Bluetooth:
+
+- The device advertises exactly the assumed Nordic UART Service
+  (`6e400001-…`) with write/notify characteristics at `6e400002`/`6e400003`
+  — the protocol guess from VESC's public firmware source was right, not
+  just plausible.
+- A real `COMM_GET_VALUES` response decoded byte-for-byte with this plan's
+  actual `vescPacket.ts`/`vescDecoder.ts` code: CRC16 matched, framing
+  matched, and the decoded values were physically sensible for an idle,
+  disconnected controller — battery voltage 45.4V (stable across repeated
+  reads), motor/battery current, duty cycle, ERPM, amp-hours all 0, ESC temp
+  ~30.5°C. Motor temp read a nonsense ~‑84°C, which is *correct* decoder
+  behavior — a floating/disconnected motor-thermistor pin reading garbage is
+  expected real hardware behavior, not a bug to paper over.
+- One real connection failure was reproduced and understood: a VESC's BLE
+  UART typically accepts only one central connection at a time, so a
+  simultaneously-connected VESC Tool session blocks a fresh connection with a
+  generic "Connection attempt failed." `VescSidecarControl`'s error state
+  now says this plainly rather than leaving a rider stuck retrying a
+  connection that can't succeed while that's true.
+
+Not yet done: recording an actual live session with a spinning motor (only
+idle/disconnected values have been observed so far), and testing the
+concurrent-merge path (`concurrentCapture.ts`) with real timing alongside a
+real RaceBox/Dragy simultaneously.
 
 ## Deliberately not done here
 

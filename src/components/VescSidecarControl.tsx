@@ -27,9 +27,20 @@ export function VescSidecarControl({ vesc }: { vesc: VescSidecarController }) {
 
   if (vesc.status === "error") {
     return (
-      <div className="flex items-center gap-2 text-xs text-destructive">
-        <span>{vesc.error}</span>
-        <Button variant="ghost" size="sm" onClick={() => void vesc.connect()}>Retry</Button>
+      <div className="space-y-1 text-xs">
+        <div className="flex items-center gap-2 text-destructive">
+          <span>{vesc.error}</span>
+          <Button variant="ghost" size="sm" onClick={() => void vesc.connect()}>Retry</Button>
+        </div>
+        {/* Confirmed in practice: a VESC only accepts one BLE central at a
+            time, so a stuck "Connection attempt failed" is very often VESC
+            Tool (or another tab) still holding the connection, not a real
+            fault — worth saying plainly rather than leaving a rider stuck
+            retrying a connection that can never succeed while that's true. */}
+        <p className="text-muted-foreground">
+          Usually only one app can be connected to a VESC's Bluetooth at a time — close VESC Tool
+          (or any other app connected to it) and try again.
+        </p>
       </div>
     );
   }
