@@ -80,7 +80,7 @@ export async function fetchNearestStation(
       {
         headers: {
           Accept: "application/geo+json",
-          "User-Agent": "DovesDataViewer/1.0",
+          "User-Agent": "RacePlex/1.0",
         },
       }
     );
@@ -102,7 +102,7 @@ export async function fetchNearestStation(
     const stationsResponse = await fetch(stationsUrl, {
       headers: {
         Accept: "application/geo+json",
-        "User-Agent": "DovesDataViewer/1.0",
+        "User-Agent": "RacePlex/1.0",
       },
     });
 
