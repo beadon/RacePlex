@@ -236,9 +236,9 @@ Chrome/Edge or the desktop app.
 
 ### Tools
 
-Trackside calculators reachable from the nav bar. The **Stance Visualizer** models the
-deceleration at which the front wheels unload and the rear leaves the ground — the number
-below urethane grip is why boards nosedive instead of skid.
+Trackside calculators reachable from Settings. The **Stance Visualizer** models the deceleration
+at which the front wheels unload and the rear leaves the ground — the number below urethane grip
+is why boards nosedive instead of skid.
 
 <p align="center">
   <img src="docs/screenshots/06-tools-picker.png" alt="Tools picker" width="48%">

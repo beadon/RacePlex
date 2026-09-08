@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Settings, Eye, EyeOff, Gauge, Activity, Circle, HardDrive, Languages, Sun, Moon, Palette, RefreshCw, Timer, Ruler, ChevronDown, Map, CloudSun, Wifi, Bug } from "lucide-react";
+import { Settings, Eye, EyeOff, Gauge, Activity, Circle, HardDrive, Languages, Sun, Moon, Palette, RefreshCw, Timer, Ruler, ChevronDown, Map, CloudSun, Wifi, Bug, Wrench } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -48,6 +48,11 @@ interface SettingsModalProps {
    *  Settings destination). Uncontrolled otherwise. */
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  /** Opens the Tools dialog (Stance / Seat Position calculators). Recording
+   *  a session has its own dedicated nav destination now — Tools lives here
+   *  instead, since it's occasional-use, not something a constrained screen
+   *  should spend a permanent bottom-bar slot on. Omitted hides the row. */
+  onOpenTools?: () => void;
 }
 
 export function SettingsModal({
@@ -58,6 +63,7 @@ export function SettingsModal({
   triggerLabelBreakpoint = "lg",
   open,
   onOpenChange,
+  onOpenTools,
 }: SettingsModalProps) {
   const { t } = useTranslation(["settings", "common"]);
   const isControlled = open !== undefined && onOpenChange !== undefined;
@@ -90,6 +96,25 @@ export function SettingsModal({
               is the first thing a rider sees when they open settings. */}
           <UsersManagerPanel />
           <div className="border-t border-border" />
+
+          {onOpenTools && (
+            <>
+              <div className="flex items-center justify-between rounded-lg border border-border p-4">
+                <div className="flex items-center gap-3">
+                  <Wrench className="w-4 h-4 text-muted-foreground shrink-0" />
+                  <div>
+                    <h3 className="font-medium text-sm">Tools</h3>
+                    <p className="text-xs text-muted-foreground">
+                      Stance visualizer, seat position, and other trackside calculators.
+                    </p>
+                  </div>
+                </div>
+                <Button variant="outline" size="sm" onClick={onOpenTools}>Open</Button>
+              </div>
+              <div className="border-t border-border" />
+            </>
+          )}
+
           {/* Compact toggle settings — responsive 2-column grid on tablet+ */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-6">
           {/* Language */}

@@ -135,9 +135,6 @@
     "noTools": "No hay herramientas disponibles en esta versión."
   },
   "laptimer": {
-    "name": "Cronómetro de vueltas",
-    "description": "Convierte el GPS de tu teléfono en un cronómetro de vueltas en vivo: delta, tiempos de vuelta y parciales por sector, guardados como un registro que puedes revisar.",
-    "badge": "Experimental",
     "tabLive": "En vivo",
     "tabLaps": "Tiempos de vuelta",
     "end": "Finalizar",
