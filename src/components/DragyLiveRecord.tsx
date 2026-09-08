@@ -25,6 +25,7 @@ import type { BmsSample } from "@/lib/live/bmsTransport";
 import { useBmsSidecar } from "@/hooks/useBmsSidecar";
 import { BmsSidecarControl } from "@/components/BmsSidecarControl";
 import { useSidecarVehicleBinding } from "@/hooks/useSidecarVehicleBinding";
+import { isUserCancelledBluetoothPicker } from "@/lib/live/bleUtils";
 
 interface DragyLiveRecordProps {
   open: boolean;
@@ -157,6 +158,12 @@ export function DragyLiveRecord({ open, onClose, onDataLoaded }: DragyLiveRecord
       setPhase("recording");
       setStatus(`Recording from ${conn.name}`);
     } catch (e) {
+      // Dismissing the browser's own device picker isn't a failure — just
+      // let the rider try again from idle instead of showing an error.
+      if (isUserCancelledBluetoothPicker(e)) {
+        setPhase("idle");
+        return;
+      }
       const msg = e instanceof Error ? e.message : String(e);
       setPhase("error");
       setError(msg);

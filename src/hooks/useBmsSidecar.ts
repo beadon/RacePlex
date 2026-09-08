@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from "react";
 import { connectBmsLive, type BmsConnection, type BmsSample } from "@/lib/live/bmsTransport";
 import type { ConcurrentSourceMerger } from "@/lib/live/concurrentCapture";
+import { isUserCancelledBluetoothPicker } from "@/lib/live/bleUtils";
 
 export type BmsSidecarStatus = "idle" | "connecting" | "connected" | "error";
 
@@ -46,6 +47,13 @@ export function useBmsSidecar(
       });
       setStatus("connected");
     } catch (e) {
+      // Dismissing the browser's own device picker isn't a failure — just
+      // let the rider try again from a clean idle state instead of showing
+      // an error with troubleshooting text that doesn't apply here.
+      if (isUserCancelledBluetoothPicker(e)) {
+        setStatus("idle");
+        return;
+      }
       setStatus("error");
       setError(e instanceof Error ? e.message : String(e));
     }
