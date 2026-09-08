@@ -11,6 +11,7 @@ import {
   listAllMetadata,
 } from "@/lib/fileStorage";
 import { isSampleFileName } from "@/lib/sampleData";
+import { shareOrDownloadSession } from "@/lib/shareSession";
 
 /** Garage sub-tabs the drawer can be opened directly to. */
 export type GarageTabKey = "files" | "vehicles";
@@ -118,6 +119,14 @@ export function useFileManager() {
     return getFile(name);
   }, []);
 
+  // Same mechanism as the phone-GPS recorder's "Share" button (shareSession.ts):
+  // the OS share sheet with the file attached, falling back to a download.
+  const shareFile = useCallback(async (name: string) => {
+    const blob = await getFile(name);
+    if (!blob) return;
+    await shareOrDownloadSession(name, blob);
+  }, []);
+
   return {
     isOpen,
     files,
@@ -134,6 +143,7 @@ export function useFileManager() {
     saveFile,
     removeFile,
     exportFile,
+    shareFile,
     loadFile,
   };
 }

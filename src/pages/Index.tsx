@@ -662,6 +662,7 @@ export default function Index() {
     onLoadFile: fileManager.loadFile,
     onDeleteFile: fileManager.removeFile,
     onExportFile: fileManager.exportFile,
+    onShareFile: fileManager.shareFile,
     onSaveFile: fileManager.saveFile,
     onDataLoaded: handleDataLoaded,
     autoSave: settings.autoSaveFiles,
@@ -682,7 +683,7 @@ export default function Index() {
     currentCourseName: lapMgmt.selection?.courseName ?? null,
   }), [
     fileManager.isOpen, fileManager.files, fileManager.fileMetadataMap, fileManager.storageUsed, fileManager.storageQuota,
-    fileManager.close, fileManager.loadFile, fileManager.removeFile, fileManager.exportFile, fileManager.saveFile,
+    fileManager.close, fileManager.loadFile, fileManager.removeFile, fileManager.exportFile, fileManager.shareFile, fileManager.saveFile,
     fileManager.initialGarageTab, fileManager.initialTopTab,
     handleDataLoaded, settings.autoSaveFiles, effectiveShowSampleFiles, showProfile,
     vehicleManager.vehicles, vehicleManager.addVehicle, vehicleManager.updateVehicle, vehicleManager.removeVehicle,

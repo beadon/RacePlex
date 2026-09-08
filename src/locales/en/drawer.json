@@ -34,6 +34,7 @@
     "videoSource": "Source",
     "videoWithOverlays": "w/ overlays",
     "exportDownload": "Export / Download",
+    "share": "Share",
     "delete": "Delete",
     "confirmLoad": "Load <name>{{name}}</name>?",
     "confirmDelete": "Delete <name>{{name}}</name>? This cannot be undone.",

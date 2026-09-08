@@ -2,7 +2,7 @@ import { useCallback, useRef, useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation, Trans } from "react-i18next";
 import { toast } from "sonner";
-import { Trash2, Download, Upload, FolderOpen, Loader2, Video, Cloud, CloudDownload, GitCompare, X, Bug } from "lucide-react";
+import { Trash2, Download, Share2, Upload, FolderOpen, Loader2, Video, Cloud, CloudDownload, GitCompare, X, Bug } from "lucide-react";
 import { useComparisonBin } from "@/hooks/useComparisonBin";
 import { Button } from "@/components/ui/button";
 import { FileEntry, FileMetadata, getFileMetadata } from "@/lib/fileStorage";
@@ -55,6 +55,7 @@ interface FilesTabProps {
   onLoadFile: (name: string) => Promise<Blob | null>;
   onDeleteFile: (name: string) => Promise<void>;
   onExportFile: (name: string) => Promise<void>;
+  onShareFile: (name: string) => Promise<void>;
   onSaveFile: (name: string, blob: Blob) => Promise<void>;
   onDataLoaded: (data: ParsedData, fileName?: string) => void;
   onClose: () => void;
@@ -75,6 +76,7 @@ export function FilesTab({
   onLoadFile,
   onDeleteFile,
   onExportFile,
+  onShareFile,
   onSaveFile,
   onDataLoaded,
   onClose,
@@ -89,7 +91,17 @@ export function FilesTab({
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [cloudBusy, setCloudBusy] = useState<string | null>(null);
+  const [sharingFile, setSharingFile] = useState<string | null>(null);
   const [videoFiles, setVideoFiles] = useState<Map<string, StoredVideoMeta>>(new Map());
+
+  const handleShare = useCallback(async (name: string) => {
+    setSharingFile(name);
+    try {
+      await onShareFile(name);
+    } finally {
+      setSharingFile(null);
+    }
+  }, [onShareFile]);
 
   /** Open /compare with the current bin. Same handler shape as the dashboard tile. */
   const startCompare = useCallback(() => {
@@ -367,6 +379,16 @@ export function FilesTab({
           variant="ghost"
           size="icon"
           className="h-7 w-7 shrink-0 opacity-60 hover:opacity-100"
+          onClick={() => handleShare(s.fileName)}
+          disabled={sharingFile === s.fileName}
+          title={t("files.share")}
+        >
+          <Share2 className="w-3.5 h-3.5" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 shrink-0 opacity-60 hover:opacity-100"
           onClick={() => onExportFile(s.fileName)}
           title={t("files.exportDownload")}
         >
@@ -383,7 +405,7 @@ export function FilesTab({
         </Button>
       </div>
     );
-  }, [cloudBusy, handleOpenCloud, filesByName, mergedMeta, videoFiles, onExportFile, t, bin]);
+  }, [cloudBusy, handleOpenCloud, filesByName, mergedMeta, videoFiles, onExportFile, handleShare, sharingFile, t, bin]);
 
   return (
     <div className="flex flex-col flex-1 min-h-0">

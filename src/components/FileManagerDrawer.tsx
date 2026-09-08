@@ -29,6 +29,7 @@ interface FileManagerDrawerProps {
   onLoadFile: (name: string) => Promise<Blob | null>;
   onDeleteFile: (name: string) => Promise<void>;
   onExportFile: (name: string) => Promise<void>;
+  onShareFile: (name: string) => Promise<void>;
   onSaveFile: (name: string, blob: Blob) => Promise<void>;
   onDataLoaded: (data: ParsedData, fileName?: string) => void;
   autoSave: boolean;
@@ -64,7 +65,7 @@ interface FileManagerDrawerProps {
 
 export function FileManagerDrawer({
   isOpen, files, fileMetadataMap, storageUsed, storageQuota,
-  onClose, onLoadFile, onDeleteFile, onExportFile, onSaveFile, onDataLoaded, autoSave,
+  onClose, onLoadFile, onDeleteFile, onExportFile, onShareFile, onSaveFile, onDataLoaded, autoSave,
   showSampleFiles,
   initialGarageTab = "files",
   initialTopTab = "garage",
@@ -225,7 +226,7 @@ export function FileManagerDrawer({
             </div>
 
             {garageTab === "files" && (
-              <FilesTab files={files} fileMetadataMap={fileMetadataMap} vehicles={vehicles} currentTrackName={currentTrackName} currentCourseName={currentCourseName} isOpen={isOpen} storageUsed={storageUsed} storageQuota={storageQuota} onLoadFile={onLoadFile} onDeleteFile={onDeleteFile} onExportFile={onExportFile} onSaveFile={onSaveFile} onDataLoaded={onDataLoaded} onClose={onClose} autoSave={autoSave} showSampleFiles={showSampleFiles} />
+              <FilesTab files={files} fileMetadataMap={fileMetadataMap} vehicles={vehicles} currentTrackName={currentTrackName} currentCourseName={currentCourseName} isOpen={isOpen} storageUsed={storageUsed} storageQuota={storageQuota} onLoadFile={onLoadFile} onDeleteFile={onDeleteFile} onExportFile={onExportFile} onShareFile={onShareFile} onSaveFile={onSaveFile} onDataLoaded={onDataLoaded} onClose={onClose} autoSave={autoSave} showSampleFiles={showSampleFiles} />
             )}
             {garageTab === "vehicles" && (
               <VehiclesTab vehicles={vehicles} vehicleTypes={vehicleTypes} onAdd={onAddVehicle} onUpdate={onUpdateVehicle} onRemove={onRemoveVehicle} onCreateVehicleType={onCreateVehicleType} onOpenFile={onOpenFile} />
