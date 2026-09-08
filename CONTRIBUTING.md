@@ -1,9 +1,9 @@
-# Contributing to Dove's DataViewer
+# Contributing to RacePlex
 
-Thanks for your interest in improving Dove's DataViewer! This is an
-offline-first, open-source motorsport telemetry viewer, and contributions of
-all kinds are welcome — new file-format parsers, bug fixes, overlays, docs, and
-reusability rewrites especially.
+Thanks for your interest in improving RacePlex! This is an offline-first,
+open-source lap timing and telemetry viewer for electric skateboards, and
+contributions of all kinds are welcome — new file-format parsers, bug fixes,
+overlays, docs, and reusability rewrites especially.
 
 By participating, you agree to abide by our Code of Conduct (`CODE_OF_CONDUCT.md`).
 
@@ -37,8 +37,8 @@ These are the rules the project lives by — please keep them in mind:
 ### Getting started
 
 ```bash
-git clone https://github.com/TheAngryRaven/DovesDataViewer.git
-cd DovesDataViewer
+git clone https://github.com/beadon/RacePlex.git
+cd RacePlex
 bun install
 bun run dev      # dev server on http://localhost:8080
 ```

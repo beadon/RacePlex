@@ -88,7 +88,7 @@ export function LocalWeatherDialog({ sessionWeather, externalOpen, onExternalOpe
     try {
       const response = await fetch(
         `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery.trim())}`,
-        { headers: { "User-Agent": "DovesDataViewer/1.0" } }
+        { headers: { "User-Agent": "RacePlex/1.0" } }
       );
       const results = await response.json();
 

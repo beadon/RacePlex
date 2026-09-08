@@ -29,7 +29,7 @@ Dimension keys: `architecture`, `security`, `performance`, `correctness`, `testi
 ```markdown
 # Codebase Review — <YYYY-MM-DD>
 
-**Project:** Dove's DataViewer / LapWing (FOSS, GPLv3, offline-first PWA)
+**Project:** RacePlex (FOSS, GPLv3, offline-first PWA)
 **Scope:** <branches/commit reviewed> · **Run:** multi-agent (<N> finders, <verify mode>)
 **Excluded:** node_modules, dist, generated supabase client, lockfiles
 

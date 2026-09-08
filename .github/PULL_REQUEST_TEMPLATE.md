@@ -1,4 +1,4 @@
-<!-- Thanks for contributing to Dove's DataViewer! -->
+<!-- Thanks for contributing to RacePlex! -->
 
 ## Summary
 
@@ -19,10 +19,10 @@
 
 ## Checklist
 
-- [ ] `npm run lint` passes
-- [ ] `npm run typecheck` passes
-- [ ] `npm run test:run` passes
-- [ ] `npm run build` succeeds
+- [ ] `bun run lint` passes
+- [ ] `bun run typecheck` passes
+- [ ] `bun run test:run` passes
+- [ ] `bun run build` succeeds
 - [ ] Feature works **offline** (no new required network calls, except weather / map tiles / admin)
 - [ ] Docs updated where relevant (`README.md`, `CLAUDE.md`, `docs/research/FORMATS.md`,
       `src/data/supported-devices.json`, the in-app Supported Files list)
