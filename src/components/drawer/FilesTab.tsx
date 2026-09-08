@@ -15,6 +15,7 @@ import {
 } from "@/lib/fileBrowserTree";
 import { SessionBrowser } from "@/components/SessionBrowser";
 import { FileTypeBadge } from "@/components/FileTypeBadge";
+import { SidecarDataChips } from "@/components/SidecarDataChips";
 import { useFileSources, type FileSource, type RemoteFile } from "@/plugins/fileSources";
 // The picker host is light; the BLE flow it launches stays in its own lazy chunk.
 import { LoggerDownload } from "@/components/LoggerDownload";
@@ -295,6 +296,7 @@ export function FilesTab({
             <div className="flex items-center gap-1.5">
               <span className="text-sm font-medium truncate text-muted-foreground">{s.displayName}</span>
               <FileTypeBadge fileName={s.fileName} />
+              <SidecarDataChips hasVescData={s.hasVescData} hasBmsData={s.hasBmsData} />
               {busy
                 ? <Loader2 className="w-3.5 h-3.5 text-primary shrink-0 animate-spin" />
                 : <Cloud className="w-3.5 h-3.5 text-muted-foreground shrink-0" />}
@@ -340,6 +342,7 @@ export function FilesTab({
           <div className="flex items-center gap-1.5">
             <span className="text-sm font-medium truncate text-foreground" title={s.fileName}>{s.displayName}</span>
             <FileTypeBadge fileName={s.fileName} />
+            <SidecarDataChips hasVescData={s.hasVescData} hasBmsData={s.hasBmsData} />
             {videoFiles.has(s.fileName) && (
               <span title={(() => {
                 const m = videoFiles.get(s.fileName)!;

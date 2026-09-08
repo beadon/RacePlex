@@ -82,6 +82,14 @@ export interface FileMetadata {
    * `drag` — instead of showing everything regardless of relevance.
    */
   sessionType?: "simple" | "drag" | "track";
+  /**
+   * Set once at record time (issues #58, #73) when a VESC or BMS sidecar ever
+   * reported data during this session — lets the file browser/dashboard show
+   * a chip without opening the session to check its channels. Absent = no
+   * sidecar (the common case), or a session recorded before this existed.
+   */
+  hasVescData?: boolean;
+  hasBmsData?: boolean;
   // Post-session measurements entered on the Notes tab (tire pressures, weight).
   postSession?: PostSessionData;
   /**

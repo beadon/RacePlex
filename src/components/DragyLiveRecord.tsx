@@ -204,6 +204,8 @@ export function DragyLiveRecord({ open, onClose, onDataLoaded }: DragyLiveRecord
         courseName: "",
         sessionStartTime: start.getTime(),
         source: "device",
+        hasVescData: merger.hasSecondary,
+        hasBmsData: bmsMerger.hasSecondary,
       });
       setSavedFileName(fileName);
       setPhase("saved");
@@ -213,7 +215,7 @@ export function DragyLiveRecord({ open, onClose, onDataLoaded }: DragyLiveRecord
       setPhase("error");
       setError(msg);
     }
-  }, [teardown, onDataLoaded]);
+  }, [teardown, onDataLoaded, merger, bmsMerger]);
 
   return (
     <Dialog open={open} onOpenChange={(o) => (!o ? void handleCancel() : undefined)}>

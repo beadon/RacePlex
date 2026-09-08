@@ -252,6 +252,8 @@ export class LapTimerSession {
         sessionStartTime: startTs,
         fastestLapMs: t.bestLapMs ?? undefined,
         source: "phone-gps",
+        hasVescData: Boolean(this.deps.vescMerger?.hasSecondary),
+        hasBmsData: Boolean(this.deps.bmsMerger?.hasSecondary),
       });
       this.patch({ saving: false, savedFileName: fileName });
     } catch (e) {

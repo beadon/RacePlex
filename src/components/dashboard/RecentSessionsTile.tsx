@@ -13,6 +13,7 @@ import { isSampleFileName } from "@/lib/sampleData";
 import { useAsyncSnapshot } from "@/hooks/useAsyncSnapshot";
 import { useComparisonBin } from "@/hooks/useComparisonBin";
 import { Button } from "@/components/ui/button";
+import { SidecarDataChips } from "@/components/SidecarDataChips";
 import { cn } from "@/lib/utils";
 
 /** How many recent sessions the dashboard tile shows. Anything beyond this is
@@ -36,6 +37,8 @@ interface RecentSession {
   trackLabel: string | null;
   savedAt: number;
   isSample: boolean;
+  hasVescData: boolean;
+  hasBmsData: boolean;
 }
 
 interface RecentSessionsSnapshot {
@@ -78,6 +81,8 @@ async function loadRecentSessions(): Promise<RecentSessionsSnapshot> {
         trackLabel: pickTrackLabel(meta),
         savedAt: entry.savedAt,
         isSample: !!meta?.isSample || isSampleFileName(entry.name),
+        hasVescData: !!meta?.hasVescData,
+        hasBmsData: !!meta?.hasBmsData,
       };
     });
   return { items, loaded: true };
@@ -203,6 +208,7 @@ export function RecentSessionsTile({
                           sample
                         </span>
                       )}
+                      <SidecarDataChips hasVescData={s.hasVescData} hasBmsData={s.hasBmsData} />
                     </div>
                     {s.trackLabel && (
                       <div className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground truncate">
