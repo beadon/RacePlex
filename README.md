@@ -162,6 +162,38 @@ Tools tab and in the Files drawer.
 
 ---
 
+## Compared to RaceChrono
+
+RaceChrono is a well-known commercial lap-timing app built for cars and karts. The table below
+checks its feature list against RacePlex on everything that carries over to eskate. One feature is
+left out entirely as not applicable: Bluetooth/Wi-Fi OBD-II readers, a car engine diagnostic
+protocol eskate hardware has no equivalent of — live ESC/BMS telemetry below is what fills that
+role instead.
+
+| Feature | RacePlex |
+|---|---|
+| Lap timing with sectors and an optimal lap | ✅ |
+| Custom circuit and point-to-point courses, with a built-in track editor | ✅ |
+| Synchronized graph, map, and video analysis | ✅ |
+| Time-delta graph against a reference lap | ✅ |
+| Predictive (projected) lap timing | Not yet |
+| Hardware-accelerated video export with a configurable data overlay | ✅ |
+| Sync a video file from almost any camera against a session | ✅ |
+| Multiple simultaneous cameras / picture-in-picture export | Not yet |
+| Record video with the device's own camera | Not yet — video is import-only |
+| Remote control a GoPro over BLE/Wi-Fi | Not yet — RacePlex only reads GPMF telemetry out of already-recorded footage |
+| External GPS receivers (RaceBox, Dragy, a phone's own GPS) | ✅ |
+| Live ESC/BMS telemetry (VESC, JBD-family BMS) | ✅ — eskate's equivalent of a car's OBD-II port |
+| Import logs from DIY or unlisted sensors | ✅ through the column mapper; live Bluetooth capture is limited to RaceBox, Dragy, VESC, and BMS today |
+| Bluetooth heart-rate monitors | Not live yet; a `.FIT` file that already recorded heart rate imports it |
+| Unlimited session length, good for 24-hour races | ✅ |
+| Pre-built track library | One track today, growing through community pull requests — see [Adding a Track](CONTRIBUTING.md#adding-a-track) |
+| Export a session to `.NMEA`, `.VBO`, `.CSV`, or `.ODS` | Not yet — RacePlex reads all four; writing them back out is unbuilt |
+
+Every feature above ships in every RacePlex install. There are no plan tiers to unlock.
+
+---
+
 ## Screens
 
 Every RacePlex install looks the same — no accounts, no plan tiers. These are the surfaces
