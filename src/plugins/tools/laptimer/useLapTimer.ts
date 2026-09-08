@@ -13,6 +13,7 @@ import type { VescSetupValues } from "@/lib/live/vescDecoder";
 import type { BmsSample } from "@/lib/live/bmsTransport";
 import { useVescSidecar, type VescSidecarController } from "@/hooks/useVescSidecar";
 import { useBmsSidecar, type BmsSidecarController } from "@/hooks/useBmsSidecar";
+import { useSidecarVehicleBinding } from "@/hooks/useSidecarVehicleBinding";
 import {
   LapTimerSession,
   INITIAL_SNAPSHOT,
@@ -43,6 +44,9 @@ export function useLapTimer(): LapTimerController {
   const vesc = useVescSidecar(vescMerger);
   const [bmsMerger] = useState(() => new ConcurrentSourceMerger<unknown, BmsSample>());
   const bms = useBmsSidecar(bmsMerger);
+  // Remembers a first-time-connected sidecar's device name on a Vehicle
+  // profile so pairing is faster next session (issues #58, #73).
+  useSidecarVehicleBinding(vesc, bms);
 
   useEffect(() => {
     const timer = new RealtimeLapTimer();

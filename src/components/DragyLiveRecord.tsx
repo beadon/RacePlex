@@ -24,6 +24,7 @@ import { applyBmsMergeToExtraFields, appendBmsFieldMappings } from "@/lib/live/b
 import type { BmsSample } from "@/lib/live/bmsTransport";
 import { useBmsSidecar } from "@/hooks/useBmsSidecar";
 import { BmsSidecarControl } from "@/components/BmsSidecarControl";
+import { useSidecarVehicleBinding } from "@/hooks/useSidecarVehicleBinding";
 
 interface DragyLiveRecordProps {
   open: boolean;
@@ -65,6 +66,9 @@ export function DragyLiveRecord({ open, onClose, onDataLoaded }: DragyLiveRecord
   // after the VESC merge.
   const [bmsMerger] = useState(() => new ConcurrentSourceMerger<unknown, BmsSample>());
   const bms = useBmsSidecar(bmsMerger);
+  // Remembers a first-time-connected sidecar's device name on a Vehicle
+  // profile so pairing is faster next session.
+  useSidecarVehicleBinding(vesc, bms);
 
   const reset = useCallback(() => {
     setPhase("idle");

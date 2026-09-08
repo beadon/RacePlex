@@ -22,6 +22,7 @@ import { applyBmsMergeToExtraFields, appendBmsFieldMappings } from "@/lib/live/b
 import type { BmsSample } from "@/lib/live/bmsTransport";
 import { useBmsSidecar } from "@/hooks/useBmsSidecar";
 import { BmsSidecarControl } from "@/components/BmsSidecarControl";
+import { useSidecarVehicleBinding } from "@/hooks/useSidecarVehicleBinding";
 import type { ParsedData } from "@/types/racing";
 
 interface RaceBoxLiveRecordProps {
@@ -66,6 +67,9 @@ export function RaceBoxLiveRecord({ open, onClose, onDataLoaded }: RaceBoxLiveRe
   // ConcurrentSourceMerger to more than one secondary.
   const [bmsMerger] = useState(() => new ConcurrentSourceMerger<unknown, BmsSample>());
   const bms = useBmsSidecar(bmsMerger);
+  // Remembers a first-time-connected sidecar's device name on a Vehicle
+  // profile so pairing is faster next session.
+  useSidecarVehicleBinding(vesc, bms);
 
   // Reset all local state when the dialog closes so a follow-up open is fresh.
   const reset = useCallback(() => {
