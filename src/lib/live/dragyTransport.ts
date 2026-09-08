@@ -16,6 +16,7 @@ import { UbxRingBuffer } from "./ubxRingBuffer";
 import { decodeDragyPacket, type DragySample } from "./dragyDecoder";
 import { dragyHandshakeReply } from "./dragyHandshake";
 import { isWebBluetoothAvailable } from "./raceboxTransport";
+import { withTimeout } from "./bleUtils";
 
 const DRAGY_SERVICE = 0xfd00;
 const DRAGY_HANDSHAKE = 0xfd03;
@@ -60,8 +61,12 @@ export async function connectDragyLive(): Promise<DragyConnection> {
           }>;
         }>;
         disconnect(): void;
-        addEventListener(type: string, listener: () => void): void;
       };
+      // `gattserverdisconnected` fires on the BluetoothDevice itself, not on
+      // `.gatt` (BluetoothRemoteGATTServer has no addEventListener at all) —
+      // confirmed against a real device error after this got copied wrong
+      // into every live BLE transport in this codebase.
+      addEventListener(type: string, listener: () => void): void;
     }>;
   }; }).bluetooth;
 
@@ -100,7 +105,7 @@ export async function connectDragyLive(): Promise<DragyConnection> {
   telemetryChar.addEventListener("characteristicvaluechanged", onNotify);
   await telemetryChar.startNotifications();
 
-  device.gatt.addEventListener("gattserverdisconnected", () => { connected = false; });
+  device.addEventListener("gattserverdisconnected", () => { connected = false; });
 
   return {
     name: device.name ?? "Dragy",
@@ -111,7 +116,10 @@ export async function connectDragyLive(): Promise<DragyConnection> {
       connected = false;
       listeners.clear();
       try {
-        await telemetryChar.stopNotifications();
+        // A real BLE peripheral has been observed (on a JBD BMS) to never
+        // settle this call at all — a timeout guard so a hanging device
+        // can't block the actual GATT disconnect below.
+        await withTimeout(telemetryChar.stopNotifications(), 2000);
         telemetryChar.removeEventListener("characteristicvaluechanged", onNotify);
       } catch { /* device may already be gone */ }
       try { device.gatt?.disconnect(); } catch { /* ditto */ }
