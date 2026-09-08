@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FileText, MapPin, GitCompare, X } from "lucide-react";
 import { STORE_NAMES } from "@/lib/dbUtils";
@@ -16,9 +16,8 @@ import { Button } from "@/components/ui/button";
 import { SidecarDataChips } from "@/components/SidecarDataChips";
 import { cn } from "@/lib/utils";
 
-/** How many recent sessions the dashboard tile shows. Anything beyond this is
- *  reachable via the file-manager drawer (Garage → Files). */
-const RECENT_LIMIT = 6;
+/** Sessions shown per page before a "Show more" control appears. */
+const PAGE_SIZE = 10;
 
 interface RecentSessionsTileProps {
   onOpen: (fileName: string) => void;
@@ -73,7 +72,6 @@ async function loadRecentSessions(): Promise<RecentSessionsSnapshot> {
   const metaByName = new Map(allMeta.map((m) => [m.fileName, m]));
   const items: RecentSession[] = files
     .sort((a, b) => b.savedAt - a.savedAt)
-    .slice(0, RECENT_LIMIT * 2) // over-fetch a bit so the sample-filter doesn't strand us
     .map((entry) => {
       const meta = metaByName.get(entry.name);
       return {
@@ -121,11 +119,11 @@ export function RecentSessionsTile({
 
   const bin = useComparisonBin();
   const navigate = useNavigate();
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
-  const visible = useCallback(() => {
-    const filtered = showSampleFiles ? data.items : data.items.filter((s) => !s.isSample);
-    return filtered.slice(0, RECENT_LIMIT);
-  }, [data.items, showSampleFiles])();
+  const filtered = showSampleFiles ? data.items : data.items.filter((s) => !s.isSample);
+  const visible = filtered.slice(0, visibleCount);
+  const remaining = filtered.length - visible.length;
 
   const startCompare = useCallback(() => {
     // Pass the selection to the /compare route via router state — a bare
@@ -144,7 +142,7 @@ export function RecentSessionsTile({
         </h2>
         {data.loaded && visible.length > 0 && (
           <span className="text-xs text-muted-foreground">
-            {visible.length} shown
+            {remaining > 0 ? `${visible.length} of ${filtered.length} shown` : `${visible.length} shown`}
           </span>
         )}
       </div>
@@ -227,6 +225,16 @@ export function RecentSessionsTile({
             );
           })}
         </ul>
+      )}
+
+      {remaining > 0 && (
+        <button
+          type="button"
+          onClick={() => setVisibleCount((n) => n + PAGE_SIZE)}
+          className="w-full py-2.5 text-xs font-medium text-primary hover:underline border-t border-border"
+        >
+          Show {Math.min(PAGE_SIZE, remaining)} more
+        </button>
       )}
 
       {/*

@@ -1,7 +1,10 @@
-import { Fragment } from "react";
+import { Fragment, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Folder, ChevronRight } from "lucide-react";
 import type { BrowserView, BrowserSession, FilterMode, NavState } from "@/lib/fileBrowserTree";
+
+/** Logs shown per page before a "Show N more" control appears. */
+const PAGE_SIZE = 10;
 
 interface SessionBrowserProps {
   /** The resolved view to render (from `computeBrowserView`). */
@@ -17,6 +20,12 @@ interface SessionBrowserProps {
  * Presentational Track→Course→logs browser: breadcrumb + optional Engine/Kart
  * filter + folders + the caller-rendered log rows. Pure UI over a computed
  * `BrowserView` — shared by the Files tab and the Profile cloud-logs panel.
+ *
+ * The final log list paginates 10 at a time once there are more than that —
+ * a track with a season's worth of sessions otherwise renders every row at
+ * once. Paging state is local (how many rows to show, not which ones), keyed
+ * off the breadcrumb path so drilling into a different folder starts back
+ * at the first page rather than carrying over an unrelated scroll position.
  */
 export function SessionBrowser({ view, onNavigate, renderRow, emptyText }: SessionBrowserProps) {
   const { t } = useTranslation("drawer");
@@ -25,6 +34,21 @@ export function SessionBrowser({ view, onNavigate, renderRow, emptyText }: Sessi
     engine: t("browser.filterEngine"),
     kart: t("browser.filterKart"),
   };
+
+  // Reset to the first page when navigation moves to a different folder —
+  // the React-recommended "adjust state during render" pattern (a plain
+  // effect here would fire an extra cascading render for no benefit).
+  const navKey = view.breadcrumb.map((seg) => seg.label).join("/");
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const [pagedNavKey, setPagedNavKey] = useState(navKey);
+  let effectiveVisibleCount = visibleCount;
+  if (navKey !== pagedNavKey) {
+    setPagedNavKey(navKey);
+    setVisibleCount(PAGE_SIZE);
+    effectiveVisibleCount = PAGE_SIZE;
+  }
+  const visibleSessions = view.sessions.slice(0, effectiveVisibleCount);
+  const remaining = view.sessions.length - visibleSessions.length;
   return (
     <div className="space-y-1">
       {/* Breadcrumb — always shown so date-named logs read in context. */}
@@ -92,9 +116,19 @@ export function SessionBrowser({ view, onNavigate, renderRow, emptyText }: Sessi
       ))}
 
       {/* Logs (final list, or unconfigured logs below filter folders) */}
-      {view.sessions.map((s) => (
+      {visibleSessions.map((s) => (
         <Fragment key={s.fileName}>{renderRow(s)}</Fragment>
       ))}
+
+      {remaining > 0 && (
+        <button
+          type="button"
+          onClick={() => setVisibleCount((n) => n + PAGE_SIZE)}
+          className="w-full py-2 text-xs font-medium text-primary hover:underline"
+        >
+          {t("browser.showMore", { count: Math.min(PAGE_SIZE, remaining) })}
+        </button>
+      )}
 
       {view.folders.length === 0 && view.sessions.length === 0 && (
         <p className="text-xs text-muted-foreground text-center py-6">{emptyText ?? t("browser.emptyDefault")}</p>
