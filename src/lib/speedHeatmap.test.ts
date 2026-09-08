@@ -116,4 +116,38 @@ describe("buildHeatmapSegments", () => {
     expect(buckets).toHaveLength(1);
     expect(buckets[0].parts[0]).toHaveLength(3);
   });
+
+  describe("hardBreakBeforeIndex", () => {
+    it("does not connect across a hard break, unlike a bucket-color change", () => {
+      const samples = [sample(0, 0, 50), sample(1, 1, 50), sample(2, 2, 50), sample(3, 3, 50)];
+      const buckets = buildHeatmapSegments(samples, 0, 100, HEATMAP_BUCKET_COUNT, new Set([2]));
+      expect(buckets).toHaveLength(1);
+      // Two disjoint parts, no shared point between index 1 and index 2.
+      expect(buckets[0].parts).toEqual([[[0, 0], [1, 1]], [[2, 2], [3, 3]]]);
+    });
+
+    it("drops a run that a hard break leaves with only one point", () => {
+      // A hard break right before the very last sample would otherwise leave
+      // a 1-point "part" with nothing to connect to.
+      const samples = [sample(0, 0, 50), sample(1, 1, 50), sample(2, 2, 50)];
+      const buckets = buildHeatmapSegments(samples, 0, 100, HEATMAP_BUCKET_COUNT, new Set([2]));
+      expect(buckets).toHaveLength(1);
+      expect(buckets[0].parts).toEqual([[[0, 0], [1, 1]]]);
+    });
+
+    it("drops an isolated single sample stranded between two hard breaks", () => {
+      const samples = [sample(0, 0, 50), sample(1, 1, 50), sample(2, 2, 50), sample(3, 3, 50)];
+      const buckets = buildHeatmapSegments(samples, 0, 100, HEATMAP_BUCKET_COUNT, new Set([1, 2]));
+      expect(buckets).toHaveLength(1);
+      // Sample 1 sits alone between the two breaks and never appears in any part.
+      expect(buckets[0].parts).toEqual([[[2, 2], [3, 3]]]);
+    });
+
+    it("behaves exactly as before when no hard breaks are given", () => {
+      const samples = [sample(0, 0, 5), sample(1, 1, 95), sample(2, 2, 95)];
+      const withUndefined = buildHeatmapSegments(samples, 0, 100);
+      const withEmptySet = buildHeatmapSegments(samples, 0, 100, HEATMAP_BUCKET_COUNT, new Set());
+      expect(withEmptySet).toEqual(withUndefined);
+    });
+  });
 });

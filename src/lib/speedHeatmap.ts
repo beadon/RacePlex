@@ -68,31 +68,49 @@ export interface HeatmapBucket {
  * sample i — quantized to the bucket's midpoint color. Consecutive segments in
  * the same bucket chain into one part, so parts stay visually continuous:
  * a bucket change starts the next part at the shared point.
+ *
+ * `hardBreakBeforeIndex` (indices where `gpsGaps.ts` detected a recording
+ * gap) forces a break that does NOT share a point — unlike a bucket-color
+ * break, nothing connects sample i-1 to sample i at all, so no line is drawn
+ * across a stretch where nothing was actually recorded.
  */
 export function buildHeatmapSegments(
   samples: ReadonlyArray<HeatmapSample>,
   minSpeed: number,
   maxSpeed: number,
   bucketCount: number = HEATMAP_BUCKET_COUNT,
+  hardBreakBeforeIndex?: ReadonlySet<number>,
 ): HeatmapBucket[] {
   if (samples.length < 2) return [];
 
   const partsByBucket: [number, number][][][] = Array.from({ length: Math.max(1, bucketCount) }, () => []);
+  // A run that never grew past its starting point (e.g. two hard breaks back
+  // to back) isn't a valid polyline — drop it rather than draw a dot.
+  const pushRun = (bucket: number, part: [number, number][]) => {
+    if (part.length >= 2) partsByBucket[bucket].push(part);
+  };
 
   let runBucket = bucketIndexForSpeed(samples[0].speedMph, minSpeed, maxSpeed, bucketCount);
   let runPart: [number, number][] = [[samples[0].lat, samples[0].lon]];
 
   for (let i = 1; i < samples.length; i++) {
+    if (hardBreakBeforeIndex?.has(i)) {
+      pushRun(runBucket, runPart);
+      runBucket = bucketIndexForSpeed(samples[i].speedMph, minSpeed, maxSpeed, bucketCount);
+      runPart = [[samples[i].lat, samples[i].lon]];
+      continue;
+    }
+
     runPart.push([samples[i].lat, samples[i].lon]);
     if (i === samples.length - 1) break;
     const nextBucket = bucketIndexForSpeed(samples[i].speedMph, minSpeed, maxSpeed, bucketCount);
     if (nextBucket !== runBucket) {
-      partsByBucket[runBucket].push(runPart);
+      pushRun(runBucket, runPart);
       runPart = [[samples[i].lat, samples[i].lon]];
       runBucket = nextBucket;
     }
   }
-  partsByBucket[runBucket].push(runPart);
+  pushRun(runBucket, runPart);
 
   const range = maxSpeed - minSpeed;
   const buckets: HeatmapBucket[] = [];

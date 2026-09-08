@@ -5,7 +5,8 @@ import { GpsSample, Course, ParserStats } from '@/types/racing';
 import { normalizeCourseSectors } from '@/lib/courseSectors';
 import { findSpeedEvents, SpeedEvent } from '@/lib/speedEvents';
 import { computeHeatmapSpeedBoundsMph } from '@/lib/speedBounds';
-import { buildHeatmapSegments } from '@/lib/speedHeatmap';
+import { buildHeatmapSegments, HEATMAP_BUCKET_COUNT } from '@/lib/speedHeatmap';
+import { detectGpsGaps, totalGapMs, formatGapDuration } from '@/lib/gpsGaps';
 import { formatLapTime } from '@/lib/lapCalculation';
 import { detectBrakingZones, BrakingZoneConfig } from '@/lib/brakingZones';
 import { unionBounds, cropOverlayLinesToWindow, type OverlayLine } from '@/lib/lapOverlays';
@@ -275,6 +276,16 @@ export function RaceLineView({ samples, allSamples, referenceSamples = [], cours
     return computeHeatmapSpeedBoundsMph(speedsMph);
   }, [samplesForStats]);
 
+  // Recording gaps (issue: phone-GPS backgrounding silently drops the
+  // browser's watchPosition callbacks) — indices are against the *drawn*
+  // `samples` array, since that's what the polyline break has to line up
+  // with; the banner below looks at the full session regardless of crop.
+  const gpsGapBreaks = useMemo(() => {
+    const gaps = detectGpsGaps(samples);
+    return new Set(gaps.map((g) => g.afterIndex));
+  }, [samples]);
+  const sessionGpsGaps = useMemo(() => detectGpsGaps(samplesForStats), [samplesForStats]);
+
   // Initialize map
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -394,7 +405,7 @@ export function RaceLineView({ samples, allSamples, referenceSamples = [], cours
     const polylineLayer = polylineLayerRef.current;
     if (!polylineLayer) return;
     polylineLayer.clearLayers();
-    for (const bucket of buildHeatmapSegments(samples, minSpeed, maxSpeed)) {
+    for (const bucket of buildHeatmapSegments(samples, minSpeed, maxSpeed, HEATMAP_BUCKET_COUNT, gpsGapBreaks)) {
       polylineLayer.addLayer(L.polyline(bucket.parts, {
         color: bucket.color,
         weight: 4,
@@ -402,7 +413,7 @@ export function RaceLineView({ samples, allSamples, referenceSamples = [], cours
         interactive: false,
       }));
     }
-  }, [samples, minSpeed, maxSpeed]);
+  }, [samples, minSpeed, maxSpeed, gpsGapBreaks]);
 
   // Draw multi-lap overlay lines (other laps / snapshots) — solid colors,
   // beneath the current lap. Rebuilt only when the overlay set changes.
@@ -545,6 +556,24 @@ export function RaceLineView({ samples, allSamples, referenceSamples = [], cours
   return (
     <div className="w-full h-full relative">
       <div ref={containerRef} className="w-full h-full bg-black" />
+
+      {/* GPS recording gap — top center. More prominent than the rejected-row
+          readout below: those are individually-bad rows, this is a stretch
+          where nothing was recorded at all, so the map/chart quietly skip it
+          rather than draw a straight line implying a real traveled path. */}
+      {sessionGpsGaps.length > 0 && (
+        <div
+          className="absolute top-3 left-1/2 -translate-x-1/2 z-1000 max-w-[90%] rounded bg-card/90 backdrop-blur-xs border border-amber-500/40 px-3 py-1.5 text-xs"
+          title={t('map.gpsGapExplain')}
+        >
+          <span className="text-amber-500 font-semibold">
+            {t('map.gpsGapDetected', {
+              count: sessionGpsGaps.length,
+              duration: formatGapDuration(totalGapMs(sessionGpsGaps)),
+            })}
+          </span>
+        </div>
+      )}
 
       {/* Multi-lap overlay legend - bottom center */}
       {overlayLines.length > 0 && (
