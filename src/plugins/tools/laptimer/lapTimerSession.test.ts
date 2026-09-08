@@ -5,6 +5,7 @@ import type { Track } from "@/types/racing";
 import { ConcurrentSourceMerger } from "@/lib/live/concurrentCapture";
 import type { VescSetupValues } from "@/lib/live/vescDecoder";
 import type { BmsSample } from "@/lib/live/bmsTransport";
+import type { HeartRateSample } from "@/lib/live/heartRateDecoder";
 
 const FAKE_VESC_SAMPLE: VescSetupValues = {
   tempEscC: 32,
@@ -40,6 +41,8 @@ const FAKE_BMS_SAMPLE: BmsSample = {
   },
   cellVoltages: null,
 };
+
+const FAKE_HEART_RATE_SAMPLE: HeartRateSample = { bpm: 142, rrIntervalMs: 420, contactDetected: true };
 
 const FAR_TRACK: Track = {
   name: "Far",
@@ -96,6 +99,7 @@ function setup(
   sidecars: {
     vescMerger?: ConcurrentSourceMerger<unknown, VescSetupValues>;
     bmsMerger?: ConcurrentSourceMerger<unknown, BmsSample>;
+    heartRateMerger?: ConcurrentSourceMerger<unknown, HeartRateSample>;
   } = {},
 ) {
   const geo = new FakeGeo();
@@ -177,7 +181,7 @@ describe("LapTimerSession", () => {
     expect(name).toMatch(/\.rplx$/);
     expect(blob).toBeInstanceOf(Blob);
     expect(saveMeta).toHaveBeenCalledTimes(1);
-    expect(saveMeta.mock.calls[0][0]).toMatchObject({ hasVescData: false, hasBmsData: false });
+    expect(saveMeta.mock.calls[0][0]).toMatchObject({ hasVescData: false, hasBmsData: false, hasHeartRateData: false });
     expect(s.savedFileName).toBe(name);
     expect(s.saving).toBe(false);
     expect(s.phase).toBe("ended");
@@ -265,7 +269,7 @@ describe("LapTimerSession", () => {
       expect(pkg.samples.length).toBeGreaterThan(0);
       expect(pkg.samples.at(-1).extraFields["Battery Voltage (V)"]).toBe(FAKE_VESC_SAMPLE.batteryVoltageV);
       expect(pkg.fieldMappings.some((f: { name: string }) => f.name === "Battery Voltage (V)")).toBe(true);
-      expect(saveMeta.mock.calls[0][0]).toMatchObject({ hasVescData: true, hasBmsData: false });
+      expect(saveMeta.mock.calls[0][0]).toMatchObject({ hasVescData: true, hasBmsData: false, hasHeartRateData: false });
     });
 
     it("writes a .rplive log with BMS channels merged in once the sidecar reports data", async () => {
@@ -280,16 +284,32 @@ describe("LapTimerSession", () => {
       const pkg = JSON.parse(await blob.text());
       expect(pkg.samples.at(-1).extraFields["Pack Voltage (V)"]).toBe(FAKE_BMS_SAMPLE.basicInfo.voltageV);
       expect(pkg.samples.at(-1).extraFields["MOSFET Temp (C)"]).toBe(FAKE_BMS_SAMPLE.basicInfo.tempsC[0]);
-      expect(saveMeta.mock.calls[0][0]).toMatchObject({ hasVescData: false, hasBmsData: true });
+      expect(saveMeta.mock.calls[0][0]).toMatchObject({ hasVescData: false, hasBmsData: true, hasHeartRateData: false });
     });
 
-    it("merges both sidecars into the same sample when both report data", async () => {
+    it("writes a .rplive log with heart-rate merged in once the sidecar reports data (issue #87)", async () => {
+      const heartRateMerger = new ConcurrentSourceMerger<unknown, HeartRateSample>();
+      const { geo, session, saveLog, saveMeta } = setup(vi.fn().mockResolvedValue(undefined), { heartRateMerger });
+      session.start();
+      heartRateMerger.addSecondary({ receivedAt: Date.now(), data: FAKE_HEART_RATE_SAMPLE });
+      drive(geo, 3);
+      await session.endSession();
+      const [name, blob] = saveLog.mock.calls[0];
+      expect(name).toMatch(/\.rplive$/);
+      const pkg = JSON.parse(await blob.text());
+      expect(pkg.samples.at(-1).extraFields["Heart Rate"]).toBe(FAKE_HEART_RATE_SAMPLE.bpm);
+      expect(saveMeta.mock.calls[0][0]).toMatchObject({ hasVescData: false, hasBmsData: false, hasHeartRateData: true });
+    });
+
+    it("merges all three sidecars into the same sample when all report data", async () => {
       const vescMerger = new ConcurrentSourceMerger<unknown, VescSetupValues>();
       const bmsMerger = new ConcurrentSourceMerger<unknown, BmsSample>();
-      const { geo, session, saveLog } = setup(vi.fn().mockResolvedValue(undefined), { vescMerger, bmsMerger });
+      const heartRateMerger = new ConcurrentSourceMerger<unknown, HeartRateSample>();
+      const { geo, session, saveLog } = setup(vi.fn().mockResolvedValue(undefined), { vescMerger, bmsMerger, heartRateMerger });
       session.start();
       vescMerger.addSecondary({ receivedAt: Date.now(), data: FAKE_VESC_SAMPLE });
       bmsMerger.addSecondary({ receivedAt: Date.now(), data: FAKE_BMS_SAMPLE });
+      heartRateMerger.addSecondary({ receivedAt: Date.now(), data: FAKE_HEART_RATE_SAMPLE });
       drive(geo, 3);
       await session.endSession();
       const [, blob] = saveLog.mock.calls[0];
@@ -297,6 +317,7 @@ describe("LapTimerSession", () => {
       const last = pkg.samples.at(-1).extraFields;
       expect(last["Battery Voltage (V)"]).toBe(FAKE_VESC_SAMPLE.batteryVoltageV);
       expect(last["Pack Voltage (V)"]).toBe(FAKE_BMS_SAMPLE.basicInfo.voltageV);
+      expect(last["Heart Rate"]).toBe(FAKE_HEART_RATE_SAMPLE.bpm);
     });
 
     // A rider bench-testing a VESC or watching a BMS charge doesn't move —

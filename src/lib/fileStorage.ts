@@ -90,6 +90,8 @@ export interface FileMetadata {
    */
   hasVescData?: boolean;
   hasBmsData?: boolean;
+  /** Same idea, for a heart-rate sidecar (issue #87) — never tied to a Vehicle. */
+  hasHeartRateData?: boolean;
   // Post-session measurements entered on the Notes tab (tire pressures, weight).
   postSession?: PostSessionData;
   /**

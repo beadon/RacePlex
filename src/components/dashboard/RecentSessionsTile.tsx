@@ -39,6 +39,7 @@ interface RecentSession {
   isSample: boolean;
   hasVescData: boolean;
   hasBmsData: boolean;
+  hasHeartRateData: boolean;
 }
 
 interface RecentSessionsSnapshot {
@@ -83,6 +84,7 @@ async function loadRecentSessions(): Promise<RecentSessionsSnapshot> {
         isSample: !!meta?.isSample || isSampleFileName(entry.name),
         hasVescData: !!meta?.hasVescData,
         hasBmsData: !!meta?.hasBmsData,
+        hasHeartRateData: !!meta?.hasHeartRateData,
       };
     });
   return { items, loaded: true };
@@ -208,7 +210,7 @@ export function RecentSessionsTile({
                           sample
                         </span>
                       )}
-                      <SidecarDataChips hasVescData={s.hasVescData} hasBmsData={s.hasBmsData} />
+                      <SidecarDataChips hasVescData={s.hasVescData} hasBmsData={s.hasBmsData} hasHeartRateData={s.hasHeartRateData} />
                     </div>
                     {s.trackLabel && (
                       <div className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground truncate">

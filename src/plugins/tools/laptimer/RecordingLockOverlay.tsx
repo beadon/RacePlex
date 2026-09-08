@@ -10,8 +10,9 @@
  * the unlock ring, the same reasoning workout/navigation apps use a locked
  * screen for.
  */
-import { Lock, LockOpen } from "lucide-react";
+import { Heart, Lock, LockOpen } from "lucide-react";
 import { useHoldToConfirm } from "@/hooks/useHoldToConfirm";
+import { SidecarDataChips } from "@/components/SidecarDataChips";
 import { useToolsT } from "../i18n";
 
 const HOLD_DURATION_MS = 1500;
@@ -22,10 +23,24 @@ export function RecordingLockOverlay({
   speed,
   speedUnit,
   onUnlock,
+  durationLabel,
+  heartRateBpm,
+  hasVescData,
+  hasBmsData,
 }: {
   speed: number;
   speedUnit: string;
   onUnlock: () => void;
+  /** Elapsed recording duration, already formatted ("M:SS"/"H:MM:SS") — a locked
+   *  screen shouldn't need to do its own clock math. */
+  durationLabel?: string;
+  /** Live BPM from a connected heart-rate sidecar (issue #87), when present. */
+  heartRateBpm?: number | null;
+  /** A VESC/BMS sidecar is currently connected and reporting (issues #58, #73)
+   *  — so a rider can see at a glance that everything is still recording
+   *  without unlocking the screen. */
+  hasVescData?: boolean;
+  hasBmsData?: boolean;
 }) {
   const t = useToolsT();
   const { progress, handlers } = useHoldToConfirm(HOLD_DURATION_MS, onUnlock);
@@ -45,6 +60,19 @@ export function RecordingLockOverlay({
           {speed.toFixed(0)}
           <span className="ml-2 text-xl font-normal text-muted-foreground">{speedUnit}</span>
         </div>
+        {durationLabel && (
+          <div className="mt-1 font-mono text-lg tabular-nums text-muted-foreground">{durationLabel}</div>
+        )}
+        {(heartRateBpm != null || hasVescData || hasBmsData) && (
+          <div className="mt-3 flex items-center justify-center gap-2">
+            {heartRateBpm != null && (
+              <span className="flex items-center gap-1 text-sm tabular-nums text-foreground">
+                <Heart className="h-4 w-4 text-destructive animate-pulse" /> {heartRateBpm}
+              </span>
+            )}
+            <SidecarDataChips hasVescData={hasVescData} hasBmsData={hasBmsData} hasHeartRateData={heartRateBpm != null} />
+          </div>
+        )}
       </div>
 
       <button

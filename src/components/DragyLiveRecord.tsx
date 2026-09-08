@@ -25,6 +25,10 @@ import type { BmsSample } from "@/lib/live/bmsTransport";
 import { useBmsSidecar } from "@/hooks/useBmsSidecar";
 import { BmsSidecarControl } from "@/components/BmsSidecarControl";
 import { useSidecarVehicleBinding } from "@/hooks/useSidecarVehicleBinding";
+import { applyHeartRateMergeToExtraFields, appendHeartRateFieldMappings } from "@/lib/live/heartRateMergeFields";
+import type { HeartRateSample } from "@/lib/live/heartRateDecoder";
+import { useHeartRateSidecar } from "@/hooks/useHeartRateSidecar";
+import { HeartRateSidecarControl } from "@/components/HeartRateSidecarControl";
 import { isUserCancelledBluetoothPicker } from "@/lib/live/bleUtils";
 
 interface DragyLiveRecordProps {
@@ -70,6 +74,10 @@ export function DragyLiveRecord({ open, onClose, onDataLoaded }: DragyLiveRecord
   // Remembers a first-time-connected sidecar's device name on a Vehicle
   // profile so pairing is faster next session.
   useSidecarVehicleBinding(vesc, bms);
+  // Fourth BLE connection (issue #87) — a heart-rate monitor belongs to the
+  // rider, not the board, so it's never fed into useSidecarVehicleBinding.
+  const [heartRateMerger] = useState(() => new ConcurrentSourceMerger<unknown, HeartRateSample>());
+  const heartRate = useHeartRateSidecar(heartRateMerger);
 
   const reset = useCallback(() => {
     setPhase("idle");
@@ -90,13 +98,14 @@ export function DragyLiveRecord({ open, onClose, onDataLoaded }: DragyLiveRecord
     connectionRef.current = null;
     try { await vesc.disconnect(); } catch { /* ignore */ }
     try { await bms.disconnect(); } catch { /* ignore */ }
-    // Only vesc.disconnect/bms.disconnect (themselves useCallback-stable off
-    // their mergers, which never change) are used here — depending on the
-    // whole vesc/bms objects, which are fresh literals every render, would
-    // re-run this effect's cleanup+setup on every render, actively tearing
-    // down BLE connections mid-session.
+    try { await heartRate.disconnect(); } catch { /* ignore */ }
+    // Only the disconnect functions (themselves useCallback-stable off their
+    // mergers, which never change) are used here — depending on the whole
+    // vesc/bms/heartRate objects, which are fresh literals every render,
+    // would re-run this effect's cleanup+setup on every render, actively
+    // tearing down BLE connections mid-session.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [vesc.disconnect, bms.disconnect]);
+  }, [vesc.disconnect, bms.disconnect, heartRate.disconnect]);
 
   useEffect(() => {
     if (!open) return;
@@ -133,6 +142,7 @@ export function DragyLiveRecord({ open, onClose, onDataLoaded }: DragyLiveRecord
     const receivedAt = Date.now();
     applyVescMergeToExtraFields(extraFields, merger.addPrimary({ receivedAt, data: null }));
     applyBmsMergeToExtraFields(extraFields, bmsMerger.addPrimary({ receivedAt, data: null }));
+    applyHeartRateMergeToExtraFields(extraFields, heartRateMerger.addPrimary({ receivedAt, data: null }));
 
     list.push({
       t,
@@ -144,7 +154,7 @@ export function DragyLiveRecord({ open, onClose, onDataLoaded }: DragyLiveRecord
     });
     setSampleCount(list.length);
     setLatest({ speedKph: sample.speedMps * 3.6, nSat: sample.numSV });
-  }, [merger, bmsMerger]);
+  }, [merger, bmsMerger, heartRateMerger]);
 
   const handleConnect = useCallback(async () => {
     setPhase("connecting");
@@ -188,6 +198,7 @@ export function DragyLiveRecord({ open, onClose, onDataLoaded }: DragyLiveRecord
       ];
       appendVescFieldMappings(fieldMappings, samples);
       appendBmsFieldMappings(fieldMappings, samples);
+      appendHeartRateFieldMappings(fieldMappings, samples);
       const data: ParsedData = {
         samples,
         fieldMappings,
@@ -206,6 +217,7 @@ export function DragyLiveRecord({ open, onClose, onDataLoaded }: DragyLiveRecord
         source: "device",
         hasVescData: merger.hasSecondary,
         hasBmsData: bmsMerger.hasSecondary,
+        hasHeartRateData: heartRateMerger.hasSecondary,
       });
       setSavedFileName(fileName);
       setPhase("saved");
@@ -215,7 +227,7 @@ export function DragyLiveRecord({ open, onClose, onDataLoaded }: DragyLiveRecord
       setPhase("error");
       setError(msg);
     }
-  }, [teardown, onDataLoaded, merger, bmsMerger]);
+  }, [teardown, onDataLoaded, merger, bmsMerger, heartRateMerger]);
 
   return (
     <Dialog open={open} onOpenChange={(o) => (!o ? void handleCancel() : undefined)}>
@@ -256,12 +268,13 @@ export function DragyLiveRecord({ open, onClose, onDataLoaded }: DragyLiveRecord
                   Speed {latest.speedKph.toFixed(1)} km/h · {latest.nSat} sats
                 </p>
               )}
-              {/* Optional second/third BLE connections alongside this one
-                  (issues #58, #73) — each merged by receipt time, flagged
-                  suspect when stale. */}
+              {/* Optional second/third/fourth BLE connections alongside this
+                  one (issues #58, #73, #87) — each merged by receipt time,
+                  flagged suspect when stale. */}
               <div className="border-t border-border pt-2 space-y-2">
                 <VescSidecarControl vesc={vesc} />
                 <BmsSidecarControl bms={bms} />
+                <HeartRateSidecarControl heartRate={heartRate} />
               </div>
             </div>
           )}
