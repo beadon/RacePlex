@@ -187,6 +187,42 @@ describe("LapTimerSession", () => {
     expect(s.phase).toBe("ended");
   });
 
+  it("exposes the exact saved bytes as savedBlob", async () => {
+    const { geo, session } = setup();
+    session.start();
+    drive(geo, 5);
+    await session.endSession();
+    const s = session.getSnapshot();
+    expect(s.savedBlob).toBeInstanceOf(Blob);
+  });
+
+  // Deliberately NOT an automatic callback fired at save time — Index.tsx
+  // unmounts its whole Dashboard subtree (this tool included) the instant a
+  // session loads, which would tear the "ended" screen out from under the
+  // rider before a "View session"/"Share" click was even possible. The
+  // parsed data sits on the snapshot instead, for the UI to hand off only on
+  // an explicit click — confirmed live, not just reasoned through.
+  it("exposes the parsed session as savedData without firing anything automatically", async () => {
+    const { geo, session, saveLog } = setup();
+    session.start();
+    drive(geo, 5);
+    await session.endSession();
+    const [name] = saveLog.mock.calls[0];
+    const s = session.getSnapshot();
+    expect(s.savedData?.samples.length).toBeGreaterThan(0);
+    expect(s.savedData?.duration).toBeGreaterThan(0);
+    expect(s.savedData?.bounds).toBeDefined();
+    expect(s.savedFileName).toBe(name);
+  });
+
+  it("leaves savedData null when nothing was recorded", async () => {
+    const { geo, session } = setup();
+    session.start();
+    geo.emit({ speed: 1 }, BASE_TS); // never arms
+    await session.endSession();
+    expect(session.getSnapshot().savedData).toBeNull();
+  });
+
   it("does not double-save when endSession is called twice", async () => {
     const { geo, session, saveLog } = setup();
     session.start();

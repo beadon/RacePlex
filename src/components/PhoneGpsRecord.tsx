@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useOptionalSettingsContext } from "@/contexts/SettingsContext";
+import type { ParsedData } from "@/types/racing";
 
 // The lap-timer tool already owns the phone-GPS capture + persistence loop.
 // Lazy so the geolocation stack + tracks/GPS math don't ride the eager bundle.
@@ -21,6 +22,9 @@ const PRECISION_ACK_KEY = "phoneGps:precisionWarningAck";
 interface PhoneGpsRecordProps {
   open: boolean;
   onClose: () => void;
+  /** Hand the finished capture into the app's session state — same contract
+   *  every other logger flow (RaceBoxLiveRecord, DataloggerDownload, …) uses. */
+  onDataLoaded?: (data: ParsedData, fileName?: string) => void;
 }
 
 /**
@@ -39,7 +43,7 @@ function hasPrecisionAck(): boolean {
   }
 }
 
-export function PhoneGpsRecord({ open, onClose }: PhoneGpsRecordProps) {
+export function PhoneGpsRecord({ open, onClose, onDataLoaded }: PhoneGpsRecordProps) {
   const settings = useOptionalSettingsContext();
   const useKph = settings?.useKph ?? false;
   // Sticky "user acknowledged for this mount" — flipped by the Start button.
@@ -115,6 +119,8 @@ export function PhoneGpsRecord({ open, onClose }: PhoneGpsRecordProps) {
                 useKph={useKph}
                 sessionSetup={null}
                 activeSnapshot={null}
+                onSessionSaved={onDataLoaded}
+                onClose={onClose}
               />
             </Suspense>
           </div>

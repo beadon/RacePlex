@@ -156,7 +156,7 @@
     "endSession": "End session",
     "saving": "Saving session…",
     "savedTitle": "Session saved",
-    "savedHint": "Find it in your saved files to review like any log.",
+    "savedHint": "View it now, share it with someone else, or start a new session.",
     "newSession": "New session",
     "noDataTitle": "No lap data recorded",
     "noDataBody": "You need to be moving (above 5 mph) for a session to record.",
