@@ -19,3 +19,14 @@ export function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<
     new Promise<undefined>((resolve) => setTimeout(() => resolve(undefined), timeoutMs)),
   ]);
 }
+
+/**
+ * True when `err` is what `navigator.bluetooth.requestDevice()` rejects with
+ * when the rider dismisses the browser's device picker without choosing
+ * anything (Chrome: a `NotFoundError` DOMException) — not a real failure, so
+ * a sidecar connect UI should quietly go back to idle rather than show an
+ * error someone would try to troubleshoot.
+ */
+export function isUserCancelledBluetoothPicker(err: unknown): boolean {
+  return err instanceof DOMException && err.name === "NotFoundError";
+}
