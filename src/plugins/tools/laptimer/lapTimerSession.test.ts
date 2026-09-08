@@ -177,6 +177,7 @@ describe("LapTimerSession", () => {
     expect(name).toMatch(/\.rplx$/);
     expect(blob).toBeInstanceOf(Blob);
     expect(saveMeta).toHaveBeenCalledTimes(1);
+    expect(saveMeta.mock.calls[0][0]).toMatchObject({ hasVescData: false, hasBmsData: false });
     expect(s.savedFileName).toBe(name);
     expect(s.saving).toBe(false);
     expect(s.phase).toBe("ended");
@@ -252,7 +253,7 @@ describe("LapTimerSession", () => {
 
     it("writes a .rplive log with VESC channels merged in once the sidecar reports data", async () => {
       const vescMerger = new ConcurrentSourceMerger<unknown, VescSetupValues>();
-      const { geo, session, saveLog } = setup(vi.fn().mockResolvedValue(undefined), { vescMerger });
+      const { geo, session, saveLog, saveMeta } = setup(vi.fn().mockResolvedValue(undefined), { vescMerger });
       session.start();
       vescMerger.addSecondary({ receivedAt: Date.now(), data: FAKE_VESC_SAMPLE });
       drive(geo, 3);
@@ -264,11 +265,12 @@ describe("LapTimerSession", () => {
       expect(pkg.samples.length).toBeGreaterThan(0);
       expect(pkg.samples.at(-1).extraFields["Battery Voltage (V)"]).toBe(FAKE_VESC_SAMPLE.batteryVoltageV);
       expect(pkg.fieldMappings.some((f: { name: string }) => f.name === "Battery Voltage (V)")).toBe(true);
+      expect(saveMeta.mock.calls[0][0]).toMatchObject({ hasVescData: true, hasBmsData: false });
     });
 
     it("writes a .rplive log with BMS channels merged in once the sidecar reports data", async () => {
       const bmsMerger = new ConcurrentSourceMerger<unknown, BmsSample>();
-      const { geo, session, saveLog } = setup(vi.fn().mockResolvedValue(undefined), { bmsMerger });
+      const { geo, session, saveLog, saveMeta } = setup(vi.fn().mockResolvedValue(undefined), { bmsMerger });
       session.start();
       bmsMerger.addSecondary({ receivedAt: Date.now(), data: FAKE_BMS_SAMPLE });
       drive(geo, 3);
@@ -278,6 +280,7 @@ describe("LapTimerSession", () => {
       const pkg = JSON.parse(await blob.text());
       expect(pkg.samples.at(-1).extraFields["Pack Voltage (V)"]).toBe(FAKE_BMS_SAMPLE.basicInfo.voltageV);
       expect(pkg.samples.at(-1).extraFields["MOSFET Temp (C)"]).toBe(FAKE_BMS_SAMPLE.basicInfo.tempsC[0]);
+      expect(saveMeta.mock.calls[0][0]).toMatchObject({ hasVescData: false, hasBmsData: true });
     });
 
     it("merges both sidecars into the same sample when both report data", async () => {

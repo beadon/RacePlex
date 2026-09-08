@@ -99,6 +99,18 @@ describe("buildBrowserSessions", () => {
     expect(a.isSample).toBe(false);
   });
 
+  it("carries hasVescData/hasBmsData from metadata, defaulting to false", () => {
+    const metaMap = new Map<string, FileMetadata>([
+      ["a.dove", { fileName: "a.dove", trackName: "OKC", courseName: "CW", sessionStartTime: 1, hasVescData: true, hasBmsData: true }],
+      ["b.dove", { fileName: "b.dove", trackName: "OKC", courseName: "CW", sessionStartTime: 2 }],
+    ]);
+    const [a, b] = buildBrowserSessions(files, metaMap, vehicles);
+    expect(a.hasVescData).toBe(true);
+    expect(a.hasBmsData).toBe(true);
+    expect(b.hasVescData).toBe(false);
+    expect(b.hasBmsData).toBe(false);
+  });
+
   it("merges remote (cloud) files as cloud sessions, deduped against local", () => {
     const metaMap = new Map<string, FileMetadata>([
       ["a.dove", { fileName: "a.dove", trackName: "OKC", courseName: "CW", sessionStartTime: 1 }],

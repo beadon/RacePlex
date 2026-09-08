@@ -35,6 +35,9 @@ export interface BrowserSession {
   fastestLapMs?: number;
   /** Bundled sample log — hidden from the browser unless "show sample files" is on. */
   isSample?: boolean;
+  /** A VESC and/or BMS sidecar reported data during this session (issues #58, #73). */
+  hasVescData?: boolean;
+  hasBmsData?: boolean;
 }
 
 /** Where the browser is currently pointing. */
@@ -179,6 +182,8 @@ export function buildBrowserSessions(
       kartName: vehicle?.name,
       fastestLapMs: meta?.fastestLapMs,
       isSample: meta?.isSample ?? false,
+      hasVescData: meta?.hasVescData ?? false,
+      hasBmsData: meta?.hasBmsData ?? false,
     };
   };
 
