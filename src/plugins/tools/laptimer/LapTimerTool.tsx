@@ -13,7 +13,7 @@
  * session manually after a confirm; ended sessions can be restarted.
  */
 import { useState, memo } from "react";
-import { Loader2, CheckCircle2, Square } from "lucide-react";
+import { Loader2, CheckCircle2, Lock, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -29,6 +29,7 @@ import { formatLapTime, formatSectorTime } from "@/lib/lapCalculation";
 import { useWakeLock } from "@/hooks/useWakeLock";
 import { isIosSafari } from "@/lib/iosSafari";
 import { useLapTimer } from "./useLapTimer";
+import { RecordingLockOverlay } from "./RecordingLockOverlay";
 import { useToolsT, type ToolsKey } from "../i18n";
 import type { TimingState, GpsObservation, SessionPhase } from "@/lib/gps";
 
@@ -45,10 +46,19 @@ export default function LapTimerTool(props: PluginPanelProps) {
   const { phase, timing, laps, latest, saving, savedFileName, error, errorCode, endSession, reset } = logger;
   const [view, setView] = useState<View>("live");
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [locked, setLocked] = useState(false);
 
   // Keep the screen awake while a session is live — a lap timer is useless if the
   // phone sleeps mid-session. Released once the session has ended.
   useWakeLock(phase !== "ended");
+
+  // A session ending (manually or via the 5-min auto-idle timer) reaches the
+  // saved/ended screen immediately — the render below never shows the lock
+  // overlay once `phase === "ended"`, so a rider is never stuck behind it.
+  // `locked` itself is reset explicitly by the "new session" actions instead
+  // of an effect, so a stale `true` from the last session doesn't reappear
+  // the instant a fresh one arms.
+  const showLockOverlay = locked && phase !== "ended";
 
   const useKph = props.useKph;
   const speedMps = latest?.fix.speed ?? latest?.motion.speedMps ?? 0;
@@ -75,9 +85,14 @@ export default function LapTimerTool(props: PluginPanelProps) {
         <div className="flex items-center gap-3">
           <Status phase={phase} courseName={timing.courseName} trackName={timing.trackName} />
           {phase !== "ended" && (
-            <Button variant="destructive" size="sm" className="h-8 gap-1" onClick={() => setConfirmOpen(true)}>
-              <Square className="h-3.5 w-3.5 fill-current" /> {t("laptimer.end")}
-            </Button>
+            <>
+              <Button variant="outline" size="sm" className="h-8 gap-1" onClick={() => setLocked(true)}>
+                <Lock className="h-3.5 w-3.5" /> {t("laptimer.lockScreen")}
+              </Button>
+              <Button variant="destructive" size="sm" className="h-8 gap-1" onClick={() => setConfirmOpen(true)}>
+                <Square className="h-3.5 w-3.5 fill-current" /> {t("laptimer.end")}
+              </Button>
+            </>
           )}
         </div>
       </div>
@@ -115,17 +130,21 @@ export default function LapTimerTool(props: PluginPanelProps) {
                 <p className="text-sm font-medium text-foreground">{t("laptimer.savedTitle")}</p>
                 <p className="break-all text-xs text-muted-foreground">{savedFileName}</p>
                 <p className="text-xs text-muted-foreground">{t("laptimer.savedHint")}</p>
-                <Button size="sm" onClick={reset}>{t("laptimer.newSession")}</Button>
+                <Button size="sm" onClick={() => { setLocked(false); reset(); }}>{t("laptimer.newSession")}</Button>
               </>
             ) : (
               <>
                 <p className="text-sm font-medium text-foreground">{t("laptimer.noDataTitle")}</p>
                 <p className="text-xs text-muted-foreground">{t("laptimer.noDataBody")}</p>
-                <Button size="sm" onClick={reset}>{t("laptimer.startNewSession")}</Button>
+                <Button size="sm" onClick={() => { setLocked(false); reset(); }}>{t("laptimer.startNewSession")}</Button>
               </>
             )}
           </div>
         </div>
+      )}
+
+      {showLockOverlay && (
+        <RecordingLockOverlay speed={speed} speedUnit={speedUnit} onUnlock={() => setLocked(false)} />
       )}
 
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
