@@ -8,7 +8,7 @@
  * foundation (`@/lib/gps`, `useLapTimer`); visuals get tuned in a later phase.
  *
  * Behavior: starts capturing the moment it opens, begins recording above 5 mph,
- * auto-ends after 5 min stopped, and saves a `.dovep` log to IndexedDB on end
+ * auto-ends after 5 min stopped, and saves an `.rplx` log to IndexedDB on end
  * (openable + processable like any uploaded session). A red control ends the
  * session manually after a confirm; ended sessions can be restarted.
  */

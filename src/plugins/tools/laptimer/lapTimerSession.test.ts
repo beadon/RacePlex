@@ -122,7 +122,7 @@ describe("LapTimerSession", () => {
     expect(saveMeta).not.toHaveBeenCalled();
   });
 
-  it("persists a .dovep log + metadata on manual end", async () => {
+  it("persists an .rplx log + metadata on manual end", async () => {
     const { geo, session, saveLog, saveMeta } = setup();
     session.start();
     drive(geo, 5);
@@ -130,7 +130,7 @@ describe("LapTimerSession", () => {
     const s = session.getSnapshot();
     expect(saveLog).toHaveBeenCalledTimes(1);
     const [name, blob] = saveLog.mock.calls[0];
-    expect(name).toMatch(/\.dovep$/);
+    expect(name).toMatch(/\.rplx$/);
     expect(blob).toBeInstanceOf(Blob);
     expect(saveMeta).toHaveBeenCalledTimes(1);
     expect(s.savedFileName).toBe(name);

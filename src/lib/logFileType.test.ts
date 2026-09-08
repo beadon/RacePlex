@@ -37,6 +37,9 @@ describe("logFileTypeLabel", () => {
     expect(logFileTypeLabel("a.csv")).toBe("CSV");
     expect(logFileTypeLabel("a.txt")).toBe("TXT");
     expect(logFileTypeLabel("a.rplive")).toBe("Live");
+    expect(logFileTypeLabel("a.rplx")).toBe("Phone");
+    // Legacy phone-GPS extension, pre-rename — already-saved files keep a label.
+    expect(logFileTypeLabel("a.dovep")).toBe("Phone");
   });
 
   it("uppercases unknown extensions", () => {

@@ -26,7 +26,7 @@ interface PhoneGpsRecordProps {
 /**
  * Launches a phone-GPS recording session from the logger picker. Shows the
  * first-time precision warning (localStorage-remembered) before mounting the
- * real recording UI. On end, the lap-timer saves its `.dovep` log through the
+ * real recording UI. On end, the lap-timer saves its `.rplx` log through the
  * same fileStorage path as any other device, tagged `source: 'phone-gps'` so
  * the session view shows a low-precision yield badge.
  */

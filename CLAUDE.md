@@ -242,7 +242,7 @@ src/
 │   ├── garageEvents.ts    # ★ Host pub/sub: storage emits {store,key,put|delete}; cloud-sync syncs off it
 │   ├── fileLoadingState.ts # ★ Host pub/sub for the global file-load overlay
 │   ├── *Storage.ts        # IDB/localStorage store modules (file, vehicle, engine, template, note, setup, …)
-│   ├── gps/               # ★ Phone-as-datalogger layer: gpsFix, customGps, sessionGate, realtimeTimer, dovepWriter
+│   ├── gps/               # ★ Phone-as-datalogger layer: gpsFix, customGps, sessionGate, realtimeTimer, rplxWriter
 │   ├── loggers/           # ★ Generic LoggerConnection (listLogs/downloadLog/disconnect) + per-logger adapters — Fledgling=web BLE, mychron/=MyChron over native (Tauri) Wi-Fi IPC, doveslogger/=same Fledgling hardware over native (Tauri) BLE IPC (scan→connect→list→download), alfano/=Alfano over native (Tauri) Bluetooth-serial IPC (SKELETON: web-side seam only, Rust backend TBD — Bluetooth serial can't be reached in-browser so there's no web path); native/ipc.ts = shared kind-agnostic native IPC (all lazy; @tauri-apps/api dynamic-imported, native-only). progress.ts = transport-neutral formatters + computeProgress (→ docs/ble.md)
 │   ├── speedHeatmap.ts / mapMarker.ts / brakingZones / gforceCalculation / …  # racing math
 │   ├── chartUtils / canvas2d / chartAxis / chartColors / videoExport / overlayCanvasRenderer  # charts/video
@@ -335,7 +335,7 @@ Three parsers break the simple sync contract — the async **AiM XRK/XRZ**
 decode, both libraries dynamic-imported), and the binary **iRacing `.ibt`**. The two
 async ones are the only formats that report progress (via `lib/importProgress.ts` →
 the file-loading overlay), and the only ones `parseDatalogContent` (sync) refuses
-outright. Details, plus the **.dovex/.dovep** 8 KB-header format:
+outright. Details, plus the **.dovex/.rplx** 8 KB-header format:
 **→ `docs/subsystems.md`**.
 
 ---

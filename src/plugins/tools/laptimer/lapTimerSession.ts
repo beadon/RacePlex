@@ -3,7 +3,7 @@
  *
  * Holds the session lifecycle that used to live inside the React hook: it drives
  * the GPS source through the session gate (arm above 5 mph / auto-idle), feeds
- * recorded fixes to the realtime timer, and persists the session as a `.dovep`
+ * recorded fixes to the realtime timer, and persists the session as an `.rplx`
  * log on end. Every dependency (GPS source, timer, save functions) is injected,
  * so the whole flow is unit-testable with a fake geolocation + fake persistence —
  * the hook is then a thin adapter that subscribes to snapshots.
@@ -21,9 +21,9 @@ import {
   endSessionGate,
   type SessionGateState,
   type SessionPhase,
-  serializeDovepBlob,
-  buildDovepFileName,
-  type DovepSessionMeta,
+  serializeRplxBlob,
+  buildRplxFileName,
+  type RplxSessionMeta,
 } from "@/lib/gps";
 import type { Lap } from "@/types/racing";
 import type { FileMetadata } from "@/lib/fileStorage";
@@ -36,7 +36,7 @@ export interface LapTimerSnapshot {
   laps: Lap[];
   /** Latest captured observation (live speed/quality). */
   latest: GpsObservation | null;
-  /** True while the `.dovep` log is being written. */
+  /** True while the `.rplx` log is being written. */
   saving: boolean;
   /** Filename once the session has been saved. */
   savedFileName: string | null;
@@ -163,7 +163,7 @@ export class LapTimerSession {
     }
   }
 
-  /** Serialize the recorded buffer to a `.dovep` log and store it. */
+  /** Serialize the recorded buffer to an `.rplx` log and store it. */
   private async persist(): Promise<void> {
     if (this.snapshot.saving || this.recorded.length === 0) return;
     this.patch({ saving: true });
@@ -171,8 +171,8 @@ export class LapTimerSession {
     const t = this.deps.timer.getState();
     const laps = [...this.deps.timer.getLaps()];
     const startTs = this.recorded[0].fix.timestamp;
-    const fileName = buildDovepFileName(startTs);
-    const meta: DovepSessionMeta = {
+    const fileName = buildRplxFileName(startTs);
+    const meta: RplxSessionMeta = {
       course: t.courseName ?? undefined,
       bestLapMs: t.bestLapMs ?? undefined,
       optimalMs: t.optimalMs ?? undefined,
@@ -180,7 +180,7 @@ export class LapTimerSession {
     };
 
     try {
-      await this.deps.saveLog(fileName, serializeDovepBlob(this.recorded, meta));
+      await this.deps.saveLog(fileName, serializeRplxBlob(this.recorded, meta));
       await this.deps.saveMeta({
         fileName,
         trackName: t.trackName ?? "",
