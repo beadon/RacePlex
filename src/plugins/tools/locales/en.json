@@ -186,6 +186,10 @@
     "statusRecording": "Recording",
     "statusEnded": "Ended",
     "statusWaiting": "Waiting",
+    "lockScreen": "Lock screen",
+    "lockedStatus": "Recording — screen locked",
+    "holdToUnlock": "Hold to unlock",
+    "lockedHint": "Keep this screen on and don't press the power button — pocket the phone as-is.",
     "iosLocationDenied": {
       "title": "Location access is off for Safari",
       "body": "RacePlex can't record without it. Turn it back on:",
