@@ -295,5 +295,24 @@ describe("LapTimerSession", () => {
       expect(last["Battery Voltage (V)"]).toBe(FAKE_VESC_SAMPLE.batteryVoltageV);
       expect(last["Pack Voltage (V)"]).toBe(FAKE_BMS_SAMPLE.basicInfo.voltageV);
     });
+
+    // A rider bench-testing a VESC or watching a BMS charge doesn't move —
+    // that data must still be captured even though GPS lap timing never arms.
+    it("records sidecar samples while parked, before the GPS session ever arms", async () => {
+      const vescMerger = new ConcurrentSourceMerger<unknown, VescSetupValues>();
+      const { geo, session, saveLog } = setup(vi.fn().mockResolvedValue(undefined), { vescMerger });
+      session.start();
+      vescMerger.addSecondary({ receivedAt: Date.now(), data: FAKE_VESC_SAMPLE });
+      geo.emit({ speed: 0 }, BASE_TS);
+      geo.emit({ speed: 0 }, BASE_TS + 1_000);
+      expect(session.getSnapshot().phase).toBe("waiting"); // never armed — stayed parked
+
+      await session.endSession();
+      const [name, blob] = saveLog.mock.calls[0];
+      expect(name).toMatch(/\.rplive$/);
+      const pkg = JSON.parse(await blob.text());
+      expect(pkg.samples).toHaveLength(2);
+      expect(pkg.samples.at(-1).extraFields["Battery Voltage (V)"]).toBe(FAKE_VESC_SAMPLE.batteryVoltageV);
+    });
   });
 });

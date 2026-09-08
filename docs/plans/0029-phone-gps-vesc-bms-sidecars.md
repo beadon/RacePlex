@@ -63,3 +63,22 @@ just because the BLE link died partway through a run.
 in this pass — the merge/persist logic is identical to the already
 hardware-verified RaceBoxLiveRecord path (plans 0021, 0027), reused rather
 than reimplemented.
+
+## Follow-up: record sidecar data while parked
+
+Reported immediately after the above merged: a rider bench-testing a VESC or
+watching a BMS charge doesn't move, so GPS lap timing never arms — and the
+original `handleFix` only pushed a fix into `recorded`/`samples` while
+`gate.phase === "recording"`, so a stationary sidecar session recorded
+nothing at all.
+
+Fixed by decoupling sidecar capture from the movement gate: `handleFix` now
+captures a fix whenever `gate.phase === "recording"` **or** a sidecar has
+ever reported data (`vescMerger?.hasSecondary || bmsMerger?.hasSecondary`).
+Lap timing itself (`timer.update`, lap-list updates) still only runs while
+actually `"recording"` — only the sidecar-driven capture ignores the
+movement gate. A plain GPS-only session (no sidecar) is unaffected: it still
+only starts recording once armed, exactly as before. Confirmed safe against
+the auto-idle timer too — `stepSessionGate` never auto-ends from `"waiting"`,
+only from `"recording"` after having been armed and then stopped, so a
+sidecar-only parked session can't be cut short by that timeout.
