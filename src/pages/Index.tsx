@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, lazy, Suspense } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Gauge, Map, ListOrdered, BarChart3, FolderOpen, Play, Pause, StepBack, StepForward, Eye, EyeOff, AlertCircle, AlertTriangle, Wrench, NotebookPen, SlidersHorizontal, Columns2 } from "lucide-react";
+import { Gauge, Map, ListOrdered, BarChart3, FolderOpen, Play, Pause, StepBack, StepForward, Eye, EyeOff, AlertCircle, AlertTriangle, ChevronRight, NotebookPen, SlidersHorizontal, Columns2 } from "lucide-react";
 import { BrandLogo } from "@/components/BrandLogo";
 import { Dashboard } from "@/pages/Dashboard";
 import { useAutoOpenLastSession } from "@/hooks/useAutoOpenLastSession";
@@ -23,9 +23,6 @@ const GraphViewTab = lazy(() =>
 const CoachTab = lazy(() =>
   import("@/components/tabs/CoachTab").then((m) => ({ default: m.CoachTab })),
 );
-const ToolsTab = lazy(() =>
-  import("@/components/tabs/ToolsTab").then((m) => ({ default: m.ToolsTab })),
-);
 // Setups is a main-view tab built on the same component the garage drawer used.
 // Lazy-loaded — it pulls in the template creator + setup-history panel that the
 // landing/initial view never needs.
@@ -46,6 +43,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { ParsedData } from "@/types/racing";
 import { parseDatalogFile } from "@/lib/datalogParser";
 import { calculateDistanceArray } from "@/lib/referenceUtils";
+import { formatSessionDisplayName } from "@/lib/fileBrowserTree";
 import { formatAxisDistance } from "@/lib/chartAxis";
 import { applyPalette } from "@/lib/palettes";
 import { cn } from "@/lib/utils";
@@ -84,7 +82,7 @@ import { takePendingLeaderboardSession } from "@/lib/leaderboardHandoff";
 import type { LeaderboardDescriptor } from "@/lib/leaderboardSession";
 
 
-type TopPanelView = "raceline" | "laptable" | "graphview" | "coach" | "tools" | "setups" | "notes";
+type TopPanelView = "raceline" | "laptable" | "graphview" | "coach" | "setups" | "notes";
 
 const enableAdmin = import.meta.env.VITE_ENABLE_ADMIN === 'true';
 const enableCloud = import.meta.env.VITE_ENABLE_CLOUD === 'true';
@@ -206,7 +204,7 @@ export default function Index() {
 
   // Session metadata
   const sessionMeta = useSessionMetadata(currentFileName);
-  const { cachedWeatherStation, sessionKartId, sessionSetupId, sessionSetupRev, postSession, sessionSource } = sessionMeta;
+  const { cachedWeatherStation, sessionKartId, sessionSetupId, sessionSetupRev, postSession, sessionSource, displayName: sessionDisplayName } = sessionMeta;
 
   // Playback
   const { isPlaying, toggle: togglePlayback, averageFrameRate } = usePlayback({
@@ -225,9 +223,6 @@ export default function Index() {
   // The Coach tab is self-gating: it appears only when a plugin contributes a
   // panel to the Coach slot (i.e. the coach package is installed).
   const showCoach = usePanelsForSlot(PanelSlot.Coach).length > 0;
-  // Tools tab is self-gating like Coach: it appears only when a plugin
-  // contributes a panel to the Tools slot (the first-party tools plugin does).
-  const showTools = usePanelsForSlot(PanelSlot.Tools).length > 0;
   // Profile tab is self-gating too: appears only when a plugin (cloud-sync)
   // contributes a Profile panel (i.e. the cloud build flag is on).
   const showProfile = usePanelsForSlot(PanelSlot.Profile).length > 0;
@@ -753,7 +748,11 @@ export default function Index() {
     );
   }
 
-  
+  // The loaded session's label for the header breadcrumb — a saved
+  // display-name override (the bundled sample) wins, else the session's own
+  // start date/time, same formatting the file browser uses for consistency.
+  const sessionLabel = sessionDisplayName?.trim() || formatSessionDisplayName(data.startDate?.getTime(), currentFileName ?? "");
+
   // Data loaded - show main view
     return (
     <DeviceProvider>
@@ -782,11 +781,23 @@ export default function Index() {
                 clearSession();
               }}
               aria-label={t("header.home")}
-              className="flex items-center gap-3 rounded-md focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
+              className="flex items-center gap-3 rounded-md shrink-0 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
             >
               <BrandLogo className="w-6 h-6" />
               <span className="font-semibold text-foreground hidden sm:inline">RacePlex</span>
             </button>
+            {/* Breadcrumb: which session is loaded, and a reminder the logo
+                above is the way back — the logo alone didn't read as a nav
+                control. */}
+            <div className="flex items-center gap-1.5 min-w-0">
+              <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+              <span
+                className="min-w-0 truncate text-sm font-medium text-muted-foreground"
+                title={sessionLabel}
+              >
+                {sessionLabel}
+              </span>
+            </div>
             {sessionSource === "phone-gps" && (
               <TooltipProvider>
                 <Tooltip>
@@ -913,7 +924,7 @@ export default function Index() {
       </header>
 
       <main className="flex-1 min-h-0 overflow-hidden flex flex-col">
-        <TabBar topPanelView={topPanelView} setTopPanelView={setTopPanelView} laps={laps} showOverlays={showOverlays} onToggleOverlays={() => setShowOverlays(v => !v)} showCoach={showCoach && !readOnly} showTools={showTools && !readOnly} readOnly={readOnly} setupIndicator={readOnly ? null : setupIndicator} onSetupIndicatorClick={() => setupIndicator && navigateToManage(setupIndicator.target)} overlayLines={overlayLines} splitActive={splitActive} onStartSplit={startSplit} onCombineSplit={combineSplit} />
+        <TabBar topPanelView={topPanelView} setTopPanelView={setTopPanelView} laps={laps} showOverlays={showOverlays} onToggleOverlays={() => setShowOverlays(v => !v)} showCoach={showCoach && !readOnly} readOnly={readOnly} setupIndicator={readOnly ? null : setupIndicator} onSetupIndicatorClick={() => setupIndicator && navigateToManage(setupIndicator.target)} overlayLines={overlayLines} splitActive={splitActive} onStartSplit={startSplit} onCombineSplit={combineSplit} />
 
 
         <div className="flex-1 min-h-0 overflow-hidden">
@@ -922,7 +933,6 @@ export default function Index() {
             {topPanelView === "raceline" && <RaceLineTab showOverlays={showOverlays} />}
             {topPanelView === "graphview" && <GraphViewTab />}
             {topPanelView === "coach" && showCoach && <CoachTab />}
-            {topPanelView === "tools" && showTools && <ToolsTab />}
             {/* Setups + Notes share one surface: a 50/50 split on tablet/desktop,
                 separate full-width tabs on phones (see SetupsNotesPanel). */}
             {(topPanelView === "setups" || topPanelView === "notes") && (
@@ -991,14 +1001,13 @@ export default function Index() {
 }
 
 /** Tab navigation bar for the main data view */
-function TabBar({ topPanelView, setTopPanelView, laps, showOverlays, onToggleOverlays, showCoach, showTools, readOnly, setupIndicator, onSetupIndicatorClick, overlayLines, splitActive, onStartSplit, onCombineSplit }: {
+function TabBar({ topPanelView, setTopPanelView, laps, showOverlays, onToggleOverlays, showCoach, readOnly, setupIndicator, onSetupIndicatorClick, overlayLines, splitActive, onStartSplit, onCombineSplit }: {
   topPanelView: TopPanelView;
   setTopPanelView: (view: TopPanelView) => void;
   laps: { lapNumber: number }[];
   showOverlays: boolean;
   onToggleOverlays: () => void;
   showCoach: boolean;
-  showTools: boolean;
   readOnly?: boolean;
   setupIndicator: SetupIndicator | null;
   onSetupIndicatorClick: () => void;
@@ -1036,11 +1045,6 @@ function TabBar({ topPanelView, setTopPanelView, laps, showOverlays, onToggleOve
       {showCoach && (
         <button onClick={() => setTopPanelView("coach")} className={tabClass("coach")}>
           <Gauge className="w-4 h-4" /> <span className="hidden sm:inline">{t("tabs.coach")}</span>
-        </button>
-      )}
-      {showTools && (
-        <button onClick={() => setTopPanelView("tools")} className={tabClass("tools")}>
-          <Wrench className="w-4 h-4" /> <span className="hidden sm:inline">{t("tabs.tools")}</span>
         </button>
       )}
       {/* Phones: Setups and Notes are separate tabs. Tablet/desktop: one merged

@@ -16,6 +16,7 @@ export function useSessionMetadata(currentFileName: string | null) {
   const [sessionSetupRev, setSessionSetupRev] = useState<string | null>(null);
   const [postSession, setPostSession] = useState<PostSessionData | null>(null);
   const [sessionSource, setSessionSource] = useState<FileMetadata["source"] | null>(null);
+  const [displayName, setDisplayName] = useState<string | null>(null);
 
   const restoreFromMetadata = useCallback((meta: FileMetadata | null) => {
     if (meta) {
@@ -34,6 +35,7 @@ export function useSessionMetadata(currentFileName: string | null) {
       setSessionSetupRev(meta.sessionSetupRev ?? null);
       setPostSession(meta.postSession ?? null);
       setSessionSource(meta.source ?? null);
+      setDisplayName(meta.displayName?.trim() || null);
     } else {
       setCachedWeatherStation(null);
       setSessionKartId(null);
@@ -41,6 +43,7 @@ export function useSessionMetadata(currentFileName: string | null) {
       setSessionSetupRev(null);
       setPostSession(null);
       setSessionSource(null);
+      setDisplayName(null);
     }
   }, []);
 
@@ -102,6 +105,7 @@ export function useSessionMetadata(currentFileName: string | null) {
     sessionSetupRev,
     postSession,
     sessionSource,
+    displayName,
     restoreFromMetadata,
     handleWeatherStationResolved,
     handleSaveSessionSetup,
