@@ -20,6 +20,10 @@ import { applyVescMergeToExtraFields, appendVescFieldMappings } from "@/lib/live
 import type { VescSetupValues } from "@/lib/live/vescDecoder";
 import { useVescSidecar } from "@/hooks/useVescSidecar";
 import { VescSidecarControl } from "@/components/VescSidecarControl";
+import { applyBmsMergeToExtraFields, appendBmsFieldMappings } from "@/lib/live/bmsMergeFields";
+import type { BmsSample } from "@/lib/live/bmsTransport";
+import { useBmsSidecar } from "@/hooks/useBmsSidecar";
+import { BmsSidecarControl } from "@/components/BmsSidecarControl";
 
 interface DragyLiveRecordProps {
   open: boolean;
@@ -56,6 +60,11 @@ export function DragyLiveRecord({ open, onClose, onDataLoaded }: DragyLiveRecord
   // useRef — its value must never be read during render).
   const [merger] = useState(() => new ConcurrentSourceMerger<unknown, VescSetupValues>());
   const vesc = useVescSidecar(merger);
+  // Third BLE connection (issue #73) — its own independent merger against
+  // the same primary stream, folded into the same extraFields object right
+  // after the VESC merge.
+  const [bmsMerger] = useState(() => new ConcurrentSourceMerger<unknown, BmsSample>());
+  const bms = useBmsSidecar(bmsMerger);
 
   const reset = useCallback(() => {
     setPhase("idle");
@@ -75,12 +84,14 @@ export function DragyLiveRecord({ open, onClose, onDataLoaded }: DragyLiveRecord
     try { await connectionRef.current?.disconnect(); } catch { /* ignore */ }
     connectionRef.current = null;
     try { await vesc.disconnect(); } catch { /* ignore */ }
-    // Only vesc.disconnect (itself useCallback-stable off `merger`, which never
-    // changes) is used here — depending on the whole `vesc` object, which is a
-    // fresh literal every render, would re-run this effect's cleanup+setup on
-    // every render, actively tearing down BLE connections mid-session.
+    try { await bms.disconnect(); } catch { /* ignore */ }
+    // Only vesc.disconnect/bms.disconnect (themselves useCallback-stable off
+    // their mergers, which never change) are used here — depending on the
+    // whole vesc/bms objects, which are fresh literals every render, would
+    // re-run this effect's cleanup+setup on every render, actively tearing
+    // down BLE connections mid-session.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [vesc.disconnect]);
+  }, [vesc.disconnect, bms.disconnect]);
 
   useEffect(() => {
     if (!open) return;
@@ -114,8 +125,9 @@ export function DragyLiveRecord({ open, onClose, onDataLoaded }: DragyLiveRecord
       Satellites: sample.numSV,
       HDOP: sample.pDOP,
     };
-    const merged = merger.addPrimary({ receivedAt: Date.now(), data: null });
-    applyVescMergeToExtraFields(extraFields, merged);
+    const receivedAt = Date.now();
+    applyVescMergeToExtraFields(extraFields, merger.addPrimary({ receivedAt, data: null }));
+    applyBmsMergeToExtraFields(extraFields, bmsMerger.addPrimary({ receivedAt, data: null }));
 
     list.push({
       t,
@@ -127,7 +139,7 @@ export function DragyLiveRecord({ open, onClose, onDataLoaded }: DragyLiveRecord
     });
     setSampleCount(list.length);
     setLatest({ speedKph: sample.speedMps * 3.6, nSat: sample.numSV });
-  }, [merger]);
+  }, [merger, bmsMerger]);
 
   const handleConnect = useCallback(async () => {
     setPhase("connecting");
@@ -164,6 +176,7 @@ export function DragyLiveRecord({ open, onClose, onDataLoaded }: DragyLiveRecord
         { index: -5, name: "HDOP", enabled: false },
       ];
       appendVescFieldMappings(fieldMappings, samples);
+      appendBmsFieldMappings(fieldMappings, samples);
       const data: ParsedData = {
         samples,
         fieldMappings,
@@ -230,10 +243,12 @@ export function DragyLiveRecord({ open, onClose, onDataLoaded }: DragyLiveRecord
                   Speed {latest.speedKph.toFixed(1)} km/h · {latest.nSat} sats
                 </p>
               )}
-              {/* Optional second BLE connection alongside this one (issue #58) —
-                  merged by receipt time, flagged suspect when stale. */}
-              <div className="border-t border-border pt-2">
+              {/* Optional second/third BLE connections alongside this one
+                  (issues #58, #73) — each merged by receipt time, flagged
+                  suspect when stale. */}
+              <div className="border-t border-border pt-2 space-y-2">
                 <VescSidecarControl vesc={vesc} />
+                <BmsSidecarControl bms={bms} />
               </div>
             </div>
           )}

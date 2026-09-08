@@ -18,6 +18,10 @@ import { applyVescMergeToExtraFields, appendVescFieldMappings } from "@/lib/live
 import type { VescSetupValues } from "@/lib/live/vescDecoder";
 import { useVescSidecar } from "@/hooks/useVescSidecar";
 import { VescSidecarControl } from "@/components/VescSidecarControl";
+import { applyBmsMergeToExtraFields, appendBmsFieldMappings } from "@/lib/live/bmsMergeFields";
+import type { BmsSample } from "@/lib/live/bmsTransport";
+import { useBmsSidecar } from "@/hooks/useBmsSidecar";
+import { BmsSidecarControl } from "@/components/BmsSidecarControl";
 import type { ParsedData } from "@/types/racing";
 
 interface RaceBoxLiveRecordProps {
@@ -55,6 +59,13 @@ export function RaceBoxLiveRecord({ open, onClose, onDataLoaded }: RaceBoxLiveRe
   // value must never be read during render).
   const [merger] = useState(() => new ConcurrentSourceMerger<unknown, VescSetupValues>());
   const vesc = useVescSidecar(merger);
+  // Third BLE connection (issue #73) — its own independent merger against
+  // the same primary stream, folded into the same extraFields object right
+  // after the VESC merge. Not a single N-way merger: two independent
+  // primary+secondary pairings are simpler than generalizing
+  // ConcurrentSourceMerger to more than one secondary.
+  const [bmsMerger] = useState(() => new ConcurrentSourceMerger<unknown, BmsSample>());
+  const bms = useBmsSidecar(bmsMerger);
 
   // Reset all local state when the dialog closes so a follow-up open is fresh.
   const reset = useCallback(() => {
@@ -73,12 +84,14 @@ export function RaceBoxLiveRecord({ open, onClose, onDataLoaded }: RaceBoxLiveRe
     try { await connectionRef.current?.disconnect(); } catch { /* ignore */ }
     connectionRef.current = null;
     try { await vesc.disconnect(); } catch { /* ignore */ }
-    // Only vesc.disconnect (itself useCallback-stable off `merger`, which never
-    // changes) is used here — depending on the whole `vesc` object, which is a
-    // fresh literal every render, would re-run this effect's cleanup+setup on
-    // every render, actively tearing down BLE connections mid-session.
+    try { await bms.disconnect(); } catch { /* ignore */ }
+    // Only vesc.disconnect/bms.disconnect (themselves useCallback-stable off
+    // their mergers, which never change) are used here — depending on the
+    // whole vesc/bms objects, which are fresh literals every render, would
+    // re-run this effect's cleanup+setup on every render, actively tearing
+    // down BLE connections mid-session.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [vesc.disconnect]);
+  }, [vesc.disconnect, bms.disconnect]);
 
   // A late unmount (browser back button, dialog kill) must still release BLE
   // — leaking a paired GATT server keeps the device unreachable to the next
@@ -112,8 +125,10 @@ export function RaceBoxLiveRecord({ open, onClose, onDataLoaded }: RaceBoxLiveRe
         // only pair + mutate the sample that actually landed, matching by
         // "did the count move" rather than assuming a 1:1 call correspondence.
         if (snap.count > beforeCount) {
-          const merged = merger.addPrimary({ receivedAt: Date.now(), data: null });
-          applyVescMergeToExtraFields(snap.samples[snap.samples.length - 1].extraFields, merged);
+          const receivedAt = Date.now();
+          const extraFields = snap.samples[snap.samples.length - 1].extraFields;
+          applyVescMergeToExtraFields(extraFields, merger.addPrimary({ receivedAt, data: null }));
+          applyBmsMergeToExtraFields(extraFields, bmsMerger.addPrimary({ receivedAt, data: null }));
         }
         setSampleCount(snap.count);
         setLatest({ speedKph: sample.speedMps * 3.6, nSat: sample.numSV });
@@ -125,7 +140,7 @@ export function RaceBoxLiveRecord({ open, onClose, onDataLoaded }: RaceBoxLiveRe
       setPhase("error");
       setError(msg);
     }
-  }, [merger]);
+  }, [merger, bmsMerger]);
 
   const handleSave = useCallback(async () => {
     if (!captureRef.current) return;
@@ -137,6 +152,7 @@ export function RaceBoxLiveRecord({ open, onClose, onDataLoaded }: RaceBoxLiveRe
       const capture = captureRef.current;
       const data = capture.toParsedData();
       appendVescFieldMappings(data.fieldMappings, data.samples);
+      appendBmsFieldMappings(data.fieldMappings, data.samples);
       const start = capture.snapshot().startDate ?? new Date();
       const source = { kind: "racebox" as const, deviceName };
       const fileName = buildLiveCaptureFileName(source, start);
@@ -199,10 +215,12 @@ export function RaceBoxLiveRecord({ open, onClose, onDataLoaded }: RaceBoxLiveRe
                   Speed {latest.speedKph.toFixed(1)} km/h · {latest.nSat} sats
                 </p>
               )}
-              {/* Optional second BLE connection alongside this one (issue #58) —
-                  merged by receipt time, flagged suspect when stale. */}
-              <div className="border-t border-border pt-2">
+              {/* Optional second/third BLE connections alongside this one
+                  (issues #58, #73) — each merged by receipt time, flagged
+                  suspect when stale. */}
+              <div className="border-t border-border pt-2 space-y-2">
                 <VescSidecarControl vesc={vesc} />
+                <BmsSidecarControl bms={bms} />
               </div>
             </div>
           )}
