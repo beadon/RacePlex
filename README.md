@@ -132,7 +132,10 @@ longitude can be imported through the column mapper.
 
 **Live capture.** Records straight from a RaceBox or a Dragy over Web Bluetooth, with no logger
 file to export first. Needs Chrome or Edge, on desktop or Android. A phone's own GPS can also
-record, at whatever rate the handset provides.
+record, at whatever rate the handset provides. A VESC-based ESC can connect alongside the primary
+GPS device as a second Bluetooth source, merging its telemetry into the same session in real time
+and showing a live gauge dashboard (current, power, duty, speed, battery, temps, consumption,
+odometer/trip/up-time) modeled on VESC Tool's own RT Data screen.
 
 **Lap and sector timing.** Detects line crossings with sub-sample interpolation, and reports lap
 times, sector splits, and a theoretical optimal lap assembled from your best sectors. Supports both

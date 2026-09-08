@@ -11,12 +11,15 @@
  *
  * VESC's BLE UART bridge (`nrf52_vesc`, VESC's own official firmware) is the
  * same Nordic UART Service RaceBox/Dragy use, but it's request/response, not
- * a push stream: nothing arrives until asked. This polls `COMM_GET_VALUES`
- * on an interval and decodes each response.
+ * a push stream: nothing arrives until asked. This polls
+ * `COMM_GET_VALUES_SETUP` on an interval and decodes each response — it's a
+ * strict superset of the plain `COMM_GET_VALUES` (issue #58's original
+ * telemetry) plus firmware-computed speed/battery%/trip/odometer, needed for
+ * the RT gauge dashboard (`VescGaugeDashboard`).
  */
 
 import { VescPacketReader } from "./vescPacket";
-import { buildGetValuesRequest, decodeGetValues, type VescValues } from "./vescDecoder";
+import { buildGetValuesSetupRequest, decodeGetValuesSetup, type VescSetupValues } from "./vescDecoder";
 import { encodeVescPacket } from "./vescPacket";
 import { isWebBluetoothAvailable } from "./raceboxTransport";
 
@@ -27,7 +30,7 @@ const NUS_WRITE = "6e400002-b5a3-f393-e0a9-e50e24dcca9e";
 /** How often to poll COMM_GET_VALUES. VESC telemetry doesn't need GPS-rate polling. */
 const POLL_INTERVAL_MS = 100;
 
-export type VescSampleListener = (sample: VescValues, receivedAt: number) => void;
+export type VescSampleListener = (sample: VescSetupValues, receivedAt: number) => void;
 
 export interface VescConnection {
   name: string;
@@ -91,7 +94,7 @@ export async function connectVescLive(options?: { namePrefix?: string }): Promis
     if (!value) return;
     const receivedAt = Date.now();
     for (const payload of reader.push(value)) {
-      const sample = decodeGetValues(payload);
+      const sample = decodeGetValuesSetup(payload);
       if (!sample) continue;
       for (const listener of listeners) {
         try { listener(sample, receivedAt); } catch (e) { console.warn("VESC listener threw", e); }
@@ -102,7 +105,7 @@ export async function connectVescLive(options?: { namePrefix?: string }): Promis
   notifyChar.addEventListener("characteristicvaluechanged", onNotify);
   await notifyChar.startNotifications();
 
-  const requestFrame = encodeVescPacket(buildGetValuesRequest());
+  const requestFrame = encodeVescPacket(buildGetValuesSetupRequest());
   const poll = window.setInterval(() => {
     if (!connected) return;
     writeChar.writeValue(requestFrame).catch((e) => console.warn("VESC poll write failed", e));

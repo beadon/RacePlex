@@ -17,7 +17,7 @@ import { calculateBounds, speedTriple } from "@/lib/parserUtils";
 import { buildLiveCaptureFileName, serializeLiveCapture } from "@/lib/live/liveCapturePackage";
 import { ConcurrentSourceMerger } from "@/lib/live/concurrentCapture";
 import { applyVescMergeToExtraFields, appendVescFieldMappings } from "@/lib/live/vescMergeFields";
-import type { VescValues } from "@/lib/live/vescDecoder";
+import type { VescSetupValues } from "@/lib/live/vescDecoder";
 import { useVescSidecar } from "@/hooks/useVescSidecar";
 import { VescSidecarControl } from "@/components/VescSidecarControl";
 
@@ -54,7 +54,7 @@ export function DragyLiveRecord({ open, onClose, onDataLoaded }: DragyLiveRecord
   // either device's own clock; see concurrentCapture.ts for why.
   // A stable object created once, so useState's lazy initializer (not
   // useRef — its value must never be read during render).
-  const [merger] = useState(() => new ConcurrentSourceMerger<unknown, VescValues>());
+  const [merger] = useState(() => new ConcurrentSourceMerger<unknown, VescSetupValues>());
   const vesc = useVescSidecar(merger);
 
   const reset = useCallback(() => {
