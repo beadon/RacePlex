@@ -63,6 +63,16 @@ export interface Vehicle {
   // ─── Remote pairing (advanced) ────────────────────────────────────────────
   /** Points at a row in the `remotes` store; the store is a shared catalog. */
   pairedRemoteId?: string;
+
+  // ─── Live sidecar pairing (issues #58, #73) ───────────────────────────────
+  /**
+   * BLE-advertised device name of this board's VESC, remembered the first
+   * time it reports live data during a sidecar capture so future sessions
+   * pair faster. Free-form — VESC has no fixed naming convention.
+   */
+  vescDeviceName?: string;
+  /** Same idea as `vescDeviceName`, for this board's BMS. */
+  bmsDeviceName?: string;
   /**
    * Opt-in: when true, a public-safe projection (name/type/engine/number — never
    * weight/setup) is published to the user's public driver profile. See plan 0006.
