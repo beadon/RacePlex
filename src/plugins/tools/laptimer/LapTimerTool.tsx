@@ -28,6 +28,8 @@ import type { Lap } from "@/types/racing";
 import { formatLapTime, formatSectorTime } from "@/lib/lapCalculation";
 import { useWakeLock } from "@/hooks/useWakeLock";
 import { isIosSafari } from "@/lib/iosSafari";
+import { VescSidecarControl } from "@/components/VescSidecarControl";
+import { BmsSidecarControl } from "@/components/BmsSidecarControl";
 import { useLapTimer } from "./useLapTimer";
 import { RecordingLockOverlay } from "./RecordingLockOverlay";
 import { useToolsT, type ToolsKey } from "../i18n";
@@ -43,7 +45,7 @@ function fmtLap(ms: number | null | undefined): string {
 export default function LapTimerTool(props: PluginPanelProps) {
   const t = useToolsT();
   const logger = useLapTimer();
-  const { phase, timing, laps, latest, saving, savedFileName, error, errorCode, endSession, reset } = logger;
+  const { phase, timing, laps, latest, saving, savedFileName, error, errorCode, endSession, reset, vesc, bms } = logger;
   const [view, setView] = useState<View>("live");
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [locked, setLocked] = useState(false);
@@ -96,6 +98,15 @@ export default function LapTimerTool(props: PluginPanelProps) {
           )}
         </div>
       </div>
+
+      {/* Optional VESC/BMS sidecars (issues #58, #73) — merged into the
+          phone-GPS log by receipt time; no RaceBox or Dragy required. */}
+      {phase !== "ended" && (
+        <div className="flex flex-wrap items-center gap-3 border-b border-border px-3 py-2 shrink-0">
+          <VescSidecarControl vesc={vesc} />
+          <BmsSidecarControl bms={bms} />
+        </div>
+      )}
 
       {error && errorCode === "permission-denied" && isIosSafari() ? (
         <IosLocationDeniedHelp />

@@ -3,10 +3,14 @@
  *
  * Holds the session lifecycle that used to live inside the React hook: it drives
  * the GPS source through the session gate (arm above 5 mph / auto-idle), feeds
- * recorded fixes to the realtime timer, and persists the session as an `.rplx`
- * log on end. Every dependency (GPS source, timer, save functions) is injected,
- * so the whole flow is unit-testable with a fake geolocation + fake persistence —
- * the hook is then a thin adapter that subscribes to snapshots.
+ * recorded fixes to the realtime timer, and persists the session on end — as
+ * `.rplx`, or `.rplive` when an optional VESC/BMS sidecar (issues #58, #73)
+ * reported any data, so a rider isn't required to also have a RaceBox or
+ * Dragy to record ESC/BMS channels alongside their phone's GPS. Every
+ * dependency (GPS source, timer, save functions, sidecar mergers) is
+ * injected, so the whole flow is unit-testable with a fake geolocation +
+ * fake persistence — the hook is then a thin adapter that subscribes to
+ * snapshots.
  */
 import {
   type CustomGps,
@@ -25,9 +29,15 @@ import {
   buildRplxFileName,
   type RplxSessionMeta,
 } from "@/lib/gps";
-import type { Lap } from "@/types/racing";
+import type { Lap, GpsSample, FieldMapping, ParsedData } from "@/types/racing";
 import type { FileMetadata } from "@/lib/fileStorage";
 import { MPS_TO_MPH } from "@/lib/parserUtils";
+import type { ConcurrentSourceMerger } from "@/lib/live/concurrentCapture";
+import type { VescSetupValues } from "@/lib/live/vescDecoder";
+import { applyVescMergeToExtraFields, appendVescFieldMappings } from "@/lib/live/vescMergeFields";
+import type { BmsSample } from "@/lib/live/bmsTransport";
+import { applyBmsMergeToExtraFields, appendBmsFieldMappings } from "@/lib/live/bmsMergeFields";
+import { buildLiveCaptureFileName, serializeLiveCapture } from "@/lib/live/liveCapturePackage";
 
 export interface LapTimerSnapshot {
   phase: SessionPhase;
@@ -68,6 +78,15 @@ export interface LapTimerSessionDeps {
   saveLog: (fileName: string, blob: Blob) => Promise<void>;
   /** Persist the file metadata (e.g. fileStorage.saveFileMetadata). */
   saveMeta: (meta: FileMetadata) => Promise<void>;
+  /**
+   * Optional VESC/BMS sidecars (issues #58, #73) — the same
+   * `ConcurrentSourceMerger` pattern `RaceBoxLiveRecord`/`DragyLiveRecord`
+   * use, so a rider gets ESC/BMS channels merged into their phone-GPS log
+   * with no RaceBox or Dragy required. Omit either (or both) when the rider
+   * hasn't connected that sidecar for this session.
+   */
+  vescMerger?: ConcurrentSourceMerger<unknown, VescSetupValues>;
+  bmsMerger?: ConcurrentSourceMerger<unknown, BmsSample>;
 }
 
 type Listener = (snapshot: LapTimerSnapshot) => void;
@@ -75,6 +94,13 @@ type Listener = (snapshot: LapTimerSnapshot) => void;
 export class LapTimerSession {
   private gate: SessionGateState = initSessionGate();
   private recorded: GpsObservation[] = [];
+  /**
+   * `recorded` converted to `GpsSample` + any sidecar channels merged in.
+   * Kept alongside `recorded` (not instead of it) because `.rplx` still
+   * writes straight from `GpsObservation`; this only gets used at persist
+   * time when a sidecar actually reported data — see `persist()`.
+   */
+  private samples: GpsSample[] = [];
   private snapshot: LapTimerSnapshot = INITIAL_SNAPSHOT;
   private readonly listeners = new Set<Listener>();
   private offFix: (() => void) | null = null;
@@ -113,6 +139,9 @@ export class LapTimerSession {
   reset(): void {
     this.gate = initSessionGate();
     this.recorded = [];
+    this.samples = [];
+    this.deps.vescMerger?.reset();
+    this.deps.bmsMerger?.reset();
     this.deps.timer.reset();
     this.deps.gps.clear();
     this.deps.gps.start();
@@ -139,7 +168,21 @@ export class LapTimerSession {
 
     if (this.gate.phase === "recording") {
       this.recorded.push(obs);
-      patch.timing = this.deps.timer.update(observationToSample(obs));
+
+      const sample = observationToSample(obs);
+      // Every accepted fix gets paired against whichever sidecars are
+      // connected (issues #58, #73) — `addPrimary` returns `secondary: null`
+      // until that sidecar actually connects, so this is a no-op cost when
+      // the rider hasn't added one.
+      if (this.deps.vescMerger) {
+        applyVescMergeToExtraFields(sample.extraFields, this.deps.vescMerger.addPrimary({ receivedAt: Date.now(), data: null }));
+      }
+      if (this.deps.bmsMerger) {
+        applyBmsMergeToExtraFields(sample.extraFields, this.deps.bmsMerger.addPrimary({ receivedAt: Date.now(), data: null }));
+      }
+      this.samples.push(sample);
+
+      patch.timing = this.deps.timer.update(sample);
       // Completed laps are immutable once closed — only swap the array (and
       // re-render the table) when a lap actually completes.
       const completed = this.deps.timer.getLaps();
@@ -163,7 +206,13 @@ export class LapTimerSession {
     }
   }
 
-  /** Serialize the recorded buffer to an `.rplx` log and store it. */
+  /**
+   * Serialize the recorded buffer and store it. Plain phone-GPS sessions
+   * still write the standard `.rplx` log unchanged; a session where a VESC
+   * or BMS sidecar ever reported data writes `.rplive` instead (mirrors
+   * `RaceBoxLiveRecord`/`DragyLiveRecord`) so those channels aren't dropped —
+   * `.rplx`'s CSV schema is fixed and has no room for extra channels.
+   */
   private async persist(): Promise<void> {
     if (this.snapshot.saving || this.recorded.length === 0) return;
     this.patch({ saving: true });
@@ -171,7 +220,9 @@ export class LapTimerSession {
     const t = this.deps.timer.getState();
     const laps = [...this.deps.timer.getLaps()];
     const startTs = this.recorded[0].fix.timestamp;
-    const fileName = buildRplxFileName(startTs);
+    const hasSidecarData = Boolean(this.deps.vescMerger?.hasSecondary || this.deps.bmsMerger?.hasSecondary);
+
+    const fileName = hasSidecarData ? buildLiveCaptureFileName({ kind: "phone" }, new Date(startTs)) : buildRplxFileName(startTs);
     const meta: RplxSessionMeta = {
       course: t.courseName ?? undefined,
       bestLapMs: t.bestLapMs ?? undefined,
@@ -180,7 +231,10 @@ export class LapTimerSession {
     };
 
     try {
-      await this.deps.saveLog(fileName, serializeRplxBlob(this.recorded, meta));
+      const blob = hasSidecarData
+        ? serializeLiveCapture(this.buildLiveCaptureData(startTs), { kind: "phone" })
+        : serializeRplxBlob(this.recorded, meta);
+      await this.deps.saveLog(fileName, blob);
       await this.deps.saveMeta({
         fileName,
         trackName: t.trackName ?? "",
@@ -197,6 +251,18 @@ export class LapTimerSession {
         errorCode: null,
       });
     }
+  }
+
+  /** Build the `.rplive` payload once a sidecar has reported data this session. */
+  private buildLiveCaptureData(startTs: number): Pick<ParsedData, "samples" | "fieldMappings" | "startDate"> {
+    const fieldMappings: FieldMapping[] = [
+      { index: -1, name: "altitude", enabled: false },
+      { index: -2, name: "h_acc", enabled: false },
+      { index: -3, name: "v_acc", enabled: false },
+    ];
+    appendVescFieldMappings(fieldMappings, this.samples);
+    appendBmsFieldMappings(fieldMappings, this.samples);
+    return { samples: this.samples, fieldMappings, startDate: new Date(startTs) };
   }
 
   private patch(partial: Partial<LapTimerSnapshot>): void {
