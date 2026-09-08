@@ -38,6 +38,8 @@ export interface BrowserSession {
   /** A VESC and/or BMS sidecar reported data during this session (issues #58, #73). */
   hasVescData?: boolean;
   hasBmsData?: boolean;
+  /** A heart-rate sidecar reported data during this session (issue #87). */
+  hasHeartRateData?: boolean;
 }
 
 /** Where the browser is currently pointing. */
@@ -184,6 +186,7 @@ export function buildBrowserSessions(
       isSample: meta?.isSample ?? false,
       hasVescData: meta?.hasVescData ?? false,
       hasBmsData: meta?.hasBmsData ?? false,
+      hasHeartRateData: meta?.hasHeartRateData ?? false,
     };
   };
 

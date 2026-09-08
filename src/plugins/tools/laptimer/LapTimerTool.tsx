@@ -12,7 +12,7 @@
  * (openable + processable like any uploaded session). A red control ends the
  * session manually after a confirm; ended sessions can be restarted.
  */
-import { useState, memo } from "react";
+import { useEffect, useRef, useState, memo } from "react";
 import { Loader2, CheckCircle2, Lock, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,6 +30,7 @@ import { useWakeLock } from "@/hooks/useWakeLock";
 import { isIosSafari } from "@/lib/iosSafari";
 import { VescSidecarControl } from "@/components/VescSidecarControl";
 import { BmsSidecarControl } from "@/components/BmsSidecarControl";
+import { HeartRateSidecarControl } from "@/components/HeartRateSidecarControl";
 import { useLapTimer } from "./useLapTimer";
 import { RecordingLockOverlay } from "./RecordingLockOverlay";
 import { useToolsT, type ToolsKey } from "../i18n";
@@ -42,13 +43,42 @@ function fmtLap(ms: number | null | undefined): string {
   return ms != null ? formatLapTime(ms) : "—:—.———";
 }
 
+/** "M:SS", or "H:MM:SS" past an hour — a running session duration, not a lap time. */
+function formatDuration(ms: number): string {
+  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  const s = totalSeconds % 60;
+  const mm = String(m).padStart(2, "0");
+  const ss = String(s).padStart(2, "0");
+  return h > 0 ? `${h}:${mm}:${ss}` : `${m}:${ss}`;
+}
+
 export default function LapTimerTool(props: PluginPanelProps) {
   const t = useToolsT();
   const logger = useLapTimer();
-  const { phase, timing, laps, latest, saving, savedFileName, error, errorCode, endSession, reset, vesc, bms } = logger;
+  const { phase, timing, laps, latest, saving, savedFileName, error, errorCode, endSession, reset, vesc, bms, heartRate } = logger;
   const [view, setView] = useState<View>("live");
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [locked, setLocked] = useState(false);
+
+  // Elapsed recording duration, anchored the moment the session arms — not
+  // the same as `timing.currentLapMs` (that's per-lap, and stays null before
+  // the first crossing). Derived from the GPS observation's own elapsed
+  // clock (not a wall-clock interval) so it can't drift from what's actually
+  // being recorded. All ref reads/writes stay inside the effect — render
+  // only ever reads the `durationMs` state.
+  const armedAtElapsedMsRef = useRef<number | null>(null);
+  const [durationMs, setDurationMs] = useState<number | null>(null);
+  useEffect(() => {
+    if (phase === "recording" && latest) {
+      if (armedAtElapsedMsRef.current === null) armedAtElapsedMsRef.current = latest.elapsedMs;
+      setDurationMs(latest.elapsedMs - armedAtElapsedMsRef.current);
+    } else {
+      armedAtElapsedMsRef.current = null;
+      setDurationMs(null);
+    }
+  }, [phase, latest]);
 
   // Keep the screen awake while a session is live — a lap timer is useless if the
   // phone sleeps mid-session. Released once the session has ended.
@@ -85,6 +115,9 @@ export default function LapTimerTool(props: PluginPanelProps) {
           )}
         </div>
         <div className="flex items-center gap-3">
+          {durationMs != null && (
+            <span className="font-mono text-xs tabular-nums text-muted-foreground">{formatDuration(durationMs)}</span>
+          )}
           <Status phase={phase} courseName={timing.courseName} trackName={timing.trackName} />
           {phase !== "ended" && (
             <>
@@ -99,12 +132,14 @@ export default function LapTimerTool(props: PluginPanelProps) {
         </div>
       </div>
 
-      {/* Optional VESC/BMS sidecars (issues #58, #73) — merged into the
-          phone-GPS log by receipt time; no RaceBox or Dragy required. */}
+      {/* Optional VESC/BMS/heart-rate sidecars (issues #58, #73, #87) —
+          merged into the phone-GPS log by receipt time; no RaceBox or Dragy
+          required. */}
       {phase !== "ended" && (
         <div className="flex flex-wrap items-center gap-3 border-b border-border px-3 py-2 shrink-0">
           <VescSidecarControl vesc={vesc} />
           <BmsSidecarControl bms={bms} />
+          <HeartRateSidecarControl heartRate={heartRate} />
         </div>
       )}
 
@@ -155,7 +190,15 @@ export default function LapTimerTool(props: PluginPanelProps) {
       )}
 
       {showLockOverlay && (
-        <RecordingLockOverlay speed={speed} speedUnit={speedUnit} onUnlock={() => setLocked(false)} />
+        <RecordingLockOverlay
+          speed={speed}
+          speedUnit={speedUnit}
+          onUnlock={() => setLocked(false)}
+          durationLabel={durationMs != null ? formatDuration(durationMs) : undefined}
+          heartRateBpm={heartRate.status === "connected" ? heartRate.latest?.bpm ?? null : null}
+          hasVescData={vesc.status === "connected"}
+          hasBmsData={bms.status === "connected"}
+        />
       )}
 
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>

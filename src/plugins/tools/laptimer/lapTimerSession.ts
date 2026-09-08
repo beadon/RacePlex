@@ -4,10 +4,10 @@
  * Holds the session lifecycle that used to live inside the React hook: it drives
  * the GPS source through the session gate (arm above 5 mph / auto-idle), feeds
  * recorded fixes to the realtime timer, and persists the session on end — as
- * `.rplx`, or `.rplive` when an optional VESC/BMS sidecar (issues #58, #73)
- * reported any data, so a rider isn't required to also have a RaceBox or
- * Dragy to record ESC/BMS channels alongside their phone's GPS. Every
- * dependency (GPS source, timer, save functions, sidecar mergers) is
+ * `.rplx`, or `.rplive` when an optional VESC/BMS/heart-rate sidecar (issues
+ * #58, #73, #87) reported any data, so a rider isn't required to also have a
+ * RaceBox or Dragy to record those channels alongside their phone's GPS.
+ * Every dependency (GPS source, timer, save functions, sidecar mergers) is
  * injected, so the whole flow is unit-testable with a fake geolocation +
  * fake persistence — the hook is then a thin adapter that subscribes to
  * snapshots.
@@ -37,6 +37,8 @@ import type { VescSetupValues } from "@/lib/live/vescDecoder";
 import { applyVescMergeToExtraFields, appendVescFieldMappings } from "@/lib/live/vescMergeFields";
 import type { BmsSample } from "@/lib/live/bmsTransport";
 import { applyBmsMergeToExtraFields, appendBmsFieldMappings } from "@/lib/live/bmsMergeFields";
+import type { HeartRateSample } from "@/lib/live/heartRateDecoder";
+import { applyHeartRateMergeToExtraFields, appendHeartRateFieldMappings } from "@/lib/live/heartRateMergeFields";
 import { buildLiveCaptureFileName, serializeLiveCapture } from "@/lib/live/liveCapturePackage";
 
 export interface LapTimerSnapshot {
@@ -87,6 +89,12 @@ export interface LapTimerSessionDeps {
    */
   vescMerger?: ConcurrentSourceMerger<unknown, VescSetupValues>;
   bmsMerger?: ConcurrentSourceMerger<unknown, BmsSample>;
+  /**
+   * Optional heart-rate sidecar (issue #87) — same pattern, but never bound
+   * to a Vehicle/Garage profile the way VESC/BMS are: a heart-rate monitor
+   * belongs to the rider, not the board.
+   */
+  heartRateMerger?: ConcurrentSourceMerger<unknown, HeartRateSample>;
 }
 
 type Listener = (snapshot: LapTimerSnapshot) => void;
@@ -142,6 +150,7 @@ export class LapTimerSession {
     this.samples = [];
     this.deps.vescMerger?.reset();
     this.deps.bmsMerger?.reset();
+    this.deps.heartRateMerger?.reset();
     this.deps.timer.reset();
     this.deps.gps.clear();
     this.deps.gps.start();
@@ -171,7 +180,9 @@ export class LapTimerSession {
     // is exactly the kind of thing worth capturing while parked. Lap timing
     // itself stays gated on `phase === "recording"` below; only the sidecar
     // capture unconditionally follows sensor data instead of GPS speed.
-    const sidecarLive = Boolean(this.deps.vescMerger?.hasSecondary || this.deps.bmsMerger?.hasSecondary);
+    const sidecarLive = Boolean(
+      this.deps.vescMerger?.hasSecondary || this.deps.bmsMerger?.hasSecondary || this.deps.heartRateMerger?.hasSecondary,
+    );
 
     if (this.gate.phase === "recording" || sidecarLive) {
       this.recorded.push(obs);
@@ -186,6 +197,9 @@ export class LapTimerSession {
       }
       if (this.deps.bmsMerger) {
         applyBmsMergeToExtraFields(sample.extraFields, this.deps.bmsMerger.addPrimary({ receivedAt: Date.now(), data: null }));
+      }
+      if (this.deps.heartRateMerger) {
+        applyHeartRateMergeToExtraFields(sample.extraFields, this.deps.heartRateMerger.addPrimary({ receivedAt: Date.now(), data: null }));
       }
       this.samples.push(sample);
 
@@ -230,7 +244,9 @@ export class LapTimerSession {
     const t = this.deps.timer.getState();
     const laps = [...this.deps.timer.getLaps()];
     const startTs = this.recorded[0].fix.timestamp;
-    const hasSidecarData = Boolean(this.deps.vescMerger?.hasSecondary || this.deps.bmsMerger?.hasSecondary);
+    const hasSidecarData = Boolean(
+      this.deps.vescMerger?.hasSecondary || this.deps.bmsMerger?.hasSecondary || this.deps.heartRateMerger?.hasSecondary,
+    );
 
     const fileName = hasSidecarData ? buildLiveCaptureFileName({ kind: "phone" }, new Date(startTs)) : buildRplxFileName(startTs);
     const meta: RplxSessionMeta = {
@@ -254,6 +270,7 @@ export class LapTimerSession {
         source: "phone-gps",
         hasVescData: Boolean(this.deps.vescMerger?.hasSecondary),
         hasBmsData: Boolean(this.deps.bmsMerger?.hasSecondary),
+        hasHeartRateData: Boolean(this.deps.heartRateMerger?.hasSecondary),
       });
       this.patch({ saving: false, savedFileName: fileName });
     } catch (e) {
@@ -274,6 +291,7 @@ export class LapTimerSession {
     ];
     appendVescFieldMappings(fieldMappings, this.samples);
     appendBmsFieldMappings(fieldMappings, this.samples);
+    appendHeartRateFieldMappings(fieldMappings, this.samples);
     return { samples: this.samples, fieldMappings, startDate: new Date(startTs) };
   }
 

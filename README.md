@@ -138,7 +138,9 @@ real time and showing a live gauge dashboard (current, power, duty, speed, batte
 consumption, odometer/trip/up-time) modeled on VESC Tool's own RT Data screen. A JBD-family BMS
 (sold as Xiaoxiang / Smart BMS / Little Elephant) can connect as a third Bluetooth source at the
 same time, adding pack voltage/current/SOC, per-cell voltages, and MOSFET/pack temperatures to the
-session — no RaceBox or Dragy required for either sidecar.
+session. A standard Bluetooth heart-rate monitor — a chest strap, a fitness watch, an Apple Watch
+running an active Workout session — can connect as a fourth source, adding BPM to the same
+timeline. None of the three sidecars require a RaceBox or Dragy.
 
 **Lap and sector timing.** Detects line crossings with sub-sample interpolation, and reports lap
 times, sector splits, and a theoretical optimal lap assembled from your best sectors. Supports both
@@ -184,8 +186,8 @@ role instead.
 | Remote control a GoPro over BLE/Wi-Fi | Not yet — RacePlex only reads GPMF telemetry out of already-recorded footage |
 | External GPS receivers (RaceBox, Dragy, a phone's own GPS) | ✅ |
 | Live ESC/BMS telemetry (VESC, JBD-family BMS) | ✅ — eskate's equivalent of a car's OBD-II port |
-| Import logs from DIY or unlisted sensors | ✅ through the column mapper; live Bluetooth capture is limited to RaceBox, Dragy, VESC, and BMS today |
-| Bluetooth heart-rate monitors | Not live yet; a `.FIT` file that already recorded heart rate imports it |
+| Import logs from DIY or unlisted sensors | ✅ through the column mapper; live Bluetooth capture is limited to RaceBox, Dragy, VESC, BMS, and heart rate today |
+| Bluetooth heart-rate monitors | ✅ |
 | Unlimited session length, good for 24-hour races | ✅ |
 | Pre-built track library | One track today, growing through community pull requests — see [Adding a Track](CONTRIBUTING.md#adding-a-track) |
 | Export a session to `.NMEA`, `.VBO`, `.CSV`, or `.ODS` | Not yet — RacePlex reads all four; writing them back out is unbuilt |

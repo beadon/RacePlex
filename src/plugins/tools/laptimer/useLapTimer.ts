@@ -11,8 +11,10 @@ import { saveFile, saveFileMetadata } from "@/lib/fileStorage";
 import { ConcurrentSourceMerger } from "@/lib/live/concurrentCapture";
 import type { VescSetupValues } from "@/lib/live/vescDecoder";
 import type { BmsSample } from "@/lib/live/bmsTransport";
+import type { HeartRateSample } from "@/lib/live/heartRateDecoder";
 import { useVescSidecar, type VescSidecarController } from "@/hooks/useVescSidecar";
 import { useBmsSidecar, type BmsSidecarController } from "@/hooks/useBmsSidecar";
+import { useHeartRateSidecar, type HeartRateSidecarController } from "@/hooks/useHeartRateSidecar";
 import { useSidecarVehicleBinding } from "@/hooks/useSidecarVehicleBinding";
 import {
   LapTimerSession,
@@ -29,6 +31,8 @@ export interface LapTimerController extends LapTimerSnapshot {
   vesc: VescSidecarController;
   /** Optional BMS sidecar (issue #73) — same connect/status pattern as RaceBoxLiveRecord. */
   bms: BmsSidecarController;
+  /** Optional heart-rate sidecar (issue #87) — not bound to a Vehicle profile like VESC/BMS. */
+  heartRate: HeartRateSidecarController;
 }
 
 export function useLapTimer(): LapTimerController {
@@ -45,8 +49,12 @@ export function useLapTimer(): LapTimerController {
   const [bmsMerger] = useState(() => new ConcurrentSourceMerger<unknown, BmsSample>());
   const bms = useBmsSidecar(bmsMerger);
   // Remembers a first-time-connected sidecar's device name on a Vehicle
-  // profile so pairing is faster next session (issues #58, #73).
+  // profile so pairing is faster next session (issues #58, #73). Heart rate
+  // is deliberately excluded — it belongs to the rider, not the board (see
+  // heartRateDevicePreference.ts for its own, separate remembering).
   useSidecarVehicleBinding(vesc, bms);
+  const [heartRateMerger] = useState(() => new ConcurrentSourceMerger<unknown, HeartRateSample>());
+  const heartRate = useHeartRateSidecar(heartRateMerger);
 
   useEffect(() => {
     const timer = new RealtimeLapTimer();
@@ -62,6 +70,7 @@ export function useLapTimer(): LapTimerController {
       saveMeta: saveFileMetadata,
       vescMerger,
       bmsMerger,
+      heartRateMerger,
     });
     sessionRef.current = session;
 
@@ -85,15 +94,16 @@ export function useLapTimer(): LapTimerController {
     return () => {
       void vesc.disconnect();
       void bms.disconnect();
+      void heartRate.disconnect();
     };
     // Only the disconnect functions (stable off their mergers) are used here;
-    // depending on the whole vesc/bms objects would re-run this cleanup on
-    // every render, tearing down BLE connections mid-session.
+    // depending on the whole vesc/bms/heartRate objects would re-run this
+    // cleanup on every render, tearing down BLE connections mid-session.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [vesc.disconnect, bms.disconnect]);
+  }, [vesc.disconnect, bms.disconnect, heartRate.disconnect]);
 
   const endSession = useCallback(() => sessionRef.current?.endSession() ?? Promise.resolve(), []);
   const reset = useCallback(() => sessionRef.current?.reset(), []);
 
-  return { ...snapshot, endSession, reset, vesc, bms };
+  return { ...snapshot, endSession, reset, vesc, bms, heartRate };
 }
