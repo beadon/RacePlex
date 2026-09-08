@@ -53,7 +53,8 @@
     "filterNone": "None",
     "filterEngine": "Engine",
     "filterKart": "Vehicle",
-    "emptyDefault": "No sessions here"
+    "emptyDefault": "No sessions here",
+    "showMore": "Show {{count}} more"
   },
   "vehicles": {
     "deleteConfirm": "Delete this vehicle? This cannot be undone.",
