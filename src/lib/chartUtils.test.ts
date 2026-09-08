@@ -77,6 +77,39 @@ describe("buildSeriesPoints", () => {
   it("handles an all-null series", () => {
     expect(buildSeriesPoints([null, null], linearFrac(2), 100)).toEqual([]);
   });
+
+  describe("hardBreakBeforeIndex", () => {
+    it("breaks the line at a valid value whose index is a hard break, in 1:1 mode", () => {
+      const values = [1, 2, 3, 4];
+      const pts = buildSeriesPoints(values, linearFrac(4), 500, new Set([2]));
+      expect(pts.map((p) => p.value)).toEqual([1, 2, 3, 4]);
+      expect(pts.map((p) => p.gap)).toEqual([false, false, true, false]);
+    });
+
+    it("combines with an existing null-driven gap rather than overriding it", () => {
+      const values = [1, null, 3, 4];
+      const pts = buildSeriesPoints(values, linearFrac(4), 500, new Set([3]));
+      expect(pts.map((p) => p.value)).toEqual([1, 3, 4]);
+      expect(pts.map((p) => p.gap)).toEqual([false, true, true]);
+    });
+
+    it("propagates a hard break into the decimated column it lands in", () => {
+      const n = 10_000;
+      const values = Array.from({ length: n }, (_, i) => i % 13);
+      const breakIndex = 5_000;
+      const withBreak = buildSeriesPoints(values, linearFrac(n), 300, new Set([breakIndex]));
+      const withoutBreak = buildSeriesPoints(values, linearFrac(n), 300);
+      expect(withBreak.some((p) => p.gap)).toBe(true);
+      expect(withoutBreak.some((p) => p.gap)).toBe(false);
+    });
+
+    it("behaves exactly as before when no hard breaks are given", () => {
+      const values = [1, 2, 3, 4];
+      const withUndefined = buildSeriesPoints(values, linearFrac(4), 500);
+      const withEmptySet = buildSeriesPoints(values, linearFrac(4), 500, new Set());
+      expect(withEmptySet).toEqual(withUndefined);
+    });
+  });
 });
 
 // ─── numericExtent ──────────────────────────────────────────────────────────

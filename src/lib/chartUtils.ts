@@ -52,11 +52,17 @@ export interface SeriesPoint {
  * every redraw. Sparse series pass through 1:1. Null/undefined/NaN entries
  * become gaps (the line breaks), matching the charts' existing behavior.
  * Assumes `fracAt` is monotone (time and cumulative-distance axes both are).
+ *
+ * `hardBreakBeforeIndex` (indices where `gpsGaps.ts` detected a recording
+ * gap) forces the same line-break treatment even though the value at that
+ * index is perfectly valid — the gap is in *time*, not in the value, so it
+ * wouldn't otherwise trip the null/NaN check above.
  */
 export function buildSeriesPoints(
   values: ArrayLike<number | null | undefined>,
   fracAt: (i: number) => number,
   widthPx: number,
+  hardBreakBeforeIndex?: ReadonlySet<number>,
 ): SeriesPoint[] {
   const n = values.length;
   const w = Math.max(1, Math.floor(widthPx));
@@ -70,7 +76,7 @@ export function buildSeriesPoints(
         gap = true;
         continue;
       }
-      points.push({ frac: fracAt(i), value: v, gap });
+      points.push({ frac: fracAt(i), value: v, gap: gap || (hardBreakBeforeIndex?.has(i) ?? false) });
       gap = false;
     }
     return points;
@@ -96,14 +102,16 @@ export function buildSeriesPoints(
       pendingGap = true;
       continue;
     }
+    const hardBreak = hardBreakBeforeIndex?.has(i) ?? false;
     const c = Math.min(w - 1, Math.max(0, Math.floor(fracAt(i) * w)));
     if (c !== col) {
       flush();
       col = c;
       mn = v;
       mx = v;
-      colGap = pendingGap;
+      colGap = pendingGap || hardBreak;
     } else {
+      if (hardBreak) colGap = true;
       if (v < mn) mn = v;
       if (v > mx) mx = v;
     }

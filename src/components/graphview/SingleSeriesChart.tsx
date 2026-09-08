@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { X } from 'lucide-react';
 import { GpsSample } from '@/types/racing';
 import { G_FORCE_FIELDS, applySmoothingToValues, buildSeriesPoints, computeSmoothingWindowSize, detectSpeedGlitchIndices, interpolateGlitchSpeed, numericExtent } from '@/lib/chartUtils';
+import { detectGpsGaps } from '@/lib/gpsGaps';
 import { prepare2dCanvas, strokeSeriesPath } from '@/lib/canvas2d';
 import { useSettingsContext } from '@/contexts/SettingsContext';
 import { usePlaybackContext } from '@/contexts/PlaybackContext';
@@ -55,6 +56,14 @@ export function SingleSeriesChart({
     () => buildChartAxis(samples, chartXAxis, { useMetricDistance, fullSamples: allSamples, rangeStart }),
     [samples, chartXAxis, useMetricDistance, allSamples, rangeStart],
   );
+  // GPS recording gaps (see RaceLineView's map fix + TelemetryChart) — break
+  // this session's own series the same way. The reference/overlay series come
+  // from a different sample array with its own index space, so they're left
+  // alone here.
+  const gpsGapBreaks = useMemo(() => {
+    const gaps = detectGpsGaps(samples);
+    return new Set(gaps.map((g) => g.afterIndex));
+  }, [samples]);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const cursorCanvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -287,7 +296,7 @@ export function SingleSeriesChart({
     }
     ctx.strokeStyle = color;
     ctx.lineWidth = 2;
-    strokeSeriesPath(ctx, buildSeriesPoints(drawValues, axis.fracAt, chartWidth), toX, toY);
+    strokeSeriesPath(ctx, buildSeriesPoints(drawValues, axis.fracAt, chartWidth, gpsGapBreaks), toX, toY);
 
     // Y axis labels
     ctx.fillStyle = chartColors.axisText;
@@ -306,7 +315,7 @@ export function SingleSeriesChart({
       const x = padding.left + (chartWidth / timeGridCount) * i;
       ctx.fillText(axis.label(i / timeGridCount), x, dimensions.height - 6);
     }
-  }, [samples, values, dimensions, color, isSpeed, isPace, isBrakingG, useKph, interpolateIndices, refValues, chartColors, axis, overlaySeries]);
+  }, [samples, values, dimensions, color, isSpeed, isPace, isBrakingG, useKph, interpolateIndices, refValues, chartColors, axis, overlaySeries, gpsGapBreaks]);
 
   // Playback cursor + value tooltip on a separate overlay canvas — the only
   // per-tick cost is clearRect + a line + a small text box.

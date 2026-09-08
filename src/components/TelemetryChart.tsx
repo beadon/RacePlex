@@ -2,6 +2,7 @@ import { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { GpsSample, FieldMapping } from '@/types/racing';
 import { G_FORCE_FIELDS, G_FORCE_FIELDS_GPS, G_FORCE_FIELDS_HW, applySmoothingToValues, buildSeriesPoints, computeSmoothingWindowSize, detectSpeedGlitchIndices, interpolateGlitchSpeed, numericExtent } from '@/lib/chartUtils';
+import { detectGpsGaps } from '@/lib/gpsGaps';
 import { prepare2dCanvas, strokeSeriesPath } from '@/lib/canvas2d';
 import { useSettingsContext } from '@/contexts/SettingsContext';
 import { usePlaybackContext } from '@/contexts/PlaybackContext';
@@ -64,6 +65,15 @@ export function TelemetryChart({
     () => buildChartAxis(samples, chartXAxis, { useMetricDistance, fullSamples: allSamples, rangeStart }),
     [samples, chartXAxis, useMetricDistance, allSamples, rangeStart],
   );
+  // GPS recording gaps (see RaceLineView's map fix) — break this session's own
+  // speed/extra-field lines the same way, rather than interpolating straight
+  // across a stretch nothing was recorded for. Reference/overlay series come
+  // from a different sample array with its own index space, so they're left
+  // alone here.
+  const gpsGapBreaks = useMemo(() => {
+    const gaps = detectGpsGaps(samples);
+    return new Set(gaps.map((g) => g.afterIndex));
+  }, [samples]);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const cursorCanvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -213,7 +223,7 @@ export function TelemetryChart({
     }
     ctx.strokeStyle = COLORS[0];
     ctx.lineWidth = 2;
-    strokeSeriesPath(ctx, buildSeriesPoints(drawSpeeds, axis.fracAt, chartWidth), toX, toSpeedY);
+    strokeSeriesPath(ctx, buildSeriesPoints(drawSpeeds, axis.fracAt, chartWidth, gpsGapBreaks), toX, toSpeedY);
 
     // Draw extra fields
     enabledFields.forEach((field, fieldIndex) => {
@@ -238,7 +248,7 @@ export function TelemetryChart({
       ctx.lineWidth = 1.5;
       strokeSeriesPath(
         ctx,
-        buildSeriesPoints(values, axis.fracAt, chartWidth),
+        buildSeriesPoints(values, axis.fracAt, chartWidth, gpsGapBreaks),
         toX,
         (v) => padding.top + (1 - (v - minVal) / range) * chartHeight,
       );
@@ -339,7 +349,7 @@ export function TelemetryChart({
       const x = padding.left + (chartWidth / timeGridCount) * i;
       ctx.fillText(axis.label(i / timeGridCount), x, dimensions.height - 8);
     }
-  }, [samples, dimensions, enabledFields, useKph, speedUnit, paceData, referenceSpeedData, hasReference, showReferenceSpeed, showPace, smoothedGForceData, chartColors, fieldMappings, getSpeed, axis, overlaySpeed]);
+  }, [samples, dimensions, enabledFields, useKph, speedUnit, paceData, referenceSpeedData, hasReference, showReferenceSpeed, showPace, smoothedGForceData, chartColors, fieldMappings, getSpeed, axis, overlaySpeed, gpsGapBreaks]);
 
   // Draw the playback cursor + value tooltip on a separate overlay canvas.
   // This is the only work a playback tick costs: clearRect + a line + a small
