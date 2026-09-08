@@ -22,6 +22,7 @@ import { VescPacketReader } from "./vescPacket";
 import { buildGetValuesSetupRequest, decodeGetValuesSetup, type VescSetupValues } from "./vescDecoder";
 import { encodeVescPacket } from "./vescPacket";
 import { isWebBluetoothAvailable } from "./raceboxTransport";
+import { withTimeout } from "./bleUtils";
 
 const NUS_SERVICE = "6e400001-b5a3-f393-e0a9-e50e24dcca9e";
 const NUS_NOTIFY = "6e400003-b5a3-f393-e0a9-e50e24dcca9e";
@@ -53,8 +54,12 @@ interface BleDevice {
     connected: boolean;
     connect(): Promise<{ getPrimaryService(uuid: string): Promise<{ getCharacteristic(uuid: string): Promise<BleCharacteristic> }> }>;
     disconnect(): void;
-    addEventListener(type: string, listener: () => void): void;
   };
+  // `gattserverdisconnected` fires on the BluetoothDevice itself, not on
+  // `.gatt` (BluetoothRemoteGATTServer has no addEventListener at all) —
+  // confirmed against a real device error after this got copied wrong into
+  // every live BLE transport in this codebase.
+  addEventListener(type: string, listener: () => void): void;
 }
 
 export async function connectVescLive(options?: { namePrefix?: string }): Promise<VescConnection> {
@@ -111,7 +116,7 @@ export async function connectVescLive(options?: { namePrefix?: string }): Promis
     writeChar.writeValue(requestFrame).catch((e) => console.warn("VESC poll write failed", e));
   }, POLL_INTERVAL_MS);
 
-  device.gatt.addEventListener("gattserverdisconnected", () => {
+  device.addEventListener("gattserverdisconnected", () => {
     connected = false;
     window.clearInterval(poll);
   });
@@ -129,7 +134,10 @@ export async function connectVescLive(options?: { namePrefix?: string }): Promis
       window.clearInterval(poll);
       listeners.clear();
       try {
-        await notifyChar.stopNotifications();
+        // A real BLE peripheral has been observed (on a JBD BMS) to never
+        // settle this call at all — a timeout guard so a hanging device
+        // can't block the actual GATT disconnect below.
+        await withTimeout(notifyChar.stopNotifications(), 2000);
         notifyChar.removeEventListener("characteristicvaluechanged", onNotify);
       } catch { /* the device may have disconnected already; carry on. */ }
       try { device.gatt?.disconnect(); } catch { /* ditto */ }

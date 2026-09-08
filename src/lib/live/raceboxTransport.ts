@@ -28,6 +28,7 @@
  */
 
 import { UbxRingBuffer } from "./ubxRingBuffer";
+import { withTimeout } from "./bleUtils";
 import {
   RACEBOX_CLASS,
   RACEBOX_LIVE_ID,
@@ -103,8 +104,12 @@ export async function connectRaceBoxLive(options?: {
           }>;
         }>;
         disconnect(): void;
-        addEventListener(type: string, listener: () => void): void;
       };
+      // `gattserverdisconnected` fires on the BluetoothDevice itself, not on
+      // `.gatt` (BluetoothRemoteGATTServer has no addEventListener at all) —
+      // confirmed against a real device error after this got copied wrong
+      // into every live BLE transport in this codebase.
+      addEventListener(type: string, listener: () => void): void;
     }>;
   }; }).bluetooth;
 
@@ -143,7 +148,7 @@ export async function connectRaceBoxLive(options?: {
   notifyChar.addEventListener("characteristicvaluechanged", onNotify);
   await notifyChar.startNotifications();
 
-  device.gatt.addEventListener("gattserverdisconnected", () => {
+  device.addEventListener("gattserverdisconnected", () => {
     connected = false;
   });
 
@@ -159,7 +164,10 @@ export async function connectRaceBoxLive(options?: {
       connected = false;
       listeners.clear();
       try {
-        await notifyChar.stopNotifications();
+        // A real BLE peripheral has been observed (on a JBD BMS) to never
+        // settle this call at all — a timeout guard so a hanging device
+        // can't block the actual GATT disconnect below.
+        await withTimeout(notifyChar.stopNotifications(), 2000);
         notifyChar.removeEventListener("characteristicvaluechanged", onNotify);
       } catch { /* the device may have disconnected already; carry on. */ }
       try { device.gatt?.disconnect(); } catch { /* ditto */ }

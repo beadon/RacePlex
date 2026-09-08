@@ -25,6 +25,7 @@ import {
   type BmsCellVoltages,
 } from "./bmsDecoder";
 import { isWebBluetoothAvailable } from "./raceboxTransport";
+import { withTimeout } from "./bleUtils";
 
 const BMS_SERVICE = "0000ff00-0000-1000-8000-00805f9b34fb";
 const BMS_NOTIFY = "0000ff01-0000-1000-8000-00805f9b34fb";
@@ -62,8 +63,13 @@ interface BleDevice {
     connected: boolean;
     connect(): Promise<{ getPrimaryService(uuid: string): Promise<{ getCharacteristic(uuid: string): Promise<BleCharacteristic> }> }>;
     disconnect(): void;
-    addEventListener(type: string, listener: () => void): void;
   };
+  // `gattserverdisconnected` fires on the BluetoothDevice itself, not on
+  // `.gatt` (BluetoothRemoteGATTServer has no addEventListener at all) —
+  // confirmed against a real device error ("device.gatt.addEventListener is
+  // not a function") after the original code (copied into every live BLE
+  // transport in this codebase) got this wrong.
+  addEventListener(type: string, listener: () => void): void;
 }
 
 export async function connectBmsLive(): Promise<BmsConnection> {
@@ -132,7 +138,7 @@ export async function connectBmsLive(): Promise<BmsConnection> {
     writeChar.writeValue(frame).catch((e) => console.warn("BMS poll write failed", e));
   }, POLL_INTERVAL_MS);
 
-  device.gatt.addEventListener("gattserverdisconnected", () => {
+  device.addEventListener("gattserverdisconnected", () => {
     connected = false;
     window.clearInterval(poll);
   });
@@ -150,7 +156,10 @@ export async function connectBmsLive(): Promise<BmsConnection> {
       window.clearInterval(poll);
       listeners.clear();
       try {
-        await notifyChar.stopNotifications();
+        // A real JBD BMS has been observed to never settle this call at
+        // all — a timeout guard so a hanging peripheral can't block the
+        // actual GATT disconnect below.
+        await withTimeout(notifyChar.stopNotifications(), 2000);
         notifyChar.removeEventListener("characteristicvaluechanged", onNotify);
       } catch { /* the device may have disconnected already; carry on. */ }
       try { device.gatt?.disconnect(); } catch { /* ditto */ }
