@@ -80,6 +80,17 @@ export function PhoneGpsRecord({ open, onClose }: PhoneGpsRecordProps) {
               way are flagged so you can tell them apart later.
             </DialogDescription>
           </DialogHeader>
+          {/* Chrome/Android stop delivering GPS updates once this tab loses the
+              foreground or the screen sleeps — a plain web page can't keep
+              recording through that the way a native app with a background
+              location service can. Said plainly up front so a rider doesn't
+              lose a whole ride to it and only find out afterward. */}
+          <p className="text-sm text-amber-500">
+            Keep this screen on and this tab in front for the whole ride — locking
+            the phone or switching apps pauses recording. Don't press the power
+            button to put the phone away; just set it down or pocket it with the
+            screen lit.
+          </p>
           <DialogFooter>
             <Button variant="outline" onClick={cancel}>
               Cancel
