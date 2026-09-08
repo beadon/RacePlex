@@ -10,7 +10,8 @@ import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Vehicle } from "@/lib/vehicleStorage";
 import { VehicleSetup } from "@/lib/setupStorage";
-import { VehicleType, SetupTemplate, TemplateSection, TemplateFieldDef } from "@/lib/templateStorage";
+import { VehicleType, SetupTemplate, TemplateSection, TemplateFieldDef, DEFAULT_ESKATE_TEMPLATE_ID } from "@/lib/templateStorage";
+import { SAMPLE_BOARDS, applySampleBoardToSetup } from "@/lib/sampleBoards";
 import { TemplateCreator } from "@/components/drawer/TemplateCreator";
 import { VehicleTypeEditor } from "@/components/drawer/VehicleTypeEditor";
 import { ModeToggle } from "@/components/drawer/ModeToggle";
@@ -86,6 +87,8 @@ export function SetupsTab({
   const [preloadSnapshot, setPreloadSnapshot] = useState<Record<string, unknown> | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [historySetup, setHistorySetup] = useState<VehicleSetup | null>(null);
+  // Flagship-board preset applied to the new-setup form ("" = none).
+  const [presetId, setPresetId] = useState<string>("");
   const { user } = useAuth();
 
   // The content hash each setup would freeze to right now (git-style short id).
@@ -129,11 +132,19 @@ export function SetupsTab({
   const resetForm = useCallback(() => {
     setForm(emptyForm());
     setSelectedTypeId("");
+    setPresetId("");
     setPreloaded(false);
     setPreloadSnapshot(null);
     setPsiSingle(null); setPsiFront(null); setPsiRear(null);
     setWidthFront(null); setWidthRear(null);
     setDiamFront(null); setDiamRear(null);
+  }, []);
+
+  // Prefill the setup form from a sample board (built-in eSkate template only).
+  const handlePresetChange = useCallback((v: string) => {
+    setPresetId(v === "none" ? "" : v);
+    const board = SAMPLE_BOARDS.find(b => b.id === v);
+    if (board) setForm(p => applySampleBoardToSetup(p, board));
   }, []);
 
   const isChanged = useCallback((key: string, currentValue: unknown): boolean => {
@@ -537,6 +548,19 @@ export function SetupsTab({
               </SelectContent>
             </Select>
           </Field>
+          {form.templateId === DEFAULT_ESKATE_TEMPLATE_ID && (
+            <Field label={t("setups.boardPreset")}>
+              <Select value={presetId || "none"} onValueChange={handlePresetChange}>
+                <SelectTrigger className="h-9"><SelectValue placeholder={t("setups.boardPresetNone")} /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">{t("setups.boardPresetNone")}</SelectItem>
+                  {SAMPLE_BOARDS.map(b => (
+                    <SelectItem key={b.id} value={b.id}>{b.brand} {b.model}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+          )}
           <Field label={t("setups.setupName")}>
             <Input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} placeholder={t("setups.setupNamePlaceholder")} className="h-9" />
           </Field>

@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Pencil, Trash2, Car, History, Plus, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -11,6 +12,7 @@ import { Vehicle } from "@/lib/vehicleStorage";
 import { VehicleType, defaultVehicleTypeId } from "@/lib/templateStorage";
 import { useEngineManager } from "@/hooks/useEngineManager";
 import { useRemoteManager } from "@/hooks/useRemoteManager";
+import { SAMPLE_BOARDS, applySampleBoardToVehicle } from "@/lib/sampleBoards";
 import { EngineCombobox } from "./EngineCombobox";
 import { RemoteCombobox } from "./RemoteCombobox";
 import { VehicleHistoryPanel } from "./VehicleHistoryPanel";
@@ -43,6 +45,8 @@ export function VehiclesTab({ vehicles, vehicleTypes, onAdd, onUpdate, onRemove,
   const defaultTypeId = useMemo(() => defaultVehicleTypeId(vehicleTypes), [vehicleTypes]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm(defaultTypeId));
+  // Flagship-board preset applied to the new-vehicle form ("" = none).
+  const [presetId, setPresetId] = useState<string>("");
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [historyVehicle, setHistoryVehicle] = useState<Vehicle | null>(null);
 
@@ -67,7 +71,16 @@ export function VehiclesTab({ vehicles, vehicleTypes, onAdd, onUpdate, onRemove,
   const resetForm = useCallback(() => {
     setEditingId(null);
     setForm(emptyForm(defaultTypeId));
+    setPresetId("");
   }, [defaultTypeId]);
+
+  // Prefill the form from a sample board; the picker stays on the chosen
+  // preset so its hint remains visible until the form is reset.
+  const handlePresetChange = useCallback((v: string) => {
+    setPresetId(v === "none" ? "" : v);
+    const board = SAMPLE_BOARDS.find(b => b.id === v);
+    if (board) setForm(f => applySampleBoardToVehicle(f, board));
+  }, []);
 
   const handleEdit = (vehicle: Vehicle) => {
     setEditingId(vehicle.id);
@@ -92,6 +105,7 @@ export function VehiclesTab({ vehicles, vehicleTypes, onAdd, onUpdate, onRemove,
       batteryBmsMake: vehicle.batteryBmsMake,
       batteryBmsModel: vehicle.batteryBmsModel,
       pairedRemoteId: vehicle.pairedRemoteId,
+      notes: vehicle.notes,
     });
   };
 
@@ -194,6 +208,23 @@ export function VehiclesTab({ vehicles, vehicleTypes, onAdd, onUpdate, onRemove,
       </div>
 
       <div className="border-t border-border p-4 space-y-3 shrink-0">
+        {editingId === null && (
+          <div className="space-y-1">
+            <Label className="text-xs">{t("vehicles.boardPreset")}</Label>
+            <Select value={presetId || "none"} onValueChange={handlePresetChange}>
+              <SelectTrigger className="h-8 text-sm"><SelectValue placeholder={t("vehicles.boardPresetNone")} /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">{t("vehicles.boardPresetNone")}</SelectItem>
+                {SAMPLE_BOARDS.map(b => (
+                  <SelectItem key={b.id} value={b.id}>{b.brand} {b.model}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {presetId && (
+              <p className="text-[11px] text-muted-foreground">{t("vehicles.boardPresetHint")}</p>
+            )}
+          </div>
+        )}
         <div className="space-y-1">
           <div className="flex items-center justify-between">
             <Label className="text-xs">{t("vehicles.vehicleType")}</Label>
@@ -271,6 +302,7 @@ type SetForm = React.Dispatch<React.SetStateAction<FormT>>;
  * this and fill in what matters to them (plan 0010).
  */
 function AdvancedVehicleFields({ form, setForm }: { form: FormT; setForm: SetForm }) {
+  const { t } = useTranslation("drawer");
   const [open, setOpen] = useState(false);
   const { remotes, addRemote, updateRemote, removeRemote } = useRemoteManager();
 
@@ -402,6 +434,17 @@ function AdvancedVehicleFields({ form, setForm }: { form: FormT; setForm: SetFor
               <Input value={form.batteryBmsModel ?? ""} onChange={(e) => setForm((f) => ({ ...f, batteryBmsModel: e.target.value }))} placeholder="e.g. HCX-D223A" className="h-8 text-sm" />
             </div>
           </div>
+        </div>
+
+        {/* Notes */}
+        <div className="space-y-1">
+          <Label className="text-xs">{t("vehicles.notes")}</Label>
+          <Textarea
+            value={form.notes ?? ""}
+            onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value || undefined }))}
+            placeholder={t("vehicles.notesPlaceholder")}
+            className="text-sm min-h-[60px]"
+          />
         </div>
 
         {/* Paired remote */}
