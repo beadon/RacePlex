@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Pencil, Trash2, Car, History, Plus, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -104,6 +105,7 @@ export function VehiclesTab({ vehicles, vehicleTypes, onAdd, onUpdate, onRemove,
       batteryBmsMake: vehicle.batteryBmsMake,
       batteryBmsModel: vehicle.batteryBmsModel,
       pairedRemoteId: vehicle.pairedRemoteId,
+      notes: vehicle.notes,
     });
   };
 
@@ -300,6 +302,7 @@ type SetForm = React.Dispatch<React.SetStateAction<FormT>>;
  * this and fill in what matters to them (plan 0010).
  */
 function AdvancedVehicleFields({ form, setForm }: { form: FormT; setForm: SetForm }) {
+  const { t } = useTranslation("drawer");
   const [open, setOpen] = useState(false);
   const { remotes, addRemote, updateRemote, removeRemote } = useRemoteManager();
 
@@ -431,6 +434,17 @@ function AdvancedVehicleFields({ form, setForm }: { form: FormT; setForm: SetFor
               <Input value={form.batteryBmsModel ?? ""} onChange={(e) => setForm((f) => ({ ...f, batteryBmsModel: e.target.value }))} placeholder="e.g. HCX-D223A" className="h-8 text-sm" />
             </div>
           </div>
+        </div>
+
+        {/* Notes */}
+        <div className="space-y-1">
+          <Label className="text-xs">{t("vehicles.notes")}</Label>
+          <Textarea
+            value={form.notes ?? ""}
+            onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value || undefined }))}
+            placeholder={t("vehicles.notesPlaceholder")}
+            className="text-sm min-h-[60px]"
+          />
         </div>
 
         {/* Paired remote */}

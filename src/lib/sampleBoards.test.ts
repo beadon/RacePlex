@@ -4,6 +4,7 @@ import {
   SAMPLE_BOARD_CHECKED_AT,
   applySampleBoardToVehicle,
   applySampleBoardToSetup,
+  formatBoardNotes,
   type SampleBoard,
 } from "./sampleBoards";
 import { DEFAULT_ESKATE_TEMPLATE } from "./templateStorage";
@@ -118,6 +119,7 @@ describe("sampleBoards", () => {
       expect(form.name).toBe(`${b.brand} ${b.model}`);
       expect(form.engine).toBe(b.engine);
       expect(form.vehicleTypeId).toBe("default-eskate-type");
+      expect(form.notes).toBe(formatBoardNotes(b));
       if (b.weightKg != null) {
         expect(form.weight).toBe(b.weightKg);
         expect(form.weightUnit).toBe("kg");
@@ -128,11 +130,24 @@ describe("sampleBoards", () => {
     }
   });
 
-  it("keeps a user-typed name when applying a vehicle preset", () => {
+  it("keeps a user-typed name and notes when applying a vehicle preset", () => {
     const b = SAMPLE_BOARDS[0];
-    const form = applySampleBoardToVehicle({ ...emptyVehicleForm(), name: "My Race Board" }, b);
+    const form = applySampleBoardToVehicle(
+      { ...emptyVehicleForm(), name: "My Race Board", notes: "Already have notes" },
+      b,
+    );
     expect(form.name).toBe("My Race Board");
     expect(form.engine).toBe(b.engine);
+    expect(form.notes).toBe("Already have notes");
+  });
+
+  it("folds published highlights into plain factual notes, never marketing copy", () => {
+    for (const b of SAMPLE_BOARDS) {
+      const notes = formatBoardNotes(b);
+      expect(notes).toContain(`Source: ${b.sourceUrl}`);
+      expect(notes).not.toMatch(/\$/); // no pricing in notes
+      if (b.highlights?.topSpeed) expect(notes).toContain(`Top speed: ${b.highlights.topSpeed}`);
+    }
   });
 
   it("applies setup presets to an empty form", () => {

@@ -43,9 +43,7 @@ export interface SampleBoard {
   model: string;
   /** Vendor page the specs were taken from. */
   sourceUrl: string;
-  /** As listed on the source page at check time (display-only). */
-  price?: string;
-  /** Marketing numbers for display; not imported into any form. */
+  /** Published performance figures; folded into `Vehicle.notes` by `formatBoardNotes`, never shown as marketing copy. */
   highlights?: {
     topSpeed?: string;
     range?: string;
@@ -115,7 +113,6 @@ export const SAMPLE_BOARDS: SampleBoard[] = [
     brand: "Stooge Race Boards",
     model: "V7 CST (2WD 30kW)",
     sourceUrl: "https://www.stoogeraceboards.com/collections/race-boards",
-    price: "from $2,040 (bare chassis); 30kW build by quote",
     vehicle: {
       drivetrain: "gear",
       truckType: "other",
@@ -149,7 +146,6 @@ export const SAMPLE_BOARDS: SampleBoard[] = [
     brand: "Radium Performance",
     model: "Mach One S",
     sourceUrl: "https://radium-performance.com/",
-    price: "$3,899 (first batch of 25, shipped May 2026)",
     highlights: {
       topSpeed: "70 km/h (44 mph)",
       range: "50 km (70A wheels, 85 kg rider)",
@@ -228,15 +224,43 @@ export const SAMPLE_BOARDS: SampleBoard[] = [
 type VehicleForm = Omit<Vehicle, "id">;
 type SetupForm = Omit<VehicleSetup, "id" | "createdAt" | "updatedAt">;
 
+const HIGHLIGHT_LABELS: Record<keyof NonNullable<SampleBoard["highlights"]>, string> = {
+  topSpeed: "Top speed",
+  range: "Range",
+  hill: "Hill grade",
+  maxLoad: "Max load",
+};
+
+/**
+ * Plain factual summary of a preset's published highlights and build notes,
+ * for the Vehicle's free-form `notes` field. Highlights are never rendered
+ * as marketing copy elsewhere in the UI — this is the one place they land.
+ */
+export function formatBoardNotes(board: SampleBoard): string {
+  const lines: string[] = [];
+  if (board.highlights) {
+    for (const [key, value] of Object.entries(board.highlights) as [
+      keyof NonNullable<SampleBoard["highlights"]>,
+      string,
+    ][]) {
+      if (value) lines.push(`${HIGHLIGHT_LABELS[key]}: ${value}`);
+    }
+  }
+  if (board.notes) lines.push(board.notes);
+  lines.push(`Source: ${board.sourceUrl}`);
+  return lines.join("\n");
+}
+
 /**
  * Prefill a vehicle form from a preset. Keeps anything the user already typed
- * (name) but takes the preset's engine/drivetrain/trucks/battery/weight.
+ * (name, notes) but takes the preset's engine/drivetrain/trucks/battery/weight.
  */
 export function applySampleBoardToVehicle(form: VehicleForm, board: SampleBoard): VehicleForm {
   return {
     ...form,
     name: form.name.trim() ? form.name : `${board.brand} ${board.model}`,
     engine: board.engine,
+    notes: form.notes?.trim() ? form.notes : formatBoardNotes(board),
     ...board.vehicle,
     ...(board.weightKg != null ? { weight: board.weightKg, weightUnit: "kg" as const } : {}),
   };

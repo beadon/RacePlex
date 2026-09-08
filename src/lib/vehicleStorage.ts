@@ -60,6 +60,9 @@ export interface Vehicle {
   /** BMS model. Free-form. */
   batteryBmsModel?: string;
 
+  /** Free-form rider notes about this board (build details, quirks, specs worth remembering). */
+  notes?: string;
+
   // ─── Remote pairing (advanced) ────────────────────────────────────────────
   /** Points at a row in the `remotes` store; the store is a shared catalog. */
   pairedRemoteId?: string;

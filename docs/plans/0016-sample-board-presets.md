@@ -28,7 +28,11 @@ be able to **pick their board** and have the forms prefill.
 
 - **Vehicles tab** (new-vehicle form): a "Board preset" select above the type
   picker. Choosing a board prefills name (if empty), engine, weight (kg),
-  drivetrain, trucks and battery.
+  drivetrain, trucks, battery, and notes (if empty) — the vendor's published
+  performance figures (top speed, range, hill grade, max load) plus any build
+  notes and the source URL, folded into the vehicle's free-form `notes` field
+  via `formatBoardNotes()` as plain facts, not marketing copy. No pricing is
+  carried — it isn't required and goes stale.
 - **Setups tab** (new-setup form, built-in eSkate template only): the same
   preset select below the vehicle picker. Choosing a board prefills the setup
   name (if empty), custom fields (merged over existing values) and the tire
