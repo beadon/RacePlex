@@ -64,9 +64,12 @@ What is **ours** (see `NOTICE` for the full statement of changes):
 - `scripts/verify-import.mjs` — see Golden Rule 3b below.
 
 Upstream is aimed at cars and karts and is growing paid tiers. **RacePlex stays
-free and fully local.** We do not commit to upstreaming changes, but we do stay
-roughly mergeable with upstream so we can keep pulling their improvements —
-follow their conventions where it's free, deviate where we have a better answer.
+free and fully local.** We do not contribute upstream, and we no longer track
+their `upstream` remote or aim to stay mergeable with their future commits —
+RacePlex has diverged enough that chasing mergeability cost more than it
+returned. Their existing code (parsers, lap engine, map, charts, video overlay)
+stays as the foundation described below; new work here follows RacePlex's own
+conventions, not theirs.
 
 **Things NOT ours, do not treat as authoritative:** `docs/plans/` and `docs/reviews/` are
 upstream's history. Do not rewrite them. (`CHANGELOG.md` is **gone** — release notes live in GitHub
