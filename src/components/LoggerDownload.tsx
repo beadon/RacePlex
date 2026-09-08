@@ -198,7 +198,7 @@ export function LoggerDownload({
 
       {phoneGpsActive && (
         <Suspense fallback={null}>
-          <PhoneGpsRecord open={phoneGpsActive} onClose={() => setPhoneGpsActive(false)} />
+          <PhoneGpsRecord open={phoneGpsActive} onClose={() => setPhoneGpsActive(false)} onDataLoaded={onDataLoaded} />
         </Suspense>
       )}
 

@@ -13,7 +13,7 @@
  * session manually after a confirm; ended sessions can be restarted.
  */
 import { useEffect, useRef, useState, memo } from "react";
-import { Loader2, CheckCircle2, Lock, Square } from "lucide-react";
+import { Loader2, CheckCircle2, Lock, Square, Eye, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -24,10 +24,11 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import type { PluginPanelProps } from "@/plugins/panels";
-import type { Lap } from "@/types/racing";
+import type { Lap, ParsedData } from "@/types/racing";
 import { formatLapTime, formatSectorTime } from "@/lib/lapCalculation";
 import { useWakeLock } from "@/hooks/useWakeLock";
 import { isIosSafari } from "@/lib/iosSafari";
+import { shareOrDownloadSession } from "@/lib/shareSession";
 import { VescSidecarControl } from "@/components/VescSidecarControl";
 import { BmsSidecarControl } from "@/components/BmsSidecarControl";
 import { HeartRateSidecarControl } from "@/components/HeartRateSidecarControl";
@@ -35,6 +36,20 @@ import { useLapTimer } from "./useLapTimer";
 import { RecordingLockOverlay } from "./RecordingLockOverlay";
 import { useToolsT, type ToolsKey } from "../i18n";
 import type { TimingState, GpsObservation, SessionPhase } from "@/lib/gps";
+
+export interface LapTimerToolProps extends PluginPanelProps {
+  /**
+   * Called only when the rider explicitly taps "View session" (not
+   * automatically at save time, unlike RaceBoxLiveRecord/DragyLiveRecord) —
+   * the host (`Index.tsx`) unmounts its whole Dashboard subtree, this tool
+   * included, the instant a session loads, which would tear the "ended"
+   * screen (and the Share button on it) out from under the rider before
+   * they could ever see or use it if this fired on its own.
+   */
+  onSessionSaved?: (data: ParsedData, fileName: string) => void;
+  /** Dismiss the recorder once "View session" hands the data off. */
+  onClose?: () => void;
+}
 
 type ToolsT = (key: ToolsKey, opts?: Record<string, unknown>) => string;
 type View = "live" | "laps";
@@ -54,10 +69,11 @@ function formatDuration(ms: number): string {
   return h > 0 ? `${h}:${mm}:${ss}` : `${m}:${ss}`;
 }
 
-export default function LapTimerTool(props: PluginPanelProps) {
+export default function LapTimerTool(props: LapTimerToolProps) {
   const t = useToolsT();
   const logger = useLapTimer();
-  const { phase, timing, laps, latest, saving, savedFileName, error, errorCode, endSession, reset, vesc, bms, heartRate } = logger;
+  const { phase, timing, laps, latest, saving, savedFileName, savedBlob, savedData, error, errorCode, endSession, reset, vesc, bms, heartRate } = logger;
+  const [sharing, setSharing] = useState(false);
   const [view, setView] = useState<View>("live");
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [locked, setLocked] = useState(false);
@@ -176,7 +192,46 @@ export default function LapTimerTool(props: PluginPanelProps) {
                 <p className="text-sm font-medium text-foreground">{t("laptimer.savedTitle")}</p>
                 <p className="break-all text-xs text-muted-foreground">{savedFileName}</p>
                 <p className="text-xs text-muted-foreground">{t("laptimer.savedHint")}</p>
-                <Button size="sm" onClick={() => { setLocked(false); reset(); }}>{t("laptimer.newSession")}</Button>
+                <div className="flex flex-wrap items-center justify-center gap-2">
+                  {savedData && (
+                    // Deliberately NOT fired automatically at save time — the
+                    // host (Index.tsx) unmounts this whole tool the instant a
+                    // session loads, which would tear this screen (and the
+                    // Share button next to it) out from under the rider
+                    // before they could ever see or use it. Only an explicit
+                    // click hands the data up and closes the recorder.
+                    <Button
+                      size="sm"
+                      className="gap-1.5"
+                      onClick={() => {
+                        setLocked(false);
+                        props.onSessionSaved?.(savedData, savedFileName);
+                        props.onClose?.();
+                      }}
+                    >
+                      <Eye className="h-3.5 w-3.5" /> View session
+                    </Button>
+                  )}
+                  {savedBlob && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="gap-1.5"
+                      disabled={sharing}
+                      onClick={async () => {
+                        setSharing(true);
+                        try {
+                          await shareOrDownloadSession(savedFileName, savedBlob);
+                        } finally {
+                          setSharing(false);
+                        }
+                      }}
+                    >
+                      <Share2 className="h-3.5 w-3.5" /> {sharing ? "Sharing…" : "Share"}
+                    </Button>
+                  )}
+                  <Button size="sm" variant="outline" onClick={() => { setLocked(false); reset(); }}>{t("laptimer.newSession")}</Button>
+                </div>
               </>
             ) : (
               <>

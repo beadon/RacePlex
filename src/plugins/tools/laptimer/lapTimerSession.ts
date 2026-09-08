@@ -40,6 +40,7 @@ import { applyBmsMergeToExtraFields, appendBmsFieldMappings } from "@/lib/live/b
 import type { HeartRateSample } from "@/lib/live/heartRateDecoder";
 import { applyHeartRateMergeToExtraFields, appendHeartRateFieldMappings } from "@/lib/live/heartRateMergeFields";
 import { buildLiveCaptureFileName, serializeLiveCapture } from "@/lib/live/liveCapturePackage";
+import { calculateBounds } from "@/lib/parserUtils";
 
 export interface LapTimerSnapshot {
   phase: SessionPhase;
@@ -52,6 +53,18 @@ export interface LapTimerSnapshot {
   saving: boolean;
   /** Filename once the session has been saved. */
   savedFileName: string | null;
+  /** The exact bytes written for `savedFileName` — lets the UI share/download
+   *  the session without a round-trip back through IndexedDB. */
+  savedBlob: Blob | null;
+  /**
+   * The session already parsed, ready to hand to the main viewer — but only
+   * on explicit request (a "View session" click), never fired automatically.
+   * `Index.tsx` unmounts its whole Dashboard subtree (this tool included) the
+   * instant a session loads, so auto-firing this at save time would tear the
+   * "ended" screen out from under the rider before they could see it, let
+   * alone tap Share first — confirmed live, not just reasoned through.
+   */
+  savedData: ParsedData | null;
   error: string | null;
   /**
    * Normalized code for `error`, when it came from the GPS source (null for a
@@ -69,6 +82,8 @@ export const INITIAL_SNAPSHOT: LapTimerSnapshot = {
   latest: null,
   saving: false,
   savedFileName: null,
+  savedBlob: null,
+  savedData: null,
   error: null,
   errorCode: null,
 };
@@ -272,7 +287,17 @@ export class LapTimerSession {
         hasBmsData: Boolean(this.deps.bmsMerger?.hasSecondary),
         hasHeartRateData: Boolean(this.deps.heartRateMerger?.hasSecondary),
       });
-      this.patch({ saving: false, savedFileName: fileName });
+      // Parsed and ready, but deliberately not handed to the main viewer yet
+      // — only a "View session" click does that (see `savedData`'s doc above).
+      const live = this.buildLiveCaptureData(startTs);
+      const savedData: ParsedData = {
+        samples: live.samples,
+        fieldMappings: live.fieldMappings,
+        bounds: calculateBounds(live.samples),
+        duration: live.samples.length > 0 ? live.samples[live.samples.length - 1].t : 0,
+        startDate: live.startDate,
+      };
+      this.patch({ saving: false, savedFileName: fileName, savedBlob: blob, savedData });
     } catch (e) {
       this.patch({
         saving: false,
